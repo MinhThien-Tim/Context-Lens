@@ -1,0 +1,12 @@
+{
+  "schema": "context-lens.dictionary-release",
+  "version": 1,
+  "pack": "context-lens-en-vi-2026.09.json",
+  "packVersion": "2026.09",
+  "entries": 104738,
+  "bytes": 17476995,
+  "sha256": "4caa2256337c7f94886c22ccd8a9ff962101647034d7b93c232f505f18888ffe",
+  "license": "CC BY-SA 4.0",
+  "attribution": "ATTRIBUTION.md",
+  "source": "https://github.com/skypediacode/english-vietnamese-dictionary"
+}

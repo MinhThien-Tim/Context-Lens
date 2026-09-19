@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Context Lens Reader",
+  "version": "0.1.0",
+  "description": "Open the current English article in Context Lens.",
+  "permissions": ["activeTab", "contextMenus", "storage"],
+  "background": { "service_worker": "service-worker.js" },
+  "action": { "default_title": "Read with Context Lens" },
+  "options_page": "options.html"
+}

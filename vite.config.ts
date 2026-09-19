@@ -1,0 +1,66 @@
+import { defineConfig } from 'vitest/config';
+import preact from '@preact/preset-vite';
+import { VitePWA } from 'vite-plugin-pwa';
+
+export default defineConfig({
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/pdfjs-dist')) return 'pdf-reader';
+          if (id.includes('node_modules/jszip') || id.includes('node_modules/@xmldom')) return 'archive-runtime';
+          if (id.includes('node_modules/epubjs')) return 'epub-reader';
+          if (id.includes('node_modules/mammoth')) return 'docx-reader';
+        }
+      }
+    }
+  },
+  plugins: [
+    preact(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['icon.svg', 'icon-192.svg', 'icon-512.svg'],
+      manifest: {
+        name: 'Context Lens',
+        short_name: 'Context Lens',
+        description: 'Fast contextual English reading for Vietnamese learners',
+        theme_color: '#f8f7f3',
+        background_color: '#f8f7f3',
+        display: 'standalone',
+        id: '/',
+        scope: '/',
+        start_url: '/',
+        lang: 'en',
+        categories: ['education', 'books'],
+        share_target: {
+          action: '/?share-target=1',
+          method: 'GET',
+          params: { title: 'title', text: 'text', url: 'url' }
+        },
+        icons: [
+          { src: '/icon-192.svg', sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
+          { src: '/icon-512.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'any' },
+          { src: '/icon-512.svg', sizes: '512x512', type: 'image/svg+xml', purpose: 'maskable' }
+        ]
+      },
+      workbox: {
+        navigateFallback: '/index.html',
+        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        globIgnores: ['**/pdf-reader-*.js', '**/epub-reader-*.js', '**/docx-reader-*.js', '**/archive-runtime-*.js'],
+        maximumFileSizeToCacheInBytes: 300 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.origin === self.location.origin && /\/assets\/.*\.(?:js|mjs)$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'context-lens-reader-chunks', expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 30 } }
+          }
+        ],
+        cleanupOutdatedCaches: true
+      }
+    })
+  ],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts']
+  }
+});
