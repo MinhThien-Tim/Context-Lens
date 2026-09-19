@@ -3,6 +3,24 @@ import { db, type DictionaryPackRecord } from '../../db/database';
 import { dictionaryRegistry } from './registry';
 import { lemmaCandidates } from './seedDictionary';
 import type { DictionaryEntry, DictionaryMatch, DictionaryProvider } from './types';
+import bundledPackUrl from '../../../release/dictionary/context-lens-en-vi-2026.09.json?url';
+
+let bundledPackReady: Promise<void> | undefined;
+
+export function loadBundledDictionary(): Promise<void> {
+  if (!bundledPackReady) {
+    bundledPackReady = (async () => {
+      const response = await fetch(bundledPackUrl);
+      if (!response.ok) throw new Error('Unable to load the offline dictionary.');
+      const pack = dictionaryPackSchema.parse(await response.json());
+      dictionaryRegistry.register(new InstalledDictionaryPack({
+        id: `bundled.${pack.id}`, name: pack.name, version: pack.packVersion,
+        license: pack.license, entries: pack.entries, installedAt: 0
+      }), true);
+    })().catch((error) => { bundledPackReady = undefined; throw error; });
+  }
+  return bundledPackReady;
+}
 
 const entrySchema = z.object({
   lemma: z.string().min(1).max(80), partOfSpeech: z.string().min(1).max(80), ipa: z.string().max(120).nullable(),

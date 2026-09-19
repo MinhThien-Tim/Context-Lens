@@ -4,8 +4,9 @@ import type { DictionaryMatch, DictionaryProvider } from './types';
 class DictionaryRegistry {
   private providers: DictionaryProvider[] = [seedDictionary];
 
-  register(provider: DictionaryProvider): () => void {
-    this.providers = [provider, ...this.providers.filter((item) => item.id !== provider.id)];
+  register(provider: DictionaryProvider, fallback = false): () => void {
+    const others = this.providers.filter((item) => item.id !== provider.id);
+    this.providers = fallback ? [...others, provider] : [provider, ...others];
     return () => { this.providers = this.providers.filter((item) => item !== provider); };
   }
 

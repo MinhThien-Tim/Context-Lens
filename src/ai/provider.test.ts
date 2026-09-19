@@ -4,10 +4,29 @@ import { ProviderError } from './provider';
 import { providerFetch } from './provider';
 import { validLookup } from '../test/fixtures';
 import type { LookupRequest } from '../lookup/types';
+import { GeminiProvider } from './providers/gemini';
 
 const request: LookupRequest = { selection: 'maintain', selection_type: 'word', sentence: validLookup.context.sentence, previous_sentence: null, next_sentence: null, language_mode: 'bilingual', learner: { native_language: 'vi', english_level: 'B2-C1' }, options: { include_ipa: true, include_contrast: true, include_grammar: true, include_sentence_translation: true } };
 
 describe('provider abstraction', () => {
+  it('normalizes the Gemini model ID and joins non-thought response parts', async () => {
+    const json = JSON.stringify(validLookup);
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ candidates: [{ content: { parts: [
+      { text: 'Internal reasoning', thought: true }, { text: json.slice(0, 80) }, { text: json.slice(80) }
+    ] } }] }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    expect((await new GeminiProvider(' test-key ', ' models/gemini-3-6-flash ').lookup(request)).selection.lemma).toBe('maintain');
+    expect(fetchMock.mock.calls[0][0]).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent');
+    expect(fetchMock.mock.calls[0][1].headers['x-goog-api-key']).toBe('test-key');
+  });
+  it('reports a missing model separately from network failures', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 404 })));
+    await expect(providerFetch('https://provider.test', {})).rejects.toMatchObject({ code: 'unsupported', status: 404 });
+  });
+  it('recognizes Gemini invalid-key responses with HTTP 400', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { details: [{ reason: 'API_KEY_INVALID' }] } }), { status: 400 })));
+    await expect(providerFetch('https://provider.test', {})).rejects.toMatchObject({ code: 'auth' });
+  });
   it('validates compatible provider output', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(validLookup) } }] }), { status: 200 })));
     const provider = new OpenAiCompatibleProvider({ apiKey: 'not-a-real-key', baseUrl: 'https://provider.test/v1', model: 'small' });

@@ -20,7 +20,7 @@ import { isVocabularySaved, removeVocabulary, saveVocabulary } from '../vocabula
 import type { VocabularyRecord } from '../db/database';
 import { VocabularyLibrary } from '../vocabulary/VocabularyLibrary';
 import { DataManagement } from '../storage/DataManagement';
-import { loadDictionaryPacks } from '../lookup/dictionary/packs';
+import { loadBundledDictionary, loadDictionaryPacks } from '../lookup/dictionary/packs';
 import { maintainStorageBudget } from '../storage/storageService';
 
 const SAMPLE = `The decision had surprised many voters. The government struggled to maintain public confidence after the announcement. Several ministers defended the policy.
@@ -68,7 +68,9 @@ export function App() {
   const importControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    void loadDictionaryPacks();
+    void Promise.all([loadBundledDictionary(), loadDictionaryPacks()]).catch(() => {
+      setImportError('The offline dictionary could not load. Reconnect and reload to download it.');
+    });
     void maintainStorageBudget();
     void Promise.all([loadPreferences(), loadAiSettings(), db.documents.orderBy('updatedAt').reverse().limit(8).toArray(), db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray()]).then(([prefs, ai, docs, words]) => {
       setPreferences(prefs); setAiSettings(ai); setRecent(docs); setVocabulary(words);
@@ -171,7 +173,7 @@ export function App() {
     setDocumentRecord(null); setLookupOpen(false);
   };
 
-  const runLookup = (selection: ReaderSelection, mode = preferences.languageMode) => {
+  const runLookup = (selection: ReaderSelection, mode = preferences.languageMode, settings = aiSettings) => {
     requestRef.current?.abort();
     const controller = new AbortController(); requestRef.current = controller;
     const request = makeRequest(selection, mode);
@@ -179,10 +181,17 @@ export function App() {
     const immediate = lookupService.immediate(request);
     setLookup(immediate); setSaved(false);
     if (documentRecord) void isVocabularySaved(documentRecord.id, immediate).then(setSaved);
-    setLoading(Boolean(aiSettings.apiKey && aiSettings.provider !== 'none' && navigator.onLine));
-    void lookupService.contextual(request, aiSettings, controller.signal).then((result) => {
+    setLoading(Boolean(settings.apiKey && settings.provider !== 'none' && navigator.onLine));
+    void loadBundledDictionary().catch(() => {
+      if (!controller.signal.aborted) setError('The offline dictionary could not load. Reconnect and reload to download it.');
+    }).then(() => {
+      if (controller.signal.aborted) return null;
+      setLookup(lookupService.immediate(request));
+      return lookupService.contextual(request, settings, controller.signal);
+    }).then((result) => {
       if (result && !controller.signal.aborted) {
         setLookup(result);
+        setError(null);
         if (documentRecord) void isVocabularySaved(documentRecord.id, result).then(setSaved);
       }
     }).catch((reason: unknown) => {
@@ -195,6 +204,12 @@ export function App() {
   const changeMode = (mode: LanguageMode) => {
     const next = { ...preferences, languageMode: mode }; setPreferences(next);
     if (activeSelection) runLookup(activeSelection, mode);
+  };
+  const saveSetup = async (settings: AiSettings) => {
+    await saveAiSettings(settings);
+    setAiSettings(settings);
+    setShowApiSettings(false);
+    if (lookupOpen && activeSelection) runLookup(activeSelection, preferences.languageMode, settings);
   };
   const toggleVocabulary = async () => {
     if (!documentRecord || !lookup) return;
@@ -228,7 +243,7 @@ export function App() {
       {recent.length > 0 && <section class="recent-section"><h2>Previously opened</h2>{recent.map((doc) => <div class="recent-row"><button class="recent-item" onClick={() => openDocument(doc)}><span><strong>{doc.title}</strong><small>{doc.content.slice(0, 86)}…</small></span><span>›</span></button><button class="icon-button recent-delete" aria-label={`Delete ${doc.title}`} onClick={() => { if (confirm(`Delete “${doc.title}” from this device?`)) { void db.documents.delete(doc.id); setRecent((items) => items.filter((item) => item.id !== doc.id)); } }}>×</button></div>)}</section>}
       {vocabulary.length > 0 && <section class="recent-section vocabulary-preview"><h2>Saved in context</h2>{vocabulary.slice(0, 8).map((word) => <div class="vocabulary-item"><span><strong>{word.lemma}</strong><small>{word.lexicalUnit ?? word.contextualMeaning}</small></span><span>{word.meaningVi.join(' · ')}</span></div>)}</section>}
       <p class="home-note">Documents stay on this device. Offline reading is available after the first visit.</p>
-      {showApiSettings && <ApiSettings initial={aiSettings} onClose={() => setShowApiSettings(false)} onSave={async (settings) => { await saveAiSettings(settings); setAiSettings(settings); setShowApiSettings(false); }} />}
+      {showApiSettings && <ApiSettings initial={aiSettings} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
       {showVocabulary && <VocabularyLibrary records={vocabulary} onClose={() => setShowVocabulary(false)} onDelete={(id) => { void db.vocabulary.delete(id); setVocabulary((items) => items.filter((item) => item.id !== id)); }} />}
       {showDataManagement && <DataManagement onClose={() => setShowDataManagement(false)} onRestored={() => { void db.documents.orderBy('updatedAt').reverse().limit(8).toArray().then(setRecent); void db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray().then(setVocabulary); }} />}
     </main>
@@ -248,7 +263,7 @@ export function App() {
       {documentRecord.source && <div class="reader-source">{documentRecord.source.author && <span>{documentRecord.source.author}</span>}{documentRecord.source.siteName && <span>{documentRecord.source.siteName}</span>}{documentRecord.source.url && <a href={documentRecord.source.url} target="_blank" rel="noreferrer noopener">Original ↗</a>}</div>}
       <TextReader content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} />
       <LookupBottomSheet open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={() => setLookupOpen(false)} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary()} saved={saved} />
-      {showApiSettings && <ApiSettings initial={aiSettings} onClose={() => setShowApiSettings(false)} onSave={async (settings) => { await saveAiSettings(settings); setAiSettings(settings); setShowApiSettings(false); }} />}
+      {showApiSettings && <ApiSettings initial={aiSettings} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
     </div>
   );
 }
@@ -261,6 +276,9 @@ function providerErrorMessage(reason: unknown): string {
     case 'quota': return 'The provider quota is exhausted. Check your provider account.';
     case 'timeout': return 'The provider took too long to respond. The basic result is still available.';
     case 'invalid_response': return 'The provider returned an invalid result. The basic result is still available.';
+    case 'unsupported':
+    case 'invalid_request': return reason.message;
+    case 'network': return 'Could not reach the AI provider. Check your connection and API endpoint.';
     default: return 'Unable to get a contextual explanation. The basic result is still available.';
   }
 }

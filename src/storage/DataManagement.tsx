@@ -4,6 +4,7 @@ import { clearLookupCache, requestPersistentStorage, storageSnapshot, type Stora
 import { db, type DictionaryPackRecord } from '../db/database';
 import { installDictionaryPack, removeDictionaryPack } from '../lookup/dictionary/packs';
 import { useDialog } from '../components/useDialog';
+import attributionUrl from '../../release/dictionary/ATTRIBUTION.md?url';
 
 export function DataManagement({ onClose, onRestored }: { onClose: () => void; onRestored: () => void }) {
   const dialogRef = useDialog(onClose);
@@ -37,6 +38,7 @@ export function DataManagement({ onClose, onRestored }: { onClose: () => void; o
           catch { setMessage('Invalid dictionary pack or missing license metadata.'); }
         }} /></label>
       </div>
+      <p class="privacy-note">Included English–Vietnamese dictionary: 104,738 entries, CC BY-SA 4.0. Vietnamese meanings are available offline after the app finishes downloading. <a href={attributionUrl} target="_blank" rel="noreferrer">Source, license and attribution</a></p>
       {packs.length > 0 && <section class="pack-list"><h3>Dictionary packs</h3>{packs.map((pack) => <div><span><strong>{pack.name}</strong><small>{pack.entries.length.toLocaleString()} entries · {pack.license.name}</small><a href={pack.license.url} target="_blank" rel="noreferrer noopener">License and attribution ↗</a></span><button class="icon-button" aria-label={`Remove ${pack.name}`} onClick={() => { if (confirm(`Remove dictionary pack “${pack.name}”?`)) void removeDictionaryPack(pack.id).then(refresh); }}>×</button></div>)}</section>}
       <p class="privacy-note">Backups contain extracted document text and vocabulary. API keys, AI settings, cached responses, and original PDF/EPUB binary files are excluded.</p>
       {message && <p class="data-message" role="status">{message}</p>}

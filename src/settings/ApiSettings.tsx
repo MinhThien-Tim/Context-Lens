@@ -3,7 +3,7 @@ import { defaultAiSettings, type AiSettings, type ProviderKind } from './types';
 import { useDialog } from '../components/useDialog';
 
 const defaults: Record<ProviderKind, { model: string; baseUrl: string }> = {
-  gemini: { model: 'gemini-2.0-flash', baseUrl: '' },
+  gemini: { model: defaultAiSettings.model, baseUrl: '' },
   openai: { model: 'gpt-4.1-mini', baseUrl: 'https://api.openai.com/v1' },
   anthropic: { model: 'claude-3-5-haiku-latest', baseUrl: 'https://api.anthropic.com' },
   compatible: { model: '', baseUrl: '' },
@@ -15,7 +15,10 @@ export function ApiSettings({ initial, onSave, onClose }: { initial: AiSettings;
   const [value, setValue] = useState<AiSettings>({ ...defaultAiSettings, ...initial });
   const [saved, setSaved] = useState(false);
   useEffect(() => setSaved(false), [value]);
-  const choose = (provider: ProviderKind) => setValue({ ...value, provider, ...defaults[provider], apiKey: provider === 'none' ? '' : value.apiKey });
+  const choose = (provider: ProviderKind) => {
+    if (provider === value.provider) return;
+    setValue({ ...value, provider, ...defaults[provider], apiKey: provider === 'none' ? '' : value.apiKey });
+  };
   return (
     <div class="modal-layer">
       <button class="modal-backdrop" aria-label="Close settings" onClick={onClose} />

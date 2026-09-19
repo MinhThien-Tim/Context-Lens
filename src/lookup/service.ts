@@ -30,16 +30,17 @@ export class LookupService {
       promptVersion: PROMPT_VERSION
     });
     if (!provider || !navigator.onLine) {
-      return findContextLookup(contextKey);
+      return findContextLookup(contextKey).catch(() => null);
     }
     const cacheKey = await createCacheKey({
       selection: request.selection, sentence: request.sentence, languageMode: request.language_mode,
       promptVersion: PROMPT_VERSION, provider: provider.id, model: settings.model
     });
-    const cached = await findExactLookup(cacheKey);
+    const cached = await findExactLookup(cacheKey).catch(() => null);
     if (cached) return cached;
     const result = await provider.lookup(request, signal);
-    await storeLookup(cacheKey, contextKey, result);
+    // A full or unavailable cache must not discard a successful AI response.
+    await storeLookup(cacheKey, contextKey, result).catch(() => undefined);
     return { ...result, source: 'ai' };
   }
 }

@@ -32,7 +32,7 @@ export function localLookup(request: LookupRequest): LookupResponse {
     },
     context: { sentence: request.sentence, previous_sentence: request.previous_sentence, next_sentence: request.next_sentence },
     quick: {
-      definition_en: lexical?.meaning_en ?? entry?.definitionEn ?? 'No offline definition is available yet.',
+      definition_en: lexical?.meaning_en ?? (entry ? entry.definitionEn : 'This word is not in the offline dictionary. Try AI in Settings.'),
       meaning_vi: lexical ? [lexical.meaning_vi] : entry?.meaningsVi ?? ['Chưa có nghĩa ngoại tuyến'],
       lexical_unit: lexical
     },

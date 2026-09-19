@@ -21,6 +21,10 @@ npm run preview
 
 The service worker is active in production builds. Browser AI requests require HTTPS outside localhost.
 
+The production app downloads and precaches the included 104,738-entry English–Vietnamese dictionary (17.5 MB uncompressed). Open it online once and let the service worker finish installing before going offline. `npm run dev` does not install an offline app shell; use the production build and preview to test offline reloads. Entries without English glosses show their Vietnamese meanings in the EN tab too. Contextual AI explanations require a connection or a previously cached result.
+
+For Gemini, select **Free — Gemini**, paste a Google AI Studio API key, and use model ID `gemini-3.6-flash`. Saving setup retries the open lookup. Model/endpoint, authentication, rate-limit, and connection failures are shown separately. A Gemini subscription alone does not configure an API key in this app.
+
 ## Current architecture
 
 ```text
@@ -59,7 +63,7 @@ API keys are session-only by default. Persistent keys are stored in this browser
 - Tap-to-look-up and native drag/long-press phrase selection
 - Previous/current/next sentence extraction without whole-document AI requests
 - Immediate bottom sheet with EN, VI, and EN + VI modes
-- Small mock/offline lexical dataset with contextual phrase handling
+- Bundled English–Vietnamese offline dictionary plus curated English glosses and contextual phrase handling
 - Gemini, Anthropic, and OpenAI-compatible direct-browser providers; OpenAI uses the compatible adapter
 - Short Gemini-first onboarding and session/persistent key choices
 - Versioned full system prompt, strict Zod validation, and a complete provider JSON schema
@@ -81,7 +85,6 @@ API keys are session-only by default. Persistent keys are stored in this browser
 
 - OCR for scanned PDFs and visual-fidelity PDF page rendering
 - Vocabulary review scheduling and richer phrase reconstruction
-- Production-sized local dictionary dataset
 - Hosted article proxy implementation; the client fallback contract uses `VITE_ARTICLE_PROXY_URL`
 
 ## Production readiness

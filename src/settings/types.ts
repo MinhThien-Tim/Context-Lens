@@ -12,7 +12,7 @@ export interface AiSettings {
 export const defaultAiSettings: AiSettings = {
   provider: 'none',
   apiKey: '',
-  model: 'gemini-2.0-flash',
+  model: 'gemini-3.6-flash',
   baseUrl: '',
   keyStorage: 'session'
 };

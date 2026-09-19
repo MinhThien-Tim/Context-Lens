@@ -47,8 +47,8 @@ export function LookupBottomSheet(props: Props) {
               </div>
               <span class={`source-pill ${result.source ?? 'ai'}`}>{props.loading ? 'Refining…' : result.source === 'offline' ? 'Offline' : result.source ?? 'AI'}</span>
             </header>
-            {showEn && <p class="meaning-en">{result.quick.definition_en}</p>}
-            {showVi && <p class="meaning-vi">{result.quick.meaning_vi.join(' · ')}</p>}
+            {showEn && <p class="meaning-en">{result.quick.definition_en || 'This offline entry has Vietnamese meanings only.'}</p>}
+            {(showVi || (showEn && !result.quick.definition_en)) && <p class="meaning-vi">{result.quick.meaning_vi.join(' · ')}</p>}
             {result.quick.lexical_unit && (
               <div class="lexical-unit">
                 <span>In this sentence</span>
