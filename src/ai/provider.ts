@@ -1,8 +1,8 @@
-import type { LookupRequest, LookupResponse } from '../lookup/types';
+import type { ContextExplanation, ContextInput } from '../core/context/types';
 
 export interface AiProvider {
   readonly id: string;
-  lookup(request: LookupRequest, signal?: AbortSignal): Promise<LookupResponse>;
+  explain(input: ContextInput, signal?: AbortSignal): Promise<ContextExplanation>;
 }
 
 export type ProviderErrorCode = 'auth' | 'rate_limit' | 'quota' | 'timeout' | 'network' | 'invalid_response' | 'unsupported' | 'invalid_request';
@@ -17,6 +17,7 @@ export class ProviderError extends Error {
 export const DEFAULT_AI_TIMEOUT_MS = 45_000;
 
 export async function providerFetch(input: RequestInfo | URL, init: RequestInit, signal?: AbortSignal, timeoutMs = DEFAULT_AI_TIMEOUT_MS): Promise<Response> {
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   const controller = new AbortController();
   let timedOut = false;
   const abort = () => controller.abort();

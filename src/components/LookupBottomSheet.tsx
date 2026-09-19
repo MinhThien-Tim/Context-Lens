@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { LanguageMode, LookupResponse } from '../lookup/types';
 import { LanguageTabs } from './LanguageTabs';
+import type { ContextMode } from '../core/context/types';
 
 interface Props {
+  contextResult?: LookupResponse | null;
+  onExplain?: (mode: ContextMode) => void;
   open: boolean;
   result: LookupResponse | null;
   loading: boolean;
@@ -13,7 +16,9 @@ interface Props {
   onOpenSettings: () => void;
   onSpeak: (text: string) => void;
   onToggleSave: () => void;
+  onAddNote?: () => void;
   saved: boolean;
+  debug?: boolean;
 }
 
 export function LookupBottomSheet(props: Props) {
@@ -28,9 +33,10 @@ export function LookupBottomSheet(props: Props) {
     document.addEventListener('keydown', onKeyDown);
     return () => { document.removeEventListener('keydown', onKeyDown); previousFocus.current?.focus({ preventScroll: true }); };
   }, [props.open]);
-  useEffect(() => setDeepOpen(false), [props.result?.request_id]);
+  useEffect(() => setDeepOpen(false), [props.result?.selection.surface, props.result?.context.sentence]);
   if (!props.open) return null;
   const result = props.result;
+  const deep = props.contextResult ?? result;
   const showEn = props.mode !== 'vi';
   const showVi = props.mode !== 'en';
   return (
@@ -42,12 +48,12 @@ export function LookupBottomSheet(props: Props) {
           <>
             <header class="lookup-heading">
               <div>
-                <div class="word-line"><strong>{result.selection.lemma}</strong><button class="icon-button" aria-label="Pronounce word" onClick={() => props.onSpeak(result.quick.lexical_unit?.text ?? result.selection.lemma)}>🔊</button><button class={`icon-button ${props.saved ? 'saved' : ''}`} aria-label={props.saved ? 'Remove saved word' : 'Save word'} aria-pressed={props.saved} onClick={props.onToggleSave}>{props.saved ? '★' : '☆'}</button></div>
+                <div class="word-line"><strong>{result.selection.lemma}</strong><button class="icon-button" aria-label="Pronounce word" onClick={() => props.onSpeak(result.quick.lexical_unit?.text ?? result.selection.lemma)}>🔊</button><button class={`icon-button ${props.saved ? 'saved' : ''}`} aria-label={props.saved ? 'Remove saved word' : 'Save word'} aria-pressed={props.saved} onClick={props.onToggleSave}>{props.saved ? '★' : '☆'}</button>{props.onAddNote && <button class="icon-button" aria-label="Add note for selection" onClick={props.onAddNote}>✎</button>}</div>
                 <p>{[result.selection.part_of_speech, result.selection.ipa_uk].filter(Boolean).join(' · ')}</p>
               </div>
               <span class={`source-pill ${result.source ?? 'ai'}`}>{props.loading ? 'Refining…' : result.source === 'offline' ? 'Offline' : result.source ?? 'AI'}</span>
             </header>
-            {showEn && <p class="meaning-en">{result.quick.definition_en || 'This offline entry has Vietnamese meanings only.'}</p>}
+            {(showEn || !result.quick.meaning_vi.length) && <p class="meaning-en">{result.quick.definition_en || (result.source === 'offline' ? 'This offline entry has Vietnamese meanings only.' : 'Translation available in Vietnamese.')}</p>}
             {(showVi || (showEn && !result.quick.definition_en)) && <p class="meaning-vi">{result.quick.meaning_vi.join(' · ')}</p>}
             {result.quick.lexical_unit && (
               <div class="lexical-unit">
@@ -58,15 +64,22 @@ export function LookupBottomSheet(props: Props) {
             )}
             <LanguageTabs value={props.mode} onChange={props.onModeChange} />
             {props.error && <div class="lookup-error" role="status">{props.error} <button onClick={props.onOpenSettings}>Settings</button></div>}
-            <button class="explain-button" aria-expanded={deepOpen} onClick={() => setDeepOpen(!deepOpen)}>Explain <span>{deepOpen ? '⌄' : '›'}</span></button>
-            {deepOpen && <div class="deep-explanation">
+            {props.debug && result.engine && <dl class="engine-debug"><div><dt>Provider</dt><dd>{result.engine.provider}</dd></div><div><dt>Cache</dt><dd>{result.engine.cached ? 'hit' : 'miss'}</dd></div>{result.engine.latencyMs !== undefined && <div><dt>Latency</dt><dd>{Math.round(result.engine.latencyMs)} ms</dd></div>}</dl>}
+            <div class="context-actions">
+              <button class="explain-button" aria-expanded={deepOpen} onClick={() => { setDeepOpen(!deepOpen); if (!deepOpen) props.onExplain?.('meaning-in-context'); }}>Context <span>{deepOpen ? '⌄' : '›'}</span></button>
+              <button class="secondary-button" onClick={() => { setDeepOpen(true); props.onExplain?.('grammar'); }}>Grammar</button>
+              <select aria-label="More explanations" value="" onChange={event => { if (event.currentTarget.value) { setDeepOpen(true); props.onExplain?.(event.currentTarget.value as ContextMode); } }}><option value="">More…</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>
+            </div>
+            {deepOpen && deep && <div class="deep-explanation" aria-busy={props.loading}>
+              {props.loading && <p role="status">Finding context…</p>}
+              {props.contextResult && <p class="source-pill">{props.contextResult.source === 'ai' ? 'AI' : props.contextResult.source === 'cache' ? 'Cached' : 'Local'}</p>}
               <h3>Original sentence</h3><p>{result.context.sentence}</p>
-              {showVi && result.deep.sentence_analysis.translation_vi && <><h3>Vietnamese</h3><p class="meaning-vi">{result.deep.sentence_analysis.translation_vi}</p></>}
-              {showEn && result.deep.context_explanation_en && <p>{result.deep.context_explanation_en}</p>}
-              {showVi && result.deep.context_explanation_vi && <p>{result.deep.context_explanation_vi}</p>}
-              {result.deep.sentence_analysis.chunks.length > 0 && <><h3>Structure</h3><dl>{result.deep.sentence_analysis.chunks.map((chunk) => <div><dt>{chunk.text}</dt><dd>{showVi ? chunk.meaning_vi : chunk.role}</dd></div>)}</dl></>}
-              {result.deep.grammar && <><h3>Grammar</h3><strong>{result.deep.grammar.pattern}</strong><p>{showVi ? result.deep.grammar.explanation_vi : result.deep.grammar.explanation_en}</p></>}
-              {result.deep.contrast.length > 0 && <><h3>Useful contrast</h3><p>{result.deep.contrast[0].meaning} · {showVi ? result.deep.contrast[0].meaning_vi : result.deep.contrast[0].reason_not_selected}</p></>}
+              {showVi && deep.deep.sentence_analysis.translation_vi && <><h3>Vietnamese</h3><p class="meaning-vi">{deep.deep.sentence_analysis.translation_vi}</p></>}
+              {showEn && deep.deep.context_explanation_en && <p>{deep.deep.context_explanation_en}</p>}
+              {showVi && deep.deep.context_explanation_vi && <p>{deep.deep.context_explanation_vi}</p>}
+              {deep.deep.sentence_analysis.chunks.length > 0 && <><h3>Structure</h3><dl>{deep.deep.sentence_analysis.chunks.map((chunk) => <div><dt>{chunk.text}</dt><dd>{showVi ? chunk.meaning_vi : chunk.role}</dd></div>)}</dl></>}
+              {deep.deep.grammar && <><h3>Grammar</h3><strong>{deep.deep.grammar.pattern}</strong><p>{showVi ? deep.deep.grammar.explanation_vi : deep.deep.grammar.explanation_en}</p></>}
+              {deep.deep.contrast.length > 0 && <><h3>Useful contrast</h3><p>{deep.deep.contrast[0].meaning} · {showVi ? deep.deep.contrast[0].meaning_vi : deep.deep.contrast[0].reason_not_selected}</p></>}
             </div>}
           </>
         )}

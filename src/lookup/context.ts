@@ -7,15 +7,31 @@ export interface SentenceContext {
 const sentenceSegmenter = typeof Intl !== 'undefined' && 'Segmenter' in Intl
   ? new Intl.Segmenter('en', { granularity: 'sentence' })
   : null;
+type SentenceSpan = { text: string; start: number; end: number };
+let lastText = '';
+let lastSpans: SentenceSpan[] = [];
+function sentenceSpans(text: string): SentenceSpan[] {
+  if (text === lastText && lastSpans.length) return lastSpans;
+  const raw = sentenceSegmenter
+    ? Array.from(sentenceSegmenter.segment(text), part => ({ text: part.segment.trim(), start: part.index, end: part.index + part.segment.length })).filter(part => part.text)
+    : fallbackSentences(text);
+  const merged: SentenceSpan[] = [];
+  for (const span of raw) {
+    const previous = merged.at(-1);
+    if (previous && /\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|vs|e\.g|i\.e|[A-Z])\.$/.test(previous.text)) {
+      previous.end = span.end; previous.text = text.slice(previous.start, previous.end).trim();
+    } else merged.push({ ...span });
+  }
+  // Keep only the active text's boundaries; never prefetch network results.
+  lastText = text; lastSpans = merged;
+  return merged;
+}
 
 export function sentenceContextAt(text: string, offset: number): SentenceContext {
   const cleanOffset = Math.max(0, Math.min(offset, Math.max(0, text.length - 1)));
-  const sentences = sentenceSegmenter
-    ? Array.from(sentenceSegmenter.segment(text), (part) => ({ text: part.segment.trim(), start: part.index, end: part.index + part.segment.length }))
-      .filter((part) => part.text.length > 0)
-    : fallbackSentences(text);
-
-  const index = Math.max(0, sentences.findIndex((part) => cleanOffset >= part.start && cleanOffset < part.end));
+  const sentences = sentenceSpans(text);
+  const found = sentences.findIndex((part) => cleanOffset >= part.start && cleanOffset < part.end);
+  const index = found >= 0 ? found : Math.max(0, sentences.filter(part => part.start <= cleanOffset).length - 1);
   const current = sentences[index] ?? { text: text.trim(), start: 0, end: text.length };
   return {
     previous: index > 0 ? sentences[index - 1].text : null,
@@ -25,7 +41,7 @@ export function sentenceContextAt(text: string, offset: number): SentenceContext
 }
 
 function fallbackSentences(text: string) {
-  const matches = Array.from(text.matchAll(/[^.!?]+(?:[.!?]+[\s\"']*|$)/g));
+  const matches = Array.from(text.matchAll(/[^.!?]+(?:[.!?]+[\s\"'”’]*|$)/g));
   return matches.map((match) => ({ text: match[0].trim(), start: match.index ?? 0, end: (match.index ?? 0) + match[0].length }));
 }
 

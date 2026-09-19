@@ -4,7 +4,7 @@ import { normalizeSelection, sentenceContextAt, wordAtPoint } from '../lookup/co
 export interface ReaderSelection {
   text: string;
   offset: number;
-  type: 'word' | 'phrase';
+  type: 'word' | 'phrase' | 'sentence';
   context: ReturnType<typeof sentenceContextAt>;
 }
 
@@ -28,7 +28,7 @@ export function TextReader({ content, safeHtml, onLookup, style }: { content: st
 
   const selectedPhrase = () => {
     const selection = window.getSelection();
-    if (!selection || selection.isCollapsed || !rootRef.current?.contains(selection.anchorNode)) return false;
+    if (!selection || selection.isCollapsed || !rootRef.current?.contains(selection.anchorNode) || !rootRef.current?.contains(selection.focusNode)) return false;
     const text = normalizeSelection(selection.toString());
     if (!text) return false;
     const range = selection.getRangeAt(0);
@@ -37,7 +37,8 @@ export function TextReader({ content, safeHtml, onLookup, style }: { content: st
     before.selectNodeContents(rootRef.current);
     before.setEnd(range.startContainer, range.startOffset);
     const offset = before.toString().length;
-    onLookup({ text, offset, type: text.includes(' ') ? 'phrase' : 'word', context: sentenceContextAt(fullText, offset) });
+    const context = sentenceContextAt(fullText, offset);
+    onLookup({ text, offset, type: text.includes(' ') ? normalizeSelection(context.current) === text ? 'sentence' : 'phrase' : 'word', context });
     ignoreClick.current = true;
     return true;
   };

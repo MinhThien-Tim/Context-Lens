@@ -1,4 +1,5 @@
 import { db } from '../db/database';
+import { clearEngineMemory } from '../core/cache';
 
 export interface StorageSnapshot {
   documents: number;
@@ -8,16 +9,17 @@ export interface StorageSnapshot {
   usage: number | null;
   quota: number | null;
   persisted: boolean | null;
+  notes: number;
 }
 
 export async function storageSnapshot(): Promise<StorageSnapshot> {
-  const [documents, vocabulary, cachedLookups, dictionaryPacks] = await Promise.all([db.documents.count(), db.vocabulary.count(), db.lookups.count(), db.dictionaryPacks.count()]);
+  const [documents, vocabulary, cachedLookups, dictionaryPacks, notes] = await Promise.all([db.documents.count(), db.vocabulary.count(), db.lookups.count(), db.dictionaryPacks.count(), db.notes.count()]);
   const estimate = await navigator.storage?.estimate?.().catch(() => undefined);
   const persisted = await navigator.storage?.persisted?.().catch(() => undefined);
   return {
-    documents, vocabulary, cachedLookups, dictionaryPacks,
+    documents, vocabulary, cachedLookups: cachedLookups + await db.translations.count() + await db.contexts.count(), dictionaryPacks,
     usage: estimate?.usage ?? null, quota: estimate?.quota ?? null,
-    persisted: persisted ?? null
+    persisted: persisted ?? null, notes
   };
 }
 
@@ -27,12 +29,18 @@ export async function requestPersistentStorage(): Promise<boolean | null> {
 }
 
 export async function clearLookupCache(): Promise<void> {
-  await db.lookups.clear();
+  clearEngineMemory();
+  await Promise.all([db.lookups.clear(), db.translations.clear(), db.contexts.clear()]);
 }
 
 export async function maintainStorageBudget(): Promise<boolean> {
   const estimate = await navigator.storage?.estimate?.().catch(() => undefined);
   if (!estimate?.usage || !estimate.quota || estimate.usage / estimate.quota < 0.85) return false;
+  clearEngineMemory();
+  for (const table of [db.translations, db.contexts]) {
+    const keys = await table.orderBy('lastUsedAt').limit(Math.ceil(await table.count() / 2)).primaryKeys();
+    await table.bulkDelete(keys);
+  }
   const count = await db.lookups.count();
   if (!count) return false;
   const keys = await db.lookups.orderBy('accessedAt').limit(Math.max(1, Math.ceil(count / 2))).primaryKeys();

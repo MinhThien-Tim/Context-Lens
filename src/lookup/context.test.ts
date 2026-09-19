@@ -13,6 +13,16 @@ describe('sentence extraction', () => {
     expect(sentenceContextAt(text, 2).previous).toBeNull();
     expect(sentenceContextAt(text, text.length - 2).next).toBeNull();
   });
+  it('keeps abbreviations, quotations and academic sentences intact', () => {
+    const passage = 'Dr. Nguyen said, “Training is a prerequisite.” It was precisely this institutional ambiguity that enabled the arrangement to persist.';
+    expect(sentenceContextAt(passage, passage.indexOf('Training')).current).toBe('Dr. Nguyen said, “Training is a prerequisite.”');
+    expect(sentenceContextAt(passage, passage.indexOf('ambiguity')).current).toContain('It was precisely');
+  });
+  it('handles Vietnamese and offsets at the end of a mobile selection', () => {
+    const passage = 'Tôi đang đọc. Đây là điều kiện tiên quyết.';
+    expect(sentenceContextAt(passage, passage.indexOf('điều kiện')).current).toBe('Đây là điều kiện tiên quyết.');
+    expect(sentenceContextAt(passage, passage.length + 10).current).toBe('Đây là điều kiện tiên quyết.');
+  });
 });
 
 describe('phrase selection', () => {

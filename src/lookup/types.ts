@@ -1,7 +1,10 @@
 export type LanguageMode = 'en' | 'vi' | 'bilingual';
-export type SelectionType = 'word' | 'phrase';
+export type SelectionType = 'word' | 'phrase' | 'sentence';
 
 export interface LookupRequest {
+  context_mode?: import('../core/context/types').ContextMode;
+  source_language?: string;
+  target_language?: string;
   selection: string;
   selection_type: SelectionType;
   sentence: string;
@@ -65,5 +68,6 @@ export interface LookupResponse {
   };
   difficulty: { cefr: string; worth_learning: boolean };
   confidence: number;
-  source?: 'ai' | 'cache' | 'offline';
+  source?: 'ai' | 'cache' | 'offline' | 'browser' | 'translation';
+  engine?: { provider: string; model?: string; cached?: boolean; latencyMs?: number; status?: string };
 }

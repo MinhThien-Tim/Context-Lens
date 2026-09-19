@@ -1,6 +1,10 @@
-import Dexie, { type EntityTable } from 'dexie';
+import Dexie, { type EntityTable, type Table } from 'dexie';
 import type { LanguageMode, LookupResponse } from '../lookup/types';
 import type { DocumentLocation } from '../documents/location';
+import type { EngineCacheRecord } from '../core/cache';
+import type { TranslationResult } from '../core/translation/types';
+import type { ContextResult } from '../core/context/types';
+import { explanationFromLookup } from '../core/context/adapter';
 
 export interface DocumentRecord {
   id: string;
@@ -54,6 +58,17 @@ export interface DictionaryPackRecord {
   entries: Array<{ lemma: string; partOfSpeech: string; ipa: string | null; definitionEn: string; meaningsVi: string[] }>;
   installedAt: number;
 }
+export interface NoteRecord {
+  id: string;
+  documentId: string;
+  documentTitle: string;
+  text: string;
+  selectedText?: string;
+  sentence?: string;
+  location: string;
+  createdAt: number;
+  updatedAt: number;
+}
 
 export class ContextLensDatabase extends Dexie {
   documents!: EntityTable<DocumentRecord, 'id'>;
@@ -61,6 +76,9 @@ export class ContextLensDatabase extends Dexie {
   settings!: EntityTable<SettingRecord, 'key'>;
   vocabulary!: EntityTable<VocabularyRecord, 'id'>;
   dictionaryPacks!: EntityTable<DictionaryPackRecord, 'id'>;
+  translations!: Table<EngineCacheRecord<TranslationResult>, string>;
+  contexts!: Table<EngineCacheRecord<ContextResult>, string>;
+  notes!: EntityTable<NoteRecord, 'id'>;
 
   constructor(name = 'context-lens') {
     super(name);
@@ -106,6 +124,23 @@ export class ContextLensDatabase extends Dexie {
       settings: 'key',
       vocabulary: 'id, lemma, createdAt',
       dictionaryPacks: 'id, installedAt'
+    });
+    // Keep legacy lookups readable; new context keys have stricter identity semantics.
+    this.version(6).stores({
+      translations: 'key, lastUsedAt, provider, languagePair, hits',
+      contexts: 'key, lastUsedAt, provider, languagePair, hits'
+    });
+    this.version(7).stores({
+      notes: 'id, documentId, updatedAt, [documentId+updatedAt]'
+    });
+    this.version(8).stores({}).upgrade(async transaction => {
+      await transaction.table<EngineCacheRecord<ContextResult | { result: LookupResponse; provider: string; model?: string; cached?: boolean }>>('contexts').toCollection().modify(record => {
+        const legacy = record.result as { result?: LookupResponse; provider?: string; model?: string; cached?: boolean };
+        if (legacy.result?.deep) {
+          record.result = { explanation: explanationFromLookup(legacy.result), provider: legacy.provider ?? record.provider, model: legacy.model, cached: legacy.cached };
+          record.version = 'context-v4';
+        }
+      });
     });
   }
 }

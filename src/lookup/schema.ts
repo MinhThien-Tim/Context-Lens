@@ -9,7 +9,7 @@ export const lookupResponseSchema = z.object({
     surface: z.string().min(1),
     lemma: z.string().min(1),
     normalized: z.string().min(1),
-    selection_type: z.enum(['word', 'phrase']),
+    selection_type: z.enum(['word', 'phrase', 'sentence']),
     part_of_speech: nullableText,
     ipa_uk: nullableText,
     ipa_us: nullableText
@@ -68,7 +68,7 @@ export const lookupJsonSchema = {
       required: ['surface', 'lemma', 'normalized', 'selection_type', 'part_of_speech', 'ipa_uk', 'ipa_us'],
       properties: {
         surface: { type: 'string' }, lemma: { type: 'string' }, normalized: { type: 'string' },
-        selection_type: { enum: ['word', 'phrase'] }, part_of_speech: { type: ['string', 'null'] },
+        selection_type: { enum: ['word', 'phrase', 'sentence'] }, part_of_speech: { type: ['string', 'null'] },
         ipa_uk: { type: ['string', 'null'] }, ipa_us: { type: ['string', 'null'] }
       }
     },

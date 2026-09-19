@@ -1,0 +1,23 @@
+import { afterEach, describe, expect, it } from 'vitest';
+import { db } from '../db/database';
+import { translationProviders } from '../core/translation/provider-registry';
+import { contextProviders } from '../core/context/providers';
+import { defaultAiSettings } from './types';
+import { defaultEngineSettings, loadEngineSettings } from './engines';
+
+describe('engine settings', () => {
+  afterEach(() => db.settings.clear());
+  it('merges missing provider ids when loading older settings', async () => {
+    await db.settings.put({ key: 'language-engines', value: { translationProviderOrder: ['dictionary'], contextProviderOrder: ['local'] } });
+    const loaded = await loadEngineSettings();
+    expect(loaded.translationProviderOrder[0]).toBe('dictionary');
+    expect(loaded.translationProviderOrder).toContain('browser');
+    expect(loaded.contextProviderOrder).toEqual(['local', 'user-api', 'hosted-lite']);
+  });
+  it('applies custom quick and context provider order', () => {
+    const settings = { ...defaultEngineSettings, publicTranslation: true, translationProviderOrder: ['mymemory', 'dictionary', 'vocabulary', 'browser', 'google', 'bing'] as typeof defaultEngineSettings.translationProviderOrder,
+      hostedAiLite: true, hostedEndpoint: 'https://example.com/context', localLlm: true, localModel: 'small', contextProviderOrder: ['local', 'hosted-lite', 'user-api'] as typeof defaultEngineSettings.contextProviderOrder };
+    expect(translationProviders(settings).map(provider => provider.id).slice(0, 2)).toEqual(['mymemory', 'dictionary']);
+    expect(contextProviders(settings, defaultAiSettings).map(provider => provider.id)).toEqual(['local', 'hosted-lite']);
+  });
+});

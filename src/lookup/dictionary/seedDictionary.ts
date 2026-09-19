@@ -1,6 +1,7 @@
 import type { DictionaryEntry, DictionaryMatch, DictionaryProvider } from './types';
 
 const entries: Record<string, DictionaryEntry> = {
+  prerequisite: { lemma: 'prerequisite', partOfSpeech: 'noun', ipa: '/ˌpriːˈrekwɪzɪt/', definitionEn: 'something required before something else can happen', meaningsVi: ['điều kiện tiên quyết'] },
   account: { lemma: 'account', partOfSpeech: 'noun / verb', ipa: '/əˈkaʊnt/', definitionEn: 'a report of an event; or to explain or cause something', meaningsVi: ['lời kể', 'giải thích'] },
   confidence: { lemma: 'confidence', partOfSpeech: 'noun', ipa: '/ˈkɒnfɪdəns/', definitionEn: 'trust or belief that someone or something will succeed', meaningsVi: ['lòng tin', 'sự tin tưởng'] },
   maintain: { lemma: 'maintain', partOfSpeech: 'verb', ipa: '/meɪnˈteɪn/', definitionEn: 'to keep something at the same level or condition', meaningsVi: ['duy trì', 'giữ vững'] },

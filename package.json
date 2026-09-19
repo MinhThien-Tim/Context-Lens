@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "typecheck": "tsc -b",
     "test:watch": "vitest",
     "pack:dictionary": "python scripts/build_dictionary_pack.py --source tmp/dictionary-source/dictionary_en_vi.db --attribution tmp/dictionary-source/ATTRIBUTION.md"
   },
