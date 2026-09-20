@@ -10,8 +10,9 @@ describe('engine settings', () => {
   it('enables managed online only in pilot builds, after local engines, with an offline opt-out', () => {
     vi.stubEnv('VITE_MANAGED_TRANSLATION', 'true');
     const providers = translationProviders(defaultEngineSettings).sort((a, b) => a.priority - b.priority);
-    expect(providers.at(-1)?.id).toBe('google-unofficial');
-    expect(translationProviders({ ...defaultEngineSettings, managedTranslation: false }).some(p => p.id === 'google-unofficial')).toBe(false);
+    expect(providers.at(-1)?.id).toBe('online-auto');
+    expect(translationProviders({ ...defaultEngineSettings, managedTranslation: false }).some(p => p.id === 'online-auto')).toBe(false);
+    expect(translationProviders({ ...defaultEngineSettings, onlineTranslationProvider: 'bing-web' }).some(p => p.id === 'bing-web')).toBe(true);
     expect(translationProviders({ ...defaultEngineSettings, quickEngine: 'offline' }).every(p => !p.network)).toBe(true);
   });
   it('merges missing provider ids when loading older settings', async () => {

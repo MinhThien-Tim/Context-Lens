@@ -1,5 +1,27 @@
 # Gateway verification — 2026-09-20
 
+## Hardening completion — 2026-09-21
+
+- Full regression suite: 39 test files / 149 tests passed.
+- Added coverage for quota rejection before provider execution, cancellation health neutrality, primary-error preservation when fallback is unavailable, no fallback on global quota, and malformed normalized frontend responses.
+- Frontend and gateway TypeScript validation passed. Production and pilot builds passed with bundle budgets; the pilot entry remained below 350 KiB and heavy reader chunks remained lazy.
+- Wrangler dry-run packaged the Worker and bindings without deployment. Staging/production behavior remains unverified.
+
+## Functional gateway update — 2026-09-21
+
+- Google moved behind `GatewayTranslationProvider`; Bing has a separate clean-unavailable adapter.
+- Router tests cover ordered Auto fallback, manual-provider isolation, and abort without fallback.
+- Quota remains reserved before upstream work; health/cooldown is isolated per provider.
+- Pilot Settings expose Off (unchecked), Auto, Google, and Bing without upstream endpoint details.
+- Functional milestone suite: 39 test files / 145 tests passed. Frontend and gateway typechecks, production build, pilot build, bundle budgets, and Wrangler dry-run passed.
+
+## Foundation protocol update — 2026-09-21
+
+- Baseline before the protocol change: 39 test files / 140 tests passed; frontend typecheck and production build passed.
+- Added a strict version 1 request envelope, normalized versioned responses, explicit web-provider IDs, and reserved official-provider type/configuration extension points.
+- Focused verification covers valid and invalid provider/version/mode values, normalized Google output, and clean Bing unavailability before quota reservation or upstream access.
+- The first sandboxed `gateway:check` attempt could not start Wrangler (`spawn EPERM`). The final unrestricted dry-run passed and packaged the Worker without deploying resources.
+
 ## Evidence
 
 - Final unit/integration suite: 32 files, 95 tests passed. Covers 100 concurrent simulated requests against transactional storage (two admitted upstream), global request/character caps, daily IP limits, rolling minute limits, UTC rollover, reconstruction, expired leases, storage failure, persisted upstream blocking, schema/body controls, HTML/redirect rejection, 2-second cancellation, Origin and kill switch, client device cache, pilot enablement and Offline opt-out.

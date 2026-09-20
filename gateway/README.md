@@ -2,6 +2,26 @@
 
 This Worker serves the existing `dist` app and `/api/translate` on the same origin. Google `client=gtx` is an **unofficial experimental** upstream, with no availability guarantee. No Google key, token extraction, IP rotation, third-party proxy or automatic retry is used. No upstream live-call success is implied by the unit tests.
 
+## Version 1 protocol
+
+Requests use a strict normalized envelope:
+
+```json
+{ "version": 1, "provider": "auto", "text": "prerequisite", "sourceLang": "en", "targetLang": "vi", "mode": "word" }
+```
+
+`provider` accepts `auto`, `google-web`, or `bing-web`. Auto tries healthy, available providers sequentially in the fixed order `google-web` then `bing-web`; it never starts both upstreams concurrently. Manual selection calls only the selected provider, and cancellation stops fallback. Google web is implemented experimentally. The isolated Bing adapter currently reports `PROVIDER_UNAVAILABLE` without reserving quota or contacting an upstream because no safe, stable unauthenticated request has been justified. Successful responses are normalized, for example:
+
+```json
+{ "version": 1, "text": "điều kiện tiên quyết", "provider": "google-web", "detectedLang": "en" }
+```
+
+The IDs `google-cloud-v2` and `azure-translator` are reserved for future official server-side adapters. They are not accepted as executable providers and no credentials, billing, OAuth, or BYOK workflow is implemented.
+
+Quota is reserved immediately before each actual upstream attempt. Daily and per-IP budgets remain shared abuse controls, while failures and cooldown are recorded by provider so a blocked provider does not suppress a healthy fallback. Failed attempts are not refunded.
+
+Gateway failures are normalized and never include raw upstream bodies. Cancellation stops fallback and does not count against provider health, although an attempt already admitted by the server remains charged. Global/daily quota, rate-limit and concurrency rejection do not fan out to another provider.
+
 ## Limits and privacy
 
 - SQLite-backed Durable Object on Workers Free; one stable object (`global-pilot-v1`) owns admission for the whole deployment. Do not shard this object or rename it to reset quota.

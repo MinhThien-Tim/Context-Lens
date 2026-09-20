@@ -1,43 +1,47 @@
 import { boundedJson, GatewayError, json, validate } from './protocol';
-import { translate } from './google';
-import { reserve, type Ledger, type Store } from './quota';
+import { GatewayProviderRouter } from './provider-router';
+import { BingWebProvider } from './providers/bing-web';
+import { GoogleWebProvider } from './providers/google-web';
+import type { GatewayTranslationProvider } from './providers/types';
+import { reserve, settle, type Ledger, type Store } from './quota';
 interface Env {
   ONLINE_ENABLED: string; IP_HASH_SECRET: string;
   ASSETS: { fetch(request: Request): Promise<Response> };
   QUOTA: { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } };
 }
 export class TranslationGate {
-  constructor(private ctx: { storage: Store }) {}
+  constructor(private ctx: { storage: Store }, private providers: GatewayTranslationProvider[] = [new GoogleWebProvider(), new BingWebProvider()]) {}
   async fetch(request: Request): Promise<Response> {
-    let id: string | undefined;
-    let failure: GatewayError | undefined;
     try {
       const input = validate(await boundedJson(request, 8192));
       const client = request.headers.get('X-Client-Hash');
       if (!client || !/^[a-f0-9]{64}$/.test(client)) throw new GatewayError('INVALID_REQUEST', 400);
-      const reservation = crypto.randomUUID();
-      await this.ctx.storage.transaction(async tx => {
-        const previous = await tx.get<Ledger>('ledger');
-        await tx.put('ledger', reserve(previous, client, [...input.text].length, Date.now(), reservation));
-      });
-      id = reservation;
-      return json(await translate(input));
+      const router = new GatewayProviderRouter(this.providers);
+      return json(await router.translate(input, request.signal, async provider => {
+        const reservation = crypto.randomUUID();
+        let failure: GatewayError | undefined;
+        try {
+          await this.ctx.storage.transaction(async tx => {
+            const previous = await tx.get<Ledger>('ledger');
+            await tx.put('ledger', reserve(previous, client, [...input.text].length, Date.now(), reservation, provider.id));
+          });
+        } catch (error) {
+          if (error instanceof GatewayError) throw error;
+          throw new GatewayError('UNAVAILABLE');
+        }
+        try { return await provider.translate(input, request.signal); }
+        catch (error) { failure = error instanceof GatewayError ? error : new GatewayError('UNAVAILABLE'); throw failure; }
+        finally {
+          // Failed attempts are not refunded; only their concurrency lease is released.
+          await this.ctx.storage.transaction(async tx => {
+            const ledger = await tx.get<Ledger>('ledger');
+            if (ledger) await tx.put('ledger', settle(ledger, reservation, provider.id, failure, Date.now()));
+          }).catch(() => {});
+        }
+      }));
     } catch (error) {
-      failure = error instanceof GatewayError ? error : new GatewayError('UNAVAILABLE');
+      const failure = error instanceof GatewayError ? error : new GatewayError('UNAVAILABLE');
       return json({ error: { code: failure.code } }, failure.status, failure.retryAfter);
-    } finally {
-      if (id) {
-        // Failure to release never refunds budget; expiring leases recover after an object restart.
-        await this.ctx.storage.transaction(async tx => {
-          const ledger = await tx.get<Ledger>('ledger'); if (!ledger) return;
-          delete ledger.leases[id!];
-          if (failure) {
-            ledger.failures++;
-            if (failure.code === 'UPSTREAM_BLOCKED' || ledger.failures >= 3) ledger.cooldown = Date.now() + Math.min(3_600_000, 60_000 * 2 ** Math.min(ledger.failures, 6));
-          } else if (ledger.cooldown <= Date.now()) ledger.failures = 0;
-          await tx.put('ledger', ledger);
-        }).catch(() => {});
-      }
     }
   }
 }
@@ -58,7 +62,7 @@ export default {
       const hash = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${new Date().toISOString().slice(0, 10)}:${ip}`));
       const client = Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('');
       return await env.QUOTA.get(env.QUOTA.idFromName('global-pilot-v1')).fetch(new Request('https://internal/translate', {
-        method: 'POST', headers: { 'X-Client-Hash': client }, body: JSON.stringify(input)
+        method: 'POST', headers: { 'X-Client-Hash': client }, body: JSON.stringify(input), signal: request.signal
       }));
     } catch (error) {
       const e = error instanceof GatewayError ? error : new GatewayError('UNAVAILABLE');

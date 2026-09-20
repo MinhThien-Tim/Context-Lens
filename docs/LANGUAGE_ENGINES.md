@@ -29,7 +29,7 @@ Quick: bounded memory → Dexie → ready browser translation → installed/bund
 
 Context: exact model cache (or previously available result when offline/no AI) → known phrase rule → simple dictionary explanation → user API → Hosted Lite → local model. Explicit engine selection can reorder this chain. Unknown or ambiguous phrases remain eligible for AI; recognized percentage “account for” and “make up one's mind” avoid it. Grammar and other explicit modes are never mistaken for ordinary word translation.
 
-Defaults enable local engines and configured user API for **explicit** context actions. All quick network providers, Hosted Lite, local LLM and experimental adapters are off. No scraping or reverse-engineered endpoints are included. The experimental flag reserves an opt-in control for future adapters; none ship here. AI translation fallback and DeepL are extension points, not enabled implementations.
+Defaults enable local engines and configured user API for **explicit** context actions. Public translation, custom gateways, Hosted Lite and local LLM remain off. The managed pilot is compiled in only when `VITE_MANAGED_TRANSLATION=true`; its experimental Google web adapter uses a bounded unauthenticated endpoint without token extraction, retry, proxy rotation or challenge bypass. Bing ships only as a clean-unavailable adapter. AI translation fallback and DeepL remain extension points, not enabled implementations.
 
 Local/browser translation deadlines are 90/280 ms. Network defaults to 1200 ms, configurable within 200–2000 ms. Context providers have a 20-second outer deadline including response parsing. No automatic retry doubles paid requests. Failures cool a pair for 30 seconds, 2 minutes, 10 minutes, then up to 1 hour. Three distinct active failed pairs trigger provider-level cooldown. Missing dictionary entries and unsupported browser pairs do not count as outages.
 
@@ -37,9 +37,9 @@ Concurrent identical requests share work. Each subscriber can abort independentl
 
 ## Cache and migration
 
-One `context-lens` database, version 8. Version 6 adds `translations` and `contexts`; version 7 adds document/selection `notes`; version 8 converts version 3 full lookup context records to the compact version 4 explanation. Existing documents/vocabulary/settings/packs/lookups remain untouched; old AI lookups remain a read-only fallback for EN→VI meaning requests without AI/offline.
+One versioned `context-lens` database stores documents, settings and provider-independent translation/context caches. Existing documents, vocabulary, notes, settings, packs and legacy lookups remain untouched by the gateway work; old AI lookups remain a read-only fallback for EN→VI meaning requests without AI/offline.
 
-Translation identity: normalized NFC text with case/punctuation preserved, source, target, word/phrase/sentence mode and version. Context identity: selection, bounded sentence, relevant adjacent sentences, source/target/display language, context mode, prompt version, provider family/endpoint and model. Keys use unambiguous JSON encoding instead of a collision-prone short hash. Text stays in local storage; no analytics were added.
+Translation identity: normalized NFC text with case/punctuation preserved, source, target, word/phrase/sentence/paragraph mode and version. Provider ID is metadata rather than cache identity, so a successful Google result prevents an unnecessary Bing lookup for the unchanged request. Context identity remains separate and includes selection, bounded sentence, relevant adjacent sentences, source/target/display language, context mode, prompt version, provider family/endpoint and model. Keys use unambiguous JSON encoding instead of a collision-prone short hash. Text stays in local storage; no analytics were added.
 
 Each cache has a 128-result memory limit. Persistent defaults: 5,000 translation rows and 1,000 context rows, configurable through `EngineSettings`. Successful AI context also writes a provider-independent offline alias, so it uses two rows. Hits update on memory and disk reads. Cleanup is deferred, transactionally capped, and favors frequently used entries among older candidates. Storage errors do not discard useful results. Clearing lookup data clears both new caches and memory; backups continue to omit caches and API keys.
 
@@ -47,7 +47,9 @@ Each cache has a 128-result memory limit. Persistent defaults: 5,000 translation
 
 ### Managed Cloudflare pilot
 
-`npm run gateway:build` opts the frontend into the same-origin `/api/translate` service. A separate `google-unofficial` adapter follows local engines and can be disabled with the Online translation setting or Offline mode. The server uses an experimental Google GTX endpoint, SQLite-backed Durable Object admission, daily per-IP/global quotas, a persisted circuit breaker and no retry. Device cache remains first; no translation bodies are stored on the server. This supersedes the statement below that no experimental adapter ships, specifically for the opt-in pilot build. Deployment defaults to disabled. See `gateway/README.md` and `gateway/VERIFICATION.md`.
+`npm run gateway:build` opts the frontend into the same-origin `/api/translate` service. A separate `google-web` adapter follows local engines and can be disabled with the Online translation setting or Offline mode. The server uses an experimental Google GTX endpoint, SQLite-backed Durable Object admission, daily per-IP/global quotas, a persisted circuit breaker and no retry. Device cache remains first; no translation bodies are stored on the server. This supersedes the statement below that no experimental adapter ships, specifically for the opt-in pilot build. Deployment defaults to disabled. See `gateway/README.md` and `gateway/VERIFICATION.md`.
+
+The version 1 gateway contract accepts `auto`, `google-web`, and `bing-web` selections and returns a normalized response containing `version`, `text`, and the concrete provider ID. Auto routing is deterministic and sequential (`google-web` then `bing-web`), never fan-out. Google is isolated behind its provider adapter. Bing has an isolated unavailable adapter because no stable unauthenticated request was justified without fragile web-token or scraping behavior. Manual selection never calls the other provider, cancellation stops fallback, and quota/cooldown state is tracked per attempted provider. `google-cloud-v2` and `azure-translator` are reserved type-safe extension points only and are not executable providers.
 
 ### Browser
 
@@ -76,6 +78,16 @@ Successful response:
 ```
 
 Optional `transliteration` is supported. HTTP 402/429 means quota. No cookies are sent. The endpoint must allow the app origin through CORS. Provider credentials belong on your server. Google/Bing controls have no effect without a configured endpoint.
+
+### Future official providers
+
+The reserved path is intentionally small:
+
+```text
+Context Lens → TranslationRouter → Gateway → official provider adapter
+```
+
+`google-cloud-v2` and `azure-translator` already have reserved IDs and server-side configuration extension points, but neither executes. A later implementation can add adapters without changing the frontend response shape or cache identity. Secrets should remain server-side; example deployment names are `GOOGLE_TRANSLATE_KEY`, `AZURE_TRANSLATOR_KEY`, and `AZURE_TRANSLATOR_REGION`. No real secrets, billing integration, OAuth, service accounts, credential UI or production BYOK flow are included.
 
 ### Context
 

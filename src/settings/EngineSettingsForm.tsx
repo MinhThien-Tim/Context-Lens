@@ -22,7 +22,11 @@ export function EngineSettingsForm({ value, onChange, health = [] }: { value: En
     {checkbox('offlineDictionary', 'Offline dictionary')}{checkbox('browserTranslation', 'Browser translation (ready models)')}
     {value.browserTranslation && <><button class="secondary-button" disabled={browserStatus === 'Preparing…'} onClick={() => { setBrowserStatus('Preparing…'); void prepareBrowserTranslation(value.sourceLang, value.targetLang).then(() => setBrowserStatus('Ready')).catch(() => setBrowserStatus('Unavailable on this browser or language pair')); }}>Prepare browser language model</button><small role="status">{browserStatus}</small></>}
     {checkbox('publicTranslation', 'Optional free web translation (MyMemory)')}
-    {import.meta.env.VITE_MANAGED_TRANSLATION === 'true' && <>{checkbox('managedTranslation', 'Online translation when local results are unavailable')}<p class="privacy-note">Selected text is sent to Google through this app’s experimental translation service. Daily limits apply; availability may vary.</p></>}
+    {import.meta.env.VITE_MANAGED_TRANSLATION === 'true' && <fieldset><legend>Online translation</legend>
+      {checkbox('managedTranslation', 'Enable online translation')}
+      <label>Provider<select disabled={!value.managedTranslation} value={value.onlineTranslationProvider} onChange={event => set('onlineTranslationProvider', event.currentTarget.value as EngineSettings['onlineTranslationProvider'])}><option value="auto">Auto</option><option value="google-web">Google</option><option value="bing-web">Bing</option></select></label>
+      <p class="privacy-note">Selected text is sent only after cache and local engines cannot complete the lookup. Google and Bing web providers are experimental; availability may vary.</p>
+    </fieldset>}
     {value.publicTranslation && <p class="privacy-note">Selected text is sent to MyMemory when local translation is unavailable. Daily limits apply.</p>}
     <details><summary>Advanced engines</summary>
       {checkbox('debugMode', 'Show provider diagnostics')}
@@ -30,7 +34,7 @@ export function EngineSettingsForm({ value, onChange, health = [] }: { value: En
       <label>Translation gateway URL<input type="url" value={value.translationEndpoint} onInput={event => set('translationEndpoint', event.currentTarget.value)} placeholder="https://your-server/translate" /></label>
       {checkbox('googleProvider', 'Enable Google gateway adapter')}{checkbox('bingProvider', 'Enable Bing gateway adapter')}
       <p class="privacy-note">Requires your configured gateway. Only selected text is sent for quick translation. No public or scraping endpoint is built in.</p>
-      {checkbox('experimentalProviders', 'Allow experimental adapters (none installed)')}
+      {checkbox('experimentalProviders', 'Allow experimental provider diagnostics')}
       {checkbox('hostedAiLite', 'Enable Hosted Lite')}
       <label>Hosted context URL<input type="url" value={value.hostedEndpoint} onInput={event => set('hostedEndpoint', event.currentTarget.value)} /></label>
       <label>Daily Hosted Lite limit<input type="number" min="0" max="1000" value={value.hostedDailyQuota} onInput={event => set('hostedDailyQuota', Number(event.currentTarget.value))} /></label>
@@ -43,7 +47,9 @@ export function EngineSettingsForm({ value, onChange, health = [] }: { value: En
       <div class="engine-status" role="status">
         <strong>Configuration status</strong>
         <span>Browser: {value.browserTranslation ? 'enabled; availability checked at use' : 'disabled'}</span>
-        <span>Google/Bing gateway: {value.translationEndpoint && (value.googleProvider || value.bingProvider) ? 'configured' : 'not configured'}</span>
+        <span>Online translation: {value.managedTranslation ? value.onlineTranslationProvider : 'off'}</span>
+        <span>Bing web: adapter available; upstream intentionally unavailable</span>
+        <span>Custom Google/Bing gateway: {value.translationEndpoint && (value.googleProvider || value.bingProvider) ? 'configured' : 'not configured'}</span>
         <span>Hosted Lite: {value.hostedAiLite && value.hostedEndpoint ? 'configured' : 'not configured'}</span>
         <span>Local model: {value.localLlm && value.localEndpoint && value.localModel ? 'configured' : 'not configured'}</span>
         {health.map(item => <span key={`${item.provider}:${item.pair ?? '*'}`}>{item.provider}{item.pair ? ` ${item.pair}` : ''}: cooling down until {new Date(item.cooldownUntil).toLocaleTimeString()}</span>)}

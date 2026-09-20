@@ -1,4 +1,5 @@
-export type TranslationMode = 'word' | 'phrase' | 'sentence';
+export type TranslationMode = 'word' | 'phrase' | 'sentence' | 'paragraph';
+export type OnlineGatewayProviderId = 'google-web' | 'bing-web' | 'google-cloud-v2' | 'azure-translator';
 export interface TranslationInput {
   text: string;
   sourceLang?: string;

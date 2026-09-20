@@ -19,7 +19,7 @@ npm run build
 npm run preview
 ```
 
-For the Cloudflare Free online translation pilot, use `npm run gateway:build`, `npm run gateway:check` (local packaging only), and `npm run gateway:dev`. The normal `npm run dev` starts the local reader without the gateway. The pilot requires a server-side `IP_HASH_SECRET` and `ONLINE_ENABLED=true`; no Google API key is required. See [gateway setup, quotas and staging checklist](gateway/README.md). Google unofficial availability is experimental; successful translations are cached on the device, and server failures preserve local reading results.
+For the Cloudflare Free online translation pilot, use `npm run gateway:build`, `npm run gateway:check` (local packaging only), and `npm run gateway:dev`. The normal `npm run dev` starts the local reader without the gateway. The pilot requires a server-side `IP_HASH_SECRET` and `ONLINE_ENABLED=true`; no Google API key is required. See [gateway setup, quotas and staging checklist](gateway/README.md). The version 1 protocol uses explicit `google-web` / `bing-web` identities and sequential Auto routing. Google web is implemented experimentally; Bing has an isolated adapter that reports unavailable rather than using fragile token or scraping workarounds. Successful translations are cached on the device, and server failures preserve local reading results.
 
 The service worker is active in production builds. Browser AI requests require HTTPS outside localhost.
 

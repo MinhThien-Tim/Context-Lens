@@ -1,3 +1,23 @@
+import type { GatewayProviderSelection, ImplementedGatewayProviderId } from './providers/types';
+
+export type GatewayTranslationMode = 'word' | 'phrase' | 'sentence' | 'paragraph';
+export interface GatewayTranslationRequest {
+  version: 1;
+  provider: GatewayProviderSelection;
+  text: string;
+  sourceLang: 'en' | 'vi';
+  targetLang: 'en' | 'vi';
+  mode: GatewayTranslationMode;
+}
+export interface GatewayTranslationResponse {
+  version: 1;
+  text: string;
+  provider: ImplementedGatewayProviderId;
+  detectedLang?: string;
+  transliteration?: string;
+  latencyMs?: number;
+}
+
 export class GatewayError extends Error {
   constructor(readonly code: string, readonly status = 503, readonly retryAfter = 60) { super(code); }
 }
@@ -23,13 +43,21 @@ export async function boundedJson(response: Request | Response, maxBytes: number
     catch { throw new GatewayError('INVALID_JSON', 400); }
   } finally { reader.releaseLock(); }
 }
-export interface Input { text: string; sourceLang: 'en' | 'vi'; targetLang: 'en' | 'vi'; mode?: string }
-export function validate(raw: unknown): Input {
+export type Input = GatewayTranslationRequest;
+export function validate(raw: unknown): GatewayTranslationRequest {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new GatewayError('INVALID_REQUEST', 400);
   const r = raw as Record<string, unknown>;
-  if (Object.keys(r).some(k => !['text', 'sourceLang', 'targetLang', 'mode'].includes(k)) ||
+  if (Object.keys(r).some(k => !['version', 'provider', 'text', 'sourceLang', 'targetLang', 'mode'].includes(k)) ||
+    r.version !== 1 || !['auto', 'google-web', 'bing-web'].includes(String(r.provider)) ||
     typeof r.text !== 'string' || !r.text.trim() || [...r.text].length > 1000 ||
     !['en', 'vi'].includes(String(r.sourceLang)) || !['en', 'vi'].includes(String(r.targetLang)) || r.sourceLang === r.targetLang ||
-    (r.mode !== undefined && !['word', 'phrase', 'sentence'].includes(String(r.mode)))) throw new GatewayError('INVALID_REQUEST', 400);
-  return { text: r.text.normalize('NFC').trim(), sourceLang: r.sourceLang as Input['sourceLang'], targetLang: r.targetLang as Input['targetLang'], mode: r.mode as string | undefined };
+    !['word', 'phrase', 'sentence', 'paragraph'].includes(String(r.mode))) throw new GatewayError('INVALID_REQUEST', 400);
+  return {
+    version: 1,
+    provider: r.provider as GatewayProviderSelection,
+    text: r.text.normalize('NFC').trim(),
+    sourceLang: r.sourceLang as GatewayTranslationRequest['sourceLang'],
+    targetLang: r.targetLang as GatewayTranslationRequest['targetLang'],
+    mode: r.mode as GatewayTranslationMode
+  };
 }

@@ -22,7 +22,8 @@ export function translationProviders(settings: EngineSettings): TranslationProvi
   }
   // Deployment opt-in only. Existing standalone builds never call an undeployed API.
   if (settings.managedTranslation && import.meta.env.VITE_MANAGED_TRANSLATION === 'true') {
-    providers.push(new ManagedTranslationProvider('/api/translate'));
+    const selection = settings.onlineTranslationProvider === 'auto' && !settings.automaticFallback ? 'google-web' : settings.onlineTranslationProvider;
+    providers.push(new ManagedTranslationProvider('/api/translate', selection));
     const managed = providers.at(-1)!;
     managed.priority = Math.max(0, ...providers.filter(p => !p.network).map(p => p.priority)) + 1;
   }
