@@ -6,6 +6,8 @@ export function PdfReadingBlock({ block }: { block: PdfTextBlock }) {
   if (block.type === 'list') return <ul {...props}>{(block.items ?? block.text.split('\n')).map((item, index) => <li key={index}>{item}</li>)}</ul>;
   if (block.type === 'quote') return <blockquote {...props}>{block.text}</blockquote>;
   if (block.type === 'footnote') return <aside {...props} class="pdf-reading-footnote">{block.text}</aside>;
-  if (block.type === 'dialogue') return <p {...props} class="pdf-reading-dialogue">{block.speaker && <strong>{block.speaker}: </strong>}{block.text}</p>;
+  if (block.type === 'dialogue') { const body = block.speaker ? block.text.replace(new RegExp(`^${escapeRegExp(block.speaker)}:\\s*`), '') : block.text; return <p {...props} class="pdf-reading-dialogue">{block.speaker && <strong>{block.speaker}: </strong>}{body}</p>; }
   return <p {...props}>{block.text}</p>;
 }
+
+function escapeRegExp(value: string): string { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }

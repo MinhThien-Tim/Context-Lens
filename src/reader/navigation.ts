@@ -10,7 +10,7 @@ export function indexAtOffset(offsets: number[] | undefined, offset: number): nu
 export function locationAtOffset(doc: DocumentRecord, offset: number): DocumentLocation {
   const absoluteOffset = Math.max(0, Math.min(doc.content.length, offset));
   const base = { absoluteOffset, scrollY: window.scrollY, progress: doc.content.length ? absoluteOffset / doc.content.length : 0, updatedAt: Date.now() };
-  if (doc.kind === 'pdf') return { ...base, kind: 'pdf', page: indexAtOffset(doc.pageOffsets, absoluteOffset) + 1 };
+  if (doc.kind === 'pdf') { const page = indexAtOffset(doc.pageOffsets, absoluteOffset) + 1; return { ...base, kind: 'pdf', page, textOffset: absoluteOffset - (doc.pageOffsets?.[page - 1] ?? 0) }; }
   if (doc.kind === 'epub') return { ...base, kind: 'epub', chapter: indexAtOffset(doc.chapterOffsets, absoluteOffset) + 1, cfi: null };
   return { ...base, kind: 'text', sectionId: doc.toc?.filter(item => item.offset !== undefined && item.offset <= absoluteOffset).at(-1)?.id };
 }

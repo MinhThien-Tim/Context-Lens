@@ -301,7 +301,8 @@ export function App() {
   const openNotes = (selection: ReaderSelection | null) => {
     if (!documentRecord) return;
     setNoteSelection(selection);
-    setNoteLocation(selection ? locationAtOffset(documentRecord, selection.offset) : captureDocumentLocation(documentRecord));
+    const captured = selection ? locationAtOffset(documentRecord, selection.offset) : currentLocation;
+    setNoteLocation(captured.kind === 'pdf' ? { ...captured, viewMode: pdfMode } : captured);
     setLookupOpen(false); if (!desktop) setContentsOpen(false); setShowNotes(true);
   };
   const changePdfViewMode = (mode: 'original' | 'reading') => {
@@ -371,12 +372,12 @@ export function App() {
       {documentRecord.kind === 'pdf' && pdfMode === 'original' && currentLocation.kind === 'pdf'
         ? <PdfViewer documentRecord={documentRecord} location={currentLocation} zoomMode={desktop ? preferences.pdfZoomMode : 'fit-width'} onZoomMode={pdfZoomMode => setPreferences(current => ({ ...current, pdfZoomMode }))} onViewMode={() => changePdfViewMode('reading')} onLocation={location => { setCurrentLocation(location); setProgress(location.progress); void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() }); }} onLookup={runLookup} onAddNote={selection => openNotes(selection)} />
         : documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf'
-        ? <PdfReadingView documentRecord={documentRecord} location={currentLocation} style={readerStyle} onOriginal={() => changePdfViewMode('original')} onLocation={location => { setCurrentLocation(location); setProgress(location.progress); void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() }); }} />
+        ? <PdfReadingView documentRecord={documentRecord} location={currentLocation} style={readerStyle} onOriginal={() => changePdfViewMode('original')} onLocation={location => { setCurrentLocation(location); setProgress(location.progress); void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() }); }} onLookup={runLookup} onAddNote={selection => openNotes(selection)} />
         : <TextReader offsets={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets : documentRecord.chapterOffsets} onAddNote={selection => openNotes(selection)} content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} />}
       </div>
       <LookupBottomSheet selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} debug={engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={() => { requestRef.current?.abort(); contextRequestRef.current?.abort(); setLookupOpen(false); }} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary()} onAddNote={() => openNotes(activeSelection)} saved={saved} />
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
-      {showNotes && <NotesPanel document={documentRecord} selection={noteSelection} location={noteLocation} onJump={location => { const offset = location.absoluteOffset ?? (location.kind === 'pdf' ? documentRecord.pageOffsets?.[location.page - 1] : location.kind === 'epub' ? documentRecord.chapterOffsets?.[location.chapter - 1] : undefined); if (offset !== undefined) jump(offset); else window.scrollTo({ top: location.scrollY, behavior: 'auto' }); }} onClose={() => setShowNotes(false)} />}
+      {showNotes && <NotesPanel document={documentRecord} selection={noteSelection} location={noteLocation} onJump={location => { if (location.kind === 'pdf') { setCurrentLocation(location); setProgress(location.progress); setPreferences(current => desktop ? { ...current, pdfViewMode: location.viewMode ?? 'reading' } : { ...current, pdfMobileViewMode: location.viewMode ?? 'reading' }); return; } const offset = location.absoluteOffset ?? (location.kind === 'epub' ? documentRecord.chapterOffsets?.[location.chapter - 1] : undefined); if (offset !== undefined) jump(offset); else window.scrollTo({ top: location.scrollY, behavior: 'auto' }); }} onClose={() => setShowNotes(false)} />}
     </ReaderShell>
   );
 }

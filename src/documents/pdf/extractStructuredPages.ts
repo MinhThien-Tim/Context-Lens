@@ -74,7 +74,7 @@ function classifyBlock(lines: Line[], median: number, pageHeight: number, pageNu
   const joined = joinLines(lines.map(line => line.text));
   const base = { id: `pdf-${pageNumber}-${index}`, type, text: joined };
   if (type === 'heading') return { ...base, level: lines[0].fontSize >= median * 1.7 ? 1 : lines[0].fontSize >= median * 1.42 ? 2 : 3 };
-  if (type === 'dialogue') { const match = joined.match(/^([^:]+):\s*(.*)$/s); return { ...base, speaker: match?.[1], text: match?.[2] || joined }; }
+  if (type === 'dialogue') { const match = joined.match(/^([^:]+):\s*(.*)$/s); return { ...base, speaker: match?.[1] }; }
   if (type === 'list') { const items = lines.map(line => line.text.replace(/^(?:[-•▪‣]|\d+[.)])\s+/, '')); return { ...base, text: items.join('\n'), items }; }
   return base;
 }
