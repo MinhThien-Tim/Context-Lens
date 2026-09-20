@@ -21,7 +21,14 @@ export class SeedDictionary implements DictionaryProvider {
     }
     return null;
   }
+  lookupReverse(surface: string): DictionaryMatch | null {
+    const normalized = normalizeVietnamese(surface);
+    const entry = Object.values(entries).find(candidate => candidate.meaningsVi.some(meaning => normalizeVietnamese(meaning) === normalized));
+    return entry ? { entry, surface } : null;
+  }
 }
+
+function normalizeVietnamese(value: string): string { return value.normalize('NFC').toLocaleLowerCase('vi').trim().replace(/\s+/g, ' '); }
 
 export function lemmaCandidates(word: string): string[] {
   const candidates = [word];

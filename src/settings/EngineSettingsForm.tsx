@@ -17,6 +17,7 @@ export function EngineSettingsForm({ value, onChange, health = [] }: { value: En
     {checkbox('offlineDictionary', 'Offline dictionary')}{checkbox('browserTranslation', 'Browser translation (ready models)')}
     {value.browserTranslation && <><button class="secondary-button" disabled={browserStatus === 'Preparing…'} onClick={() => { setBrowserStatus('Preparing…'); void prepareBrowserTranslation(value.sourceLang, value.targetLang).then(() => setBrowserStatus('Ready')).catch(() => setBrowserStatus('Unavailable on this browser or language pair')); }}>Prepare browser language model</button><small role="status">{browserStatus}</small></>}
     {checkbox('publicTranslation', 'Optional free web translation (MyMemory)')}
+    {import.meta.env.VITE_MANAGED_TRANSLATION === 'true' && <>{checkbox('managedTranslation', 'Online translation when local results are unavailable')}<p class="privacy-note">Selected text is sent to Google through this app’s experimental translation service. Daily limits apply; availability may vary.</p></>}
     {value.publicTranslation && <p class="privacy-note">Selected text is sent to MyMemory when local translation is unavailable. Daily limits apply.</p>}
     <details><summary>Advanced engines</summary>
       {checkbox('debugMode', 'Show provider diagnostics')}

@@ -10,6 +10,7 @@ export interface LookupRequest {
   sentence: string;
   previous_sentence: string | null;
   next_sentence: string | null;
+  paragraph?: string;
   language_mode: LanguageMode;
   learner: { native_language: 'vi'; english_level: string };
   options: {

@@ -4,8 +4,13 @@
   "version": "0.3.0-alpha.2",
   "type": "module",
   "scripts": {
+    "gateway:typecheck": "tsc --project gateway/tsconfig.json",
+    "gateway:build": "tsc -b && tsc --project gateway/tsconfig.json && vite build --mode pilot && node scripts/check_bundle_budget.mjs",
+    "gateway:check": "wrangler deploy --dry-run --config gateway/wrangler.jsonc",
+    "gateway:dev": "wrangler dev --config gateway/wrangler.jsonc",
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/check_bundle_budget.mjs",
+    "check:bundle": "node scripts/check_bundle_budget.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b",
@@ -31,7 +36,8 @@
     "typescript": "~5.7.2",
     "vite": "^6.2.0",
     "vite-plugin-pwa": "^0.21.1",
-    "vitest": "^5.0.1"
+    "vitest": "^5.0.1",
+    "wrangler": "^4.135.0"
   },
   "overrides": {
     "@xmldom/xmldom": "0.9.12"

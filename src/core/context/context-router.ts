@@ -12,7 +12,7 @@ import type { ContextInput, ContextProvider, ContextResult } from './types';
 import { explanationFromLookup } from './adapter';
 export const CONTEXT_VERSION = 'context-v4';
 export function contextKey(input: ContextInput, family: string): string {
-  return cacheKey([CONTEXT_VERSION, normalizeText(input.request.selection), normalizeText(input.request.sentence), input.request.previous_sentence, input.request.next_sentence,
+  return cacheKey([CONTEXT_VERSION, normalizeText(input.request.selection), normalizeText(input.request.sentence), input.request.previous_sentence, input.request.next_sentence, input.request.paragraph,
     input.sourceLang, input.targetLang, input.request.language_mode, input.mode, family]);
 }
 export class ContextRouter {
@@ -71,7 +71,10 @@ export class ContextRouter {
       }
       const cached = await this.cache.get(availableKey);
       if (cached) return { ...cached, cached: true, status };
-      return { explanation: explanationFromLookup(localLookup(input.request)), provider: 'offline', status };
+      return { explanation: {
+        meaning: input.targetLang === 'vi' ? 'Chưa thể xác định nghĩa theo ngữ cảnh này với độ tin cậy đủ cao.' : 'The contextual meaning could not be determined with enough confidence.',
+        confidence: 0
+      }, provider: 'unresolved', status };
     }, raw.signal);
   }
 }

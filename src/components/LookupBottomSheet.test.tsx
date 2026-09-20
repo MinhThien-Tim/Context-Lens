@@ -4,7 +4,7 @@ import { expect, it, vi } from 'vitest';
 import { LookupBottomSheet } from './LookupBottomSheet';
 import { validLookup } from '../test/fixtures';
 
-it('shows Vietnamese-only offline entries even in the English tab', () => {
+it('does not substitute a Vietnamese translation for a missing English definition', () => {
   const host = document.createElement('div');
   document.body.append(host);
   const noop = vi.fn();
@@ -13,8 +13,8 @@ it('shows Vietnamese-only offline entries even in the English tab', () => {
   try {
     act(() => render(<LookupBottomSheet open result={result} loading={false} error={null} mode="en"
       onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
-    expect(host.textContent).toContain('Vietnamese meanings only');
-    expect(host.querySelector('.meaning-vi')?.textContent).toBe('xảy ra');
+    expect(host.textContent).toContain('No English definition is available');
+    expect(host.querySelector('.meaning-vi')).toBeNull();
   } finally { act(() => render(null, host)); host.remove(); }
 });
 

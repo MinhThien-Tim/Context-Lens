@@ -19,6 +19,8 @@ npm run build
 npm run preview
 ```
 
+For the Cloudflare Free online translation pilot, use `npm run gateway:build`, `npm run gateway:check` (local packaging only), and `npm run gateway:dev`. The normal `npm run dev` starts the local reader without the gateway. The pilot requires a server-side `IP_HASH_SECRET` and `ONLINE_ENABLED=true`; no Google API key is required. See [gateway setup, quotas and staging checklist](gateway/README.md). Google unofficial availability is experimental; successful translations are cached on the device, and server failures preserve local reading results.
+
 The service worker is active in production builds. Browser AI requests require HTTPS outside localhost.
 
 The production app downloads and precaches the included 104,738-entry English–Vietnamese dictionary (17.5 MB uncompressed). Open it online once and let the service worker finish installing before going offline. `npm run dev` does not install an offline app shell; use the production build and preview to test offline reloads. Entries without English glosses show their Vietnamese meanings in the EN tab too. Context explanations use cached results and local rules first; optional AI runs only after an explicit Context or Grammar action.
@@ -111,14 +113,16 @@ API keys are session-only by default. Persistent keys are stored in this browser
 - Provider prompts, cache keys, database migrations, and external response schemas are explicitly versioned.
 - Heavy reader code is isolated in lazy chunks and cached only after use.
 
-## Stage 3 status
+## Implementation status
 
-The first two Stage 3 slices are implemented:
+The staged local-first foundation is implemented:
 
 - Local dictionary data is behind a versioned provider registry, ready for downloadable or English101-owned language packs.
-- Portable `context-lens.backup` version 1 export/restore preserves documents and vocabulary while excluding API keys, AI cache, and original binary book files.
+- Portable `context-lens.backup` version 2 export/restore preserves documents, vocabulary, and notes while excluding API keys, AI cache, and original binary book files; version 1 backups remain importable.
 - The library exposes storage usage, persistent-storage status, AI-cache cleanup, and per-document deletion.
 - DOCX joins the shared importer contract and remains outside the initial bundle.
 - Dictionary packs require versioned schemas and explicit license/attribution metadata; see `docs/DICTIONARY_PACK.md`.
+- VI→EN exact reverse lookup, multi-sentence/paragraph context, typed complexity decisions, and conservative phrase heuristics extend offline coverage.
+- Integration and performance tests enforce offline flows, local latency budgets, initial bundle budgets, and lazy reader chunks.
 - English101 synchronization is intentionally not implemented yet. The versioned export contract remains the future integration boundary.
 - A least-privilege Manifest V3 extension hands the current URL to the existing article-import contract without reading page content.

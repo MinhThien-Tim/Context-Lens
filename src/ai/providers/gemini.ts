@@ -1,7 +1,7 @@
 import type { AiProvider } from '../provider';
 import { providerFetch, ProviderError } from '../provider';
 import { buildContextPrompt, CONTEXT_SYSTEM_PROMPT } from '../prompt';
-import { contextExplanationJsonSchema, contextExplanationSchema } from '../../core/context/schema';
+import { contextExplanationJsonSchema, contextProviderResponseSchema } from '../../core/context/schema';
 import type { ContextExplanation, ContextInput } from '../../core/context/types';
 
 export function normalizeGeminiModel(model: string): string {
@@ -25,7 +25,7 @@ export class GeminiProvider implements AiProvider {
     const payload = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }> };
     const content = payload.candidates?.[0]?.content?.parts?.filter((part) => !part.thought).map((part) => part.text ?? '').join('');
     if (!content) throw new ProviderError('Gemini returned an empty response.', 'invalid_response');
-    try { return contextExplanationSchema.parse(JSON.parse(content)); }
+    try { return contextProviderResponseSchema.parse(JSON.parse(content)); }
     catch { throw new ProviderError('Gemini returned an invalid response.', 'invalid_response'); }
   }
 }

@@ -12,6 +12,7 @@ export interface EngineSettings {
   googleProvider: boolean;
   bingProvider: boolean;
   publicTranslation: boolean;
+  managedTranslation: boolean;
   experimentalProviders: boolean;
   hostedAiLite: boolean;
   userApi: boolean;
@@ -35,7 +36,7 @@ export const defaultContextProviderOrder: ContextProviderId[] = ['user-api', 'ho
 export const defaultEngineSettings: EngineSettings = {
   sourceLang: 'en', targetLang: 'vi', quickEngine: 'auto', contextEngine: 'auto', automaticFallback: true,
   cacheTranslations: true, cacheContext: true, browserTranslation: true, offlineDictionary: true,
-  googleProvider: false, bingProvider: false, publicTranslation: false, experimentalProviders: false,
+  googleProvider: false, bingProvider: false, publicTranslation: false, managedTranslation: true, experimentalProviders: false,
   hostedAiLite: false, userApi: true, localLlm: false,
   translationEndpoint: '', hostedEndpoint: '', localEndpoint: 'http://localhost:1234/v1', localModel: '',
   hostedDailyQuota: 20, networkTimeoutMs: 1200, translationCacheLimit: 5000, contextCacheLimit: 1000,

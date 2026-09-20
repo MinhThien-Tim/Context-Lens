@@ -24,6 +24,7 @@ import { maintainStorageBudget } from '../storage/storageService';
 import { defaultEngineSettings, loadEngineSettings, saveEngineSettings, type EngineSettings } from '../settings/engines';
 import type { ContextMode } from '../core/context/types';
 import { NotesPanel } from '../notes/NotesPanel';
+import { EngineError } from '../core/errors';
 
 const SAMPLE = `The decision had surprised many voters. The government struggled to maintain public confidence after the announcement. Several ministers defended the policy.
 
@@ -34,7 +35,7 @@ He considered every option carefully. He finally made up his own mind. Several f
 function makeRequest(selection: ReaderSelection, mode: LanguageMode): LookupRequest {
   return {
     selection: selection.text, selection_type: selection.type,
-    sentence: selection.context.current, previous_sentence: selection.context.previous, next_sentence: selection.context.next,
+    sentence: selection.context.current, previous_sentence: selection.context.previous, next_sentence: selection.context.next, paragraph: selection.context.paragraph,
     language_mode: mode,
     learner: { native_language: 'vi', english_level: 'B2-C1' },
     options: { include_ipa: true, include_contrast: true, include_grammar: true, include_sentence_translation: true }
@@ -197,7 +198,11 @@ export function App() {
         setLookup(result);
         if (documentRecord) void isVocabularySaved(documentRecord.id, result).then(value => { if (!controller.signal.aborted) setSaved(value); });
       }
-    }).catch(() => { /* The immediate local result remains available. */ }); }, 150);
+    }).catch((failure: unknown) => {
+      if (controller.signal.aborted || immediate.difficulty.worth_learning || immediate.quick.lexical_unit) return;
+      if (failure instanceof EngineError && failure.code === 'QUOTA') setError('Online translation limit reached. Cached and offline meanings remain available.');
+      else if (failure instanceof EngineError && ['TIMEOUT', 'PROVIDER_DOWN', 'NETWORK'].includes(failure.code)) setError('Online translation is temporarily unavailable. You can continue reading.');
+    }); }, 150);
     controller.signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
   };
 

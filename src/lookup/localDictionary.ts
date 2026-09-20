@@ -1,20 +1,10 @@
 import type { LanguageMode, LookupRequest, LookupResponse } from './types';
 import { dictionaryRegistry } from './dictionary/registry';
+import { matchKnownExpression } from '../core/context/language-rules';
 
 function lexicalUnit(selection: string, sentence: string) {
-  const lower = sentence.toLowerCase();
-  if (/\b(?:mind|make up|made up)\b/.test(selection.toLowerCase()) && /(?:make|makes|made) up (?:\w+ )?(?:own )?mind/.test(lower)) {
-    return { type: 'idiom', text: "make up one's mind", meaning_en: 'make a decision', meaning_vi: 'đưa ra quyết định' };
-  }
-  if (/maintain public confidence/.test(lower) && ['maintain', 'confidence'].includes(selection.toLowerCase())) {
-    return { type: 'collocation', text: 'maintain public confidence', meaning_en: 'keep public confidence strong', meaning_vi: 'duy trì lòng tin của công chúng' };
-  }
-  if (/account(?:s)? (?:of|for)/.test(lower) && selection.toLowerCase().startsWith('account')) {
-    const isFor = /accounts? for/.test(lower);
-    const share = /accounts? for\s+(?:about |approximately |over |nearly )?\d+(?:\.\d+)?\s*(?:%|percent)/.test(lower);
-    return { type: isFor ? 'phrasal verb' : 'noun phrase', text: isFor ? 'account for' : 'account of an event', meaning_en: share ? 'constitute a share of a total' : isFor ? 'explain or constitute (depending on context)' : 'a report of an event', meaning_vi: share ? 'chiếm; tạo nên' : isFor ? 'giải thích; chiếm' : 'lời kể; bản tường thuật' };
-  }
-  return null;
+  const match = matchKnownExpression(selection, sentence);
+  return match && { type: match.type, text: match.text, meaning_en: match.meaningEn, meaning_vi: match.meaningVi };
 }
 
 export function localLookup(request: LookupRequest, useDictionary = true): LookupResponse {

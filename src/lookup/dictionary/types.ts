@@ -15,4 +15,5 @@ export interface DictionaryProvider {
   readonly id: string;
   readonly version: string;
   lookup(surface: string): DictionaryMatch | null;
+  lookupReverse?(surface: string): DictionaryMatch | null;
 }

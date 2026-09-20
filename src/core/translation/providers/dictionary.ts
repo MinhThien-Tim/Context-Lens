@@ -2,14 +2,13 @@ import { db } from '../../../db/database';
 import { dictionaryRegistry } from '../../../lookup/dictionary/registry';
 import { EngineError } from '../../errors';
 import type { TranslationInput, TranslationProvider } from '../types';
-const reverse: Record<string, string> = { 'điều kiện tiên quyết': 'prerequisite', 'lòng tin': 'confidence', 'duy trì': 'maintain', 'quyết định': 'decision' };
 export class DictionaryTranslationProvider implements TranslationProvider {
   id = 'dictionary'; priority = 20; tier = 'stable' as const; network = false; timeoutMs = 90;
   isAvailable() { return true; }
-  supports(source: string, target: string) { return (source === 'en' && target === 'vi') || (source === 'vi' && target === 'en'); }
+  supports(source: string, target: string) { return (source === 'en' && ['en', 'vi'].includes(target)) || (source === 'vi' && target === 'en'); }
   async translate(input: TranslationInput) {
-    const entry = input.sourceLang === 'en' ? dictionaryRegistry.lookup(input.text)?.entry : undefined;
-    const text = entry?.meaningsVi.join('; ') ?? (input.sourceLang === 'vi' ? reverse[input.text.toLocaleLowerCase().trim()] : undefined);
+    const entry = input.sourceLang === 'en' ? dictionaryRegistry.lookup(input.text)?.entry : dictionaryRegistry.lookupReverse(input.text)?.entry;
+    const text = input.sourceLang === 'en' && input.targetLang === 'en' ? entry?.definitionEn : input.sourceLang === 'en' ? entry?.meaningsVi.join('; ') : entry?.lemma;
     if (!text) throw new EngineError('UNSUPPORTED_LANGUAGE');
     return { text, sourceText: input.text, sourceLang: input.sourceLang, targetLang: input.targetLang, provider: this.id, offline: true,
       dictionary: entry ? { definition: entry.definitionEn, meanings: entry.meaningsVi, ipa: entry.ipa } : undefined };

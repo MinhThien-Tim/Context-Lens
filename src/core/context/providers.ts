@@ -5,7 +5,7 @@ import type { AiProvider } from '../../ai/provider';
 import type { AiSettings } from '../../settings/types';
 import type { EngineSettings } from '../../settings/engines';
 import { db } from '../../db/database';
-import { contextExplanationSchema } from './schema';
+import { contextProviderResponseSchema } from './schema';
 import { EngineError } from '../errors';
 import { postJson } from '../network';
 import type { ContextInput, ContextProvider } from './types';
@@ -28,7 +28,7 @@ export class HostedLiteProvider implements ContextProvider {
       if (count >= this.dailyLimit) throw new EngineError('QUOTA');
       await db.settings.put({ key, value: count + 1 });
     });
-    const result = contextExplanationSchema.safeParse(await postJson(this.endpoint, { selectedText: input.request.selection, sentence: input.request.sentence, previousSentence: input.request.previous_sentence, nextSentence: input.request.next_sentence, mode: input.mode, sourceLang: input.sourceLang, targetLang: input.targetLang }, input.signal));
+    const result = contextProviderResponseSchema.safeParse(await postJson(this.endpoint, { selectedText: input.request.selection, sentence: input.request.sentence, previousSentence: input.request.previous_sentence, nextSentence: input.request.next_sentence, mode: input.mode, sourceLang: input.sourceLang, targetLang: input.targetLang }, input.signal));
     if (!result.success) throw new EngineError('INVALID_RESPONSE');
     return result.data;
   }

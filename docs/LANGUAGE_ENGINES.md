@@ -45,6 +45,10 @@ Each cache has a 128-result memory limit. Persistent defaults: 5,000 translation
 
 ## Provider configuration
 
+### Managed Cloudflare pilot
+
+`npm run gateway:build` opts the frontend into the same-origin `/api/translate` service. A separate `google-unofficial` adapter follows local engines and can be disabled with the Online translation setting or Offline mode. The server uses an experimental Google GTX endpoint, SQLite-backed Durable Object admission, daily per-IP/global quotas, a persisted circuit breaker and no retry. Device cache remains first; no translation bodies are stored on the server. This supersedes the statement below that no experimental adapter ships, specifically for the opt-in pilot build. Deployment defaults to disabled. See `gateway/README.md` and `gateway/VERIFICATION.md`.
+
 ### Browser
 
 Feature-detected `Translator` API. Selection lookup only uses `availability() === 'available'`. **Prepare browser language model** is an explicit settings action that permits model download. Unsupported platforms/pairs fall through. No browser API enters reader UI components.
@@ -87,10 +91,10 @@ Notes live only in IndexedDB and are linked to a document, optional selected tex
 
 ## Verification and limits
 
-Regression coverage includes cache hits, fallback ordering, ignored-abort timeout, cancellation isolation, pair/provider cooldown, migration from v5, insert/read/eviction, local EN↔VI, ambiguous phrases, quota/offline fallback, sentence extraction, structured response validation, and explicit UI actions preserving quick text. Existing import, backup, vocabulary and reader tests remain in the suite. Run `npm test`, `npm run typecheck`, `npm run build`.
+Regression coverage includes cache hits, fallback ordering, ignored-abort timeout, cancellation isolation, pair/provider cooldown, migration from v5, insert/read/eviction, local EN↔VI, ambiguous phrases, quota/offline fallback, multi-sentence selection, paragraph extraction, strict structured-response validation, notes, and complete offline reading flows. Existing import, backup, vocabulary and reader tests remain in the suite. Run `npm test`, `npm run typecheck`, `npm run build`.
 
-No latency targets are claimed from hardware benchmarks; values above are budgets. Browser adapter tests use mocks, and live desktop smoke testing does not replace Android/iOS QA. Actual provider credentials, downloaded browser models and deployed gateways require environment-specific checks.
+Automated budgets require local dictionary p95 below 100 ms, warm memory-cache p95 below 50 ms, initial JavaScript below 350 KiB per entry asset, and initial CSS below 100 KiB. On the development machine the measured p95 values were 0.022 ms and 0.325 ms; the production build reported 259.1 KiB and 278.7 KiB initial JavaScript assets, 17.1 KiB CSS, with four heavy reader chunks kept lazy. These numbers are environment-specific. Browser adapter tests use mocks, and desktop smoke testing does not replace Android/iOS QA. Actual provider credentials, downloaded browser models and deployed gateways require environment-specific checks.
 
-The large existing dictionary is EN→VI. VI→EN ships a small seed fallback only; browser/public/configured translation is needed for broader reverse coverage. Heuristics deliberately cover a small set of confident patterns, not general offline grammar. No new notes editor or full local LLM runtime is bundled. Browser secret vault APIs are unavailable in this PWA: session storage remains default, persistent IndexedDB keys are opt-in and disclosed in Settings.
+The large existing dictionary is indexed EN→VI. VI→EN can reverse-search exact Vietnamese meanings in installed packs and uses a bounded memo cache; broad or approximate reverse translation still benefits from browser/public/configured providers. Heuristics deliberately cover a small set of confident patterns, including percentage and causal `account for`, `make up one's mind`, and `maintain public confidence`, rather than general offline grammar. The notes editor is local-only; no full local LLM runtime is bundled. Browser secret vault APIs are unavailable in this PWA: session storage remains default, persistent IndexedDB keys are opt-in and disclosed in Settings.
 
 Next improvements: expand licensed VI→EN packs, deploy and test a quota-enforcing hosted/gateway service, profile on physical mobile devices, and add further context rules only with disambiguation regression cases. The original adapter architecture was reviewed at https://github.com/ttop32/MouseTooltipTranslator; its fragile web endpoints were not copied.

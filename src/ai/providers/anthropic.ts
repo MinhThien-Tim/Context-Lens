@@ -1,7 +1,7 @@
 import type { AiProvider } from '../provider';
 import { providerFetch, ProviderError } from '../provider';
 import { buildContextPrompt, CONTEXT_SYSTEM_PROMPT } from '../prompt';
-import { contextExplanationSchema } from '../../core/context/schema';
+import { contextProviderResponseSchema } from '../../core/context/schema';
 import type { ContextExplanation, ContextInput } from '../../core/context/types';
 
 export class AnthropicProvider implements AiProvider {
@@ -20,7 +20,7 @@ export class AnthropicProvider implements AiProvider {
     const payload = await response.json() as { content?: Array<{ type?: string; text?: string }> };
     const content = payload.content?.find((part) => part.type === 'text')?.text;
     if (!content) throw new ProviderError('Anthropic returned an empty response.', 'invalid_response');
-    try { return contextExplanationSchema.parse(JSON.parse(content)); }
+    try { return contextProviderResponseSchema.parse(JSON.parse(content)); }
     catch { throw new ProviderError('Anthropic returned an invalid response.', 'invalid_response'); }
   }
 }

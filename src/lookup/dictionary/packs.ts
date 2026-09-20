@@ -40,6 +40,7 @@ class InstalledDictionaryPack implements DictionaryProvider {
   readonly id: string;
   readonly version: string;
   private readonly entries: Map<string, DictionaryEntry>;
+  private readonly reverseHits = new Map<string, DictionaryEntry | null>();
 
   constructor(record: DictionaryPackRecord) {
     this.id = record.id; this.version = record.version;
@@ -54,7 +55,20 @@ class InstalledDictionaryPack implements DictionaryProvider {
     }
     return null;
   }
+
+  lookupReverse(surface: string): DictionaryMatch | null {
+    const normalized = normalizeVietnamese(surface);
+    let entry = this.reverseHits.get(normalized);
+    if (entry === undefined) {
+      entry = [...this.entries.values()].find(candidate => candidate.meaningsVi.some(meaning => normalizeVietnamese(meaning) === normalized)) ?? null;
+      this.reverseHits.set(normalized, entry);
+      if (this.reverseHits.size > 256) this.reverseHits.delete(this.reverseHits.keys().next().value!);
+    }
+    return entry ? { entry, surface } : null;
+  }
 }
+
+function normalizeVietnamese(value: string): string { return value.normalize('NFC').toLocaleLowerCase('vi').trim().replace(/\s+/g, ' '); }
 
 export async function installDictionaryPack(input: unknown): Promise<DictionaryPackRecord> {
   const pack = dictionaryPackSchema.parse(input);

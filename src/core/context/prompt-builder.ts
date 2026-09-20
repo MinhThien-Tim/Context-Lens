@@ -10,6 +10,7 @@ export function boundedContext(input: ContextInput): ContextInput {
     sentence: request.sentence.slice(start, start + 3200),
     previous_sentence: deep ? request.previous_sentence?.slice(-500) ?? null : null,
     next_sentence: deep ? request.next_sentence?.slice(0, 500) ?? null : null,
+    paragraph: deep ? request.paragraph?.slice(0, 4000) : undefined,
     context_mode: input.mode, source_language: input.sourceLang, target_language: input.targetLang,
     options: { ...request.options, include_grammar: ['grammar', 'sentence-structure'].includes(input.mode), include_sentence_translation: input.mode === 'simplify' }
   } };

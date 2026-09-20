@@ -37,9 +37,10 @@ export class LookupService {
     this.configure(settings);
     const translated = await this.translation!.translate({ text: request.selection, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: request.selection_type, signal });
     const base = this.immediate(request, settings);
+    const translatedDefinition = settings.sourceLang === 'en' && settings.targetLang === 'en' ? translated.text : '';
     return { ...base, source: translated.cached ? 'cache' : translated.provider === 'browser' ? 'browser' : translated.offline ? 'offline' : 'translation',
       engine: { provider: translated.provider, cached: translated.cached, latencyMs: translated.latencyMs },
-      quick: base.quick.lexical_unit ? base.quick : { definition_en: settings.targetLang === 'en' ? translated.text : translated.dictionary?.definition ?? '',
+      quick: base.quick.lexical_unit ? base.quick : { definition_en: base.quick.definition_en || translated.dictionary?.definition || translatedDefinition,
         meaning_vi: settings.targetLang === 'vi' ? translated.dictionary?.meanings ?? [translated.text] : [], lexical_unit: null } };
   }
   async explain(request: LookupRequest, ai: AiSettings, settings = defaultEngineSettings, mode: ContextMode = 'meaning-in-context', signal?: AbortSignal): Promise<ContextResult & { result: LookupResponse }> {

@@ -17,7 +17,7 @@ const taskDirections: Record<ContextInput['mode'], string> = {
 export function buildContextPrompt(input: ContextInput): string {
   const payload = {
     task: input.mode, instruction: taskDirections[input.mode], selectedText: input.request.selection,
-    sentence: input.request.sentence, previousSentence: input.request.previous_sentence, nextSentence: input.request.next_sentence,
+    sentence: input.request.sentence, previousSentence: input.request.previous_sentence, nextSentence: input.request.next_sentence, paragraph: input.request.paragraph,
     sourceLang: input.sourceLang, targetLang: input.targetLang, displayLanguage: input.request.language_mode
   };
   return JSON.stringify(payload);

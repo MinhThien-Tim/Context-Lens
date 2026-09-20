@@ -1,7 +1,7 @@
 import type { AiProvider } from '../provider';
 import { providerFetch, ProviderError } from '../provider';
 import { buildContextPrompt, CONTEXT_SYSTEM_PROMPT } from '../prompt';
-import { contextExplanationJsonSchema, contextExplanationSchema } from '../../core/context/schema';
+import { contextExplanationJsonSchema, contextProviderResponseSchema } from '../../core/context/schema';
 import type { ContextExplanation, ContextInput } from '../../core/context/types';
 
 export interface CompatibleProviderConfig { apiKey: string; baseUrl: string; model: string }
@@ -25,7 +25,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
     const payload = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
     const content = payload.choices?.[0]?.message?.content;
     if (!content) throw new ProviderError('The provider returned an empty response.', 'invalid_response');
-    try { return contextExplanationSchema.parse(JSON.parse(content)); }
+    try { return contextProviderResponseSchema.parse(JSON.parse(content)); }
     catch { throw new ProviderError('The provider returned an invalid response.', 'invalid_response'); }
   }
 }

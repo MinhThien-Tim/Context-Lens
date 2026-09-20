@@ -4,7 +4,7 @@ import { boundedContext } from './prompt-builder';
 import type { ContextInput, ContextProvider, ContextResult } from './types';
 import { EngineError } from '../errors';
 const input: ContextInput = { sourceLang: 'en', targetLang: 'vi', mode: 'meaning-in-context', request: {
-  selection: 'account for', selection_type: 'phrase', sentence: 'Several factors account for the decline.', previous_sentence: null, next_sentence: null, language_mode: 'bilingual',
+  selection: 'take off', selection_type: 'phrase', sentence: 'The project began to take off.', previous_sentence: null, next_sentence: null, language_mode: 'bilingual',
   learner: { native_language: 'vi', english_level: 'B2' }, options: { include_ipa: true, include_contrast: true, include_grammar: true, include_sentence_translation: true }
 } };
 function cache() { const values = new Map<string, ContextResult>(); return { get: vi.fn(async (key: string) => values.get(key) ?? null), put: vi.fn(async (key: string, result: ContextResult) => { values.set(key, result); }) }; }
@@ -17,10 +17,23 @@ describe('ContextRouter', () => {
   });
   it('resolves percentage account for without AI and keeps ambiguous uses eligible', async () => {
     const ai = provider(); const router = new ContextRouter([ai], cache());
-    const result = await router.explain({ ...input, request: { ...input.request, sentence: 'The sector accounts for 40% of total output.' } });
+    const result = await router.explain({ ...input, request: { ...input.request, selection: 'account for', sentence: 'The sector accounts for 40% of total output.' } });
     expect(result.provider).toBe('heuristic'); expect(result.explanation.meaning).toContain('chiếm');
     expect(ai.explain).not.toHaveBeenCalled();
     await router.explain(input); expect(ai.explain).toHaveBeenCalledTimes(1);
+  });
+  it('distinguishes causal account for from percentage share without AI', async () => {
+    const ai = provider(); const router = new ContextRouter([ai], cache());
+    const result = await router.explain({ ...input, request: { ...input.request, selection: 'account for', sentence: 'Several factors account for the decline.' } });
+    expect(result.explanation.meaning).toContain('nguyên nhân'); expect(ai.explain).not.toHaveBeenCalled();
+  });
+  it('forwards an uncertain sense and reports unresolved when no provider can answer', async () => {
+    const uncertain = { ...input, request: { ...input.request, selection: 'account for', sentence: 'That might account for it.' } };
+    const ai = provider();
+    await new ContextRouter([ai], cache()).explain(uncertain);
+    expect(ai.explain).toHaveBeenCalledTimes(1);
+    const result = await new ContextRouter([], cache()).explain(uncertain);
+    expect(result).toMatchObject({ provider: 'unresolved', status: 'unavailable', explanation: { confidence: 0 } });
   });
   it('avoids AI for a simple word and a recognized idiom', async () => {
     const ai = provider(); const router = new ContextRouter([ai], cache());

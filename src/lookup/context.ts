@@ -2,12 +2,15 @@ export interface SentenceContext {
   previous: string | null;
   current: string;
   next: string | null;
+  paragraph?: string;
 }
 
 const sentenceSegmenter = typeof Intl !== 'undefined' && 'Segmenter' in Intl
   ? new Intl.Segmenter('en', { granularity: 'sentence' })
   : null;
 type SentenceSpan = { text: string; start: number; end: number };
+const NON_TERMINAL_ABBREVIATION = /\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|Mt|vs|etc|e\.g|i\.e)\.$/i;
+const SINGLE_INITIAL = /\b[A-Z]\.$/;
 let lastText = '';
 let lastSpans: SentenceSpan[] = [];
 function sentenceSpans(text: string): SentenceSpan[] {
@@ -18,7 +21,7 @@ function sentenceSpans(text: string): SentenceSpan[] {
   const merged: SentenceSpan[] = [];
   for (const span of raw) {
     const previous = merged.at(-1);
-    if (previous && /\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|vs|e\.g|i\.e|[A-Z])\.$/.test(previous.text)) {
+    if (previous && (NON_TERMINAL_ABBREVIATION.test(previous.text) || SINGLE_INITIAL.test(previous.text))) {
       previous.end = span.end; previous.text = text.slice(previous.start, previous.end).trim();
     } else merged.push({ ...span });
   }
@@ -28,15 +31,27 @@ function sentenceSpans(text: string): SentenceSpan[] {
 }
 
 export function sentenceContextAt(text: string, offset: number): SentenceContext {
-  const cleanOffset = Math.max(0, Math.min(offset, Math.max(0, text.length - 1)));
+  return sentenceContextForRange(text, offset, offset);
+}
+
+export function sentenceContextForRange(text: string, startOffset: number, endOffset: number): SentenceContext {
+  const cleanOffset = Math.max(0, Math.min(startOffset, Math.max(0, text.length - 1)));
+  const cleanEnd = Math.max(cleanOffset, Math.min(endOffset, text.length));
   const sentences = sentenceSpans(text);
   const found = sentences.findIndex((part) => cleanOffset >= part.start && cleanOffset < part.end);
   const index = found >= 0 ? found : Math.max(0, sentences.filter(part => part.start <= cleanOffset).length - 1);
-  const current = sentences[index] ?? { text: text.trim(), start: 0, end: text.length };
+  const lastSelected = Math.max(index, sentences.filter(part => part.start < cleanEnd).length - 1);
+  const selected = sentences.slice(index, lastSelected + 1);
+  const current = selected[0] ?? { text: text.trim(), start: 0, end: text.length };
+  const previousParagraphBreak = text.lastIndexOf('\n\n', current.start - 1);
+  const paragraphStart = previousParagraphBreak < 0 ? 0 : previousParagraphBreak + 2;
+  const paragraphBreak = text.indexOf('\n\n', selected.at(-1)?.end ?? current.end);
+  const paragraphEnd = paragraphBreak < 0 ? text.length : paragraphBreak;
   return {
     previous: index > 0 ? sentences[index - 1].text : null,
-    current: current.text,
-    next: index < sentences.length - 1 ? sentences[index + 1].text : null
+    current: selected.map(part => part.text).join(' ') || current.text,
+    next: lastSelected < sentences.length - 1 ? sentences[lastSelected + 1].text : null,
+    paragraph: text.slice(paragraphStart, paragraphEnd).trim() || undefined
   };
 }
 
@@ -65,5 +80,5 @@ export function wordAtPoint(range: Range): { text: string; offset: number } | nu
 }
 
 export function normalizeSelection(value: string): string {
-  return value.trim().replace(/\s+/g, ' ').replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+  return value.trim().replace(/\s+/g, ' ').replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}%]+$/gu, '');
 }

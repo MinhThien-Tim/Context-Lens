@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildContextPrompt } from '../../ai/prompt';
-import { contextExplanationSchema } from './schema';
+import { contextExplanationSchema, contextProviderResponseSchema } from './schema';
 import type { ContextInput } from './types';
 
 const input: ContextInput = { mode: 'grammar', sourceLang: 'en', targetLang: 'vi', request: {
@@ -16,6 +16,14 @@ describe('compact context contract', () => {
   it('rejects empty or undocumented output', () => {
     expect(contextExplanationSchema.safeParse({}).success).toBe(false);
     expect(contextExplanationSchema.safeParse({ meaning: 'x', quick: {} }).success).toBe(false);
+  });
+  it('compacts null placeholders from strict structured-output providers', () => {
+    const parsed = contextProviderResponseSchema.parse({
+      meaning: 'cất cánh', naturalTranslation: null, sense: null, grammar: null,
+      whyHere: null, notThisMeaning: null, pattern: null, example: null,
+      simplified: null, sentenceTranslation: null, chunks: null, confidence: 0.9
+    });
+    expect(parsed).toEqual({ meaning: 'cất cánh', confidence: 0.9 });
   });
   it('sends only bounded reading context and task fields', () => {
     const payload = JSON.parse(buildContextPrompt(input));

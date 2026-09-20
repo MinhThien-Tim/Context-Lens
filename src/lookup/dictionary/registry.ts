@@ -23,6 +23,14 @@ class DictionaryRegistry {
     return null;
   }
 
+  lookupReverse(surface: string): DictionaryMatch | null {
+    for (const provider of this.providers) {
+      const match = provider.lookupReverse?.(surface);
+      if (match) return match;
+    }
+    return null;
+  }
+
   versions(): string[] {
     return this.providers.map((provider) => `${provider.id}@${provider.version}`);
   }

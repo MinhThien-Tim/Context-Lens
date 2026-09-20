@@ -1,0 +1,11 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "context-lens-pilot",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-20",
+  "assets": { "directory": "../dist", "binding": "ASSETS", "not_found_handling": "single-page-application", "run_worker_first": ["/api/*"] },
+  "durable_objects": { "bindings": [{ "name": "QUOTA", "class_name": "TranslationGate" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["TranslationGate"] }],
+  "vars": { "ONLINE_ENABLED": "false" },
+  "observability": { "enabled": false }
+}

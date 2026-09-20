@@ -7,3 +7,6 @@ coverage
 *.tsbuildinfo
 tmp/
 .DS_Store
+.dev.vars
+.dev.vars.*
+.wrangler/

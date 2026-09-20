@@ -21,6 +21,14 @@ it('supports the minimum local EN/VI and VI/EN pairs', async () => {
   const dictionary = new DictionaryTranslationProvider();
   expect((await dictionary.translate({ text: 'prerequisite', sourceLang: 'en', targetLang: 'vi' })).text).toBe('điều kiện tiên quyết');
   expect((await dictionary.translate({ text: 'điều kiện tiên quyết', sourceLang: 'vi', targetLang: 'en' })).text).toBe('prerequisite');
+  expect((await dictionary.translate({ text: 'lòng tin', sourceLang: 'vi', targetLang: 'en' })).text).toBe('confidence');
+});
+it('returns an English definition for EN to EN without replacing it with Vietnamese', async () => {
+  const dictionary = new DictionaryTranslationProvider();
+  const result = await dictionary.translate({ text: 'prerequisite', sourceLang: 'en', targetLang: 'en' });
+  expect(result.text).toContain('required before');
+  expect(result.dictionary?.definition).toBe(result.text);
+  expect(result.text).not.toContain('tiên quyết');
 });
 it('validates gateway output and sends only selected text and language codes', async () => {
   const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ text: 'translated' })));
