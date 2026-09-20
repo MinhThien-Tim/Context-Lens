@@ -54,7 +54,7 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, onVi
   useEffect(() => {
     if (!pdf || !rootRef.current) return;
     requestAnimationFrame(() => rootRef.current?.querySelector(`[data-pdf-page="${location.page}"]`)?.scrollIntoView({ block: 'start' }));
-  }, [pdf]);
+  }, [pdf, location.page]);
 
   const activePages = useMemo(() => { const result = new Set<number>(); for (const page of visible) for (let value = page - 2; value <= page + 2; value++) if (pdf && value >= 1 && value <= pdf.numPages) result.add(value); return result; }, [visible, pdf]);
   if (passwordRequired) return <form class="pdf-state" onSubmit={event => { event.preventDefault(); submitPassword(); }}><h2>Password-protected PDF</h2><label>Password<input type="password" value={password} onInput={event => setPassword(event.currentTarget.value)} autoFocus /></label><button class="primary-button" type="submit">Open PDF</button></form>;

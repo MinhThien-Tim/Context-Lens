@@ -49,8 +49,8 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
       options.onProgress?.({ stage: 'extracting', completed: pageNumber - 1, total: pdf.numPages, label: `Extracting page ${pageNumber} of ${pdf.numPages}` });
       const page = await pdf.getPage(pageNumber);
       const text = await page.getTextContent();
-      const viewport = page.getViewport({ scale: 1 });
-      const structured = extractStructuredPage(pageNumber, text.items.filter((item): item is Extract<typeof item, { str: string }> => 'str' in item).map(item => ({ str: item.str, transform: item.transform, width: item.width, height: item.height, hasEOL: item.hasEOL, fontName: item.fontName })) as PdfSourceTextItem[], viewport.width, viewport.height);
+      const viewport = page.getViewport?.({ scale: 1 }) ?? { width: 612, height: 792 };
+      const structured = extractStructuredPage(pageNumber, text.items.filter((item): item is Extract<typeof item, { str: string }> => 'str' in item).map((item, index) => ({ str: item.str, transform: item.transform ?? [12, 0, 0, 12, 36, viewport.height - 36 - index * 16], width: item.width ?? item.str.length * 6, height: item.height ?? 12, hasEOL: item.hasEOL, fontName: item.fontName })) as PdfSourceTextItem[], viewport.width, viewport.height);
       const pageText = structured.plainText;
       pageOffsets.push(offset);
       pages.push(pageText);

@@ -292,6 +292,13 @@ export function App() {
 
   const jump = (offset: number) => {
     if (!documentRecord) return;
+    if (documentRecord.kind === 'pdf') {
+      const page = pdfPageForOffset(documentRecord.pageOffsets, offset);
+      const location: DocumentLocation = { kind: 'pdf', page, viewMode: pdfMode, textOffset: offset - pdfOffsetForPage(documentRecord.pageOffsets, page), absoluteOffset: offset, pageOffset: 0, scrollY: 0, progress: documentRecord.content.length ? offset / documentRecord.content.length : 0, updatedAt: Date.now() };
+      setCurrentLocation(location); setProgress(location.progress);
+      void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() });
+      return;
+    }
     jumpToOffset(offset);
     const location = locationAtOffset(documentRecord, offset);
     setCurrentLocation(location); setProgress(location.progress);
