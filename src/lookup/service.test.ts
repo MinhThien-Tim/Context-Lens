@@ -6,6 +6,7 @@ import { createContextCacheKey } from './cache';
 import { LookupService } from './service';
 import type { LookupRequest } from './types';
 import { validLookup } from '../test/fixtures';
+import { defaultEngineSettings } from '../settings/engines';
 
 const request: LookupRequest = {
   selection: 'maintain', selection_type: 'word', sentence: validLookup.context.sentence,
@@ -15,7 +16,30 @@ const request: LookupRequest = {
 };
 
 describe('lookup service offline cache', () => {
-  afterEach(async () => { vi.restoreAllMocks(); vi.unstubAllGlobals(); await Promise.all([db.lookups.clear(), db.contexts.clear(), db.translations.clear()]); });
+  afterEach(async () => { vi.restoreAllMocks(); vi.unstubAllGlobals(); await Promise.all([db.lookups.clear(), db.contexts.clear(), db.translations.clear(), db.sentenceAnalyses.clear()]); });
+  it('reuses explicit browser sentence translations for later local selections', async () => {
+    const translate = vi.fn().mockResolvedValue('Đào tạo là điều kiện tiên quyết.');
+    vi.stubGlobal('Translator', { availability: vi.fn().mockResolvedValue('available'), create: vi.fn().mockResolvedValue({ translate, destroy: vi.fn() }) });
+    const service = new LookupService();
+    const sentenceRequest = { ...request, selection: 'prerequisite', sentence: 'Training is a prerequisite.' };
+    await service.translateSentence(sentenceRequest);
+    await service.translateSentence(sentenceRequest);
+    expect(translate).toHaveBeenCalledTimes(1);
+    const quick = await service.quick(sentenceRequest);
+    expect(quick.deep.sentence_analysis.translation_vi).toBe('Đào tạo là điều kiện tiên quyết.');
+  });
+  it('honors the sentence-analysis cache opt-out', async () => {
+    const put = vi.spyOn(db.sentenceAnalyses, 'put');
+    await new LookupService().quick(request, { ...defaultEngineSettings, cacheSentenceAnalysis: false, quickEngine: 'offline' });
+    expect(put).not.toHaveBeenCalled();
+  });
+  it('publishes local English before a failing fallback and preserves the useful result', async () => {
+    const service = new LookupService();
+    const local = vi.fn();
+    const result = await service.quick({ ...request, selection: 'run', sentence: 'They run.' }, defaultEngineSettings, undefined, local);
+    expect(local).toHaveBeenCalledOnce();
+    expect(result.quick.definition_en).toContain('move on foot');
+  });
   it('returns a successful AI response even when cache reads and writes fail', async () => {
     vi.spyOn(db.contexts, 'get').mockRejectedValue(new Error('Storage unavailable'));
     vi.spyOn(db.contexts, 'put').mockRejectedValue(new Error('Storage full'));

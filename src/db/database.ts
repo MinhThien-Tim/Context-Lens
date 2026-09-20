@@ -5,6 +5,7 @@ import type { EngineCacheRecord } from '../core/cache';
 import type { TranslationResult } from '../core/translation/types';
 import type { ContextResult } from '../core/context/types';
 import { explanationFromLookup } from '../core/context/adapter';
+import type { SentenceAnalysis } from '../core/language/types';
 
 export interface DocumentRecord {
   id: string;
@@ -79,6 +80,7 @@ export class ContextLensDatabase extends Dexie {
   translations!: Table<EngineCacheRecord<TranslationResult>, string>;
   contexts!: Table<EngineCacheRecord<ContextResult>, string>;
   notes!: EntityTable<NoteRecord, 'id'>;
+  sentenceAnalyses!: Table<EngineCacheRecord<SentenceAnalysis>, string>;
 
   constructor(name = 'context-lens') {
     super(name);
@@ -142,6 +144,7 @@ export class ContextLensDatabase extends Dexie {
         }
       });
     });
+    this.version(9).stores({ sentenceAnalyses: 'key, lastUsedAt, provider, languagePair, hits' });
   }
 }
 

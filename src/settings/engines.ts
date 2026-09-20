@@ -7,6 +7,7 @@ export interface EngineSettings {
   automaticFallback: boolean;
   cacheTranslations: boolean;
   cacheContext: boolean;
+  cacheSentenceAnalysis: boolean;
   browserTranslation: boolean;
   offlineDictionary: boolean;
   googleProvider: boolean;
@@ -35,7 +36,7 @@ export const defaultTranslationProviderOrder: TranslationProviderId[] = ['browse
 export const defaultContextProviderOrder: ContextProviderId[] = ['user-api', 'hosted-lite', 'local'];
 export const defaultEngineSettings: EngineSettings = {
   sourceLang: 'en', targetLang: 'vi', quickEngine: 'auto', contextEngine: 'auto', automaticFallback: true,
-  cacheTranslations: true, cacheContext: true, browserTranslation: true, offlineDictionary: true,
+  cacheTranslations: true, cacheContext: true, cacheSentenceAnalysis: true, browserTranslation: true, offlineDictionary: true,
   googleProvider: false, bingProvider: false, publicTranslation: false, managedTranslation: true, experimentalProviders: false,
   hostedAiLite: false, userApi: true, localLlm: false,
   translationEndpoint: '', hostedEndpoint: '', localEndpoint: 'http://localhost:1234/v1', localModel: '',

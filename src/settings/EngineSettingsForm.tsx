@@ -2,18 +2,23 @@ import type { ContextProviderId, EngineSettings, TranslationProviderId } from '.
 import { useState } from 'preact/hooks';
 import { prepareBrowserTranslation } from '../core/translation/providers/browser';
 import type { ProviderHealthSnapshot } from '../core/translation/provider-health';
+import { loadWordNet, wordNetStatus, wordNetLicenseUrl } from '../core/language/wordnet';
 export function EngineSettingsForm({ value, onChange, health = [] }: { value: EngineSettings; onChange: (value: EngineSettings) => void; health?: ProviderHealthSnapshot[] }) {
   const [browserStatus, setBrowserStatus] = useState('');
+  const [englishStatus, setEnglishStatus] = useState(wordNetStatus());
   const set = <K extends keyof EngineSettings>(key: K, next: EngineSettings[K]) => onChange({ ...value, [key]: next });
   const checkbox = (key: keyof EngineSettings, label: string) => <label class="checkbox"><input type="checkbox" checked={Boolean(value[key])} onChange={event => onChange({ ...value, [key]: event.currentTarget.checked })} />{label}</label>;
   return <div class="api-form engine-settings">
     <h3>Language engines</h3>
+    <p>Offline English definitions: {englishStatus}. <a href={wordNetLicenseUrl} target="_blank" rel="noreferrer">WordNet license</a></p>
+    {englishStatus !== 'ready' && <button class="secondary-button" onClick={() => { setEnglishStatus('loading'); void loadWordNet().then(() => setEnglishStatus(wordNetStatus())).catch(() => setEnglishStatus('unavailable')); }}>Load English dictionary</button>}
     <label>Translation direction<select value={value.sourceLang} onChange={event => onChange({ ...value, sourceLang: event.currentTarget.value as 'en' | 'vi', targetLang: event.currentTarget.value === 'en' ? 'vi' : 'en' })}><option value="en">English → Vietnamese</option><option value="vi">Vietnamese → English</option></select></label>
     <label>Quick translation<select value={value.quickEngine} onChange={event => set('quickEngine', event.currentTarget.value as EngineSettings['quickEngine'])}><option value="auto">Auto (recommended)</option><option value="browser">Browser</option><option value="offline">Offline</option><option value="google">Google (configured gateway)</option><option value="bing">Bing (configured gateway)</option></select></label>
     <label>Context engine<select value={value.contextEngine} onChange={event => set('contextEngine', event.currentTarget.value as EngineSettings['contextEngine'])}><option value="auto">Auto (recommended)</option><option value="user-api">User API</option><option value="hosted-lite">Hosted Lite</option><option value="local">Local</option></select></label>
     <p class="privacy-note">Quick lookup uses cache and local engines first. Context and Grammar run only when you request them.</p>
     {checkbox('automaticFallback', 'Automatic fallback')}
     {checkbox('cacheTranslations', 'Cache translations')}{checkbox('cacheContext', 'Cache context')}
+    {checkbox('cacheSentenceAnalysis', 'Reuse sentence analyses offline')}
     {checkbox('offlineDictionary', 'Offline dictionary')}{checkbox('browserTranslation', 'Browser translation (ready models)')}
     {value.browserTranslation && <><button class="secondary-button" disabled={browserStatus === 'Preparing…'} onClick={() => { setBrowserStatus('Preparing…'); void prepareBrowserTranslation(value.sourceLang, value.targetLang).then(() => setBrowserStatus('Ready')).catch(() => setBrowserStatus('Unavailable on this browser or language pair')); }}>Prepare browser language model</button><small role="status">{browserStatus}</small></>}
     {checkbox('publicTranslation', 'Optional free web translation (MyMemory)')}

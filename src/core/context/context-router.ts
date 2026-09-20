@@ -10,15 +10,17 @@ import { estimateComplexity } from './complexity-estimator';
 import { heuristicContext } from './heuristic';
 import type { ContextInput, ContextProvider, ContextResult } from './types';
 import { explanationFromLookup } from './adapter';
-export const CONTEXT_VERSION = 'context-v4';
+import { LocalLanguageEngine } from '../language/local-language-engine';
+import { selectionInput } from '../language/adapter';
+export const CONTEXT_VERSION = 'context-v5';
 export function contextKey(input: ContextInput, family: string): string {
   return cacheKey([CONTEXT_VERSION, normalizeText(input.request.selection), normalizeText(input.request.sentence), input.request.previous_sentence, input.request.next_sentence, input.request.paragraph,
-    input.sourceLang, input.targetLang, input.request.language_mode, input.mode, family]);
+    input.sourceLang, input.targetLang, input.request.language_mode, input.mode, family, input.aiRequested ?? false]);
 }
 export class ContextRouter {
   private requests = new SharedRequests<ContextResult>();
   readonly health = new ProviderHealthManager();
-  constructor(private providers: ContextProvider[], private cache: ResultCache<ContextResult>, private fallback = true, private online = () => navigator.onLine, private legacyCache = false) {}
+  constructor(private providers: ContextProvider[], private cache: ResultCache<ContextResult>, private fallback = true, private online = () => navigator.onLine, private legacyCache = false, private local = new LocalLanguageEngine()) {}
   explain(raw: ContextInput): Promise<ContextResult> {
     const input = boundedContext(raw);
     const families = this.providers.map(provider => `${provider.family}:${provider.model}`);
@@ -35,7 +37,7 @@ export class ContextRouter {
         if (cached) return { ...cached, cached: true };
       }
       if (this.legacyCache && (!this.online() || !this.providers.length) && input.mode === 'meaning-in-context' && input.sourceLang === 'en' && input.targetLang === 'vi') {
-        for (const promptVersion of [CONTEXT_VERSION, 'context-v2']) {
+        for (const promptVersion of [CONTEXT_VERSION, 'context-v4', 'context-v2']) {
           const key = await createContextCacheKey({ selection: input.request.selection, sentence: input.request.sentence, languageMode: input.request.language_mode, promptVersion });
           const result = await findContextLookup(key).catch(() => null);
           checkAbort(signal);
@@ -45,9 +47,17 @@ export class ContextRouter {
       const heuristic = heuristicContext(input);
       const complexity = estimateComplexity(input.request.selection, input.request.sentence);
       const simple = input.mode === 'meaning-in-context' && input.sourceLang === 'en' && complexity.level === 'simple';
-      if (heuristic || simple) {
+      if (!input.aiRequested && (heuristic || simple)) {
         const result = heuristic ?? { explanation: explanationFromLookup(localLookup(input.request)), provider: 'dictionary' };
         await this.cache.put(localKey, result, result.provider, pair);
+        return result;
+      }
+      const local = input.sourceLang === 'en' ? await this.local.analyzeSelection(selectionInput(input.request, input.sourceLang, input.targetLang)) : undefined;
+      checkAbort(signal);
+      if (local?.sense && !input.aiRequested && input.mode === 'meaning-in-context' && local.confidence >= 0.6) {
+        const result: ContextResult = { explanation: { meaning: input.targetLang === 'vi' ? local.vietnamese?.contextualMeaning ?? local.vietnamese?.meaning : local.english?.definition,
+          sense: local.english?.definition, whyHere: local.sense.reasons.join('; '), confidence: local.confidence }, provider: 'local' };
+        await this.cache.put(localKey, result, 'local', pair);
         return result;
       }
       let status: ContextResult['status'] = this.online() ? 'unavailable' : 'offline';
@@ -71,6 +81,11 @@ export class ContextRouter {
       }
       const cached = await this.cache.get(availableKey);
       if (cached) return { ...cached, cached: true, status };
+      if (local?.sense && local.confidence >= 0.6) return { explanation: {
+        meaning: input.targetLang === 'vi' ? local.vietnamese?.meaning : local.english?.definition,
+        sense: local.english?.definition, whyHere: local.sense.reasons.join('; '), confidence: local.confidence,
+        grammar: local.grammar?.pattern ? { pattern: local.grammar.pattern, explanation: local.grammar.role ?? '' } : undefined
+      }, provider: 'local', status };
       return { explanation: {
         meaning: input.targetLang === 'vi' ? 'Chưa thể xác định nghĩa theo ngữ cảnh này với độ tin cậy đủ cao.' : 'The contextual meaning could not be determined with enough confidence.',
         confidence: 0

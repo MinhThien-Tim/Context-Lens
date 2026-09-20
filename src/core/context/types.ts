@@ -1,6 +1,7 @@
 import type { LookupRequest } from '../../lookup/types';
 export type ContextMode = 'meaning-in-context' | 'grammar' | 'phrase' | 'idiom' | 'simplify' | 'nuance' | 'word-sense' | 'sentence-structure';
 export interface ContextInput {
+  aiRequested?: boolean;
   request: LookupRequest;
   mode: ContextMode;
   sourceLang: string;

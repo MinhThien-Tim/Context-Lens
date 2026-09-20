@@ -2,6 +2,7 @@ export type LanguageMode = 'en' | 'vi' | 'bilingual';
 export type SelectionType = 'word' | 'phrase' | 'sentence';
 
 export interface LookupRequest {
+  selection_start?: number;
   context_mode?: import('../core/context/types').ContextMode;
   source_language?: string;
   target_language?: string;
@@ -22,6 +23,7 @@ export interface LookupRequest {
 }
 
 export interface LookupResponse {
+  lens?: import('../core/language/types').LensResult;
   request_id: string;
   language_mode: LanguageMode;
   selection: {

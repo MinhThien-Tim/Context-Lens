@@ -21,6 +21,10 @@ describe('engine settings', () => {
     expect(loaded.translationProviderOrder).toContain('browser');
     expect(loaded.contextProviderOrder).toEqual(['local', 'user-api', 'hosted-lite']);
   });
+  it('keeps local context isolated from all network AI even with automatic fallback', () => {
+    const providers = contextProviders({ ...defaultEngineSettings, contextEngine: 'local', hostedAiLite: true, hostedEndpoint: 'https://example.com' }, { ...defaultAiSettings, provider: 'gemini', apiKey: 'test' });
+    expect(providers.every(provider => !provider.network)).toBe(true);
+  });
   it('applies custom quick and context provider order', () => {
     const settings = { ...defaultEngineSettings, publicTranslation: true, translationProviderOrder: ['mymemory', 'dictionary', 'vocabulary', 'browser', 'google', 'bing'] as typeof defaultEngineSettings.translationProviderOrder,
       hostedAiLite: true, hostedEndpoint: 'https://example.com/context', localLlm: true, localModel: 'small', contextProviderOrder: ['local', 'hosted-lite', 'user-api'] as typeof defaultEngineSettings.contextProviderOrder };

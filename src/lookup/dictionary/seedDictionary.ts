@@ -39,10 +39,12 @@ export function lemmaCandidates(word: string): string[] {
   if (word.endsWith('ed') && word.length > 3) {
     candidates.push(word.slice(0, -2));
     candidates.push(word.slice(0, -1));
+    if (/([b-df-hj-np-tv-z])\1ed$/.test(word)) candidates.push(word.slice(0, -3));
   }
   if (word.endsWith('ing') && word.length > 5) {
     candidates.push(word.slice(0, -3));
     candidates.push(`${word.slice(0, -3)}e`);
+    if (/([b-df-hj-np-tv-z])\1ing$/.test(word)) candidates.push(word.slice(0, -4));
   }
   return [...new Set(candidates)];
 }

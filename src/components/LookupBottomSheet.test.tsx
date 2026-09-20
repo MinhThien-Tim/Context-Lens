@@ -26,6 +26,8 @@ it('requests context only on action and keeps quick text when a deep result arri
     act(() => render(<LookupBottomSheet {...props} />, host));
     expect(onExplain).not.toHaveBeenCalled();
     act(() => (host.querySelector('.explain-button') as HTMLButtonElement).click());
+    expect(onExplain).not.toHaveBeenCalled();
+    act(() => (host.querySelector('.ai-explain-button') as HTMLButtonElement).click());
     expect(onExplain).toHaveBeenCalledWith('meaning-in-context');
     const contextResult = { ...validLookup, request_id: 'new', quick: { ...validLookup.quick, definition_en: 'MUST NOT REPLACE QUICK' }, deep: { ...validLookup.deep, context_explanation_en: 'A deeper explanation.' } };
     act(() => render(<LookupBottomSheet {...props} contextResult={contextResult} />, host));

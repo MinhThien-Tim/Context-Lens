@@ -1,9 +1,13 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { BrowserTranslationProvider } from './browser';
-import { DictionaryTranslationProvider } from './dictionary';
+import { DictionaryTranslationProvider, VocabularyTranslationProvider } from './dictionary';
 import { GatewayTranslationProvider } from './gateway';
 import { PublicTranslationProvider } from './public';
 afterEach(() => vi.unstubAllGlobals());
+it('never presents Vietnamese saved vocabulary as an English definition or a composed sentence', async () => {
+  expect(new VocabularyTranslationProvider().supports('en', 'en')).toBe(false);
+  await expect(new DictionaryTranslationProvider().translate({ text: 'prerequisite', sourceLang: 'en', targetLang: 'vi', mode: 'sentence' })).rejects.toMatchObject({ code: 'UNSUPPORTED_LANGUAGE' });
+});
 it('feature detects browser translation and destroys the translator after use', async () => {
   vi.stubGlobal('Translator', undefined);
   const browser = new BrowserTranslationProvider(); expect(browser.isAvailable()).toBe(false);

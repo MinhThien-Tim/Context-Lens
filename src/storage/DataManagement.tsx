@@ -24,7 +24,7 @@ export function DataManagement({ onClose, onRestored }: { onClose: () => void; o
       {snapshot?.usage && snapshot.quota && snapshot.usage / snapshot.quota >= 0.8 && <p class="storage-warning" role="status">Storage is almost full. Clear AI cache or remove documents you no longer need.</p>}
       <div class="data-actions">
         <button class="secondary-button" onClick={async () => { const granted = await requestPersistentStorage(); setMessage(granted ? 'Persistent storage enabled.' : 'The browser did not grant persistent storage.'); refresh(); }}>Protect offline data</button>
-        <button class="secondary-button" onClick={async () => { await clearLookupCache(); setMessage('AI lookup cache cleared.'); refresh(); }}>Clear AI cache</button>
+        <button class="secondary-button" onClick={async () => { await clearLookupCache(); setMessage('Translation, sentence, and context caches cleared.'); refresh(); }}>Clear reading caches</button>
         <button class="secondary-button" onClick={async () => downloadBackup(await buildBackup())}>Export backup</button>
         <label class="secondary-button">Import backup<input class="visually-hidden" type="file" accept="application/json,.json" onChange={async (event) => {
           const file = event.currentTarget.files?.[0]; if (!file) return;

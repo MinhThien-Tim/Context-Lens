@@ -36,6 +36,7 @@ src/
   ai/                 provider contract, prompts, Gemini and compatible adapters
   app/                application composition and state
   components/         progressive quick/context bottom sheet
+  core/language/      local EN/EN + EN/VI, phrases, sentence cache, sense resolution
   core/translation/   typed translation router, provider registry, health, adapters
   core/context/       explicit context router, heuristics, bounded prompts, providers
   core/               bounded two-level cache, deadlines, shared requests, transport
@@ -54,12 +55,12 @@ extension/             optional Manifest V3 URL handoff extension
 The interaction pipeline is intentionally latency-first:
 
 1. Tap/select text and show a local result immediately.
-2. After a 150 ms stable-selection delay, TranslationRouter checks memory ? Dexie ? browser ? dictionary/vocabulary ? enabled network adapters.
+2. After a 150 ms stable-selection delay, LocalLanguageEngine reuses sentence analysis and returns contextual EN/VI. Only insufficient results continue through translation cache, dictionary/vocabulary, ready browser models, and enabled network adapters.
 3. Keep the quick card visible while reading.
-4. Only an explicit Context, Grammar, or More action invokes ContextRouter: cache ? deterministic rules ? configured context providers.
+4. Context and Grammar reveal local information. AI Explain or the AI task menu explicitly invokes ContextRouter. Translate sentence is a separate action. Switching EN/VI modes never repeats requests.
 5. Preserve the quick card on timeout, quota exhaustion, unsupported languages, cancellation, or provider failure.
 
-Dexie v8 adds separate translation/context caches and offline notes without replacing documents, vocabulary, dictionary packs, or legacy lookup records. Both caches use bounded memory and deferred, hit-weighted LRU cleanup. Context AI returns a compact task-specific explanation which is adapted to the existing reader UI. `npm run typecheck` runs TypeScript validation; this repository has no separate lint configuration.
+Dexie v9 adds reusable sentence analyses alongside translation/context caches and offline notes without replacing documents, vocabulary, dictionary packs, or legacy lookup records. Caches use bounded memory and deferred, hit-weighted LRU cleanup. Context AI returns a compact task-specific explanation adapted to the reader UI. `npm run typecheck` runs TypeScript validation; this repository has no separate lint configuration.
 
 Locations store both an absolute offset and normalized progress. PDF locations also track pages; EPUB locations track chapters with a reserved CFI field. This keeps restoration stable when viewport or typography changes. IndexedDB migrations are versioned and older documents are upgraded automatically.
 
@@ -72,7 +73,7 @@ API keys are session-only by default. Persistent keys are stored in this browser
 - Tap-to-look-up and native drag/long-press phrase selection
 - Previous/current/next sentence extraction without whole-document AI requests
 - Immediate bottom sheet with EN, VI, and EN + VI modes
-- Bundled English–Vietnamese offline dictionary plus curated English glosses and contextual phrase handling
+- Bundled English–Vietnamese dictionary and full compact WordNet 3.0 English definitions, synonyms and examples; curated bilingual contextual senses and phrase normalization
 - Gemini, Anthropic, and OpenAI-compatible direct-browser providers; OpenAI uses the compatible adapter
 - Separate translation/context settings and session/persistent key choices
 - Versioned full system prompt, strict Zod validation, and a complete provider JSON schema

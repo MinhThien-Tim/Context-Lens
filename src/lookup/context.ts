@@ -1,4 +1,5 @@
 export interface SentenceContext {
+  selectionStart?: number;
   previous: string | null;
   current: string;
   next: string | null;
@@ -8,7 +9,7 @@ export interface SentenceContext {
 const sentenceSegmenter = typeof Intl !== 'undefined' && 'Segmenter' in Intl
   ? new Intl.Segmenter('en', { granularity: 'sentence' })
   : null;
-type SentenceSpan = { text: string; start: number; end: number };
+export type SentenceSpan = { text: string; start: number; end: number };
 const NON_TERMINAL_ABBREVIATION = /\b(?:Mr|Mrs|Ms|Dr|Prof|Sr|Jr|St|Mt|vs|etc|e\.g|i\.e)\.$/i;
 const SINGLE_INITIAL = /\b[A-Z]\.$/;
 let lastText = '';
@@ -30,6 +31,11 @@ function sentenceSpans(text: string): SentenceSpan[] {
   return merged;
 }
 
+/** Lightweight boundaries only; does not analyze or translate the document. */
+export function buildSentenceIndex(text: string): SentenceSpan[] {
+  return sentenceSpans(text).map(span => ({ ...span }));
+}
+
 export function sentenceContextAt(text: string, offset: number): SentenceContext {
   return sentenceContextForRange(text, offset, offset);
 }
@@ -48,6 +54,7 @@ export function sentenceContextForRange(text: string, startOffset: number, endOf
   const paragraphBreak = text.indexOf('\n\n', selected.at(-1)?.end ?? current.end);
   const paragraphEnd = paragraphBreak < 0 ? text.length : paragraphBreak;
   return {
+    selectionStart: cleanOffset - current.start - (text.slice(current.start, current.end).length - text.slice(current.start, current.end).trimStart().length),
     previous: index > 0 ? sentences[index - 1].text : null,
     current: selected.map(part => part.text).join(' ') || current.text,
     next: lastSelected < sentences.length - 1 ? sentences[lastSelected + 1].text : null,

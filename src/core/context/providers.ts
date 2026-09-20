@@ -49,6 +49,7 @@ export function contextProviders(settings: EngineSettings, ai: AiSettings): Cont
   const order = new Map(settings.contextProviderOrder.map((id, index) => [id, index]));
   providers.sort((a, b) => (order.get(a.id as never) ?? 999) - (order.get(b.id as never) ?? 999));
   if (settings.contextEngine !== 'auto') {
+    if (settings.contextEngine === 'local') return providers.filter(provider => !provider.network);
     providers.sort((a, b) => Number(b.id === settings.contextEngine) - Number(a.id === settings.contextEngine));
     if (!settings.automaticFallback) return providers.filter(provider => provider.id === settings.contextEngine);
   }

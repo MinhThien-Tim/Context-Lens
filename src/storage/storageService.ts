@@ -17,7 +17,7 @@ export async function storageSnapshot(): Promise<StorageSnapshot> {
   const estimate = await navigator.storage?.estimate?.().catch(() => undefined);
   const persisted = await navigator.storage?.persisted?.().catch(() => undefined);
   return {
-    documents, vocabulary, cachedLookups: cachedLookups + await db.translations.count() + await db.contexts.count(), dictionaryPacks,
+    documents, vocabulary, cachedLookups: cachedLookups + await db.translations.count() + await db.contexts.count() + await db.sentenceAnalyses.count(), dictionaryPacks,
     usage: estimate?.usage ?? null, quota: estimate?.quota ?? null,
     persisted: persisted ?? null, notes
   };
@@ -30,14 +30,14 @@ export async function requestPersistentStorage(): Promise<boolean | null> {
 
 export async function clearLookupCache(): Promise<void> {
   clearEngineMemory();
-  await Promise.all([db.lookups.clear(), db.translations.clear(), db.contexts.clear()]);
+  await Promise.all([db.lookups.clear(), db.translations.clear(), db.contexts.clear(), db.sentenceAnalyses.clear()]);
 }
 
 export async function maintainStorageBudget(): Promise<boolean> {
   const estimate = await navigator.storage?.estimate?.().catch(() => undefined);
   if (!estimate?.usage || !estimate.quota || estimate.usage / estimate.quota < 0.85) return false;
   clearEngineMemory();
-  for (const table of [db.translations, db.contexts]) {
+  for (const table of [db.translations, db.contexts, db.sentenceAnalyses]) {
     const keys = await table.orderBy('lastUsedAt').limit(Math.ceil(await table.count() / 2)).primaryKeys();
     await table.bulkDelete(keys);
   }

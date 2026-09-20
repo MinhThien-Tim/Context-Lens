@@ -6,6 +6,7 @@ import type { ContextMode } from '../core/context/types';
 interface Props {
   contextResult?: LookupResponse | null;
   onExplain?: (mode: ContextMode) => void;
+  onTranslateSentence?: () => void;
   open: boolean;
   result: LookupResponse | null;
   loading: boolean;
@@ -51,10 +52,10 @@ export function LookupBottomSheet(props: Props) {
                 <div class="word-line"><strong>{result.selection.lemma}</strong><button class="icon-button" aria-label="Pronounce word" onClick={() => props.onSpeak(result.quick.lexical_unit?.text ?? result.selection.lemma)}>🔊</button><button class={`icon-button ${props.saved ? 'saved' : ''}`} aria-label={props.saved ? 'Remove saved word' : 'Save word'} aria-pressed={props.saved} onClick={props.onToggleSave}>{props.saved ? '★' : '☆'}</button>{props.onAddNote && <button class="icon-button" aria-label="Add note for selection" onClick={props.onAddNote}>✎</button>}</div>
                 <p>{[result.selection.part_of_speech, result.selection.ipa_uk].filter(Boolean).join(' · ')}</p>
               </div>
-              <span class={`source-pill ${result.source ?? 'ai'}`}>{props.loading ? 'Refining…' : result.source === 'offline' ? 'Offline' : result.source ?? 'AI'}</span>
+              <span class={`source-pill ${result.source ?? 'ai'}`}>{props.loading ? 'Refining…' : result.source === 'cache' ? 'Cached' : result.source === 'offline' ? 'Local' : result.source ?? 'AI'}</span>
             </header>
-            {showEn && <p class="meaning-en">{result.quick.definition_en || 'No English definition is available for this selection yet.'}</p>}
-            {showVi && <p class="meaning-vi">{result.quick.meaning_vi.length ? result.quick.meaning_vi.join(' · ') : 'Chưa có nghĩa tiếng Việt cho lựa chọn này.'}</p>}
+            {showEn && <div><small>English definition</small><p class="meaning-en">{result.quick.definition_en || 'No English definition is available for this selection yet.'}</p></div>}
+            {showVi && <div><small>{result.lens?.vietnamese?.senseAligned === false ? 'Vietnamese dictionary meanings' : 'Vietnamese'}</small><p class="meaning-vi">{result.quick.meaning_vi.length ? result.quick.meaning_vi.join(' · ') : 'Chưa có nghĩa tiếng Việt cho lựa chọn này.'}</p></div>}
             {result.quick.lexical_unit && (
               <div class="lexical-unit">
                 <span>In this sentence</span>
@@ -66,14 +67,21 @@ export function LookupBottomSheet(props: Props) {
             {props.error && <div class="lookup-error" role="status">{props.error} <button onClick={props.onOpenSettings}>Settings</button></div>}
             {props.debug && result.engine && <dl class="engine-debug"><div><dt>Provider</dt><dd>{result.engine.provider}</dd></div><div><dt>Cache</dt><dd>{result.engine.cached ? 'hit' : 'miss'}</dd></div>{result.engine.latencyMs !== undefined && <div><dt>Latency</dt><dd>{Math.round(result.engine.latencyMs)} ms</dd></div>}</dl>}
             <div class="context-actions">
-              <button class="explain-button" aria-expanded={deepOpen} onClick={() => { setDeepOpen(!deepOpen); if (!deepOpen) props.onExplain?.('meaning-in-context'); }}>Context <span>{deepOpen ? '⌄' : '›'}</span></button>
-              <button class="secondary-button" onClick={() => { setDeepOpen(true); props.onExplain?.('grammar'); }}>Grammar</button>
-              <select aria-label="More explanations" value="" onChange={event => { if (event.currentTarget.value) { setDeepOpen(true); props.onExplain?.(event.currentTarget.value as ContextMode); } }}><option value="">More…</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>
+              <button class="explain-button" aria-expanded={deepOpen} onClick={() => setDeepOpen(!deepOpen)}>Context <span>{deepOpen ? '⌄' : '›'}</span></button>
+              <button class="secondary-button" onClick={() => setDeepOpen(true)}>Grammar</button>
+              <button class="ai-explain-button secondary-button" onClick={() => { setDeepOpen(true); props.onExplain?.('meaning-in-context'); }}>AI Explain</button>
+              {props.onTranslateSentence && <button class="secondary-button" onClick={() => { setDeepOpen(true); props.onTranslateSentence?.(); }}>Translate sentence</button>}
+              <select aria-label="AI explanation type" value="" onChange={event => { if (event.currentTarget.value) { setDeepOpen(true); props.onExplain?.(event.currentTarget.value as ContextMode); } }}><option value="">AI: more…</option><option value="grammar">Grammar</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>
             </div>
             {deepOpen && deep && <div class="deep-explanation" aria-busy={props.loading}>
               {props.loading && <p role="status">Finding context…</p>}
               {props.contextResult && <p class="source-pill">{props.contextResult.source === 'ai' ? 'AI' : props.contextResult.source === 'cache' ? 'Cached' : 'Local'}</p>}
               <h3>Original sentence</h3><p>{result.context.sentence}</p>
+              {result.lens && <><p>Local confidence: {Math.round(result.lens.confidence * 100)}%</p>{result.lens.context.needsPreviousSentence && <p>{result.lens.context.previousSentence ? `Previous sentence: ${result.lens.context.previousSentence}` : 'The previous sentence may be needed to understand this reference.'}</p>}
+                {result.lens.sense?.reasons.length ? <p>{result.lens.sense.reasons.join(' · ')}</p> : null}
+                {showEn && result.lens.english?.synonyms?.length ? <p>Related words: {result.lens.english.synonyms.join(', ')}</p> : null}
+                {showEn && result.lens.english?.examples?.[0] && <p>Example: {result.lens.english.examples[0]}</p>}
+                {showEn && result.lens.context.simpleEnglish && <p>Simpler wording: {result.lens.context.simpleEnglish}</p>}</>}
               {showVi && deep.deep.sentence_analysis.translation_vi && <><h3>Vietnamese</h3><p class="meaning-vi">{deep.deep.sentence_analysis.translation_vi}</p></>}
               {showEn && deep.deep.context_explanation_en && <p>{deep.deep.context_explanation_en}</p>}
               {showVi && deep.deep.context_explanation_vi && <p>{deep.deep.context_explanation_vi}</p>}

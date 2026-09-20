@@ -45,7 +45,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
-        globPatterns: ['**/*.{js,css,html,svg,woff2}', 'assets/context-lens-en-vi-*.json', 'assets/ATTRIBUTION-*.md'],
+        globPatterns: ['**/*.{js,css,html,svg,woff2}', 'assets/context-lens-en-vi-*.json', 'assets/wordnet-*.json', 'assets/WORDNET-LICENSE-*.md', 'assets/ATTRIBUTION-*.md'],
         globIgnores: ['**/pdf-reader-*.js', '**/epub-reader-*.js', '**/docx-reader-*.js', '**/archive-runtime-*.js'],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
         runtimeCaching: [

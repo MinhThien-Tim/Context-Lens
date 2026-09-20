@@ -16,6 +16,10 @@ export function translationProviders(settings: EngineSettings): TranslationProvi
   const order = new Map(settings.translationProviderOrder.map((id, index) => [id, index]));
   providers.sort((a, b) => (order.get(a.id as never) ?? 999) - (order.get(b.id as never) ?? 999));
   providers.forEach((provider, index) => { provider.priority = (index + 1) * 10; });
+  // Auto exhausts offline lexical sources before ready browser models and network.
+  if (settings.quickEngine === 'auto') {
+    for (const provider of providers) provider.priority += provider.network ? 200 : provider.id === 'browser' ? 100 : 0;
+  }
   // Deployment opt-in only. Existing standalone builds never call an undeployed API.
   if (settings.managedTranslation && import.meta.env.VITE_MANAGED_TRANSLATION === 'true') {
     providers.push(new ManagedTranslationProvider('/api/translate'));

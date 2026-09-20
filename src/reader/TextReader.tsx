@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { normalizeSelection, sentenceContextAt, sentenceContextForRange, wordAtPoint } from '../lookup/context';
+import { buildSentenceIndex, normalizeSelection, sentenceContextAt, sentenceContextForRange, wordAtPoint } from '../lookup/context';
 
 export interface ReaderSelection {
   text: string;
@@ -26,6 +26,7 @@ export function TextReader({ content, safeHtml, onLookup, style }: { content: st
   const rootRef = useRef<HTMLElement>(null);
   const ignoreClick = useRef(false);
   const [pendingSelection, setPendingSelection] = useState<ReaderSelection | null>(null);
+  useEffect(() => { buildSentenceIndex(rootRef.current?.textContent ?? content); }, [content, safeHtml]);
 
   const readSelectedPhrase = (): ReaderSelection | null => {
     const selection = window.getSelection();
@@ -52,7 +53,7 @@ export function TextReader({ content, safeHtml, onLookup, style }: { content: st
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed) { setPendingSelection(null); return; }
       clearTimeout(selectionTimer);
-      selectionTimer = window.setTimeout(captureSelection, 80);
+      selectionTimer = window.setTimeout(captureSelection, 150);
     };
     document.addEventListener('selectionchange', onSelectionChange);
     return () => { clearTimeout(selectionTimer); document.removeEventListener('selectionchange', onSelectionChange); };

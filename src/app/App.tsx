@@ -25,6 +25,7 @@ import { defaultEngineSettings, loadEngineSettings, saveEngineSettings, type Eng
 import type { ContextMode } from '../core/context/types';
 import { NotesPanel } from '../notes/NotesPanel';
 import { EngineError } from '../core/errors';
+import { loadWordNet } from '../core/language/wordnet';
 
 const SAMPLE = `The decision had surprised many voters. The government struggled to maintain public confidence after the announcement. Several ministers defended the policy.
 
@@ -35,6 +36,7 @@ He considered every option carefully. He finally made up his own mind. Several f
 function makeRequest(selection: ReaderSelection, mode: LanguageMode): LookupRequest {
   return {
     selection: selection.text, selection_type: selection.type,
+    selection_start: selection.context.selectionStart,
     sentence: selection.context.current, previous_sentence: selection.context.previous, next_sentence: selection.context.next, paragraph: selection.context.paragraph,
     language_mode: mode,
     learner: { native_language: 'vi', english_level: 'B2-C1' },
@@ -43,6 +45,7 @@ function makeRequest(selection: ReaderSelection, mode: LanguageMode): LookupRequ
 }
 
 export function App() {
+  useEffect(() => { void loadWordNet().catch(() => { /* Pack availability is shown in engine settings; curated entries remain usable. */ }); }, []);
   const [documentRecord, setDocumentRecord] = useState<DocumentRecord | null>(null);
   const [draft, setDraft] = useState(SAMPLE);
   const [title, setTitle] = useState('Untitled reading');
@@ -193,7 +196,9 @@ export function App() {
     setLookup(immediate); setSaved(false);
     if (documentRecord) void isVocabularySaved(documentRecord.id, immediate).then(value => { if (!controller.signal.aborted) setSaved(value); });
     // A stable selection delay avoids network calls during repeated mobile selection changes.
-    const timer = window.setTimeout(() => { void lookupService.quick(request, engines, controller.signal).then((result) => {
+    const timer = window.setTimeout(() => { void lookupService.quick(request, engines, controller.signal, local => {
+      if (!controller.signal.aborted) setLookup(local);
+    }).then((result) => {
       if (result && !controller.signal.aborted) {
         setLookup(result);
         if (documentRecord) void isVocabularySaved(documentRecord.id, result).then(value => { if (!controller.signal.aborted) setSaved(value); });
@@ -222,7 +227,21 @@ export function App() {
 
   const changeMode = (mode: LanguageMode) => {
     const next = { ...preferences, languageMode: mode }; setPreferences(next);
-    if (activeSelection) runLookup(activeSelection, mode);
+    setLookup(current => current ? { ...current, language_mode: mode } : current);
+    setContextResult(current => current ? { ...current, language_mode: mode } : current);
+  };
+  const translateSelectedSentence = () => {
+    if (!activeSelection || !lookup) return;
+    contextRequestRef.current?.abort();
+    const controller = new AbortController(); contextRequestRef.current = controller;
+    setLoading(true); setError(null);
+    void lookupService.translateSentence(makeRequest(activeSelection, preferences.languageMode), engineSettings, controller.signal).then(translation => {
+      if (controller.signal.aborted) return;
+      setContextResult({ ...lookup, source: translation.cached ? 'cache' : translation.provider === 'browser' ? 'browser' : 'translation',
+        deep: { ...lookup.deep, sentence_analysis: { ...lookup.deep.sentence_analysis, translation_vi: translation.targetLang === 'vi' ? translation.text : '' },
+          context_explanation_en: translation.targetLang === 'en' ? translation.text : lookup.deep.context_explanation_en } });
+    }).catch(() => { if (!controller.signal.aborted) setError('Sentence translation is unavailable. Local word meanings remain available.'); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
   };
   const saveSetup = async (settings: AiSettings, engines = engineSettings) => {
     await saveAiSettings(settings);
@@ -283,7 +302,7 @@ export function App() {
       <div class="progress-line" role="progressbar" aria-label="Reading progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}><span style={{ width: `${progress * 100}%` }} /></div>
       {documentRecord.source && <div class="reader-source">{documentRecord.source.author && <span>{documentRecord.source.author}</span>}{documentRecord.source.siteName && <span>{documentRecord.source.siteName}</span>}{documentRecord.source.url && <a href={documentRecord.source.url} target="_blank" rel="noreferrer noopener">Original ↗</a>}</div>}
       <TextReader content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} />
-      <LookupBottomSheet debug={engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={() => { requestRef.current?.abort(); contextRequestRef.current?.abort(); setLookupOpen(false); }} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary()} onAddNote={() => { setLookupOpen(false); setShowNotes(true); }} saved={saved} />
+      <LookupBottomSheet debug={engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={() => { requestRef.current?.abort(); contextRequestRef.current?.abort(); setLookupOpen(false); }} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary()} onAddNote={() => { setLookupOpen(false); setShowNotes(true); }} saved={saved} />
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
       {showNotes && <NotesPanel document={documentRecord} selection={activeSelection} onClose={() => setShowNotes(false)} />}
     </div>

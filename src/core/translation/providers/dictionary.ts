@@ -7,6 +7,7 @@ export class DictionaryTranslationProvider implements TranslationProvider {
   isAvailable() { return true; }
   supports(source: string, target: string) { return (source === 'en' && ['en', 'vi'].includes(target)) || (source === 'vi' && target === 'en'); }
   async translate(input: TranslationInput) {
+    if (input.mode === 'sentence') throw new EngineError('UNSUPPORTED_LANGUAGE');
     const entry = input.sourceLang === 'en' ? dictionaryRegistry.lookup(input.text)?.entry : dictionaryRegistry.lookupReverse(input.text)?.entry;
     const text = input.sourceLang === 'en' && input.targetLang === 'en' ? entry?.definitionEn : input.sourceLang === 'en' ? entry?.meaningsVi.join('; ') : entry?.lemma;
     if (!text) throw new EngineError('UNSUPPORTED_LANGUAGE');
@@ -16,6 +17,7 @@ export class DictionaryTranslationProvider implements TranslationProvider {
 }
 export class VocabularyTranslationProvider extends DictionaryTranslationProvider {
   id = 'vocabulary'; priority = 21;
+  supports(source: string, target: string) { return source === 'en' && target === 'vi'; }
   async translate(input: TranslationInput) {
     if (input.sourceLang !== 'en') throw new EngineError('UNSUPPORTED_LANGUAGE');
     const entry = await db.vocabulary.where('lemma').equals(input.text.toLowerCase().trim()).first();
