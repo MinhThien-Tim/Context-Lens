@@ -127,6 +127,8 @@ button { cursor:pointer; } button:disabled { cursor:default; }
 .pdf-reading-scroll { flex:1; min-height:0; overflow:auto; scroll-padding-top:12px; }
 .pdf-reading-page { width:min(100%,760px); margin:0 auto; padding:20px max(18px,env(safe-area-inset-right)) 42px max(18px,env(safe-area-inset-left)); border-bottom:1px solid var(--border); }
 .pdf-reading-page>header { margin-bottom:22px; color:var(--muted); font:600 11px/1.2 system-ui,sans-serif; letter-spacing:.08em; text-transform:uppercase; }
+.pdf-reading-content,.pdf-reading-content * { -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
+.pdf-reading-content { cursor:text; }
 .pdf-reading-content h1,.pdf-reading-content h2,.pdf-reading-content h3 { margin:1.2em 0 .55em; line-height:1.25; }
 .pdf-reading-content h1:first-child,.pdf-reading-content h2:first-child,.pdf-reading-content h3:first-child { margin-top:0; }
 .pdf-reading-content p,.pdf-reading-content blockquote,.pdf-reading-content ul { margin:0 0 1.25em; }
