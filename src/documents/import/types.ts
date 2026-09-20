@@ -1,5 +1,6 @@
 import type { DocumentLocation } from '../location';
 import type { DocumentRecord } from '../../db/database';
+import type { PdfStructuredPage } from '../pdf/types';
 
 export interface ImportedDocument {
   toc?: DocumentRecord['toc'];
@@ -9,6 +10,7 @@ export interface ImportedDocument {
   data?: Blob;
   safeHtml?: string;
   pageOffsets?: number[];
+  pdfPages?: PdfStructuredPage[];
   chapterOffsets?: number[];
   source?: DocumentRecord['source'];
   location: DocumentLocation;

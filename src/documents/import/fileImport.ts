@@ -1,6 +1,8 @@
 import { htmlSections, textSections, pdfSections, epubSections } from '../sections';
 import { initialTextLocation } from '../location';
 import { ImportError, type ImportedDocument, type ImportOptions } from './types';
+import { extractStructuredPage, shiftStructuredPage } from '../pdf/extractStructuredPages';
+import type { PdfSourceTextItem, PdfStructuredPage } from '../pdf/types';
 
 const MAX_TEXT_BYTES = 5 * 1024 * 1024;
 const MAX_BOOK_BYTES = 50 * 1024 * 1024;
@@ -39,6 +41,7 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
     const pdf = await loadingTask.promise;
     const metadata = await pdf.getMetadata().catch(() => null);
     const pages: string[] = [];
+    const pdfPages: PdfStructuredPage[] = [];
     const pageOffsets: number[] = [];
     let offset = 0;
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
@@ -46,9 +49,12 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
       options.onProgress?.({ stage: 'extracting', completed: pageNumber - 1, total: pdf.numPages, label: `Extracting page ${pageNumber} of ${pdf.numPages}` });
       const page = await pdf.getPage(pageNumber);
       const text = await page.getTextContent();
-      const pageText = text.items.map((item) => 'str' in item ? item.str : '').join(' ').replace(/\s+/g, ' ').trim();
+      const viewport = page.getViewport({ scale: 1 });
+      const structured = extractStructuredPage(pageNumber, text.items.filter((item): item is Extract<typeof item, { str: string }> => 'str' in item).map(item => ({ str: item.str, transform: item.transform, width: item.width, height: item.height, hasEOL: item.hasEOL, fontName: item.fontName })) as PdfSourceTextItem[], viewport.width, viewport.height);
+      const pageText = structured.plainText;
       pageOffsets.push(offset);
       pages.push(pageText);
+      pdfPages.push(shiftStructuredPage(structured, offset));
       offset += pageText.length + 2;
       page.cleanup();
     }
@@ -64,7 +70,7 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
     const info = metadata?.info as { Title?: string } | undefined;
     return {
       title: info?.Title?.trim() || baseName(file.name), kind: 'pdf', content, data: file,
-      pageOffsets, toc, location: { kind: 'pdf', page: 1, pageOffset: 0, textOffset: 0, scrollY: 0, progress: 0, updatedAt: Date.now() }
+      pageOffsets, pdfPages, toc, location: { kind: 'pdf', page: 1, pageOffset: 0, textOffset: 0, scrollY: 0, progress: 0, updatedAt: Date.now() }
     };
   } catch (error) {
     if (error instanceof ImportError) throw error;

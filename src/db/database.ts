@@ -7,6 +7,7 @@ import type { TranslationResult } from '../core/translation/types';
 import type { ContextResult } from '../core/context/types';
 import { explanationFromLookup } from '../core/context/adapter';
 import type { SentenceAnalysis } from '../core/language/types';
+import type { PdfStructuredPage } from '../documents/pdf/types';
 
 export interface DocumentRecord {
   toc?: DocumentSection[];
@@ -17,6 +18,7 @@ export interface DocumentRecord {
   data?: Blob;
   safeHtml?: string;
   pageOffsets?: number[];
+  pdfPages?: PdfStructuredPage[];
   chapterOffsets?: number[];
   source?: { url?: string; author?: string; siteName?: string };
   createdAt: number;
