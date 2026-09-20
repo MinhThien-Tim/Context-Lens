@@ -13,6 +13,8 @@ import { db, defaultPreferences, loadPreferences, savePreferences, type AppPrefe
 import { TextReader, type ReaderSelection } from '../reader/TextReader';
 import { PdfViewer } from '../reader/pdf/PdfViewer';
 import { pdfOffsetForPage, pdfPageForOffset } from '../reader/pdf/navigation';
+import { PdfReadingView } from '../reader/pdf-reading/PdfReadingView';
+import { pdfHasReadableText } from '../reader/pdf-reading/structuredPages';
 import { ApiSettings } from '../settings/ApiSettings';
 import { loadAiSettings, saveAiSettings } from '../settings/store';
 import { defaultAiSettings, type AiSettings } from '../settings/types';
@@ -91,6 +93,8 @@ export function App() {
   const [showVocabulary, setShowVocabulary] = useState(false);
   const [showDataManagement, setShowDataManagement] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const preferredPdfMode = desktop ? preferences.pdfViewMode : preferences.pdfMobileViewMode;
+  const pdfMode = documentRecord?.kind === 'pdf' && preferredPdfMode === 'reading' && !pdfHasReadableText(documentRecord) ? 'original' : preferredPdfMode;
   useEffect(() => { if (!desktop && (lookupOpen || showNotes)) setContentsOpen(false); }, [desktop, lookupOpen, showNotes]);
   const requestRef = useRef<AbortController | null>(null);
   const contextRequestRef = useRef<AbortController | null>(null);
@@ -137,7 +141,7 @@ export function App() {
 
   useEffect(() => {
     if (!documentRecord) return;
-    const originalPdf = documentRecord.kind === 'pdf' && preferences.pdfViewMode === 'original';
+    const originalPdf = documentRecord.kind === 'pdf' && pdfMode === 'original';
     if (!originalPdf) restoreTextLocation(documentRecord);
     setProgress(documentRecord.location.progress);
     setCurrentLocation(documentRecord.location);
@@ -158,7 +162,7 @@ export function App() {
       document.removeEventListener('visibilitychange', onVisibility);
       persist.flush();
     };
-  }, [documentRecord?.id, preferences.pdfViewMode]);
+  }, [documentRecord?.id, pdfMode]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = preferences.theme;
@@ -301,7 +305,7 @@ export function App() {
     setLookupOpen(false); if (!desktop) setContentsOpen(false); setShowNotes(true);
   };
   const changePdfViewMode = (mode: 'original' | 'reading') => {
-    if (!documentRecord || documentRecord.kind !== 'pdf' || mode === preferences.pdfViewMode) return;
+    if (!documentRecord || documentRecord.kind !== 'pdf' || mode === pdfMode || (mode === 'reading' && !pdfHasReadableText(documentRecord))) return;
     const offset = currentLocation.absoluteOffset ?? (currentLocation.kind === 'pdf' ? pdfOffsetForPage(documentRecord.pageOffsets, currentLocation.page) : 0);
     const page = pdfPageForOffset(documentRecord.pageOffsets, offset);
     const nextLocation: DocumentLocation = mode === 'original'
@@ -309,7 +313,7 @@ export function App() {
       : { kind: 'pdf', page, absoluteOffset: offset, scrollY: 0, progress: documentRecord.content.length ? offset / documentRecord.content.length : 0, updatedAt: Date.now() };
     setCurrentLocation(nextLocation); setProgress(nextLocation.progress);
     setDocumentRecord({ ...documentRecord, location: nextLocation });
-    setPreferences(current => ({ ...current, pdfViewMode: mode }));
+    setPreferences(current => desktop ? { ...current, pdfViewMode: mode } : { ...current, pdfMobileViewMode: mode });
     void db.documents.update(documentRecord.id, { location: nextLocation, updatedAt: Date.now() });
   };
   useEffect(() => {
@@ -354,7 +358,7 @@ export function App() {
     <ReaderShell contentsOpen={contentsOpen} contextOpen={lookupOpen || showNotes}>
       {!online && <div class="reader-offline" role="status">Offline</div>}
       <ReaderToolbar title={documentRecord.title} contentsOpen={contentsOpen} onBack={() => void closeDocument()} onContents={() => setContentsOpen(!contentsOpen)} onNote={() => openNotes(null)} onSettings={() => setShowReaderSettings(!showReaderSettings)} onEngines={() => setShowApiSettings(true)}>
-        {desktop && documentRecord.kind === 'pdf' && <div class="pdf-mode-switch" role="group" aria-label="PDF view mode"><button aria-pressed={preferences.pdfViewMode === 'original'} onClick={() => changePdfViewMode('original')}>Original</button><button aria-pressed={preferences.pdfViewMode === 'reading'} onClick={() => changePdfViewMode('reading')}>Reading</button></div>}
+        {desktop && documentRecord.kind === 'pdf' && <div class="pdf-mode-switch" role="group" aria-label="PDF view mode"><button aria-pressed={pdfMode === 'original'} onClick={() => changePdfViewMode('original')}>Original</button><button aria-pressed={pdfMode === 'reading'} disabled={!pdfHasReadableText(documentRecord)} onClick={() => changePdfViewMode('reading')}>Reading</button></div>}
         <DocumentPosition document={documentRecord} location={currentLocation} onOpen={() => setGoToOpen(true)} />
         {showReaderSettings && <ReaderSettings value={preferences} onChange={setPreferences} onClose={() => setShowReaderSettings(false)} />}
       </ReaderToolbar>
@@ -364,8 +368,10 @@ export function App() {
       <div class="progress-line" role="progressbar" aria-label="Reading progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}><span style={{ width: `${progress * 100}%` }} /></div>
       <div class="reader-viewport">
       {documentRecord.source && <div class="reader-source">{documentRecord.source.author && <span>{documentRecord.source.author}</span>}{documentRecord.source.siteName && <span>{documentRecord.source.siteName}</span>}{documentRecord.source.url && <a href={documentRecord.source.url} target="_blank" rel="noreferrer noopener">Original ↗</a>}</div>}
-      {documentRecord.kind === 'pdf' && preferences.pdfViewMode === 'original' && currentLocation.kind === 'pdf'
+      {documentRecord.kind === 'pdf' && pdfMode === 'original' && currentLocation.kind === 'pdf'
         ? <PdfViewer documentRecord={documentRecord} location={currentLocation} zoomMode={desktop ? preferences.pdfZoomMode : 'fit-width'} onZoomMode={pdfZoomMode => setPreferences(current => ({ ...current, pdfZoomMode }))} onViewMode={() => changePdfViewMode('reading')} onLocation={location => { setCurrentLocation(location); setProgress(location.progress); void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() }); }} onLookup={runLookup} onAddNote={selection => openNotes(selection)} />
+        : documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf'
+        ? <PdfReadingView documentRecord={documentRecord} location={currentLocation} style={readerStyle} onOriginal={() => changePdfViewMode('original')} onLocation={location => { setCurrentLocation(location); setProgress(location.progress); void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() }); }} />
         : <TextReader offsets={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets : documentRecord.chapterOffsets} onAddNote={selection => openNotes(selection)} content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} />}
       </div>
       <LookupBottomSheet selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} debug={engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={() => { requestRef.current?.abort(); contextRequestRef.current?.abort(); setLookupOpen(false); }} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary()} onAddNote={() => openNotes(activeSelection)} saved={saved} />

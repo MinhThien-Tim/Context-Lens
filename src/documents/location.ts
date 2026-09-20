@@ -13,6 +13,7 @@ export interface PdfDocumentLocation {
   absoluteOffset?: number;
   kind: 'pdf';
   page: number;
+  viewMode?: 'original' | 'reading';
   pageOffset?: number;
   textOffset?: number;
   scrollY: number;

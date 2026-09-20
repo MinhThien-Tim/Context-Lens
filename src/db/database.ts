@@ -164,6 +164,7 @@ export interface AppPreferences {
   fontFamily: 'serif' | 'sans';
   theme: 'light' | 'dark' | 'system';
   pdfViewMode: 'original' | 'reading';
+  pdfMobileViewMode: 'original' | 'reading';
   pdfZoomMode: 'fit-width' | 'fit-page' | 'custom';
 }
 
@@ -174,6 +175,7 @@ export const defaultPreferences: AppPreferences = {
   fontFamily: 'serif',
   theme: 'system',
   pdfViewMode: 'original',
+  pdfMobileViewMode: 'reading',
   pdfZoomMode: 'fit-page'
 };
 
