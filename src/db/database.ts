@@ -161,6 +161,8 @@ export interface AppPreferences {
   lineHeight: number;
   fontFamily: 'serif' | 'sans';
   theme: 'light' | 'dark' | 'system';
+  pdfViewMode: 'original' | 'reading';
+  pdfZoomMode: 'fit-width' | 'fit-page' | 'custom';
 }
 
 export const defaultPreferences: AppPreferences = {
@@ -168,7 +170,9 @@ export const defaultPreferences: AppPreferences = {
   fontSize: 19,
   lineHeight: 1.75,
   fontFamily: 'serif',
-  theme: 'system'
+  theme: 'system',
+  pdfViewMode: 'original',
+  pdfZoomMode: 'fit-page'
 };
 
 export async function loadPreferences(): Promise<AppPreferences> {

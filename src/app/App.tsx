@@ -11,6 +11,8 @@ import { LookupBottomSheet } from '../components/LookupBottomSheet';
 import { ReaderSettings } from '../components/ReaderSettings';
 import { db, defaultPreferences, loadPreferences, savePreferences, type AppPreferences, type DocumentRecord } from '../db/database';
 import { TextReader, type ReaderSelection } from '../reader/TextReader';
+import { PdfViewer } from '../reader/pdf/PdfViewer';
+import { pdfOffsetForPage, pdfPageForOffset } from '../reader/pdf/navigation';
 import { ApiSettings } from '../settings/ApiSettings';
 import { loadAiSettings, saveAiSettings } from '../settings/store';
 import { defaultAiSettings, type AiSettings } from '../settings/types';
@@ -135,7 +137,8 @@ export function App() {
 
   useEffect(() => {
     if (!documentRecord) return;
-    restoreTextLocation(documentRecord);
+    const originalPdf = documentRecord.kind === 'pdf' && preferences.pdfViewMode === 'original';
+    if (!originalPdf) restoreTextLocation(documentRecord);
     setProgress(documentRecord.location.progress);
     setCurrentLocation(documentRecord.location);
     const persist = debounce(() => {
@@ -146,7 +149,7 @@ export function App() {
     const onScroll = () => persist.run();
     const onPageHide = () => persist.flush();
     const onVisibility = () => { if (document.visibilityState === 'hidden') persist.flush(); };
-    window.addEventListener('scroll', onScroll, { passive: true });
+    if (!originalPdf) window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('pagehide', onPageHide);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
@@ -155,7 +158,7 @@ export function App() {
       document.removeEventListener('visibilitychange', onVisibility);
       persist.flush();
     };
-  }, [documentRecord?.id]);
+  }, [documentRecord?.id, preferences.pdfViewMode]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = preferences.theme;
@@ -297,6 +300,18 @@ export function App() {
     setNoteLocation(selection ? locationAtOffset(documentRecord, selection.offset) : captureDocumentLocation(documentRecord));
     setLookupOpen(false); if (!desktop) setContentsOpen(false); setShowNotes(true);
   };
+  const changePdfViewMode = (mode: 'original' | 'reading') => {
+    if (!documentRecord || documentRecord.kind !== 'pdf' || mode === preferences.pdfViewMode) return;
+    const offset = currentLocation.absoluteOffset ?? (currentLocation.kind === 'pdf' ? pdfOffsetForPage(documentRecord.pageOffsets, currentLocation.page) : 0);
+    const page = pdfPageForOffset(documentRecord.pageOffsets, offset);
+    const nextLocation: DocumentLocation = mode === 'original'
+      ? { kind: 'pdf', page, pageOffset: 0, textOffset: offset - pdfOffsetForPage(documentRecord.pageOffsets, page), absoluteOffset: offset, scrollY: 0, progress: documentRecord.content.length ? offset / documentRecord.content.length : 0, updatedAt: Date.now() }
+      : { kind: 'pdf', page, absoluteOffset: offset, scrollY: 0, progress: documentRecord.content.length ? offset / documentRecord.content.length : 0, updatedAt: Date.now() };
+    setCurrentLocation(nextLocation); setProgress(nextLocation.progress);
+    setDocumentRecord({ ...documentRecord, location: nextLocation });
+    setPreferences(current => ({ ...current, pdfViewMode: mode }));
+    void db.documents.update(documentRecord.id, { location: nextLocation, updatedAt: Date.now() });
+  };
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (!documentRecord || !keyboardCanNavigate(event)) return;
@@ -339,6 +354,7 @@ export function App() {
     <ReaderShell contentsOpen={contentsOpen} contextOpen={lookupOpen || showNotes}>
       {!online && <div class="reader-offline" role="status">Offline</div>}
       <ReaderToolbar title={documentRecord.title} contentsOpen={contentsOpen} onBack={() => void closeDocument()} onContents={() => setContentsOpen(!contentsOpen)} onNote={() => openNotes(null)} onSettings={() => setShowReaderSettings(!showReaderSettings)} onEngines={() => setShowApiSettings(true)}>
+        {documentRecord.kind === 'pdf' && <div class="pdf-mode-switch" role="group" aria-label="PDF view mode"><button aria-pressed={preferences.pdfViewMode === 'original'} onClick={() => changePdfViewMode('original')}>Original</button><button aria-pressed={preferences.pdfViewMode === 'reading'} onClick={() => changePdfViewMode('reading')}>Reading</button></div>}
         <DocumentPosition document={documentRecord} location={currentLocation} onOpen={() => setGoToOpen(true)} />
         {showReaderSettings && <ReaderSettings value={preferences} onChange={setPreferences} onClose={() => setShowReaderSettings(false)} />}
       </ReaderToolbar>
@@ -348,7 +364,9 @@ export function App() {
       <div class="progress-line" role="progressbar" aria-label="Reading progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}><span style={{ width: `${progress * 100}%` }} /></div>
       <div class="reader-viewport">
       {documentRecord.source && <div class="reader-source">{documentRecord.source.author && <span>{documentRecord.source.author}</span>}{documentRecord.source.siteName && <span>{documentRecord.source.siteName}</span>}{documentRecord.source.url && <a href={documentRecord.source.url} target="_blank" rel="noreferrer noopener">Original ↗</a>}</div>}
-      <TextReader offsets={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets : documentRecord.chapterOffsets} onAddNote={selection => openNotes(selection)} content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} />
+      {documentRecord.kind === 'pdf' && preferences.pdfViewMode === 'original' && currentLocation.kind === 'pdf'
+        ? <PdfViewer documentRecord={documentRecord} location={currentLocation} zoomMode={preferences.pdfZoomMode} onZoomMode={pdfZoomMode => setPreferences(current => ({ ...current, pdfZoomMode }))} onLocation={location => { setCurrentLocation(location); setProgress(location.progress); void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() }); }} onLookup={runLookup} onAddNote={selection => openNotes(selection)} />
+        : <TextReader offsets={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets : documentRecord.chapterOffsets} onAddNote={selection => openNotes(selection)} content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} />}
       </div>
       <LookupBottomSheet selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} debug={engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={() => { requestRef.current?.abort(); contextRequestRef.current?.abort(); setLookupOpen(false); }} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary()} onAddNote={() => openNotes(activeSelection)} saved={saved} />
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}

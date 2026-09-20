@@ -61,11 +61,10 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
     }, pageOffsets);
     await loadingTask.destroy();
     const content = pages.join('\n\n');
-    if (!content.trim()) throw new ImportError('No selectable text was found in this PDF. Scanned PDFs are not supported yet.', 'extraction');
     const info = metadata?.info as { Title?: string } | undefined;
     return {
       title: info?.Title?.trim() || baseName(file.name), kind: 'pdf', content, data: file,
-      pageOffsets, toc, location: { kind: 'pdf', page: 1, scrollY: 0, progress: 0, updatedAt: Date.now() }
+      pageOffsets, toc, location: { kind: 'pdf', page: 1, pageOffset: 0, textOffset: 0, scrollY: 0, progress: 0, updatedAt: Date.now() }
     };
   } catch (error) {
     if (error instanceof ImportError) throw error;
