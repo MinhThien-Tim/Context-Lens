@@ -87,6 +87,11 @@ button { cursor:pointer; } button:disabled { cursor:default; }
 :focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
 .reader-header { padding:0 12px; gap:4px; }
 .reader-header h1 { text-align:left; padding:0 8px; }
+.reader-header-position { display:flex; align-items:center; gap:4px; }
+.reader-more,.pdf-more { position:relative; }
+.reader-more-menu,.pdf-more-menu { position:absolute; z-index:30; top:calc(100% + 6px); right:0; width:190px; padding:6px; border:1px solid var(--border); border-radius:10px; background:var(--elevated-surface); box-shadow:var(--shadow); }
+.reader-more-menu button,.pdf-more-menu button { width:100%; min-height:44px; padding:0 10px; border:0; background:transparent; color:var(--text); text-align:left; }
+.pdf-more-menu { color:var(--text); }
 .reader-viewport { min-width:0; background:var(--reading-surface); min-height:calc(100vh - 56px); }
 .reader-text { width:min(calc(100% - 40px),720px); margin:0 auto; padding:36px 0 50vh; }
 .reader-source { padding-top:20px; margin-top:0; margin-bottom:0; }
@@ -142,14 +147,13 @@ button { cursor:pointer; } button:disabled { cursor:default; }
 .selection-actions .selection-lookup { position:static; transform:none; }
 .segmented button,.language-tabs button,.word-line .icon-button { min-height:44px; min-width:44px; }
 @media (max-width:767px) {
-  .reader-header { height:98px; flex-wrap:wrap; align-content:center; gap:0; }
+  .reader-header { height:54px; flex-wrap:nowrap; gap:2px; }
   .reader-header h1 { font-size:13px; }
-  .document-position { order:10; flex-basis:100%; height:44px; min-height:44px; }
-  .progress-line { top:98px; }
+  .reader-header-position { display:none; }
+  .progress-line { top:54px; }
   .reader-text { width:calc(100% - 36px); padding-top:24px; }
-  .pdf-mode-switch { order:10; margin-left:auto; }
-  .pdf-viewer-wrap { height:calc(100dvh - 100px); }
-  .pdf-toolbar { justify-content:flex-start; overflow-x:auto; flex-wrap:nowrap; }
+  .pdf-viewer-wrap { height:calc(100dvh - 56px); }
+  .pdf-toolbar { justify-content:center; overflow:visible; flex-wrap:nowrap; }
   .notes-panel { left:0; right:0; width:auto; transform:none; }
 }
 @media (min-width:1024px) {

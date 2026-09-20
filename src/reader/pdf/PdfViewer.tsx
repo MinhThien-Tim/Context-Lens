@@ -5,10 +5,13 @@ import type { ReaderSelection } from '../TextReader';
 import { calculatePdfScale, pdfOffsetForPage, type PdfZoomMode } from './navigation';
 import { PdfPage, type PdfPageSize } from './PdfPage';
 import { usePdfDocument } from './usePdfDocument';
+import { useDesktop } from '../../components/useDesktop';
 
 const DEFAULT_SIZE = { width: 612, height: 792 };
 
-export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, onLocation, onLookup, onAddNote }: { documentRecord: DocumentRecord; location: PdfDocumentLocation; zoomMode: PdfZoomMode; onZoomMode: (mode: PdfZoomMode) => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void }) {
+export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, onViewMode, onLocation, onLookup, onAddNote }: { documentRecord: DocumentRecord; location: PdfDocumentLocation; zoomMode: PdfZoomMode; onZoomMode: (mode: PdfZoomMode) => void; onViewMode: () => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void }) {
+  const desktop = useDesktop();
+  const [moreOpen, setMoreOpen] = useState(false);
   const { pdf, error, passwordRequired, password, setPassword, submitPassword } = usePdfDocument(documentRecord.data);
   const rootRef = useRef<HTMLDivElement>(null);
   const [sizes, setSizes] = useState<Record<number, PdfPageSize>>({});
@@ -62,10 +65,7 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, onLo
       <button aria-label="Previous page" disabled={location.page <= 1} onClick={() => rootRef.current?.querySelector(`[data-pdf-page="${location.page - 1}"]`)?.scrollIntoView()}>‹</button>
       <span aria-label="Current PDF page">{location.page} / {pdf.numPages}</span>
       <button aria-label="Next page" disabled={location.page >= pdf.numPages} onClick={() => rootRef.current?.querySelector(`[data-pdf-page="${location.page + 1}"]`)?.scrollIntoView()}>›</button>
-      <button aria-label="Zoom out" onClick={() => { onZoomMode('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>−</button>
-      <button aria-label="Zoom in" onClick={() => { onZoomMode('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>+</button>
-      <button aria-pressed={zoomMode === 'fit-width'} onClick={() => onZoomMode('fit-width')}>Fit width</button>
-      <button aria-pressed={zoomMode === 'fit-page'} onClick={() => onZoomMode('fit-page')}>Fit page</button>
+      {desktop ? <><button aria-label="Zoom out" onClick={() => { onZoomMode('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>−</button><button aria-label="Zoom in" onClick={() => { onZoomMode('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>+</button><button aria-pressed={zoomMode === 'fit-width'} onClick={() => onZoomMode('fit-width')}>Fit width</button><button aria-pressed={zoomMode === 'fit-page'} onClick={() => onZoomMode('fit-page')}>Fit page</button></> : <div class="pdf-more"><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>•••</button>{moreOpen && <div class="pdf-more-menu"><button onClick={onViewMode}>Reading mode</button><button onClick={() => { onZoomMode('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>Zoom out</button><button onClick={() => { onZoomMode('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>Zoom in</button><button onClick={() => onZoomMode('fit-width')}>Fit width</button><button onClick={() => onZoomMode('fit-page')}>Fit page</button></div>}</div>}
     </div>
     <div ref={rootRef} class="pdf-scroll" tabIndex={0}>
       {Array.from({ length: pdf.numPages }, (_, index) => index + 1).map(pageNumber => {
