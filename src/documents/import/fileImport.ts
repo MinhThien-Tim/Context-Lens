@@ -1,3 +1,4 @@
+import { htmlSections, textSections, pdfSections, epubSections } from '../sections';
 import { initialTextLocation } from '../location';
 import { ImportError, type ImportedDocument, type ImportOptions } from './types';
 
@@ -23,9 +24,9 @@ async function importText(file: File, kind: 'text' | 'markdown', options: Import
     options.onProgress?.({ stage: 'extracting', completed: 0, total: 1, label: 'Rendering Markdown' });
     const [{ marked }, { sanitizeReaderHtml }] = await Promise.all([import('marked'), import('./sanitize')]);
     const safeHtml = sanitizeReaderHtml(await marked.parse(content, { gfm: true }));
-    return { title: baseName(file.name), kind, content, safeHtml, location: initialTextLocation() };
+    return { title: baseName(file.name), kind, ...htmlSections(safeHtml), safeHtml, location: initialTextLocation() };
   }
-  return { title: baseName(file.name), kind, content, location: initialTextLocation() };
+  return { title: baseName(file.name), kind, content, toc: textSections(content), location: initialTextLocation() };
 }
 
 async function importPdf(file: File, options: ImportOptions): Promise<ImportedDocument> {
@@ -51,13 +52,20 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
       offset += pageText.length + 2;
       page.cleanup();
     }
+    const toc = await pdfSections(await pdf.getOutline().catch(() => null) ?? [], async destination => {
+      const dest = typeof destination === 'string' ? await pdf.getDestination(destination) : destination;
+      if (!dest?.length) return undefined;
+      const target = dest[0];
+      const index = typeof target === 'number' ? target : await pdf.getPageIndex(target as { num: number; gen: number });
+      return index >= 0 && index < pdf.numPages ? index + 1 : undefined;
+    }, pageOffsets);
     await loadingTask.destroy();
-    const content = pages.filter(Boolean).join('\n\n');
-    if (!content) throw new ImportError('No selectable text was found in this PDF. Scanned PDFs are not supported yet.', 'extraction');
+    const content = pages.join('\n\n');
+    if (!content.trim()) throw new ImportError('No selectable text was found in this PDF. Scanned PDFs are not supported yet.', 'extraction');
     const info = metadata?.info as { Title?: string } | undefined;
     return {
       title: info?.Title?.trim() || baseName(file.name), kind: 'pdf', content, data: file,
-      pageOffsets, location: { kind: 'pdf', page: 1, scrollY: 0, progress: 0, updatedAt: Date.now() }
+      pageOffsets, toc, location: { kind: 'pdf', page: 1, scrollY: 0, progress: 0, updatedAt: Date.now() }
     };
   } catch (error) {
     if (error instanceof ImportError) throw error;
@@ -72,18 +80,28 @@ async function importEpub(file: File, options: ImportOptions): Promise<ImportedD
     const { default: ePub } = await import('epubjs');
     book = ePub(await file.arrayBuffer());
     await book.ready;
-    const [metadata, spineItems] = await Promise.all([book.loaded.metadata, book.loaded.spine]);
+    const metadata = await book.loaded.metadata;
+    const spineItems: import('epubjs/types/section').default[] = [];
+    book.spine.each((section: import('epubjs/types/section').default) => spineItems.push(section));
     const chapters: string[] = [];
+    const chapterMap: Array<{ href: string; offset: number; anchors: Record<string, number> }> = [];
     const chapterOffsets: number[] = [];
     let offset = 0;
     for (let itemIndex = 0; itemIndex < spineItems.length; itemIndex++) {
       throwIfAborted(options.signal);
       options.onProgress?.({ stage: 'extracting', completed: itemIndex, total: spineItems.length, label: `Extracting chapter ${itemIndex + 1} of ${spineItems.length}` });
-      const item = spineItems[itemIndex];
-      const section = book.spine.get(item.index);
-      const chapterDocument = await Promise.resolve(section.load(book.load.bind(book)));
-      const text = chapterDocument.body?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
-      if (text) {
+      const section = spineItems[itemIndex];
+      await Promise.resolve(section.load(book.load.bind(book)));
+      const chapterDocument = section.document;
+      const body = chapterDocument.querySelector('body');
+      const text = body?.textContent ?? '';
+      const anchors: Record<string, number> = {};
+      for (const element of body?.querySelectorAll('[id]') ?? []) {
+        const range = chapterDocument.createRange(); range.selectNodeContents(body!); range.setEndBefore(element);
+        anchors[element.id] = range.toString().length;
+      }
+      {
+        chapterMap.push({ href: section.href, offset, anchors });
         chapterOffsets.push(offset);
         chapters.push(text);
         offset += text.length + 2;
@@ -94,7 +112,7 @@ async function importEpub(file: File, options: ImportOptions): Promise<ImportedD
     if (!content) throw new ImportError('No readable text was found in this EPUB.', 'extraction');
     return {
       title: metadata.title?.trim() || baseName(file.name), kind: 'epub', content, data: file,
-      chapterOffsets, source: { author: metadata.creator },
+      chapterOffsets, toc: epubSections((await book.loaded.navigation).toc, chapterMap), source: { author: metadata.creator },
       location: { kind: 'epub', chapter: 1, cfi: null, scrollY: 0, progress: 0, updatedAt: Date.now() }
     };
   } catch (error) {
@@ -112,11 +130,13 @@ async function importDocx(file: File, options: ImportOptions): Promise<ImportedD
     throwIfAborted(options.signal);
     const module = await import('mammoth');
     const mammoth = module.default;
-    const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    const result = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
     throwIfAborted(options.signal);
-    const content = result.value.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    const { sanitizeReaderHtml } = await import('./sanitize');
+    const safeHtml = sanitizeReaderHtml(result.value);
+    const { content, toc } = htmlSections(safeHtml);
     if (!content) throw new ImportError('No readable text was found in this DOCX.', 'extraction');
-    return { title: baseName(file.name), kind: 'docx', content, data: file, location: initialTextLocation() };
+    return { title: baseName(file.name), kind: 'docx', content, toc, safeHtml, data: file, location: initialTextLocation() };
   } catch (error) {
     if (error instanceof ImportError) throw error;
     throw new ImportError('Unable to read this DOCX.', 'invalid_file');

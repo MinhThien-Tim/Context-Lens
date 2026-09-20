@@ -1,15 +1,16 @@
+import { jumpToOffset, locationAtOffset, visibleOffset } from './navigation';
 import { db, type DocumentRecord } from '../db/database';
 import { getRestoreScrollY, getScrollProgress, type DocumentLocation, type TextDocumentLocation } from '../documents/location';
 
 export function captureDocumentLocation(documentRecord: DocumentRecord): DocumentLocation {
+  const offset = visibleOffset();
+  if (offset !== undefined) return locationAtOffset(documentRecord, offset);
   const base = {
     scrollY: window.scrollY,
     progress: getScrollProgress(window.scrollY, document.documentElement.scrollHeight, window.innerHeight),
     updatedAt: Date.now()
   };
-  if (documentRecord.kind === 'pdf') return { kind: 'pdf', page: indexAtProgress(documentRecord.pageOffsets, documentRecord.content.length, base.progress) + 1, ...base };
-  if (documentRecord.kind === 'epub') return { kind: 'epub', chapter: indexAtProgress(documentRecord.chapterOffsets, documentRecord.content.length, base.progress) + 1, cfi: null, ...base };
-  return { kind: 'text', ...base };
+  return { ...documentRecord.location, ...base };
 }
 
 export async function saveDocumentLocation(documentRecord: DocumentRecord): Promise<DocumentLocation> {
@@ -20,14 +21,8 @@ export async function saveDocumentLocation(documentRecord: DocumentRecord): Prom
 
 export function restoreTextLocation(documentRecord: DocumentRecord): void {
   requestAnimationFrame(() => requestAnimationFrame(() => {
+    if (documentRecord.location.absoluteOffset !== undefined) { jumpToOffset(documentRecord.location.absoluteOffset); return; }
     const y = getRestoreScrollY(documentRecord.location as TextDocumentLocation, document.documentElement.scrollHeight, window.innerHeight);
     window.scrollTo({ top: y, behavior: 'auto' });
   }));
-}
-
-function indexAtProgress(offsets: number[] | undefined, contentLength: number, progress: number): number {
-  if (!offsets?.length || contentLength <= 0) return 0;
-  const contentOffset = progress * contentLength;
-  const next = offsets.findIndex((offset) => offset > contentOffset);
-  return next === -1 ? offsets.length - 1 : Math.max(0, next - 1);
 }

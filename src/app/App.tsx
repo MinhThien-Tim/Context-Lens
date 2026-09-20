@@ -1,3 +1,11 @@
+import { useDesktop } from '../components/useDesktop';
+import { ReaderShell } from '../reader/ReaderShell';
+import { ReaderToolbar } from '../reader/ReaderToolbar';
+import { ContentsPanel } from '../reader/ContentsPanel';
+import { DocumentPosition, GoToLocation } from '../reader/DocumentPosition';
+import { jumpToOffset, keyboardCanNavigate, locationAtOffset, navigationOffset, positionLabel } from '../reader/navigation';
+import { htmlSections, textSections } from '../documents/sections';
+import type { DocumentLocation } from '../documents/location';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { LookupBottomSheet } from '../components/LookupBottomSheet';
 import { ReaderSettings } from '../components/ReaderSettings';
@@ -45,6 +53,7 @@ function makeRequest(selection: ReaderSelection, mode: LanguageMode): LookupRequ
 }
 
 export function App() {
+  const desktop = useDesktop();
   useEffect(() => { void loadWordNet().catch(() => { /* Pack availability is shown in engine settings; curated entries remain usable. */ }); }, []);
   const [documentRecord, setDocumentRecord] = useState<DocumentRecord | null>(null);
   const [draft, setDraft] = useState(SAMPLE);
@@ -62,6 +71,13 @@ export function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [contentsOpen, setContentsOpen] = useState(false);
+  const [goToOpen, setGoToOpen] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<DocumentLocation>(initialTextLocation());
+  const [noteLocation, setNoteLocation] = useState<DocumentLocation>(initialTextLocation());
+  const [noteSelection, setNoteSelection] = useState<ReaderSelection | null>(null);
+  const [jumpAnnouncement, setJumpAnnouncement] = useState('');
   const [online, setOnline] = useState(navigator.onLine);
   const [updateReady, setUpdateReady] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
@@ -73,6 +89,7 @@ export function App() {
   const [showVocabulary, setShowVocabulary] = useState(false);
   const [showDataManagement, setShowDataManagement] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  useEffect(() => { if (!desktop && (lookupOpen || showNotes)) setContentsOpen(false); }, [desktop, lookupOpen, showNotes]);
   const requestRef = useRef<AbortController | null>(null);
   const contextRequestRef = useRef<AbortController | null>(null);
   const importControllerRef = useRef<AbortController | null>(null);
@@ -84,7 +101,7 @@ export function App() {
     });
     void maintainStorageBudget();
     void Promise.all([loadPreferences(), loadAiSettings(), db.documents.orderBy('updatedAt').reverse().limit(8).toArray(), db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray()]).then(([prefs, ai, docs, words]) => {
-      setPreferences(prefs); setAiSettings(ai); setRecent(docs); setVocabulary(words);
+      setPreferences(prefs); setPreferencesLoaded(true); setAiSettings(ai); setRecent(docs); setVocabulary(words);
     });
     const params = new URLSearchParams(location.search);
     const sharedUrl = params.get('url');
@@ -120,9 +137,10 @@ export function App() {
     if (!documentRecord) return;
     restoreTextLocation(documentRecord);
     setProgress(documentRecord.location.progress);
+    setCurrentLocation(documentRecord.location);
     const persist = debounce(() => {
       const location = captureDocumentLocation(documentRecord);
-      setProgress(location.progress);
+      setProgress(location.progress); setCurrentLocation(location);
       void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() });
     }, 250);
     const onScroll = () => persist.run();
@@ -141,8 +159,8 @@ export function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = preferences.theme;
-    void savePreferences(preferences);
-  }, [preferences]);
+    if (preferencesLoaded) void savePreferences(preferences);
+  }, [preferences, preferencesLoaded]);
 
   const readerStyle = useMemo(() => ({
     '--reader-size': `${preferences.fontSize}px`, '--reader-leading': String(preferences.lineHeight),
@@ -153,7 +171,7 @@ export function App() {
   const createDocument = async () => {
     const content = draft.trim(); if (!content) return;
     const now = Date.now();
-    const doc: DocumentRecord = { id: crypto.randomUUID(), title: title.trim() || 'Untitled reading', content, kind: 'text', createdAt: now, updatedAt: now, location: initialTextLocation() };
+    const doc: DocumentRecord = { id: crypto.randomUUID(), title: title.trim() || 'Untitled reading', content, toc: textSections(content), kind: 'text', createdAt: now, updatedAt: now, location: initialTextLocation() };
     await db.documents.put(doc); setRecent([doc, ...recent]); setDocumentRecord(doc);
   };
   const importTextFile = async (file: File | undefined) => {
@@ -182,7 +200,7 @@ export function App() {
   const closeDocument = async () => {
     requestRef.current?.abort(); contextRequestRef.current?.abort();
     if (documentRecord) await saveDocumentLocation(documentRecord);
-    setDocumentRecord(null); setLookupOpen(false);
+    setDocumentRecord(null); setLookupOpen(false); setShowNotes(false); setContentsOpen(false); setGoToOpen(false); setActiveSelection(null);
   };
 
   const runLookup = (selection: ReaderSelection, mode = preferences.languageMode, engines = engineSettings) => {
@@ -190,7 +208,7 @@ export function App() {
     contextRequestRef.current?.abort();
     const controller = new AbortController(); requestRef.current = controller;
     const request = makeRequest(selection, mode);
-    setActiveSelection(selection); setLookupOpen(true); setError(null);
+    setActiveSelection(selection); setShowNotes(false); if (!desktop) setContentsOpen(false); setLookupOpen(true); setError(null);
     setContextResult(null); setLoading(false);
     const immediate = lookupService.immediate(request, engines);
     setLookup(immediate); setSaved(false);
@@ -265,6 +283,35 @@ export function App() {
     }
   };
 
+  const jump = (offset: number) => {
+    if (!documentRecord) return;
+    jumpToOffset(offset);
+    const location = locationAtOffset(documentRecord, offset);
+    setCurrentLocation(location); setProgress(location.progress);
+    setJumpAnnouncement(`Moved to ${positionLabel(documentRecord, location)}`);
+    void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() });
+  };
+  const openNotes = (selection: ReaderSelection | null) => {
+    if (!documentRecord) return;
+    setNoteSelection(selection);
+    setNoteLocation(selection ? locationAtOffset(documentRecord, selection.offset) : captureDocumentLocation(documentRecord));
+    setLookupOpen(false); if (!desktop) setContentsOpen(false); setShowNotes(true);
+  };
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (!documentRecord || !keyboardCanNavigate(event)) return;
+      if (event.key.toLowerCase() === 't') { event.preventDefault(); setContentsOpen(value => !value); }
+      if (event.key.toLowerCase() === 'g') { event.preventDefault(); setGoToOpen(true); }
+      if (documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf' && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+        const offset = navigationOffset(documentRecord, currentLocation.page + (event.key === 'ArrowRight' ? 1 : -1));
+        if (offset !== null) { event.preventDefault(); jump(offset); }
+      }
+    };
+    window.addEventListener('keydown', keydown);
+    return () => window.removeEventListener('keydown', keydown);
+  }, [documentRecord, currentLocation]);
+  const sections = useMemo(() => documentRecord?.toc ?? (documentRecord?.safeHtml ? htmlSections(documentRecord.safeHtml).toc : textSections(documentRecord?.content ?? '')), [documentRecord]);
+
   if (!documentRecord) return (
     <main class="home-shell">
       {!online && <div class="status-banner" role="status">Offline mode · Saved documents and cached meanings remain available.</div>}
@@ -289,23 +336,24 @@ export function App() {
   );
 
   return (
-    <div class="reader-shell">
+    <ReaderShell contentsOpen={contentsOpen} contextOpen={lookupOpen || showNotes}>
       {!online && <div class="reader-offline" role="status">Offline</div>}
-      <header class="reader-header">
-        <button class="icon-button" aria-label="Back to library" onClick={closeDocument}>←</button>
-        <h1>{documentRecord.title}</h1>
-        <button class="text-button" onClick={() => setShowReaderSettings(!showReaderSettings)} aria-expanded={showReaderSettings}>Aa</button>
-        <button class="icon-button" onClick={() => setShowNotes(true)} aria-label="Document notes">✎</button>
-        <button class="icon-button" onClick={() => setShowApiSettings(true)} aria-label="Language engine settings">⋯</button>
+      <ReaderToolbar title={documentRecord.title} contentsOpen={contentsOpen} onBack={() => void closeDocument()} onContents={() => setContentsOpen(!contentsOpen)} onNote={() => openNotes(null)} onSettings={() => setShowReaderSettings(!showReaderSettings)} onEngines={() => setShowApiSettings(true)}>
+        <DocumentPosition document={documentRecord} location={currentLocation} onOpen={() => setGoToOpen(true)} />
         {showReaderSettings && <ReaderSettings value={preferences} onChange={setPreferences} onClose={() => setShowReaderSettings(false)} />}
-      </header>
+      </ReaderToolbar>
+      {goToOpen && <GoToLocation document={documentRecord} onClose={() => setGoToOpen(false)} onJump={jump} />}
+      {contentsOpen && <ContentsPanel sections={sections} offset={currentLocation.absoluteOffset ?? 0} onJump={jump} onClose={() => setContentsOpen(false)} />}
+      <div class="visually-hidden" role="status" aria-live="polite">{jumpAnnouncement}</div>
       <div class="progress-line" role="progressbar" aria-label="Reading progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}><span style={{ width: `${progress * 100}%` }} /></div>
+      <div class="reader-viewport">
       {documentRecord.source && <div class="reader-source">{documentRecord.source.author && <span>{documentRecord.source.author}</span>}{documentRecord.source.siteName && <span>{documentRecord.source.siteName}</span>}{documentRecord.source.url && <a href={documentRecord.source.url} target="_blank" rel="noreferrer noopener">Original ↗</a>}</div>}
-      <TextReader content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} />
-      <LookupBottomSheet debug={engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={() => { requestRef.current?.abort(); contextRequestRef.current?.abort(); setLookupOpen(false); }} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary()} onAddNote={() => { setLookupOpen(false); setShowNotes(true); }} saved={saved} />
+      <TextReader offsets={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets : documentRecord.chapterOffsets} onAddNote={selection => openNotes(selection)} content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} />
+      </div>
+      <LookupBottomSheet selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} debug={engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={() => { requestRef.current?.abort(); contextRequestRef.current?.abort(); setLookupOpen(false); }} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary()} onAddNote={() => openNotes(activeSelection)} saved={saved} />
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
-      {showNotes && <NotesPanel document={documentRecord} selection={activeSelection} onClose={() => setShowNotes(false)} />}
-    </div>
+      {showNotes && <NotesPanel document={documentRecord} selection={noteSelection} location={noteLocation} onJump={location => { const offset = location.absoluteOffset ?? (location.kind === 'pdf' ? documentRecord.pageOffsets?.[location.page - 1] : location.kind === 'epub' ? documentRecord.chapterOffsets?.[location.chapter - 1] : undefined); if (offset !== undefined) jump(offset); else window.scrollTo({ top: location.scrollY, behavior: 'auto' }); }} onClose={() => setShowNotes(false)} />}
+    </ReaderShell>
   );
 }
 

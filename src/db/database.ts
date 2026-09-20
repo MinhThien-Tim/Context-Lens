@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable, type Table } from 'dexie';
+import type { DocumentSection } from '../documents/sections';
 import type { LanguageMode, LookupResponse } from '../lookup/types';
 import type { DocumentLocation } from '../documents/location';
 import type { EngineCacheRecord } from '../core/cache';
@@ -8,6 +9,7 @@ import { explanationFromLookup } from '../core/context/adapter';
 import type { SentenceAnalysis } from '../core/language/types';
 
 export interface DocumentRecord {
+  toc?: DocumentSection[];
   id: string;
   title: string;
   content: string;
@@ -60,6 +62,7 @@ export interface DictionaryPackRecord {
   installedAt: number;
 }
 export interface NoteRecord {
+  structuredLocation?: DocumentLocation;
   id: string;
   documentId: string;
   documentTitle: string;
@@ -145,6 +148,8 @@ export class ContextLensDatabase extends Dexie {
       });
     });
     this.version(9).stores({ sentenceAnalyses: 'key, lastUsedAt, provider, languagePair, hits' });
+    // Optional TOC and note anchors preserve legacy records without inventing locations.
+    this.version(10).stores({});
   }
 }
 

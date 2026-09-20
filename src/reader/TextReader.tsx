@@ -22,7 +22,7 @@ function rangeFromPoint(x: number, y: number): Range | null {
   return range;
 }
 
-export function TextReader({ content, safeHtml, onLookup, style }: { content: string; safeHtml?: string; onLookup: (selection: ReaderSelection) => void; style: Record<string, string | number> }) {
+export function TextReader({ content, safeHtml, onLookup, style, offsets, onAddNote }: { content: string; safeHtml?: string; onLookup: (selection: ReaderSelection) => void; style: Record<string, string | number>; offsets?: number[]; onAddNote?: (selection: ReaderSelection) => void }) {
   const rootRef = useRef<HTMLElement>(null);
   const ignoreClick = useRef(false);
   const [pendingSelection, setPendingSelection] = useState<ReaderSelection | null>(null);
@@ -59,6 +59,7 @@ export function TextReader({ content, safeHtml, onLookup, style }: { content: st
     return () => { clearTimeout(selectionTimer); document.removeEventListener('selectionchange', onSelectionChange); };
   }, []);
 
+  const starts = offsets?.length ? offsets : [0, ...Array.from(content.matchAll(/\n\s*\n/g), match => match.index + match[0].length).filter(offset => offset < content.length)];
   return (
     <>
     <article
@@ -82,9 +83,9 @@ export function TextReader({ content, safeHtml, onLookup, style }: { content: st
     >
       {safeHtml
         ? <div class="article-content" dangerouslySetInnerHTML={{ __html: safeHtml }} />
-        : content.split(/\n\s*\n/).map((paragraph, index) => <p key={index}>{paragraph.trim()}</p>)}
+        : starts.map((offset, index, starts) => <p class="text-segment" data-offset={offset} key={index}>{content.slice(offset, starts[index + 1] ?? content.length)}</p>)}
     </article>
-    {pendingSelection && <button class="selection-lookup" onPointerDown={(event) => event.preventDefault()} onClick={() => { onLookup(pendingSelection); setPendingSelection(null); window.getSelection()?.removeAllRanges(); }}>Look up selection</button>}
+    {pendingSelection && <div class="selection-actions"><button class="selection-lookup" onPointerDown={(event) => event.preventDefault()} onClick={() => { onLookup(pendingSelection); setPendingSelection(null); window.getSelection()?.removeAllRanges(); }}>Look up selection</button>{onAddNote && <button class="secondary-button" onPointerDown={event => event.preventDefault()} onClick={() => { onAddNote(pendingSelection); setPendingSelection(null); window.getSelection()?.removeAllRanges(); }}>Note</button>}</div>}
     </>
   );
 }

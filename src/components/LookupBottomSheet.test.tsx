@@ -35,3 +35,46 @@ it('requests context only on action and keeps quick text when a deep result arri
     expect(host.querySelector('.meaning-en')?.textContent).toBe(validLookup.quick.definition_en);
   } finally { act(() => render(null, host)); host.remove(); }
 });
+
+it('keeps Quick minimal, resets expansion on selection, and handles Escape in two steps', () => {
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn(); const close = vi.fn();
+  const props = { open: true, result: validLookup, loading: false, error: null, mode: 'bilingual' as const, onModeChange: noop, onClose: close, onOpenSettings: noop, onSpeak: noop, onToggleSave: noop, onAddNote: noop, onTranslateSentence: noop, saved: false, debug: true };
+  try {
+    act(() => render(<LookupBottomSheet {...props} selectionKey="first" />, host));
+    expect(host.querySelector('.context-actions,.language-tabs,.engine-debug,select')).toBeNull();
+    expect(host.textContent).not.toContain('Save word');
+    act(() => (host.querySelector('.explain-button') as HTMLButtonElement).click());
+    expect(host.textContent).toContain('Save word');
+    act(() => render(<LookupBottomSheet {...props} selectionKey="first" loading error="Unavailable" />, host));
+    expect(host.querySelector('.meaning-en')?.textContent).toBe(validLookup.quick.definition_en);
+    act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })); });
+    expect(close).not.toHaveBeenCalled();
+    expect(host.querySelector('.language-tabs')).toBeNull();
+    act(() => (host.querySelector('.explain-button') as HTMLButtonElement).click());
+    host.querySelector<HTMLSelectElement>('select')?.focus();
+    act(() => render(<LookupBottomSheet {...props} selectionKey="second" />, host));
+    expect(host.querySelector('.language-tabs')).toBeNull();
+    expect(document.activeElement).toBe(host.querySelector('.explain-button'));
+    act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })); });
+    expect(close).toHaveBeenCalledOnce();
+  } finally { act(() => render(null, host)); host.remove(); }
+});
+
+it.each([false, true])('only traps focus when mobile is modal (desktop=%s)', desktop => {
+  vi.stubGlobal('matchMedia', () => ({ matches: desktop, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  const host = document.createElement('div'); document.body.append(host);
+  const previous = document.createElement('button'); document.body.append(previous); previous.focus();
+  const noop = vi.fn();
+  try {
+    act(() => render(<LookupBottomSheet open result={validLookup} loading={false} error={null} mode="en" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    expect(host.querySelector('[aria-modal="true"]') !== null).toBe(!desktop);
+    expect(host.querySelector('.sheet-backdrop') !== null).toBe(!desktop);
+    const buttons = host.querySelectorAll<HTMLButtonElement>('.lookup-sheet button');
+    buttons[buttons.length - 1].focus();
+    const event = new KeyboardEvent('keydown', { key: 'Tab', cancelable: true });
+    act(() => { document.dispatchEvent(event); });
+    expect(event.defaultPrevented).toBe(!desktop);
+    if (!desktop) expect(document.activeElement).toBe(buttons[0]);
+  } finally { act(() => render(null, host)); host.remove(); previous.remove(); vi.unstubAllGlobals(); }
+});

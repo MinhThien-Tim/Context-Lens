@@ -33,3 +33,23 @@ describe('portable backup', () => {
     expect(result.notes).toBe(0);
   });
 });
+
+it('round-trips TOC and structured note locations with backup v3', async () => {
+  const location = { kind: 'text' as const, absoluteOffset: 3, sectionId: 's1', scrollY: 20, progress: .5, updatedAt: 8 };
+  const toc = [{ id: 's1', title: 'Section', level: 1, offset: 3 }];
+  await db.documents.put({ ...documentRecord, toc, location });
+  await db.notes.put({ ...noteRecord, structuredLocation: location });
+  const backup = await buildBackup();
+  expect(backup.version).toBe(3);
+  await db.documents.clear(); await db.notes.clear();
+  await restoreBackup(backup);
+  expect((await db.documents.get(documentRecord.id))?.toc).toEqual(toc);
+  expect((await db.notes.get(noteRecord.id))?.structuredLocation).toEqual(location);
+  await db.documents.clear(); await db.notes.clear();
+});
+
+it('still restores legacy version 2 notes without invented anchors', async () => {
+  await restoreBackup({ schema: 'context-lens.backup', version: 2, exportedAt: '', documents: [], vocabulary: [], notes: [noteRecord] });
+  expect((await db.notes.get(noteRecord.id))?.structuredLocation).toBeUndefined();
+  await db.notes.clear();
+});

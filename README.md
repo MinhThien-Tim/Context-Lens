@@ -60,7 +60,7 @@ The interaction pipeline is intentionally latency-first:
 4. Context and Grammar reveal local information. AI Explain or the AI task menu explicitly invokes ContextRouter. Translate sentence is a separate action. Switching EN/VI modes never repeats requests.
 5. Preserve the quick card on timeout, quota exhaustion, unsupported languages, cancellation, or provider failure.
 
-Dexie v9 adds reusable sentence analyses alongside translation/context caches and offline notes without replacing documents, vocabulary, dictionary packs, or legacy lookup records. Caches use bounded memory and deferred, hit-weighted LRU cleanup. Context AI returns a compact task-specific explanation adapted to the reader UI. `npm run typecheck` runs TypeScript validation; this repository has no separate lint configuration.
+Dexie v10 preserves TOC metadata and structured note anchors; v9 added reusable sentence analyses alongside translation/context caches and offline notes without replacing documents, vocabulary, dictionary packs, or legacy lookup records. Caches use bounded memory and deferred, hit-weighted LRU cleanup. Context AI returns a compact task-specific explanation adapted to the reader UI. `npm run typecheck` runs TypeScript validation; this repository has no separate lint configuration.
 
 Locations store both an absolute offset and normalized progress. PDF locations also track pages; EPUB locations track chapters with a reserved CFI field. This keeps restoration stable when viewport or typography changes. IndexedDB migrations are versioned and older documents are upgraded automatically.
 
@@ -119,7 +119,7 @@ API keys are session-only by default. Persistent keys are stored in this browser
 The staged local-first foundation is implemented:
 
 - Local dictionary data is behind a versioned provider registry, ready for downloadable or English101-owned language packs.
-- Portable `context-lens.backup` version 2 export/restore preserves documents, vocabulary, and notes while excluding API keys, AI cache, and original binary book files; version 1 backups remain importable.
+- Portable `context-lens.backup` version 3 export/restore preserves documents, vocabulary, and notes while excluding API keys, AI cache, and original binary book files; version 1 and 2 backups remain importable.
 - The library exposes storage usage, persistent-storage status, AI-cache cleanup, and per-document deletion.
 - DOCX joins the shared importer contract and remains outside the initial bundle.
 - Dictionary packs require versioned schemas and explicit license/attribution metadata; see `docs/DICTIONARY_PACK.md`.
@@ -127,3 +127,26 @@ The staged local-first foundation is implemented:
 - Integration and performance tests enforce offline flows, local latency budgets, initial bundle budgets, and lazy reader chunks.
 - English101 synchronization is intentionally not implemented yet. The versioned export contract remains the future integration boundary.
 - A least-privilege Manifest V3 extension hands the current URL to the existing article-import contract without reading page content.
+
+
+## Reader UI upgrade
+
+The reader now adapts between desktop Contents/reading/context columns and mobile
+Contents drawers, Quick/Expanded explanation sheets, and full-height notes.
+Quick shows the selection and core meanings; language controls, vocabulary, notes,
+context, grammar and optional AI actions are available after **Expand**.
+Escape collapses Expanded first, then closes Quick.
+
+PDF navigation uses source page offsets (including blank pages), EPUB uses spine
+chapters and progress, and other formats use percentage/location. Use **Contents**,
+**T**, or **G** to navigate; PDF additionally supports Left/Right outside forms and
+text selections. Browser Find remains available offline. Imports preserve PDF
+outlines, EPUB navigation and HTML/Markdown/DOCX headings. TXT headings use a
+conservative chapter/part/section pattern; missing TOCs have an explicit empty state.
+
+**Note** captures the current position; selection notes also retain their quote and
+sentence. **Go to location** returns to the stored text anchor. Older notes remain
+editable and show an unavailable-location message rather than inventing a target.
+Light/dark/system preferences remain local and persist across reloads.
+
+See [implementation and verification details](docs/READER_UI_UPGRADE.md).

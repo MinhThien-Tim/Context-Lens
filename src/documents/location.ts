@@ -1,6 +1,8 @@
 export type DocumentLocation = TextDocumentLocation | PdfDocumentLocation | EpubDocumentLocation;
 
 export interface TextDocumentLocation {
+  absoluteOffset?: number;
+  sectionId?: string;
   kind: 'text';
   scrollY: number;
   progress: number;
@@ -8,6 +10,7 @@ export interface TextDocumentLocation {
 }
 
 export interface PdfDocumentLocation {
+  absoluteOffset?: number;
   kind: 'pdf';
   page: number;
   scrollY: number;
@@ -16,6 +19,7 @@ export interface PdfDocumentLocation {
 }
 
 export interface EpubDocumentLocation {
+  absoluteOffset?: number;
   kind: 'epub';
   chapter: number;
   cfi: string | null;

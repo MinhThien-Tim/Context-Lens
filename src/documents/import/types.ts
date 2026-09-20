@@ -2,6 +2,7 @@ import type { DocumentLocation } from '../location';
 import type { DocumentRecord } from '../../db/database';
 
 export interface ImportedDocument {
+  toc?: DocumentRecord['toc'];
   title: string;
   kind: DocumentRecord['kind'];
   content: string;

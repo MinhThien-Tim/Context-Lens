@@ -1,3 +1,4 @@
+import { htmlSections } from '../sections';
 import { initialTextLocation } from '../location';
 import { ImportError, type ImportedDocument, type ImportOptions } from './types';
 
@@ -24,7 +25,7 @@ export async function importArticle(urlValue: string, options: ImportOptions = {
   if (!article?.textContent?.trim()) throw new ImportError('Article extraction failed. Paste the article text manually.', 'extraction');
   const safeHtml = sanitizeReaderHtml(article.content ?? '');
   return {
-    title: article.title || url.hostname, kind: 'article', content: article.textContent.trim(), safeHtml,
+    title: article.title || url.hostname, kind: 'article', ...htmlSections(safeHtml), safeHtml,
     source: { url: url.href, author: article.byline || undefined, siteName: article.siteName || url.hostname },
     location: initialTextLocation()
   };
