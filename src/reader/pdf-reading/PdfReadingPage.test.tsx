@@ -19,4 +19,11 @@ describe('paginated PDF reading', () => {
     expect(pages).toHaveLength(2);
     expect(pages[1]).toEqual(expect.objectContaining({ pageNumber: 2, extractionQuality: 'partial' }));
   });
+
+  it('renders a saved reading highlight at its canonical offset', () => {
+    const host = document.createElement('div');
+    render(<PdfReadingPage page={{ pageNumber: 1, startOffset: 10, endOffset: 21, plainText: 'Hello world', extractionQuality: 'good', blocks: [{ id: 'p', type: 'paragraph', text: 'Hello world', startOffset: 10, endOffset: 21 }] }} highlights={[{ id: 'highlight-1', startOffset: 16, endOffset: 21, color: 'yellow', createdAt: 1 }]} />, host);
+    expect(host.querySelector('mark')?.textContent).toBe('world');
+    expect(host.querySelector('mark')?.classList.contains('reader-highlight-yellow')).toBe(true);
+  });
 });

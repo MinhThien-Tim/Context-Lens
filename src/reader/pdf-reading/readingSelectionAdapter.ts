@@ -13,7 +13,7 @@ export function readingSelectionFromDom(root: HTMLElement, documentText: string)
   if (!text) return null;
   const from = Math.min(start, end), to = Math.max(start, end);
   const context = sentenceContextForRange(documentText, from, to);
-  return { text, offset: from, type: text.includes(' ') ? (normalizeSelection(context.current) === text ? 'sentence' : 'phrase') : 'word', context };
+  return { text, offset: from, endOffset: to, type: text.includes(' ') ? (normalizeSelection(context.current) === text ? 'sentence' : 'phrase') : 'word', context };
 }
 
 export function readingWordAtPoint(root: HTMLElement, documentText: string, x: number, y: number): ReaderSelection | null {
@@ -33,7 +33,7 @@ export function readingWordFromRange(root: HTMLElement, documentText: string, ra
   if (!text) return null;
   const canonicalOffset = endpointOffset(root, node, start, 'start');
   if (canonicalOffset === null) return null;
-  return { text, offset: canonicalOffset, type: 'word', context: sentenceContextAt(documentText, canonicalOffset) };
+  return { text, offset: canonicalOffset, endOffset: canonicalOffset + text.length, type: 'word', context: sentenceContextAt(documentText, canonicalOffset) };
 }
 
 function rangeFromPoint(x: number, y: number): Range | null {

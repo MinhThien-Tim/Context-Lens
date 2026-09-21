@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import type { DocumentRecord } from '../../db/database';
+import type { DocumentRecord, ReaderHighlight } from '../../db/database';
 import type { PdfDocumentLocation } from '../../documents/location';
 import { PdfReadingPage } from './PdfReadingPage';
 import { PdfReadingNavigation } from './PdfReadingNavigation';
@@ -7,10 +7,11 @@ import { readingPagesForDocument } from './structuredPages';
 import type { ReaderSelection } from '../TextReader';
 import { readingSelectionFromDom, readingWordAtPoint } from './readingSelectionAdapter';
 
-export function PdfReadingView({ documentRecord, location, style, onOriginal, onLocation, onLookup, onAddNote }: { documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; onOriginal: () => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void }) {
+export function PdfReadingView({ documentRecord, location, style, onOriginal, onLocation, onLookup, onAddNote, onHighlight }: { documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; onOriginal: () => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onHighlight: (highlight: ReaderHighlight) => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const ignoreClick = useRef(false);
   const [pending, setPending] = useState<ReaderSelection | null>(null);
+  const [highlightOpen, setHighlightOpen] = useState(false);
   const pages = useMemo(() => readingPagesForDocument(documentRecord), [documentRecord]);
   const goTo = (page: number) => rootRef.current?.querySelector(`[data-pdf-reading-page="${Math.max(1, Math.min(pages.length, page))}"]`)?.scrollIntoView({ block: 'start' });
   const captureSelection = () => {
@@ -55,7 +56,7 @@ export function PdfReadingView({ documentRecord, location, style, onOriginal, on
       if (nativeSelection && !nativeSelection.isCollapsed) return;
       const next = rootRef.current && readingWordAtPoint(rootRef.current, documentRecord.content, event.clientX, event.clientY);
       if (next) onLookup(next);
-    }}>{pages.map(page => <PdfReadingPage key={page.pageNumber} page={page} />)}</div>
-    {pending && <div class="pdf-reading-selection-actions" role="toolbar" aria-label="Selected text actions"><button onPointerDown={event => event.preventDefault()} onClick={() => onLookup(pending)}>Explain</button><button onPointerDown={event => event.preventDefault()} onClick={() => onAddNote(pending)}>Note</button><button onPointerDown={event => event.preventDefault()} onClick={() => void navigator.clipboard?.writeText(pending.text)}>Copy</button><button aria-label="Close selection actions" onClick={() => { setPending(null); window.getSelection()?.removeAllRanges(); }}>×</button></div>}
+    }}>{pages.map(page => <PdfReadingPage key={page.pageNumber} page={page} highlights={documentRecord.highlights} />)}</div>
+    {pending && <div class="pdf-reading-selection-wrap"><div class="pdf-reading-selection-actions" role="toolbar" aria-label="Selected text actions"><button onPointerDown={event => event.preventDefault()} onClick={() => onLookup(pending)}>Explain</button><button aria-pressed={highlightOpen} class={highlightOpen ? 'active' : ''} onPointerDown={event => event.preventDefault()} onClick={() => setHighlightOpen(value => !value)}>Highlight</button><button onPointerDown={event => event.preventDefault()} onClick={() => onAddNote(pending)}>Note</button><button onPointerDown={event => event.preventDefault()} onClick={() => void navigator.clipboard?.writeText(pending.text)}>Copy</button><button aria-label="Close selection actions" onClick={() => { setPending(null); setHighlightOpen(false); window.getSelection()?.removeAllRanges(); }}>×</button></div>{highlightOpen && <div class="pdf-highlight-colors" role="group" aria-label="Highlight color">{(['yellow', 'pink', 'blue'] as const).map(color => <button key={color} class={`highlight-color highlight-color-${color}`} aria-label={`${color} highlight`} onPointerDown={event => event.preventDefault()} onClick={() => { onHighlight({ id: crypto.randomUUID(), startOffset: pending.offset, endOffset: pending.endOffset ?? pending.offset + pending.text.length, color, createdAt: Date.now() }); setHighlightOpen(false); setPending(null); window.getSelection()?.removeAllRanges(); }} />)}</div>}</div>}
   </div>;
 }

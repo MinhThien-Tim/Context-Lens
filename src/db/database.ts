@@ -19,6 +19,7 @@ export interface DocumentRecord {
   safeHtml?: string;
   pageOffsets?: number[];
   pdfPages?: PdfStructuredPage[];
+  highlights?: ReaderHighlight[];
   chapterOffsets?: number[];
   source?: { url?: string; author?: string; siteName?: string };
   createdAt: number;
@@ -26,6 +27,14 @@ export interface DocumentRecord {
   location: DocumentLocation;
   /** Version 1 compatibility. Removed after all existing databases migrate. */
   lastPosition?: number;
+}
+
+export interface ReaderHighlight {
+  id: string;
+  startOffset: number;
+  endOffset: number;
+  color: 'yellow' | 'pink' | 'blue';
+  createdAt: number;
 }
 
 export interface CachedLookupRecord {

@@ -5,8 +5,8 @@
   --accent: #165c50; --accent-soft: #e2efeb; --vi: #27705d; --error: #a34040;
 }
 :root[data-theme="light"] { color-scheme:light; }
-:root[data-theme="dark"] { --bg:#171a19; --surface:#202422; --text:#e9ece8; --muted:#a5ada8; --line:#3a403d; --accent:#8bc2b4; --accent-soft:#263d37; --vi:#8bc2b4; --error:#ef9292; color-scheme:dark; }
-@media (prefers-color-scheme: dark) { :root[data-theme="system"] { --bg:#171a19; --surface:#202422; --text:#e9ece8; --muted:#a5ada8; --line:#3a403d; --accent:#8bc2b4; --accent-soft:#263d37; --vi:#8bc2b4; --error:#ef9292; color-scheme:dark; } }
+:root[data-theme="dark"] { --bg:#111213; --surface:#18191b; --reading-surface:#141516; --elevated-surface:#202124; --text:#f1f1ef; --muted:#a9aaa7; --line:#303236; --accent:#91cabb; --accent-soft:#253d37; --vi:#91cabb; --error:#ef9292; color-scheme:dark; }
+@media (prefers-color-scheme: dark) { :root[data-theme="system"] { --bg:#111213; --surface:#18191b; --reading-surface:#141516; --elevated-surface:#202124; --text:#f1f1ef; --muted:#a9aaa7; --line:#303236; --accent:#91cabb; --accent-soft:#253d37; --vi:#91cabb; --error:#ef9292; color-scheme:dark; } }
 * { box-sizing: border-box; }
 html { background: var(--bg); color: var(--text); }
 body { margin:0; min-width:320px; min-height:100vh; background:var(--bg); color:var(--text); }
@@ -137,9 +137,15 @@ button { cursor:pointer; } button:disabled { cursor:default; }
 .pdf-reading-dialogue strong { font-family:system-ui,sans-serif; font-size:.82em; letter-spacing:.03em; }
 .pdf-reading-footnote { margin-top:1.8em; padding-top:12px; border-top:1px solid var(--border); color:var(--muted); font-size:.86em; }
 .pdf-reading-empty { color:var(--muted); font-style:italic; }
-.pdf-reading-selection-actions { position:fixed; z-index:25; left:50%; bottom:max(18px,calc(env(safe-area-inset-bottom) + 8px)); transform:translateX(-50%); display:flex; gap:4px; padding:5px; border:1px solid var(--border); border-radius:12px; background:var(--elevated-surface); box-shadow:var(--shadow); }
+.pdf-reading-selection-wrap { position:fixed; z-index:25; left:50%; bottom:max(18px,calc(env(safe-area-inset-bottom) + 8px)); transform:translateX(-50%); display:grid; justify-items:center; gap:7px; width:max-content; max-width:calc(100vw - 16px); }
+.pdf-reading-selection-actions { display:flex; gap:4px; padding:5px; max-width:100%; overflow-x:auto; border:1px solid var(--border); border-radius:12px; background:var(--elevated-surface); box-shadow:var(--shadow); }
 .pdf-reading-selection-actions button { min-width:54px; min-height:44px; padding:0 10px; border:0; border-radius:8px; background:transparent; color:var(--text); }
 .pdf-reading-selection-actions button:first-child { background:var(--accent); color:#fff; }
+.pdf-reading-selection-actions button.active { background:var(--accent-soft); color:var(--accent); }
+.pdf-highlight-colors { display:flex; gap:12px; padding:9px 13px; border:1px solid var(--border); border-radius:22px; background:var(--elevated-surface); box-shadow:var(--shadow); }
+.highlight-color { width:28px; height:28px; padding:0; border:2px solid var(--elevated-surface); border-radius:50%; outline:1px solid var(--border); }
+.highlight-color-yellow,.reader-highlight-yellow { background:#ffdb75; }.highlight-color-pink,.reader-highlight-pink { background:#f6a6c1; }.highlight-color-blue,.reader-highlight-blue { background:#91cafa; }
+.reader-highlight { padding:.04em 0; border-radius:2px; color:#171717; }
 .location-target { background:var(--accent-soft); border-radius:3px; }
 .document-position { font-size:12px; font-weight:500; white-space:nowrap; }
 .contents-panel { position:fixed; z-index:40; inset:0 auto 0 0; width:min(88vw,290px); padding:16px; overflow:auto; background:var(--elevated-surface); border-right:1px solid var(--border); box-shadow:var(--shadow); }
@@ -171,6 +177,7 @@ button { cursor:pointer; } button:disabled { cursor:default; }
   .reader-header { height:54px; flex-wrap:nowrap; gap:2px; }
   .reader-header h1 { font-size:13px; }
   .reader-header-position { display:none; }
+  .settings-popover { top:auto; right:8px; bottom:max(8px,env(safe-area-inset-bottom)); left:8px; width:auto; max-height:calc(100dvh - 70px); overflow:auto; }
   .progress-line { top:54px; }
   .reader-text { width:calc(100% - 36px); padding-top:24px; }
   .pdf-viewer-wrap { height:calc(100dvh - 56px); }

@@ -4,6 +4,7 @@ import { buildSentenceIndex, normalizeSelection, sentenceContextAt, sentenceCont
 export interface ReaderSelection {
   text: string;
   offset: number;
+  endOffset?: number;
   type: 'word' | 'phrase' | 'sentence';
   context: ReturnType<typeof sentenceContextAt>;
 }
