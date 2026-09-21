@@ -7,7 +7,7 @@ import { readingPagesForDocument } from './structuredPages';
 import type { ReaderSelection } from '../TextReader';
 import { readingSelectionFromDom, readingWordAtPoint } from './readingSelectionAdapter';
 
-export function PdfReadingView({ documentRecord, location, style, activeHighlightColor, onOriginal, onLocation, onLookup, onAddNote, onHighlight }: { documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; activeHighlightColor?: ReaderHighlight['color'] | null; onOriginal: () => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onHighlight: (highlight: ReaderHighlight) => void }) {
+export function PdfReadingView({ documentRecord, location, style, activeMarkupTool, activeMarkupColor, onOriginal, onLocation, onLookup, onAddNote, onHighlight, onErase }: { documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; activeMarkupTool?: 'highlight' | 'underline' | 'eraser' | null; activeMarkupColor: ReaderHighlight['color']; onOriginal: () => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onHighlight: (highlight: ReaderHighlight) => void; onErase: (startOffset: number, endOffset: number) => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const ignoreClick = useRef(false);
   const highlightTimer = useRef<number | undefined>(undefined);
@@ -20,7 +20,11 @@ export function PdfReadingView({ documentRecord, location, style, activeHighligh
     const next = readingSelectionFromDom(rootRef.current, documentRecord.content);
     if (next) {
       setPending(next);
-      if (activeHighlightColor && commitHighlight) onHighlight({ id: crypto.randomUUID(), startOffset: next.offset, endOffset: next.endOffset ?? next.offset + next.text.length, color: activeHighlightColor, createdAt: Date.now() });
+      if (activeMarkupTool && commitHighlight) {
+        const endOffset = next.endOffset ?? next.offset + next.text.length;
+        if (activeMarkupTool === 'eraser') onErase(next.offset, endOffset);
+        else onHighlight({ id: crypto.randomUUID(), startOffset: next.offset, endOffset, color: activeMarkupColor, style: activeMarkupTool, createdAt: Date.now() });
+      }
       ignoreClick.current = true;
     }
     return next;
@@ -50,14 +54,14 @@ export function PdfReadingView({ documentRecord, location, style, activeHighligh
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed || !rootRef.current?.contains(selection.anchorNode) || !rootRef.current?.contains(selection.focusNode)) return;
       timer = window.setTimeout(() => captureSelection(false), 160);
-      if (activeHighlightColor) highlightTimer.current = window.setTimeout(() => captureSelection(true), 700);
+      if (activeMarkupTool) highlightTimer.current = window.setTimeout(() => captureSelection(true), 700);
     };
     document.addEventListener('selectionchange', capture);
     return () => { clearTimeout(timer); clearTimeout(highlightTimer.current); document.removeEventListener('selectionchange', capture); };
-  }, [documentRecord.id, documentRecord.content, activeHighlightColor]);
+  }, [documentRecord.id, documentRecord.content, activeMarkupTool, activeMarkupColor]);
   return <div class="pdf-reading-view" style={style}>
     <PdfReadingNavigation page={location.page} total={pages.length} onPrevious={() => goTo(location.page - 1)} onNext={() => goTo(location.page + 1)} onOriginal={onOriginal} />
-    <div ref={rootRef} class={`pdf-reading-scroll ${activeHighlightColor ? 'highlight-mode-active' : ''}`} onPointerUp={() => window.setTimeout(() => captureSelection(Boolean(activeHighlightColor)), 0)} onKeyUp={event => { if (event.shiftKey) captureSelection(Boolean(activeHighlightColor)); }} onClick={event => {
+    <div ref={rootRef} class={`pdf-reading-scroll ${activeMarkupTool ? 'highlight-mode-active' : ''} ${activeMarkupTool ? `markup-${activeMarkupTool}` : ''}`} onPointerUp={() => window.setTimeout(() => captureSelection(Boolean(activeMarkupTool)), 0)} onKeyUp={event => { if (event.shiftKey) captureSelection(Boolean(activeMarkupTool)); }} onClick={event => {
       if (ignoreClick.current) { ignoreClick.current = false; return; }
       const nativeSelection = window.getSelection();
       if (nativeSelection && !nativeSelection.isCollapsed) return;

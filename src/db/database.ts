@@ -34,6 +34,7 @@ export interface ReaderHighlight {
   startOffset: number;
   endOffset: number;
   color: 'yellow' | 'pink' | 'blue';
+  style?: 'highlight' | 'underline';
   createdAt: number;
 }
 

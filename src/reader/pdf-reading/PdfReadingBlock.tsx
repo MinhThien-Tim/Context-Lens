@@ -32,7 +32,7 @@ function highlightedText(text: string, blockOffset: number, highlights: ReaderHi
     const start = Math.max(cursor, item.startOffset - blockOffset);
     const end = Math.min(text.length, item.endOffset - blockOffset);
     if (start > cursor) parts.push(text.slice(cursor, start));
-    if (end > start) parts.push(<mark key={item.id} class={`reader-highlight reader-highlight-${item.color}`}>{text.slice(start, end)}</mark>);
+    if (end > start) parts.push(<mark key={item.id} class={`reader-highlight reader-highlight-${item.style ?? 'highlight'} reader-highlight-${item.color}`}>{text.slice(start, end)}</mark>);
     cursor = Math.max(cursor, end);
   }
   if (cursor < text.length) parts.push(text.slice(cursor));
