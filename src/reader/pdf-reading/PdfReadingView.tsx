@@ -7,7 +7,7 @@ import { readingPagesForDocument } from './structuredPages';
 import type { ReaderSelection } from '../TextReader';
 import { readingSelectionFromDom, readingWordAtPoint } from './readingSelectionAdapter';
 
-export function PdfReadingView({ documentRecord, location, style, onOriginal, onLocation, onLookup, onAddNote, onHighlight }: { documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; onOriginal: () => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onHighlight: (highlight: ReaderHighlight) => void }) {
+export function PdfReadingView({ documentRecord, location, style, activeHighlightColor, onOriginal, onLocation, onLookup, onAddNote, onHighlight }: { documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; activeHighlightColor?: ReaderHighlight['color'] | null; onOriginal: () => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onHighlight: (highlight: ReaderHighlight) => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const ignoreClick = useRef(false);
   const [pending, setPending] = useState<ReaderSelection | null>(null);
@@ -17,7 +17,13 @@ export function PdfReadingView({ documentRecord, location, style, onOriginal, on
   const captureSelection = () => {
     if (!rootRef.current) return null;
     const next = readingSelectionFromDom(rootRef.current, documentRecord.content);
-    if (next) { setPending(next); ignoreClick.current = true; }
+    if (next) {
+      if (activeHighlightColor) {
+        onHighlight({ id: crypto.randomUUID(), startOffset: next.offset, endOffset: next.endOffset ?? next.offset + next.text.length, color: activeHighlightColor, createdAt: Date.now() });
+        window.getSelection()?.removeAllRanges();
+      } else setPending(next);
+      ignoreClick.current = true;
+    }
     return next;
   };
   useEffect(() => {
@@ -47,7 +53,7 @@ export function PdfReadingView({ documentRecord, location, style, onOriginal, on
     };
     document.addEventListener('selectionchange', capture);
     return () => { clearTimeout(timer); document.removeEventListener('selectionchange', capture); };
-  }, [documentRecord.id, documentRecord.content]);
+  }, [documentRecord.id, documentRecord.content, activeHighlightColor]);
   return <div class="pdf-reading-view" style={style}>
     <PdfReadingNavigation page={location.page} total={pages.length} onPrevious={() => goTo(location.page - 1)} onNext={() => goTo(location.page + 1)} onOriginal={onOriginal} />
     <div ref={rootRef} class="pdf-reading-scroll" onPointerUp={() => window.setTimeout(captureSelection, 0)} onKeyUp={event => { if (event.shiftKey) captureSelection(); }} onClick={event => {
