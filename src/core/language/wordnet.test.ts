@@ -63,6 +63,16 @@ it.each(['studied', 'interested', 'tired', 'better'])('retains lexicalized sense
   const entry = new LexicalEngine().lookup(word);
   expect(entry?.senses.length).toBeGreaterThan(1);
 });
+it('resolves attended as the finite verb in subject-verb-object context', async () => {
+  const result = await new LookupService().quick(request('attended', 'Not long ago we attended a talk at an academic conference.'),
+    { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(result.selection.lemma).toBe('attend');
+  expect(result.selection.part_of_speech).toContain('verb');
+  expect(result.quick.meaning_vi.join(' ')).toMatch(/Dự|có mặt/i);
+  expect(result.quick.meaning_vi.join(' ')).not.toMatch(/station|đài|trạm/i);
+  expect(result.quick.definition_en).not.toMatch(/singing|instrumental|accompaniment/i);
+  expect(result.deep.grammar?.pattern).toContain('attend');
+});
 it('keeps contextual phrase results local and does not reuse the wrong sentence sense', async () => {
   const fetch = vi.fn().mockRejectedValue(new Error('must not fetch')); vi.stubGlobal('fetch', fetch);
   const service = new LookupService();

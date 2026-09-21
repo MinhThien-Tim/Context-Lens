@@ -26,7 +26,7 @@ const entrySchema = z.object({
   lemma: z.string().min(1).max(80), partOfSpeech: z.string().min(1).max(80), ipa: z.string().max(120).nullable(),
   definitionEn: z.string().max(500), meaningsVi: z.array(z.string().min(1).max(250)).min(1).max(12),
   baseLemma: z.string().min(1).max(80).optional(),
-  inflection: z.enum(['past', 'past-participle', 'present-participle', 'third-person', 'plural', 'comparative', 'superlative']).optional()
+  inflection: z.enum(['past', 'past-participle', 'present-participle', 'third-person', 'plural', 'comparative', 'superlative', 'variant']).optional()
 }).strict();
 
 export const dictionaryPackSchema = z.object({
@@ -51,7 +51,18 @@ class InstalledDictionaryPack implements DictionaryProvider {
     for (const entry of this.entries.values()) {
       if (entry.baseLemma) continue;
       const parsed = parseMorphologyRedirect(entry.meaningsVi);
-      if (parsed && parsed.baseLemma !== entry.lemma && this.entries.has(parsed.baseLemma)) Object.assign(entry, parsed);
+      if (parsed && parsed.baseLemma !== entry.lemma && this.entries.has(parsed.baseLemma)) {
+        Object.assign(entry, parsed);
+        continue;
+      }
+      if (!isWeakInflectedEntry(entry)) continue;
+      for (const candidate of rankedLemmaCandidates(entry.lemma).slice(1)) {
+        const base = this.entries.get(candidate);
+        if (base && isVerbEntry(base)) {
+          Object.assign(entry, { baseLemma: base.lemma, inflection: inferInflection(entry.lemma, entry.partOfSpeech) });
+          break;
+        }
+      }
     }
   }
 
@@ -83,6 +94,14 @@ class InstalledDictionaryPack implements DictionaryProvider {
   }
 }
 
+function isVerbEntry(entry: DictionaryEntry): boolean {
+  return /(?:^|[ /,])(?:v|verb)(?:$|[ /,])/i.test(entry.partOfSpeech);
+}
+
+function isWeakInflectedEntry(entry: DictionaryEntry): boolean {
+  return isVerbEntry(entry) && !entry.definitionEn.trim() && entry.meaningsVi.length === 1 && /(?:ed|ing|s)$/i.test(entry.lemma);
+}
+
 function inferInflection(surface: string, partOfSpeech?: string): import('./types').InflectionType {
   if (surface.endsWith('ing')) return 'present-participle';
   if (surface.endsWith('ed') || surface.endsWith('ied')) return 'past-participle';
@@ -97,7 +116,8 @@ const redirectPatterns: Array<[import('./types').InflectionType, RegExp]> = [
   ['third-person', /^(?:động từ chia ở ngôi thứ ba số ít|third-person singular(?: simple present)?) (?:của|of) ([a-z][a-z' -]*)\.?$/i],
   ['plural', /^(?:số nhiều|danh từ số nhiều|plural) (?:của|of) ([a-z][a-z' -]*)\.?$/i],
   ['comparative', /^(?:dạng so sánh hơn|comparative) (?:của|of) ([a-z][a-z' -]*)\.?$/i],
-  ['superlative', /^(?:dạng so sánh nhất|superlative) (?:của|of) ([a-z][a-z' -]*)\.?$/i]
+  ['superlative', /^(?:dạng so sánh nhất|superlative) (?:của|of) ([a-z][a-z' -]*)\.?$/i],
+  ['variant', /^dạng viết khác của ([a-z][a-z' -]*)\.?$/i]
 ];
 
 function parseMorphologyRedirect(meanings: string[]): { baseLemma: string; inflection: import('./types').InflectionType } | undefined {

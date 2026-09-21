@@ -8,7 +8,7 @@ export interface DictionaryEntry {
   inflection?: InflectionType;
 }
 
-export type InflectionType = 'past' | 'past-participle' | 'present-participle' | 'third-person' | 'plural' | 'comparative' | 'superlative';
+export type InflectionType = 'past' | 'past-participle' | 'present-participle' | 'third-person' | 'plural' | 'comparative' | 'superlative' | 'variant';
 
 export interface DictionaryMatch {
   entry: DictionaryEntry;

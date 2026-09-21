@@ -7,32 +7,45 @@ from pathlib import Path
 
 LICENSE_URL = "https://creativecommons.org/licenses/by-sa/4.0/"
 ATTRIBUTION = ("Context Lens English-Vietnamese pack derived from Skypedia's English-Vietnamese Dictionary Database (2026), based on MinhQND Dictionary with data from Wiktionary and other open linguistic resources. Licensed CC BY-SA 4.0. Full notices are in ATTRIBUTION.md shipped beside this pack.")
-
 REDIRECTS = [
-    ('past-participle', re.compile(r'^(?:quá khứ và phân từ quá khứ|dạng quá khứ(?: và phân từ quá khứ)?|động từ quá khứ|past tense and past participle|past tense|past participle) (?:của|of) ([a-z][a-z\' -]*)[.]?$', re.I)),
-    ('present-participle', re.compile(r'^(?:dạng phân từ hiện tại(?: và danh động từ \(gerund\))?|hiện tại phân từ|present participle(?: and gerund)?) (?:của|of) ([a-z][a-z\' -]*)[.]?$', re.I)),
-    ('third-person', re.compile(r'^(?:động từ chia ở ngôi thứ ba số ít|third-person singular(?: simple present)?) (?:của|of) ([a-z][a-z\' -]*)[.]?$', re.I)),
-    ('plural', re.compile(r'^(?:số nhiều|danh từ số nhiều|plural) (?:của|of) ([a-z][a-z\' -]*)[.]?$', re.I)),
-    ('comparative', re.compile(r'^(?:dạng so sánh hơn|comparative) (?:của|of) ([a-z][a-z\' -]*)[.]?$', re.I)),
-    ('superlative', re.compile(r'^(?:dạng so sánh nhất|superlative) (?:của|of) ([a-z][a-z\' -]*)[.]?$', re.I)),
+    ('past-participle', re.compile(r'^(?:(?:dạng|thì|động từ)?\s*quá khứ(?:\s+đơn)?(?:\s+và\s+phân từ quá khứ)?|past tense and past participle|past tense|past participle)\s+(?:của|of)\s+([a-z][a-z\' -]*?)[.!?;:]?$', re.I)),
+    ('present-participle', re.compile(r'^(?:dạng phân từ hiện tại(?: và danh động từ \(gerund\))?|hiện tại phân từ|present participle(?: and gerund)?)\s+(?:của|of)\s+([a-z][a-z\' -]*?)[.!?;:]?$', re.I)),
+    ('third-person', re.compile(r'^(?:động từ chia ở ngôi thứ ba số ít|third-person singular(?: simple present)?)\s+(?:của|of)\s+([a-z][a-z\' -]*?)[.!?;:]?$', re.I)),
+    ('plural', re.compile(r'^(?:số nhiều|danh từ số nhiều|plural)\s+(?:của|of)\s+([a-z][a-z\' -]*?)[.!?;:]?$', re.I)),
+    ('comparative', re.compile(r'^(?:dạng so sánh hơn|comparative)\s+(?:của|of)\s+([a-z][a-z\' -]*?)[.!?;:]?$', re.I)),
+    ('superlative', re.compile(r'^(?:dạng so sánh nhất|superlative)\s+(?:của|of)\s+([a-z][a-z\' -]*?)[.!?;:]?$', re.I)),
+    ('variant', re.compile(r'^dạng viết khác\s+(?:của)\s+([a-z][a-z\' -]*?)[.!?;:]?$', re.I)),
 ]
-
-def redirect(meanings: list[str]) -> tuple[str, str] | None:
-    hits = []
-    for meaning in meanings:
-        for inflection, pattern in REDIRECTS:
-            match = pattern.match(meaning.strip())
-            if match: hits.append((inflection, match.group(1).strip().lower()))
-    return hits[0] if hits and all(hit == hits[0] for hit in hits) else None
 
 def clean(value: str | None, limit: int) -> str:
     return " ".join((value or "").split())[:limit]
 
+def lemma_candidates(word: str) -> list[tuple[str, str]]:
+    guesses: list[tuple[str, str]] = []
+    if word.endswith("ied") and len(word) > 4: guesses.append((word[:-3] + "y", "past-participle"))
+    if word.endswith("ed") and len(word) > 3:
+        guesses.extend([(word[:-2], "past-participle"), (word[:-1], "past-participle")])
+        if re.search(r"([b-df-hj-np-tv-z])\1ed$", word): guesses.append((word[:-3], "past-participle"))
+    if word.endswith("ing") and len(word) > 5:
+        guesses.extend([(word[:-3], "present-participle"), (word[:-3] + "e", "present-participle")])
+        if re.search(r"([b-df-hj-np-tv-z])\1ing$", word): guesses.append((word[:-4], "present-participle"))
+    if word.endswith("ies") and len(word) > 4: guesses.append((word[:-3] + "y", "third-person"))
+    if word.endswith("es") and len(word) > 3: guesses.append((word[:-2], "third-person"))
+    if word.endswith("s") and len(word) > 3: guesses.append((word[:-1], "third-person"))
+    return list(dict.fromkeys(guesses))
+
+def is_verb(entry: dict[str, object]) -> bool:
+    return bool(re.search(r"(?:^|[ /,])(?:v|verb)(?:$|[ /,])", str(entry["partOfSpeech"]), re.I))
+
+def weak_inflected_entry(entry: dict[str, object]) -> bool:
+    meanings = entry["meaningsVi"]
+    assert isinstance(meanings, list)
+    return not entry["definitionEn"] and len(meanings) == 1
+
 def build(source: Path, output_dir: Path, version: str, attribution_file: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(f"file:{source.as_posix()}?mode=ro", uri=True)
-    if connection.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
-        raise SystemExit("Source database integrity check failed")
+    if connection.execute("PRAGMA integrity_check").fetchone()[0] != "ok": raise SystemExit("Source database integrity check failed")
     rows = connection.execute("""
       SELECT w.word, d.pos, d.sub_pos, d.definition, p.ipa
       FROM words w JOIN word_definitions wd ON wd.word_id=w.id
@@ -49,7 +62,7 @@ def build(source: Path, output_dir: Path, version: str, attribution_file: Path) 
             grouped[lemma] = {"lemma": lemma, "partOfSpeech": clean(pos or sub_pos or "unknown", 80) or "unknown", "ipa": clean(ipa, 120) or None, "definitionEn": "", "meaningsVi": []}
         meanings[lemma].add(meaning)
         grouped[lemma]["meaningsVi"].append(meaning)
-    detected = resolved = unresolved = ambiguous = 0
+    detected = resolved = unresolved = ambiguous = inferred = 0
     for entry in grouped.values():
         hits = []
         for meaning in entry["meaningsVi"]:
@@ -63,6 +76,14 @@ def build(source: Path, output_dir: Path, version: str, attribution_file: Path) 
         if base not in grouped or base == entry["lemma"]: unresolved += 1; continue
         entry["baseLemma"], entry["inflection"] = base, inflection
         resolved += 1
+    for lemma, entry in grouped.items():
+        if entry.get("baseLemma") or not is_verb(entry) or not weak_inflected_entry(entry): continue
+        for base, inflection in lemma_candidates(lemma):
+            base_entry = grouped.get(base)
+            if base_entry and base != lemma and is_verb(base_entry):
+                entry["baseLemma"], entry["inflection"] = base, inflection
+                inferred += 1
+                break
     entries = list(grouped.values())
     if not 1 <= len(entries) <= 200_000: raise SystemExit(f"Unexpected entry count: {len(entries)}")
     pack = {"schema":"context-lens.dictionary-pack","version":1,"id":"context-lens.skypedia.en-vi","name":"Context Lens English-Vietnamese (Skypedia)","packVersion":version,"license":{"name":"CC BY-SA 4.0","url":LICENSE_URL,"attribution":ATTRIBUTION},"entries":entries}
@@ -76,7 +97,7 @@ def build(source: Path, output_dir: Path, version: str, attribution_file: Path) 
     manifest = {"schema":"context-lens.dictionary-release","version":1,"pack":pack_path.name,"packVersion":version,"entries":len(entries),"bytes":size,"sha256":digest,"license":"CC BY-SA 4.0","attribution":attribution_path.name,"source":"https://github.com/skypediacode/english-vietnamese-dictionary"}
     (output_dir/"manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     (output_dir/"SHA256SUMS").write_text(f"{digest}  {pack_path.name}\n",encoding="ascii")
-    print(json.dumps({**manifest, "morphology": {"detected": detected, "resolved": resolved, "unresolved": unresolved, "ambiguous": ambiguous}},ensure_ascii=False,indent=2))
+    print(json.dumps({**manifest, "morphology": {"detected": detected, "resolved": resolved, "inferred": inferred, "unresolved": unresolved, "ambiguous": ambiguous}},ensure_ascii=False,indent=2))
 
 if __name__ == "__main__":
     parser=argparse.ArgumentParser(); parser.add_argument("--source",type=Path,required=True); parser.add_argument("--attribution",type=Path,required=True); parser.add_argument("--output",type=Path,default=Path("release/dictionary")); parser.add_argument("--version",default="2026.09.1")

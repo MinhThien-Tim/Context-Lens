@@ -35,6 +35,7 @@ export class LocalLanguageEngine {
     const entry = phraseEntry ?? this.lexical.lookup(input.selectedText);
     const resolved = this.resolver.resolve({ selection: input.selectedText, lemma: entry?.lemma ?? normalized,
       canonicalPhrase: phraseEntry?.lemma, sentence: analysis.normalizedText, sentenceAnalysis: analysis,
+      pos: occurrence?.pos,
       candidateSenses: entry?.senses ?? [] });
     const sense = resolved.selectedSense;
     return { ...result, selection: { ...result.selection, lemma: entry?.lemma ?? this.lexical.lemma(input.selectedText), pos: sense?.pos ?? entry?.pos.join(' / ') },

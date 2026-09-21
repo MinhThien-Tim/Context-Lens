@@ -4,8 +4,8 @@
   "pack": "context-lens-en-vi-2026.09.1.json",
   "packVersion": "2026.09.1",
   "entries": 104738,
-  "bytes": 18117157,
-  "sha256": "7bbd01a1da4d0c92e7c87a5a37ccbc96228591707c685750ed49f87af920d59e",
+  "bytes": 18130226,
+  "sha256": "bd099a0bd5f450df740ae30bf7cde42d52c217e516143ba2bd82b253f808d890",
   "license": "CC BY-SA 4.0",
   "attribution": "ATTRIBUTION.md",
   "source": "https://github.com/skypediacode/english-vietnamese-dictionary"

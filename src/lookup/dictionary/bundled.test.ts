@@ -36,3 +36,14 @@ it('resolves bundled morphology to the base lexical meaning', async () => {
     expect(match?.entry.meaningsVi.some(meaning => !/quá khứ|phân từ/i.test(meaning))).toBe(true);
   }
 });
+
+it.each([
+  ['abated', 'abate'], ['abducted', 'abduct'], ['allowed', 'allow'], ['attended', 'attend']
+])('repairs missed or low-quality redirect %s -> %s', async (surface, lemma) => {
+  const source = readFileSync('release/dictionary/context-lens-en-vi-2026.09.1.json', 'utf8');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(source)));
+  await loadBundledDictionary();
+  const match = dictionaryRegistry.lookup(surface);
+  expect(match?.entry.lemma).toBe(lemma);
+  expect(match?.morphology?.baseLemma).toBe(lemma);
+});
