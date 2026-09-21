@@ -1,12 +1,29 @@
 #!/usr/bin/env python3
 """Build and verify the distributable Context Lens EN-VI dictionary pack."""
 from __future__ import annotations
-import argparse, hashlib, json, sqlite3
+import argparse, hashlib, json, re, sqlite3
 from collections import defaultdict
 from pathlib import Path
 
 LICENSE_URL = "https://creativecommons.org/licenses/by-sa/4.0/"
 ATTRIBUTION = ("Context Lens English-Vietnamese pack derived from Skypedia's English-Vietnamese Dictionary Database (2026), based on MinhQND Dictionary with data from Wiktionary and other open linguistic resources. Licensed CC BY-SA 4.0. Full notices are in ATTRIBUTION.md shipped beside this pack.")
+
+REDIRECTS = [
+    ('past-participle', re.compile(r'^(?:quá khứ và phân từ quá khứ|dạng quá khứ(?: và phân từ quá khứ)?|động từ quá khứ|past tense and past participle|past tense|past participle) (?:của|of) ([a-z][a-z\' -]*)[.]?$', re.I)),
+    ('present-participle', re.compile(r'^(?:dạng phân từ hiện tại(?: và danh động từ \(gerund\))?|hiện tại phân từ|present participle(?: and gerund)?) (?:của|of) ([a-z][a-z\' -]*)[.]?$', re.I)),
+    ('third-person', re.compile(r'^(?:động từ chia ở ngôi thứ ba số ít|third-person singular(?: simple present)?) (?:của|of) ([a-z][a-z\' -]*)[.]?$', re.I)),
+    ('plural', re.compile(r'^(?:số nhiều|danh từ số nhiều|plural) (?:của|of) ([a-z][a-z\' -]*)[.]?$', re.I)),
+    ('comparative', re.compile(r'^(?:dạng so sánh hơn|comparative) (?:của|of) ([a-z][a-z\' -]*)[.]?$', re.I)),
+    ('superlative', re.compile(r'^(?:dạng so sánh nhất|superlative) (?:của|of) ([a-z][a-z\' -]*)[.]?$', re.I)),
+]
+
+def redirect(meanings: list[str]) -> tuple[str, str] | None:
+    hits = []
+    for meaning in meanings:
+        for inflection, pattern in REDIRECTS:
+            match = pattern.match(meaning.strip())
+            if match: hits.append((inflection, match.group(1).strip().lower()))
+    return hits[0] if hits and all(hit == hits[0] for hit in hits) else None
 
 def clean(value: str | None, limit: int) -> str:
     return " ".join((value or "").split())[:limit]
@@ -32,6 +49,20 @@ def build(source: Path, output_dir: Path, version: str, attribution_file: Path) 
             grouped[lemma] = {"lemma": lemma, "partOfSpeech": clean(pos or sub_pos or "unknown", 80) or "unknown", "ipa": clean(ipa, 120) or None, "definitionEn": "", "meaningsVi": []}
         meanings[lemma].add(meaning)
         grouped[lemma]["meaningsVi"].append(meaning)
+    detected = resolved = unresolved = ambiguous = 0
+    for entry in grouped.values():
+        hits = []
+        for meaning in entry["meaningsVi"]:
+            for inflection, pattern in REDIRECTS:
+                match = pattern.match(meaning.strip())
+                if match: hits.append((inflection, match.group(1).strip().lower()))
+        if not hits: continue
+        detected += 1
+        if any(hit != hits[0] for hit in hits): ambiguous += 1; continue
+        inflection, base = hits[0]
+        if base not in grouped or base == entry["lemma"]: unresolved += 1; continue
+        entry["baseLemma"], entry["inflection"] = base, inflection
+        resolved += 1
     entries = list(grouped.values())
     if not 1 <= len(entries) <= 200_000: raise SystemExit(f"Unexpected entry count: {len(entries)}")
     pack = {"schema":"context-lens.dictionary-pack","version":1,"id":"context-lens.skypedia.en-vi","name":"Context Lens English-Vietnamese (Skypedia)","packVersion":version,"license":{"name":"CC BY-SA 4.0","url":LICENSE_URL,"attribution":ATTRIBUTION},"entries":entries}
@@ -45,8 +76,8 @@ def build(source: Path, output_dir: Path, version: str, attribution_file: Path) 
     manifest = {"schema":"context-lens.dictionary-release","version":1,"pack":pack_path.name,"packVersion":version,"entries":len(entries),"bytes":size,"sha256":digest,"license":"CC BY-SA 4.0","attribution":attribution_path.name,"source":"https://github.com/skypediacode/english-vietnamese-dictionary"}
     (output_dir/"manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     (output_dir/"SHA256SUMS").write_text(f"{digest}  {pack_path.name}\n",encoding="ascii")
-    print(json.dumps(manifest,ensure_ascii=False,indent=2))
+    print(json.dumps({**manifest, "morphology": {"detected": detected, "resolved": resolved, "unresolved": unresolved, "ambiguous": ambiguous}},ensure_ascii=False,indent=2))
 
 if __name__ == "__main__":
-    parser=argparse.ArgumentParser(); parser.add_argument("--source",type=Path,required=True); parser.add_argument("--attribution",type=Path,required=True); parser.add_argument("--output",type=Path,default=Path("release/dictionary")); parser.add_argument("--version",default="2026.09")
+    parser=argparse.ArgumentParser(); parser.add_argument("--source",type=Path,required=True); parser.add_argument("--attribution",type=Path,required=True); parser.add_argument("--output",type=Path,default=Path("release/dictionary")); parser.add_argument("--version",default="2026.09.1")
     args=parser.parse_args(); build(args.source,args.output,args.version,args.attribution)

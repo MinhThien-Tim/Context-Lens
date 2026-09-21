@@ -13,8 +13,8 @@ export function applyLocalResult(base: LookupResponse, lens: LensResult): Lookup
     deep: { ...base.deep, context_explanation_en: lens.english?.contextualDefinition ?? '',
       context_explanation_vi: lens.vietnamese?.contextualMeaning ?? '',
       sentence_analysis: { ...base.deep.sentence_analysis, translation_vi: lens.context.sentenceTranslation ?? '' },
-      grammar: lens.grammar?.role ? { pattern: lens.grammar.pattern ?? lens.selection.lemma,
-        explanation_en: `Dictionary part of speech: ${lens.grammar.role}`,
+      grammar: lens.grammar?.role ? { pattern: lens.grammar.form ?? lens.grammar.pattern ?? lens.selection.lemma,
+        explanation_en: lens.grammar.form ? `Word form: ${lens.grammar.form}. Dictionary part of speech: ${lens.grammar.role}` : `Dictionary part of speech: ${lens.grammar.role}`,
         explanation_vi: `Từ loại theo từ điển: ${lens.grammar.role}` } : null },
     difficulty: { ...base.difficulty, worth_learning: Boolean(en || vi) },
     engine: { provider: 'local', cached: lens.cached }

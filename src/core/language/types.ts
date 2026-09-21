@@ -14,7 +14,10 @@ export interface LexicalSense {
   frequency?: number;
   cefr?: string;
 }
-export interface LexicalEntry { lemma: string; pos: string[]; forms?: string[]; senses: LexicalSense[]; meaningsVi?: string[] }
+export interface LexicalEntry {
+  lemma: string; pos: string[]; forms?: string[]; senses: LexicalSense[]; meaningsVi?: string[];
+  morphology?: { surface: string; baseLemma: string; inflection: import('../../lookup/dictionary/types').InflectionType };
+}
 export interface PhraseEntry extends LexicalEntry { type: 'idiom' | 'phrasal verb' | 'collocation' | 'fixed expression' }
 export interface TokenInfo { text: string; normalized: string; lemma: string; start: number; end: number; pos?: string }
 export interface DetectedPhrase { canonical: string; text: string; start: number; end: number; type: PhraseEntry['type'] }
@@ -35,7 +38,7 @@ export interface LensResult {
   phrase?: { canonical: string; type: string };
   english?: { definition?: string; contextualDefinition?: string; synonyms?: string[]; examples?: string[] };
   vietnamese?: { meaning?: string; contextualMeaning?: string; senseAligned?: boolean };
-  grammar?: { role?: string; pattern?: string };
+  grammar?: { role?: string; pattern?: string; form?: string };
   context: { sentence: string; sentenceTranslation?: string; simpleEnglish?: string; previousSentence?: string; nextSentence?: string; needsPreviousSentence?: boolean };
   sense?: { id: string; alternatives: string[]; reasons: string[] };
   confidence: number; providers: { lexical?: string; sentence?: string; context?: string };

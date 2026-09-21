@@ -15,7 +15,7 @@ Real Android/iOS QA is not complete because this workspace has no connected Andr
 
 ## Release artifact
 
-`release/dictionary/context-lens-en-vi-2026.09.json`
+`release/dictionary/context-lens-en-vi-2026.09.1.json`
 
 SHA-256: `4caa2256337c7f94886c22ccd8a9ff962101647034d7b93c232f505f18888ffe`
 

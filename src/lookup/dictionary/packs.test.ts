@@ -21,4 +21,16 @@ describe('installable dictionary packs', () => {
   it('rejects packs without attribution', async () => {
     await expect(installDictionaryPack({ ...pack, license: { ...pack.license, attribution: '' } })).rejects.toBeTruthy();
   });
+  it('upgrades old packs with trusted redirects and keeps exact non-inflections', async () => {
+    const legacy = { ...pack, id: 'legacy-morphology', entries: [
+      { lemma: 'deliver', partOfSpeech: 'verb', ipa: null, definitionEn: 'to bring something', meaningsVi: ['giao', 'chuyển'] },
+      { lemma: 'delivered', partOfSpeech: 'verb', ipa: null, definitionEn: '', meaningsVi: ['Quá khứ và phân từ quá khứ của deliver'] },
+      { lemma: 'sing', partOfSpeech: 'verb', ipa: null, definitionEn: 'to make music with the voice', meaningsVi: ['hát'] }
+    ] };
+    await installDictionaryPack(legacy);
+    expect(dictionaryRegistry.lookup('delivered')).toMatchObject({ entry: { lemma: 'deliver' }, morphology: { baseLemma: 'deliver' } });
+    expect(dictionaryRegistry.lookup('sing')?.entry.lemma).toBe('sing');
+    dictionaryRegistry.unregister(legacy.id);
+    await db.dictionaryPacks.delete(legacy.id);
+  });
 });

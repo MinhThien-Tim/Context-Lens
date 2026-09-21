@@ -7,13 +7,14 @@ import { LookupService } from '../../lookup/service';
 import { defaultEngineSettings } from '../../settings/engines';
 import { db } from '../../db/database';
 import type { LookupRequest } from '../../lookup/types';
+import { LexicalEngine } from './lexicon';
 
 const request = (word: string, sentence: string): LookupRequest => ({ selection: word, sentence, selection_type: 'word', previous_sentence: null, next_sentence: null,
   language_mode: 'bilingual', learner: { native_language: 'vi', english_level: 'B2' }, options: { include_ipa: true, include_contrast: true, include_grammar: true, include_sentence_translation: true } });
 beforeAll(async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     const wordnet = url.match(/wordnet-(noun|verb|adj|adv)/)?.[1];
-    const path = wordnet ? `release/wordnet/wordnet-${wordnet}.json` : 'release/dictionary/context-lens-en-vi-2026.09.json';
+    const path = wordnet ? `release/wordnet/wordnet-${wordnet}.json` : 'release/dictionary/context-lens-en-vi-2026.09.1.json';
     return new Response(readFileSync(path, 'utf8'));
   }));
   await Promise.all([loadWordNet(), loadWordNet(), loadBundledDictionary()]);
@@ -40,6 +41,27 @@ it('delivers English definitions and Vietnamese meanings through the actual serv
     expect(result.lens?.vietnamese?.senseAligned).toBe(false);
   }
   expect(fetch).not.toHaveBeenCalled();
+});
+it.each([
+  ['indicated', 'indicate', 'The arrow indicated the correct route.'],
+  ['delivered', 'deliver', 'The courier delivered the parcel yesterday.'],
+  ['written', 'write', 'She had written a short note.'],
+  ['went', 'go', 'They went home early.']
+])('resolves %s consistently through immediate, lexical, and quick lookup', async (surface, lemma, sentence) => {
+  const service = new LookupService();
+  const input = request(surface, sentence);
+  expect(service.immediate(input).selection.lemma).toBe(lemma);
+  expect(new LexicalEngine().lookup(surface)?.lemma).toBe(lemma);
+  const quick = await service.quick(input, { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(quick.selection.lemma).toBe(lemma);
+  expect(quick.quick.definition_en.length).toBeGreaterThan(5);
+  expect(quick.quick.meaning_vi.join(' ')).not.toMatch(/^(Quá khứ|Dạng phân từ)/i);
+  expect(quick.deep.grammar?.pattern).toContain('of');
+});
+
+it.each(['studied', 'interested', 'tired', 'better'])('retains lexicalized senses for %s', word => {
+  const entry = new LexicalEngine().lookup(word);
+  expect(entry?.senses.length).toBeGreaterThan(1);
 });
 it('keeps contextual phrase results local and does not reuse the wrong sentence sense', async () => {
   const fetch = vi.fn().mockRejectedValue(new Error('must not fetch')); vi.stubGlobal('fetch', fetch);

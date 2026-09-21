@@ -15,7 +15,7 @@ export class SeedDictionary implements DictionaryProvider {
 
   lookup(surface: string): DictionaryMatch | null {
     const normalized = surface.toLocaleLowerCase().replace(/[^a-z'-]/g, '');
-    for (const candidate of lemmaCandidates(normalized)) {
+    for (const candidate of rankedLemmaCandidates(normalized)) {
       const entry = entries[candidate];
       if (entry) return { entry, surface };
     }
@@ -47,6 +47,13 @@ export function lemmaCandidates(word: string): string[] {
     if (/([b-df-hj-np-tv-z])\1ing$/.test(word)) candidates.push(word.slice(0, -4));
   }
   return [...new Set(candidates)];
+}
+
+const irregular: Record<string, string> = { written: 'write', wrote: 'write', went: 'go', gone: 'go', better: 'good', best: 'good' };
+
+/** Ordered guesses only. Providers must still require that the candidate exists. */
+export function rankedLemmaCandidates(word: string): string[] {
+  return [...new Set([word, irregular[word], ...lemmaCandidates(word)].filter((value): value is string => Boolean(value)))];
 }
 
 export const seedDictionary = new SeedDictionary();

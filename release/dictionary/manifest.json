@@ -1,11 +1,11 @@
 {
   "schema": "context-lens.dictionary-release",
   "version": 1,
-  "pack": "context-lens-en-vi-2026.09.json",
-  "packVersion": "2026.09",
+  "pack": "context-lens-en-vi-2026.09.1.json",
+  "packVersion": "2026.09.1",
   "entries": 104738,
-  "bytes": 17476995,
-  "sha256": "4caa2256337c7f94886c22ccd8a9ff962101647034d7b93c232f505f18888ffe",
+  "bytes": 18117157,
+  "sha256": "7bbd01a1da4d0c92e7c87a5a37ccbc96228591707c685750ed49f87af920d59e",
   "license": "CC BY-SA 4.0",
   "attribution": "ATTRIBUTION.md",
   "source": "https://github.com/skypediacode/english-vietnamese-dictionary"

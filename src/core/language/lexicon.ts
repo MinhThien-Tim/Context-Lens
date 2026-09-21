@@ -1,5 +1,5 @@
 import { dictionaryRegistry } from '../../lookup/dictionary/registry';
-import { lemmaCandidates } from '../../lookup/dictionary/seedDictionary';
+import { rankedLemmaCandidates } from '../../lookup/dictionary/seedDictionary';
 import type { LexicalEntry, PhraseEntry, TokenInfo } from './types';
 import { lookupWordNet, wordNetVersion } from './wordnet';
 
@@ -27,19 +27,31 @@ const irregular: Record<string, string> = { made: 'make', makes: 'make', making:
 export function normalizeLexical(text: string): string { return text.normalize('NFC').toLowerCase().replace(/’/g, "'").trim().replace(/\s+/g, ' '); }
 export class LexicalEngine {
   constructor(private entries: LexicalEntry[] = words) {}
-  get version(): string { return JSON.stringify(['local-lexicon-2', this.entries, dictionaryRegistry.versions(), wordNetVersion()]); }
+  get version(): string { return JSON.stringify(['local-lexicon-3', this.entries, dictionaryRegistry.versions(), wordNetVersion()]); }
   lookup(surface: string): LexicalEntry | undefined {
     const normalized = normalizeLexical(surface);
-    const candidates = [...new Set([normalized, irregular[normalized], ...lemmaCandidates(normalized)].filter((v): v is string => Boolean(v)))];
+    const candidates = [...new Set([normalized, irregular[normalized], ...rankedLemmaCandidates(normalized)].filter((v): v is string => Boolean(v)))];
     for (const candidate of candidates) {
       const entry = this.entries.find(item => item.lemma === candidate || item.forms?.includes(candidate));
-      if (entry) return entry;
+      if (entry) {
+        if (candidate === normalized) return entry;
+        const lexicalized = lookupWordNet(normalized);
+        return lexicalized ? { ...entry, pos: [...new Set([...lexicalized.pos, ...entry.pos])], senses: [...lexicalized.senses, ...entry.senses],
+          morphology: { surface: normalized, baseLemma: entry.lemma, inflection: normalized === 'best' ? 'superlative' : normalized === 'better' ? 'comparative' : 'past-participle' } } : entry;
+      }
     }
     for (const candidate of candidates) {
-      const legacy = candidate.includes(' ') ? undefined : dictionaryRegistry.lookup(candidate)?.entry;
-      const english = lookupWordNet(legacy?.lemma ?? candidate);
-      if (english && !legacy?.definitionEn) return { ...english, meaningsVi: legacy?.meaningsVi };
-      if (legacy) return { lemma: legacy.lemma, pos: legacy.partOfSpeech.split(/\s*\/\s*/), senses: [{ id: `${legacy.lemma}.legacy`, definitionEn: legacy.definitionEn, meaningVi: legacy.meaningsVi.join(' / ') }] };
+      if (candidate.includes(' ')) continue;
+      const match = dictionaryRegistry.lookup(candidate);
+      const legacy = match?.entry;
+      const baseEnglish = lookupWordNet(legacy?.lemma ?? candidate);
+      const surfaceEnglish = match?.morphology ? lookupWordNet(normalized) : undefined;
+      const senses = [...(surfaceEnglish?.senses ?? []), ...(baseEnglish?.senses ?? [])]
+        .filter((sense, index, all) => all.findIndex(other => other.id === sense.id) === index);
+      if (senses.length) return { lemma: legacy?.lemma ?? baseEnglish!.lemma, pos: [...new Set([...(surfaceEnglish?.pos ?? []), ...(baseEnglish?.pos ?? [])])], senses,
+        meaningsVi: legacy?.meaningsVi, morphology: match?.morphology ? { surface: normalized, ...match.morphology } : undefined };
+      if (legacy) return { lemma: legacy.lemma, pos: legacy.partOfSpeech.split(/\s*\/\s*/), senses: [{ id: `${legacy.lemma}.legacy`, definitionEn: legacy.definitionEn, meaningVi: legacy.meaningsVi.join(' / ') }],
+        morphology: match?.morphology ? { surface: normalized, ...match.morphology } : undefined };
     }
     return undefined;
   }

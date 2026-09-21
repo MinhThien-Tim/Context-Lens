@@ -8,7 +8,7 @@ import { validLookup } from '../../test/fixtures';
 afterEach(() => vi.unstubAllGlobals());
 
 it('loads the released dictionary once and resolves happened without network access', async () => {
-  const source = readFileSync('release/dictionary/context-lens-en-vi-2026.09.json', 'utf8');
+  const source = readFileSync('release/dictionary/context-lens-en-vi-2026.09.1.json', 'utf8');
   const fetchMock = vi.fn().mockResolvedValue(new Response(source));
   vi.stubGlobal('fetch', fetchMock);
   await Promise.all([loadBundledDictionary(), loadBundledDictionary()]);
@@ -23,4 +23,16 @@ it('loads the released dictionary once and resolves happened without network acc
   expect(result.quick.definition_en).toBe('');
   expect(result.quick.meaning_vi.length).toBeGreaterThan(0);
   expect(dictionaryRegistry.lookup('maintain')?.entry.definitionEn).toContain('keep');
+});
+
+it('resolves bundled morphology to the base lexical meaning', async () => {
+  const source = readFileSync('release/dictionary/context-lens-en-vi-2026.09.1.json', 'utf8');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(source)));
+  await loadBundledDictionary();
+  for (const [surface, lemma] of [['indicated', 'indicate'], ['delivered', 'deliver'], ['studied', 'study'], ['interested', 'interest'], ['tired', 'tire'], ['went', 'go']]) {
+    const match = dictionaryRegistry.lookup(surface);
+    expect(match?.entry.lemma).toBe(lemma);
+    expect(match?.morphology?.baseLemma).toBe(lemma);
+    expect(match?.entry.meaningsVi.some(meaning => !/quá khứ|phân từ/i.test(meaning))).toBe(true);
+  }
 });

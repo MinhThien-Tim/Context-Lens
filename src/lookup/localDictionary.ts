@@ -30,7 +30,9 @@ export function localLookup(request: LookupRequest, useDictionary = true): Looku
     deep: {
       context_explanation_en: lexical?.meaning_en ?? '',
       context_explanation_vi: lexical?.meaning_vi ?? '',
-      contrast: [], grammar: null,
+      contrast: [], grammar: match?.morphology ? { pattern: `${match.morphology.inflection} of ${match.morphology.baseLemma}`,
+        explanation_en: `Word form: ${match.morphology.inflection} of ${match.morphology.baseLemma}.`,
+        explanation_vi: `Dạng từ ${match.morphology.inflection} của ${match.morphology.baseLemma}.` } : null,
       sentence_analysis: { translation_vi: '', chunks: lexical ? [{ text: lexical.text, role: lexical.type, meaning_vi: lexical.meaning_vi }] : [] }
     },
     difficulty: { cefr: '—', worth_learning: Boolean(entry) }, confidence: entry ? 0.55 : 0.2, source: 'offline'

@@ -42,7 +42,8 @@ export class LocalLanguageEngine {
       english: sense?.definitionEn ? { definition: sense.definitionEn, contextualDefinition: sense.definitionEn, synonyms: sense.synonyms, examples: sense.examples } : undefined,
       vietnamese: sense?.meaningVi ? { meaning: sense.meaningVi, contextualMeaning: sense.meaningVi, senseAligned: true }
         : entry?.meaningsVi?.length ? { meaning: entry.meaningsVi.join(' / '), senseAligned: false } : undefined,
-      grammar: entry ? { role: sense?.pos ?? entry.pos.join(' / '), pattern: phraseEntry?.lemma } : undefined,
+      grammar: entry ? { role: sense?.pos ?? entry.pos.join(' / '), pattern: phraseEntry?.lemma,
+        form: entry.morphology ? `${entry.morphology.inflection} of ${entry.morphology.baseLemma}` : undefined } : undefined,
       sense: sense ? { id: sense.id, alternatives: resolved.alternatives.map(s => s.id), reasons: resolved.reasons } : undefined,
       context: { ...result.context, sentenceTranslation: analysis.translationVi, simpleEnglish: analysis.simpleEnglish },
       confidence: resolved.confidence, providers: { lexical: 'local-dictionary', sentence: 'local', context: 'local-sense-resolver' }, cached

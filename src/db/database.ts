@@ -8,6 +8,7 @@ import type { ContextResult } from '../core/context/types';
 import { explanationFromLookup } from '../core/context/adapter';
 import type { SentenceAnalysis } from '../core/language/types';
 import type { PdfStructuredPage } from '../documents/pdf/types';
+import type { DictionaryEntry } from '../lookup/dictionary/types';
 
 export interface DocumentRecord {
   toc?: DocumentSection[];
@@ -70,7 +71,7 @@ export interface DictionaryPackRecord {
   name: string;
   version: string;
   license: { name: string; url: string; attribution: string };
-  entries: Array<{ lemma: string; partOfSpeech: string; ipa: string | null; definitionEn: string; meaningsVi: string[] }>;
+  entries: DictionaryEntry[];
   installedAt: number;
 }
 export interface NoteRecord {
