@@ -10,16 +10,17 @@ import { readingSelectionFromDom, readingWordAtPoint } from './readingSelectionA
 export function PdfReadingView({ documentRecord, location, style, activeHighlightColor, onOriginal, onLocation, onLookup, onAddNote, onHighlight }: { documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; activeHighlightColor?: ReaderHighlight['color'] | null; onOriginal: () => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onHighlight: (highlight: ReaderHighlight) => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const ignoreClick = useRef(false);
+  const highlightTimer = useRef<number | undefined>(undefined);
   const [pending, setPending] = useState<ReaderSelection | null>(null);
   const [highlightOpen, setHighlightOpen] = useState(false);
   const pages = useMemo(() => readingPagesForDocument(documentRecord), [documentRecord]);
   const goTo = (page: number) => rootRef.current?.querySelector(`[data-pdf-reading-page="${Math.max(1, Math.min(pages.length, page))}"]`)?.scrollIntoView({ block: 'start' });
-  const captureSelection = () => {
+  const captureSelection = (commitHighlight = false) => {
     if (!rootRef.current) return null;
     const next = readingSelectionFromDom(rootRef.current, documentRecord.content);
     if (next) {
       setPending(next);
-      if (activeHighlightColor) onHighlight({ id: crypto.randomUUID(), startOffset: next.offset, endOffset: next.endOffset ?? next.offset + next.text.length, color: activeHighlightColor, createdAt: Date.now() });
+      if (activeHighlightColor && commitHighlight) onHighlight({ id: crypto.randomUUID(), startOffset: next.offset, endOffset: next.endOffset ?? next.offset + next.text.length, color: activeHighlightColor, createdAt: Date.now() });
       ignoreClick.current = true;
     }
     return next;
@@ -45,16 +46,18 @@ export function PdfReadingView({ documentRecord, location, style, activeHighligh
     let timer: number | undefined;
     const capture = () => {
       clearTimeout(timer);
+      clearTimeout(highlightTimer.current);
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed || !rootRef.current?.contains(selection.anchorNode) || !rootRef.current?.contains(selection.focusNode)) return;
-      timer = window.setTimeout(captureSelection, 160);
+      timer = window.setTimeout(() => captureSelection(false), 160);
+      if (activeHighlightColor) highlightTimer.current = window.setTimeout(() => captureSelection(true), 700);
     };
     document.addEventListener('selectionchange', capture);
-    return () => { clearTimeout(timer); document.removeEventListener('selectionchange', capture); };
+    return () => { clearTimeout(timer); clearTimeout(highlightTimer.current); document.removeEventListener('selectionchange', capture); };
   }, [documentRecord.id, documentRecord.content, activeHighlightColor]);
   return <div class="pdf-reading-view" style={style}>
     <PdfReadingNavigation page={location.page} total={pages.length} onPrevious={() => goTo(location.page - 1)} onNext={() => goTo(location.page + 1)} onOriginal={onOriginal} />
-    <div ref={rootRef} class="pdf-reading-scroll" onPointerUp={() => window.setTimeout(captureSelection, 0)} onKeyUp={event => { if (event.shiftKey) captureSelection(); }} onClick={event => {
+    <div ref={rootRef} class={`pdf-reading-scroll ${activeHighlightColor ? 'highlight-mode-active' : ''}`} onPointerUp={() => window.setTimeout(() => captureSelection(Boolean(activeHighlightColor)), 0)} onKeyUp={event => { if (event.shiftKey) captureSelection(Boolean(activeHighlightColor)); }} onClick={event => {
       if (ignoreClick.current) { ignoreClick.current = false; return; }
       const nativeSelection = window.getSelection();
       if (nativeSelection && !nativeSelection.isCollapsed) return;
