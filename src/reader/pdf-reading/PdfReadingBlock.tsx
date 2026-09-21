@@ -5,10 +5,21 @@ export function PdfReadingBlock({ block, highlights = [] }: { block: PdfTextBloc
   const props = { id: block.id, 'data-offset': block.startOffset };
   const content = highlightedText(block.text, block.startOffset, highlights);
   if (block.type === 'heading') { const Tag = `h${block.level ?? 2}` as 'h1' | 'h2' | 'h3'; return <Tag {...props}>{content}</Tag>; }
-  if (block.type === 'list') return <ul {...props}>{(block.items ?? block.text.split('\n')).map((item, index) => <li key={index}>{item}</li>)}</ul>;
+  if (block.type === 'list') {
+    let searchFrom = 0;
+    return <ul {...props}>{(block.items ?? block.text.split('\n')).map((item, index) => {
+      const found = block.text.indexOf(item, searchFrom);
+      const localOffset = found >= 0 ? found : searchFrom;
+      searchFrom = localOffset + item.length;
+      return <li key={index} data-offset={block.startOffset + localOffset}>{highlightedText(item, block.startOffset + localOffset, highlights)}</li>;
+    })}</ul>;
+  }
   if (block.type === 'quote') return <blockquote {...props}>{content}</blockquote>;
   if (block.type === 'footnote') return <aside {...props} class="pdf-reading-footnote">{content}</aside>;
-  if (block.type === 'dialogue') { const body = block.speaker ? block.text.replace(new RegExp(`^${escapeRegExp(block.speaker)}:\\s*`), '') : block.text; return <p {...props} class="pdf-reading-dialogue">{block.speaker && <strong>{block.speaker}: </strong>}{body}</p>; }
+  if (block.type === 'dialogue' && block.speaker) {
+    const prefix = block.text.match(new RegExp(`^${escapeRegExp(block.speaker)}:\\s*`))?.[0] ?? `${block.speaker}: `;
+    return <p {...props} class="pdf-reading-dialogue"><strong>{highlightedText(prefix, block.startOffset, highlights)}</strong>{highlightedText(block.text.slice(prefix.length), block.startOffset + prefix.length, highlights)}</p>;
+  }
   return <p {...props}>{content}</p>;
 }
 

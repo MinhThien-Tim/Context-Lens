@@ -26,4 +26,10 @@ describe('paginated PDF reading', () => {
     expect(host.querySelector('mark')?.textContent).toBe('world');
     expect(host.querySelector('mark')?.classList.contains('reader-highlight-yellow')).toBe(true);
   });
+
+  it('renders highlights inside dialogue and list blocks', () => {
+    const host = document.createElement('div');
+    render(<PdfReadingPage page={{ pageNumber: 1, startOffset: 0, endOffset: 35, plainText: 'SOCRATES: Hello world\n\nFirst item', extractionQuality: 'good', blocks: [{ id: 'd', type: 'dialogue', speaker: 'SOCRATES', text: 'SOCRATES: Hello world', startOffset: 0, endOffset: 21 }, { id: 'l', type: 'list', text: 'First item', items: ['First item'], startOffset: 23, endOffset: 33 }] }} highlights={[{ id: 'h1', startOffset: 10, endOffset: 15, color: 'yellow', createdAt: 1 }, { id: 'h2', startOffset: 23, endOffset: 28, color: 'blue', createdAt: 1 }]} />, host);
+    expect(Array.from(host.querySelectorAll('mark')).map(node => node.textContent)).toEqual(['Hello', 'First']);
+  });
 });

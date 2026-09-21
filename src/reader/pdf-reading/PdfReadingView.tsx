@@ -18,10 +18,8 @@ export function PdfReadingView({ documentRecord, location, style, activeHighligh
     if (!rootRef.current) return null;
     const next = readingSelectionFromDom(rootRef.current, documentRecord.content);
     if (next) {
-      if (activeHighlightColor) {
-        onHighlight({ id: crypto.randomUUID(), startOffset: next.offset, endOffset: next.endOffset ?? next.offset + next.text.length, color: activeHighlightColor, createdAt: Date.now() });
-        window.getSelection()?.removeAllRanges();
-      } else setPending(next);
+      setPending(next);
+      if (activeHighlightColor) onHighlight({ id: crypto.randomUUID(), startOffset: next.offset, endOffset: next.endOffset ?? next.offset + next.text.length, color: activeHighlightColor, createdAt: Date.now() });
       ignoreClick.current = true;
     }
     return next;
