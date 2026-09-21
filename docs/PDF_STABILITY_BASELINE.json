@@ -1,0 +1,591 @@
+[
+  {
+    "project": "laptop",
+    "samples": [
+      {
+        "writes": 2,
+        "scrollCommands": 1,
+        "longTasks": 6,
+        "longTaskMs": 1249,
+        "heap": 84333893,
+        "canvases": 5,
+        "pixels": [
+          443430,
+          443430,
+          443430,
+          443430,
+          443430
+        ],
+        "top": 2,
+        "page": "1 / 64"
+      },
+      {
+        "writes": 5,
+        "scrollCommands": 6,
+        "longTasks": 6,
+        "longTaskMs": 1249,
+        "heap": 85798957,
+        "canvases": 9,
+        "pixels": [
+          343505,
+          343505,
+          343505,
+          343505,
+          390370,
+          343505,
+          343505,
+          343505,
+          45000
+        ],
+        "top": 4112,
+        "page": "8 / 64"
+      },
+      {
+        "writes": 134,
+        "scrollCommands": 127,
+        "longTasks": 7,
+        "longTaskMs": 1322,
+        "heap": 92204918,
+        "canvases": 8,
+        "pixels": [
+          45000,
+          45000,
+          45000,
+          443430,
+          443430,
+          443430,
+          503685,
+          443430
+        ],
+        "top": 4658,
+        "page": "3 / 64"
+      },
+      {
+        "writes": 269,
+        "scrollCommands": 255,
+        "longTasks": 8,
+        "longTaskMs": 1387,
+        "heap": 98805717,
+        "canvases": 9,
+        "pixels": [
+          443430,
+          503685,
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          45000
+        ],
+        "top": 7089,
+        "page": "11 / 64"
+      },
+      {
+        "writes": 409,
+        "scrollCommands": 390,
+        "longTasks": 8,
+        "longTaskMs": 1387,
+        "heap": 105633779,
+        "canvases": 9,
+        "pixels": [
+          45000,
+          45000,
+          45000,
+          443430,
+          443430,
+          443430,
+          503685,
+          443430,
+          443430
+        ],
+        "top": 6313,
+        "page": "4 / 64"
+      },
+      {
+        "writes": 557,
+        "scrollCommands": 526,
+        "longTasks": 9,
+        "longTaskMs": 1439,
+        "heap": 114758874,
+        "canvases": 8,
+        "pixels": [
+          45000,
+          45000,
+          45000,
+          343505,
+          343505,
+          343505,
+          390370,
+          343505
+        ],
+        "top": 4658,
+        "page": "3 / 64"
+      },
+      {
+        "writes": 690,
+        "scrollCommands": 660,
+        "longTasks": 9,
+        "longTaskMs": 1439,
+        "heap": 121237305,
+        "canvases": 9,
+        "pixels": [
+          503685,
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          503685,
+          45000
+        ],
+        "top": 7865,
+        "page": "12 / 64"
+      },
+      {
+        "writes": 765,
+        "scrollCommands": 716,
+        "longTasks": 9,
+        "longTaskMs": 1439,
+        "heap": 123755558,
+        "canvases": 7,
+        "pixels": [
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          503685
+        ],
+        "top": 1554,
+        "page": "3 / 64"
+      },
+      {
+        "writes": 795,
+        "scrollCommands": 736,
+        "longTasks": 9,
+        "longTaskMs": 1439,
+        "heap": 123775766,
+        "canvases": 7,
+        "pixels": [
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          503685
+        ],
+        "top": 1554,
+        "page": "3 / 64"
+      },
+      {
+        "writes": 825,
+        "scrollCommands": 756,
+        "longTasks": 9,
+        "longTaskMs": 1439,
+        "heap": 123769782,
+        "canvases": 7,
+        "pixels": [
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          503685
+        ],
+        "top": 1554,
+        "page": "3 / 64"
+      },
+      {
+        "writes": 855,
+        "scrollCommands": 776,
+        "longTasks": 9,
+        "longTaskMs": 1439,
+        "heap": 123779098,
+        "canvases": 7,
+        "pixels": [
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          503685
+        ],
+        "top": 1554,
+        "page": "3 / 64"
+      },
+      {
+        "writes": 885,
+        "scrollCommands": 796,
+        "longTasks": 9,
+        "longTaskMs": 1439,
+        "heap": 123775346,
+        "canvases": 7,
+        "pixels": [
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          503685
+        ],
+        "top": 1554,
+        "page": "3 / 64"
+      },
+      {
+        "writes": 915,
+        "scrollCommands": 816,
+        "longTasks": 9,
+        "longTaskMs": 1439,
+        "heap": 123824878,
+        "canvases": 7,
+        "pixels": [
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          503685
+        ],
+        "top": 1554,
+        "page": "3 / 64"
+      },
+      {
+        "writes": 927,
+        "scrollCommands": 824,
+        "longTasks": 9,
+        "longTaskMs": 1439,
+        "heap": 123814250,
+        "canvases": 7,
+        "pixels": [
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          443430,
+          503685
+        ],
+        "top": 1554,
+        "page": "3 / 64"
+      }
+    ]
+  },
+  {
+    "project": "mobile-chromium",
+    "samples": [
+      {
+        "writes": 4,
+        "scrollCommands": 2,
+        "longTasks": 5,
+        "longTaskMs": 1266,
+        "heap": 84586806,
+        "canvases": 6,
+        "pixels": [
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080
+        ],
+        "top": 2,
+        "page": "1 / 64"
+      },
+      {
+        "writes": 8,
+        "scrollCommands": 7,
+        "longTasks": 5,
+        "longTaskMs": 1266,
+        "heap": 86435749,
+        "canvases": 11,
+        "pixels": [
+          747080,
+          747080,
+          747080,
+          747080,
+          848920,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          45000
+        ],
+        "top": 4657,
+        "page": "10 / 64"
+      },
+      {
+        "writes": 127,
+        "scrollCommands": 141,
+        "longTasks": 5,
+        "longTaskMs": 1266,
+        "heap": 86798235,
+        "canvases": 11,
+        "pixels": [
+          45000,
+          45000,
+          747080,
+          747080,
+          747080,
+          848920,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080
+        ],
+        "top": 9312,
+        "page": "19 / 64"
+      },
+      {
+        "writes": 243,
+        "scrollCommands": 279,
+        "longTasks": 7,
+        "longTaskMs": 1388,
+        "heap": 87104288,
+        "canvases": 11,
+        "pixels": [
+          747080,
+          747080,
+          848920,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          848920,
+          747080
+        ],
+        "top": 14543,
+        "page": "29 / 64"
+      },
+      {
+        "writes": 359,
+        "scrollCommands": 394,
+        "longTasks": 8,
+        "longTaskMs": 1443,
+        "heap": 87453048,
+        "canvases": 11,
+        "pixels": [
+          747080,
+          848920,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          848920,
+          45000,
+          45000
+        ],
+        "top": 23343,
+        "page": "47 / 64"
+      },
+      {
+        "writes": 474,
+        "scrollCommands": 515,
+        "longTasks": 8,
+        "longTaskMs": 1443,
+        "heap": 87620180,
+        "canvases": 11,
+        "pixels": [
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          848920,
+          747080,
+          747080,
+          45000,
+          45000
+        ],
+        "top": 6186,
+        "page": "14 / 64"
+      },
+      {
+        "writes": 598,
+        "scrollCommands": 625,
+        "longTasks": 9,
+        "longTaskMs": 1501,
+        "heap": 87768741,
+        "canvases": 11,
+        "pixels": [
+          45000,
+          45000,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          848920,
+          747080,
+          747080,
+          747080
+        ],
+        "top": 27488,
+        "page": "52 / 64"
+      },
+      {
+        "writes": 659,
+        "scrollCommands": 685,
+        "longTasks": 9,
+        "longTaskMs": 1501,
+        "heap": 87485047,
+        "canvases": 11,
+        "pixels": [
+          45000,
+          45000,
+          747080,
+          747080,
+          747080,
+          848920,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080
+        ],
+        "top": 16582,
+        "page": "33 / 64"
+      },
+      {
+        "writes": 741,
+        "scrollCommands": 720,
+        "longTasks": 9,
+        "longTaskMs": 1501,
+        "heap": 86948325,
+        "canvases": 9,
+        "pixels": [
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          848920,
+          747080,
+          747080
+        ],
+        "top": 1531,
+        "page": "4 / 64"
+      },
+      {
+        "writes": 771,
+        "scrollCommands": 740,
+        "longTasks": 9,
+        "longTaskMs": 1501,
+        "heap": 86955393,
+        "canvases": 9,
+        "pixels": [
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          848920,
+          747080,
+          747080
+        ],
+        "top": 1531,
+        "page": "4 / 64"
+      },
+      {
+        "writes": 801,
+        "scrollCommands": 760,
+        "longTasks": 9,
+        "longTaskMs": 1501,
+        "heap": 86973149,
+        "canvases": 9,
+        "pixels": [
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          848920,
+          747080,
+          747080
+        ],
+        "top": 1531,
+        "page": "4 / 64"
+      },
+      {
+        "writes": 831,
+        "scrollCommands": 780,
+        "longTasks": 9,
+        "longTaskMs": 1501,
+        "heap": 86982953,
+        "canvases": 9,
+        "pixels": [
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          848920,
+          747080,
+          747080
+        ],
+        "top": 1531,
+        "page": "4 / 64"
+      },
+      {
+        "writes": 861,
+        "scrollCommands": 800,
+        "longTasks": 9,
+        "longTaskMs": 1501,
+        "heap": 86975761,
+        "canvases": 9,
+        "pixels": [
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          848920,
+          747080,
+          747080
+        ],
+        "top": 1531,
+        "page": "4 / 64"
+      },
+      {
+        "writes": 873,
+        "scrollCommands": 808,
+        "longTasks": 9,
+        "longTaskMs": 1501,
+        "heap": 86990497,
+        "canvases": 9,
+        "pixels": [
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          747080,
+          848920,
+          747080,
+          747080
+        ],
+        "top": 1531,
+        "page": "4 / 64"
+      }
+    ]
+  }
+]

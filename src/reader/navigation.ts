@@ -10,7 +10,7 @@ export function indexAtOffset(offsets: number[] | undefined, offset: number): nu
 export function locationAtOffset(doc: DocumentRecord, offset: number): DocumentLocation {
   const absoluteOffset = Math.max(0, Math.min(doc.content.length, offset));
   const base = { absoluteOffset, scrollY: window.scrollY, progress: doc.content.length ? absoluteOffset / doc.content.length : 0, updatedAt: Date.now() };
-  if (doc.kind === 'pdf') { const page = indexAtOffset(doc.pageOffsets, absoluteOffset) + 1; return { ...base, kind: 'pdf', page, textOffset: absoluteOffset - (doc.pageOffsets?.[page - 1] ?? 0) }; }
+  if (doc.kind === 'pdf') { const page = indexAtOffset(doc.pageOffsets, absoluteOffset) + 1; const start = doc.pageOffsets?.[page - 1] ?? 0; const end = doc.pageOffsets?.[page] ?? doc.content.length; return { ...base, kind: 'pdf', page, pageOffset: (absoluteOffset - start) / Math.max(1, end - start), textOffset: absoluteOffset - start }; }
   if (doc.kind === 'epub') return { ...base, kind: 'epub', chapter: indexAtOffset(doc.chapterOffsets, absoluteOffset) + 1, cfi: null };
   return { ...base, kind: 'text', sectionId: doc.toc?.filter(item => item.offset !== undefined && item.offset <= absoluteOffset).at(-1)?.id };
 }
@@ -29,7 +29,7 @@ export function navigationOffset(doc: DocumentRecord, value: number): number | n
 }
 
 export function keyboardCanNavigate(event: KeyboardEvent): boolean {
-  return !event.defaultPrevented && !event.ctrlKey && !event.metaKey && !event.altKey && !(event.target instanceof Element && event.target.closest('input,textarea,select,button,a,[contenteditable="true"],[role="dialog"]')) && !document.querySelector('[aria-modal="true"]') && !window.getSelection()?.toString();
+  return !event.defaultPrevented && !event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey && !(event.target instanceof Element && event.target.closest('input,textarea,select,button,a,[contenteditable="true"],[role="dialog"]')) && !document.querySelector('[aria-modal="true"]') && !window.getSelection()?.toString();
 }
 
 export function rangeAtOffset(root: HTMLElement, offset: number): Range | null {

@@ -10,3 +10,7 @@ tmp/
 .dev.vars
 .dev.vars.*
 .wrangler/
+test-results/
+playwright-report/
+release/Context-Lens-pdf-stability.bundle
+release/Context-Lens-pdf-stability-handoff.txt

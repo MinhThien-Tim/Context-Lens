@@ -1,0 +1,874 @@
+[
+  {
+    "project": "laptop",
+    "kind": "metrics",
+    "samples": [
+      {
+        "writes": 2,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 84955399,
+        "canvases": 2,
+        "pixels": [
+          394680,
+          394680
+        ],
+        "top": 18,
+        "page": "1 / 64"
+      },
+      {
+        "writes": 2,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 85578545,
+        "canvases": 3,
+        "pixels": [
+          394680,
+          394680,
+          394680
+        ],
+        "top": 751,
+        "page": "2 / 64"
+      },
+      {
+        "writes": 3,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 86395608,
+        "canvases": 3,
+        "pixels": [
+          394680,
+          394680,
+          394680
+        ],
+        "top": 8081,
+        "page": "11 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 86967127,
+        "canvases": 3,
+        "pixels": [
+          394680,
+          448224,
+          394680
+        ],
+        "top": 15411,
+        "page": "21 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 87497546,
+        "canvases": 3,
+        "pixels": [
+          394680,
+          394680,
+          394680
+        ],
+        "top": 22741,
+        "page": "31 / 64"
+      },
+      {
+        "writes": 5,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 88065640,
+        "canvases": 3,
+        "pixels": [
+          394680,
+          394680,
+          448224
+        ],
+        "top": 30071,
+        "page": "41 / 64"
+      },
+      {
+        "writes": 6,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 88617124,
+        "canvases": 3,
+        "pixels": [
+          394680,
+          394680,
+          394680
+        ],
+        "top": 37401,
+        "page": "51 / 64"
+      },
+      {
+        "writes": 6,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 88817841,
+        "canvases": 3,
+        "pixels": [
+          394680,
+          394680,
+          394680
+        ],
+        "top": 39600,
+        "page": "54 / 64"
+      },
+      {
+        "writes": 6,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 89329969,
+        "canvases": 3,
+        "pixels": [
+          394680,
+          394680,
+          394680
+        ],
+        "top": 32270,
+        "page": "44 / 64"
+      },
+      {
+        "writes": 6,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 89837559,
+        "canvases": 3,
+        "pixels": [
+          394680,
+          394680,
+          448224
+        ],
+        "top": 24940,
+        "page": "34 / 64"
+      },
+      {
+        "writes": 7,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 90368927,
+        "canvases": 3,
+        "pixels": [
+          394680,
+          394680,
+          394680
+        ],
+        "top": 17610,
+        "page": "24 / 64"
+      },
+      {
+        "writes": 7,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 90868615,
+        "canvases": 3,
+        "pixels": [
+          394680,
+          448224,
+          394680
+        ],
+        "top": 10280,
+        "page": "14 / 64"
+      },
+      {
+        "writes": 7,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 91366487,
+        "canvases": 3,
+        "pixels": [
+          394680,
+          394680,
+          394680
+        ],
+        "top": 2950,
+        "page": "5 / 64"
+      },
+      {
+        "writes": 9,
+        "scrollCommands": 2,
+        "longTasks": 8,
+        "longTaskMs": 1799,
+        "heap": 91439368,
+        "canvases": 2,
+        "pixels": [
+          394680,
+          394680
+        ],
+        "top": 18,
+        "page": "1 / 64"
+      }
+    ]
+  },
+  {
+    "project": "laptop",
+    "kind": "complex-book-metrics",
+    "samples": [
+      {
+        "heap": 88724639,
+        "page": "2 / 353",
+        "pixels": [
+          363935,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 90567426,
+        "page": "11 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 92193044,
+        "page": "21 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 93219201,
+        "page": "30 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 94971316,
+        "page": "40 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 96205641,
+        "page": "49 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 96784176,
+        "page": "52 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 98012676,
+        "page": "43 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 99263639,
+        "page": "33 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 100568548,
+        "page": "24 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 101664828,
+        "page": "14 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 103130247,
+        "page": "4 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 103696269,
+        "page": "2 / 353",
+        "pixels": [
+          363935,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 104939526,
+        "page": "11 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 106535124,
+        "page": "21 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 107521011,
+        "page": "30 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 109159487,
+        "page": "40 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 110277724,
+        "page": "49 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 110865176,
+        "page": "52 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 112105752,
+        "page": "43 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 113362695,
+        "page": "33 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 114633996,
+        "page": "24 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 115792304,
+        "page": "14 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      },
+      {
+        "heap": 117188323,
+        "page": "4 / 353",
+        "pixels": [
+          406707,
+          406707,
+          406707
+        ]
+      }
+    ]
+  },
+  {
+    "project": "mobile-chromium",
+    "kind": "metrics",
+    "samples": [
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 84873768,
+        "canvases": 2,
+        "pixels": [
+          626400,
+          626400
+        ],
+        "top": 18,
+        "page": "1 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 85518368,
+        "canvases": 3,
+        "pixels": [
+          626400,
+          626400,
+          626400
+        ],
+        "top": 486,
+        "page": "2 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 85962796,
+        "canvases": 3,
+        "pixels": [
+          626400,
+          626400,
+          626400
+        ],
+        "top": 5170,
+        "page": "12 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 86062407,
+        "canvases": 3,
+        "pixels": [
+          626400,
+          712008,
+          626400
+        ],
+        "top": 9853,
+        "page": "21 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 86079035,
+        "canvases": 3,
+        "pixels": [
+          626400,
+          626400,
+          626400
+        ],
+        "top": 14537,
+        "page": "31 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 86120179,
+        "canvases": 3,
+        "pixels": [
+          626400,
+          626400,
+          712008
+        ],
+        "top": 19220,
+        "page": "41 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 86133637,
+        "canvases": 3,
+        "pixels": [
+          626400,
+          626400,
+          626400
+        ],
+        "top": 23904,
+        "page": "51 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 86134981,
+        "canvases": 3,
+        "pixels": [
+          626400,
+          626400,
+          626400
+        ],
+        "top": 25309,
+        "page": "54 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 86162076,
+        "canvases": 3,
+        "pixels": [
+          626400,
+          626400,
+          626400
+        ],
+        "top": 20625,
+        "page": "44 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 86166807,
+        "canvases": 3,
+        "pixels": [
+          626400,
+          626400,
+          712008
+        ],
+        "top": 15942,
+        "page": "34 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 86192091,
+        "canvases": 3,
+        "pixels": [
+          626400,
+          626400,
+          626400
+        ],
+        "top": 11258,
+        "page": "24 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 86198875,
+        "canvases": 3,
+        "pixels": [
+          626400,
+          712008,
+          626400
+        ],
+        "top": 6575,
+        "page": "14 / 64"
+      },
+      {
+        "writes": 4,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 86219419,
+        "canvases": 3,
+        "pixels": [
+          626400,
+          626400,
+          626400
+        ],
+        "top": 1891,
+        "page": "5 / 64"
+      },
+      {
+        "writes": 5,
+        "scrollCommands": 3,
+        "longTasks": 6,
+        "longTaskMs": 1044,
+        "heap": 86081640,
+        "canvases": 2,
+        "pixels": [
+          626400,
+          626400
+        ],
+        "top": 18,
+        "page": "1 / 64"
+      }
+    ]
+  },
+  {
+    "project": "mobile-chromium",
+    "kind": "complex-book-metrics",
+    "samples": [
+      {
+        "heap": 94655791,
+        "page": "2 / 353",
+        "pixels": [
+          679992,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95265926,
+        "page": "11 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95342906,
+        "page": "21 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95149697,
+        "page": "30 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95499744,
+        "page": "40 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95517147,
+        "page": "49 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95551948,
+        "page": "52 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95620978,
+        "page": "43 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95486153,
+        "page": "33 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95621297,
+        "page": "24 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95414647,
+        "page": "14 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95170361,
+        "page": "5 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95543011,
+        "page": "2 / 353",
+        "pixels": [
+          679992,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95625328,
+        "page": "11 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95712543,
+        "page": "21 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95464836,
+        "page": "30 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95774357,
+        "page": "40 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95713679,
+        "page": "49 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95723976,
+        "page": "52 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95779146,
+        "page": "43 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95670781,
+        "page": "33 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95761069,
+        "page": "24 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95562055,
+        "page": "14 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      },
+      {
+        "heap": 95272585,
+        "page": "5 / 353",
+        "pixels": [
+          759808,
+          759808,
+          759808
+        ]
+      }
+    ]
+  }
+]

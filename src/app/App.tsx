@@ -11,6 +11,7 @@ import { LookupBottomSheet } from '../components/LookupBottomSheet';
 import { ReaderSettings } from '../components/ReaderSettings';
 import { db, defaultPreferences, loadPreferences, savePreferences, type AppPreferences, type DocumentRecord } from '../db/database';
 import { TextReader, type ReaderSelection } from '../reader/TextReader';
+import { createLocationPersistence } from '../reader/pdf/locationPersistence';
 import { PdfViewer } from '../reader/pdf/PdfViewer';
 import { pdfOffsetForPage, pdfPageForOffset } from '../reader/pdf/navigation';
 import { PdfReadingView } from '../reader/pdf-reading/PdfReadingView';
@@ -82,6 +83,7 @@ export function App() {
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [contentsOpen, setContentsOpen] = useState(false);
   const [goToOpen, setGoToOpen] = useState(false);
+  const [pdfNavigationToken, setPdfNavigationToken] = useState(0);
   const [currentLocation, setCurrentLocation] = useState<DocumentLocation>(initialTextLocation());
   const [noteLocation, setNoteLocation] = useState<DocumentLocation>(initialTextLocation());
   const [noteSelection, setNoteSelection] = useState<ReaderSelection | null>(null);
@@ -143,9 +145,22 @@ export function App() {
     };
   }, []);
 
+  const pdfPersistence = useMemo(() => createLocationPersistence(location => {
+    if (documentRecord) void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() });
+  }), [documentRecord?.id]);
+  useEffect(() => {
+    const flush = () => pdfPersistence.flush();
+    const hidden = () => { if (document.visibilityState === 'hidden') flush(); };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', hidden);
+    return () => { flush(); window.removeEventListener('pagehide', flush); document.removeEventListener('visibilitychange', hidden); };
+  }, [pdfPersistence]);
+  const trackPdfLocation = (location: import('../documents/location').PdfDocumentLocation) => {
+    setCurrentLocation(location); setProgress(location.progress); pdfPersistence.update(location);
+  };
   useEffect(() => {
     if (!documentRecord) return;
-    const originalPdf = documentRecord.kind === 'pdf' && pdfMode === 'original';
+    const originalPdf = documentRecord.kind === 'pdf';
     if (!originalPdf) restoreTextLocation(documentRecord);
     setProgress(documentRecord.location.progress);
     setCurrentLocation(documentRecord.location);
@@ -178,7 +193,7 @@ export function App() {
     '--reader-font': preferences.fontFamily === 'serif' ? 'Georgia, Cambria, serif' : 'system-ui, sans-serif'
   }), [preferences]);
 
-  const openDocument = async (doc: DocumentRecord) => { setDocumentRecord(doc); };
+  const openDocument = async (doc: DocumentRecord) => { setDocumentRecord(await db.documents.get(doc.id) ?? doc); };
   const createDocument = async () => {
     const content = draft.trim(); if (!content) return;
     const now = Date.now();
@@ -210,7 +225,8 @@ export function App() {
   };
   const closeDocument = async () => {
     requestRef.current?.abort(); contextRequestRef.current?.abort();
-    if (documentRecord) await saveDocumentLocation(documentRecord);
+    if (documentRecord?.kind === 'pdf') pdfPersistence.flush();
+    else if (documentRecord) await saveDocumentLocation(documentRecord);
     setDocumentRecord(null); setLookupOpen(false); setShowNotes(false); setContentsOpen(false); setGoToOpen(false); setActiveSelection(null);
   };
 
@@ -299,6 +315,7 @@ export function App() {
     if (documentRecord.kind === 'pdf') {
       const page = pdfPageForOffset(documentRecord.pageOffsets, offset);
       const location: DocumentLocation = { kind: 'pdf', page, viewMode: pdfMode, textOffset: offset - pdfOffsetForPage(documentRecord.pageOffsets, page), absoluteOffset: offset, pageOffset: 0, scrollY: 0, progress: documentRecord.content.length ? offset / documentRecord.content.length : 0, updatedAt: Date.now() };
+      pdfPersistence.flush(); setPdfNavigationToken(value => value + 1);
       setCurrentLocation(location); setProgress(location.progress);
       void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() });
       return;
@@ -320,9 +337,13 @@ export function App() {
     if (!documentRecord || documentRecord.kind !== 'pdf' || mode === pdfMode || (mode === 'reading' && !pdfHasReadableText(documentRecord))) return;
     const offset = currentLocation.absoluteOffset ?? (currentLocation.kind === 'pdf' ? pdfOffsetForPage(documentRecord.pageOffsets, currentLocation.page) : 0);
     const page = pdfPageForOffset(documentRecord.pageOffsets, offset);
+    const pageStart = pdfOffsetForPage(documentRecord.pageOffsets, page);
+    const pageEnd = documentRecord.pageOffsets?.[page] ?? documentRecord.content.length;
+    const pageFraction = Math.max(0, Math.min(1, (offset - pageStart) / Math.max(1, pageEnd - pageStart)));
     const nextLocation: DocumentLocation = mode === 'original'
-      ? { kind: 'pdf', page, pageOffset: 0, textOffset: offset - pdfOffsetForPage(documentRecord.pageOffsets, page), absoluteOffset: offset, scrollY: 0, progress: documentRecord.content.length ? offset / documentRecord.content.length : 0, updatedAt: Date.now() }
-      : { kind: 'pdf', page, absoluteOffset: offset, scrollY: 0, progress: documentRecord.content.length ? offset / documentRecord.content.length : 0, updatedAt: Date.now() };
+      ? { kind: 'pdf', page, pageOffset: pageFraction, textOffset: offset - pdfOffsetForPage(documentRecord.pageOffsets, page), absoluteOffset: offset, scrollY: 0, progress: documentRecord.content.length ? offset / documentRecord.content.length : 0, updatedAt: Date.now() }
+      : { kind: 'pdf', page, pageOffset: pageFraction, absoluteOffset: offset, scrollY: 0, progress: documentRecord.content.length ? offset / documentRecord.content.length : 0, updatedAt: Date.now() };
+    pdfPersistence.flush(); setPdfNavigationToken(value => value + 1);
     setCurrentLocation(nextLocation); setProgress(nextLocation.progress);
     setDocumentRecord({ ...documentRecord, location: nextLocation });
     setPreferences(current => desktop ? { ...current, pdfViewMode: mode } : { ...current, pdfMobileViewMode: mode });
@@ -346,7 +367,7 @@ export function App() {
   if (!documentRecord) return (
     <main class="home-shell">
       {!online && <div class="status-banner" role="status">Offline mode · Saved documents and cached meanings remain available.</div>}
-      {updateReady && <button class="status-banner update-banner" onClick={() => location.reload()}>An update is ready · Reload</button>}
+      {updateReady && <button class="status-banner update-banner" onClick={() => window.dispatchEvent(new Event('context-lens:apply-update'))}>An update is ready · Reload</button>}
       <header class="brand-header"><div class="brand-mark">C</div><div><h1>Context Lens</h1><p>Read English. Stay in context.</p></div><button class="icon-button settings-button" aria-label="Saved vocabulary" onClick={() => setShowVocabulary(true)}>★</button><button class="icon-button" aria-label="Data and storage" onClick={() => setShowDataManagement(true)}>▣</button><button class="icon-button" aria-label="AI settings" onClick={() => setShowApiSettings(true)}>⚙</button></header>
       <section class="paste-panel">
         <label class="title-input">Title<input value={title} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
@@ -382,14 +403,14 @@ export function App() {
       <div class="reader-viewport">
       {documentRecord.source && <div class="reader-source">{documentRecord.source.author && <span>{documentRecord.source.author}</span>}{documentRecord.source.siteName && <span>{documentRecord.source.siteName}</span>}{documentRecord.source.url && <a href={documentRecord.source.url} target="_blank" rel="noreferrer noopener">Original ↗</a>}</div>}
       {documentRecord.kind === 'pdf' && pdfMode === 'original' && currentLocation.kind === 'pdf'
-        ? <PdfViewer documentRecord={documentRecord} location={currentLocation} zoomMode={desktop ? preferences.pdfZoomMode : 'fit-width'} onZoomMode={pdfZoomMode => setPreferences(current => ({ ...current, pdfZoomMode }))} onViewMode={() => changePdfViewMode('reading')} onLocation={location => { setCurrentLocation(location); setProgress(location.progress); void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() }); }} onLookup={runLookup} onAddNote={selection => openNotes(selection)} />
+        ? <PdfViewer key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} zoomMode={desktop ? preferences.pdfZoomMode : 'fit-width'} onZoomMode={pdfZoomMode => setPreferences(current => ({ ...current, pdfZoomMode }))} onViewMode={() => changePdfViewMode('reading')} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
         : documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf'
-        ? <PdfReadingView documentRecord={documentRecord} location={currentLocation} style={readerStyle} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onOriginal={() => changePdfViewMode('original')} onLocation={location => { setCurrentLocation(location); setProgress(location.progress); void db.documents.update(documentRecord.id, { location, updatedAt: Date.now() }); }} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
+        ? <PdfReadingView key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} style={readerStyle} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onOriginal={() => changePdfViewMode('original')} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
         : <TextReader offsets={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets : documentRecord.chapterOffsets} onAddNote={selection => openNotes(selection)} content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} />}
       </div>
       <LookupBottomSheet selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} debug={engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={() => { requestRef.current?.abort(); contextRequestRef.current?.abort(); setLookupOpen(false); }} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary()} onAddNote={() => openNotes(activeSelection)} saved={saved} />
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
-      {showNotes && <NotesPanel document={documentRecord} selection={noteSelection} location={noteLocation} onJump={location => { if (location.kind === 'pdf') { setCurrentLocation(location); setProgress(location.progress); setPreferences(current => desktop ? { ...current, pdfViewMode: location.viewMode ?? 'reading' } : { ...current, pdfMobileViewMode: location.viewMode ?? 'reading' }); return; } const offset = location.absoluteOffset ?? (location.kind === 'epub' ? documentRecord.chapterOffsets?.[location.chapter - 1] : undefined); if (offset !== undefined) jump(offset); else window.scrollTo({ top: location.scrollY, behavior: 'auto' }); }} onClose={() => setShowNotes(false)} />}
+      {showNotes && <NotesPanel document={documentRecord} selection={noteSelection} location={noteLocation} onJump={location => { if (location.kind === 'pdf') { pdfPersistence.flush(); setPdfNavigationToken(value => value + 1); setCurrentLocation(location); setProgress(location.progress); setPreferences(current => desktop ? { ...current, pdfViewMode: location.viewMode ?? 'reading' } : { ...current, pdfMobileViewMode: location.viewMode ?? 'reading' }); return; } const offset = location.absoluteOffset ?? (location.kind === 'epub' ? documentRecord.chapterOffsets?.[location.chapter - 1] : undefined); if (offset !== undefined) jump(offset); else window.scrollTo({ top: location.scrollY, behavior: 'auto' }); }} onClose={() => setShowNotes(false)} />}
     </ReaderShell>
   );
 }

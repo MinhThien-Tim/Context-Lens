@@ -18,7 +18,7 @@ export default defineConfig({
   plugins: [
     preact(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['icon.svg', 'icon-192.svg', 'icon-512.svg'],
       manifest: {
         name: 'Context Lens',
@@ -61,6 +61,7 @@ export default defineConfig({
   ],
   test: {
     environment: 'jsdom',
+    include: ['src/**/*.test.{ts,tsx}', 'gateway/**/*.test.{ts,tsx}'],
     setupFiles: ['./src/test/setup.ts']
   }
 });

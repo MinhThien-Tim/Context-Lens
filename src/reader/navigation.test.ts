@@ -39,4 +39,5 @@ it('ignores navigation keys inside forms, dialogs and native selections', () => 
   expect(keyboardCanNavigate(new KeyboardEvent('keydown', { key: 'ArrowRight' }))).toBe(false);
   window.getSelection()?.removeAllRanges();
   expect(keyboardCanNavigate(new KeyboardEvent('keydown', { key: 't' }))).toBe(true);
+  expect(keyboardCanNavigate(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true }))).toBe(false);
 });

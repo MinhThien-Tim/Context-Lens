@@ -221,3 +221,31 @@ button { cursor:pointer; } button:disabled { cursor:default; }
 
 .reader-header { z-index:12; }
 .reader-text { padding-bottom:max(50vh,calc(100dvh - 130px)); }
+
+/* PDF.js 6.3 text-layer variables (pdfjs-dist/web/pdf_viewer.css, Apache-2.0).
+   These must track the installed TextLayer implementation. */
+.pdf-text-layer { z-index:1; --min-font-size:1; --text-scale-factor:calc(var(--total-scale-factor) * var(--min-font-size)); --min-font-size-inv:calc(1 / var(--min-font-size)); letter-spacing:normal; word-spacing:normal; text-align:initial; forced-color-adjust:none; -webkit-text-size-adjust:none; }
+.pdf-text-layer :is(span,br) { -webkit-user-select:text; user-select:text; }
+.pdf-text-layer > :not(.markedContent),.pdf-text-layer .markedContent span:not(.markedContent) { z-index:1; --font-height:0; font-size:calc(var(--text-scale-factor) * var(--font-height)); --scale-x:1; --rotate:0deg; transform:rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv)); }
+.pdf-text-layer .markedContent { display:contents; }
+.pdf-text-layer span[role="img"],.pdf-text-layer .endOfContent { -webkit-user-select:none; user-select:none; }
+.pdf-annotation-layer { z-index:2; }
+.context-overlay { z-index:3; }
+.pdf-saved-highlight { position:absolute; background:#ffdb7566; }
+.pdf-saved-highlight.highlight-pink { background:#ff93bf66; }
+.pdf-saved-highlight.highlight-blue { background:#83c9ff66; }
+.pdf-saved-highlight.underline { background:transparent; border-bottom:2px solid #dfa900; }
+.pdf-original-actions { max-width:calc(100vw - 16px); padding:5px; gap:4px; border-radius:12px; background:var(--surface); box-shadow:var(--shadow); }
+.pdf-original-actions button { min-height:44px; padding:0 10px; border:0; border-radius:8px; }
+.pdf-viewer-wrap { height:calc(100dvh - 56px); }
+.pdf-scroll,.pdf-reading-scroll { overscroll-behavior:contain; overflow-anchor:none; }
+.reader-viewport:has(.pdf-viewer-wrap),.reader-viewport:has(.pdf-reading-view) { min-height:0; }
+body:has(.pdf-viewer-wrap),body:has(.pdf-reading-view) { overflow:hidden; }
+
+.pdf-text-host { position:absolute; inset:0; z-index:1; }
+.pdf-text-layer { --scale-round-x:1px; --scale-round-y:1px; }
+.pdf-text-layer[data-main-rotation="90"] { transform:rotate(90deg) translateY(-100%); }
+.pdf-text-layer[data-main-rotation="180"] { transform:rotate(180deg) translate(-100%,-100%); }
+.pdf-text-layer[data-main-rotation="270"] { transform:rotate(270deg) translateX(-100%); }
+
+.pdf-text-host { position:absolute; inset:0; z-index:1; }

@@ -1,20 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import type { DocumentRecord, ReaderHighlight } from '../../db/database';
 import type { PdfDocumentLocation } from '../../documents/location';
+import { usePdfScroll } from '../pdf/usePdfScroll';
 import { PdfReadingPage } from './PdfReadingPage';
 import { PdfReadingNavigation } from './PdfReadingNavigation';
 import { readingPagesForDocument } from './structuredPages';
 import type { ReaderSelection } from '../TextReader';
 import { readingSelectionFromDom, readingWordAtPoint } from './readingSelectionAdapter';
 
-export function PdfReadingView({ documentRecord, location, style, activeMarkupTool, activeMarkupColor, onOriginal, onLocation, onLookup, onAddNote, onHighlight, onErase }: { documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; activeMarkupTool?: 'highlight' | 'underline' | 'eraser' | null; activeMarkupColor: ReaderHighlight['color']; onOriginal: () => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onHighlight: (highlight: ReaderHighlight) => void; onErase: (startOffset: number, endOffset: number) => void }) {
+export function PdfReadingView({ documentRecord, location, style, activeMarkupTool, activeMarkupColor, onOriginal, onLocation, onLookup, onAddNote, onHighlight, onErase, navigationToken = 0 }: { navigationToken?: number; documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; activeMarkupTool?: 'highlight' | 'underline' | 'eraser' | null; activeMarkupColor: ReaderHighlight['color']; onOriginal: () => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onHighlight: (highlight: ReaderHighlight) => void; onErase: (startOffset: number, endOffset: number) => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const ignoreClick = useRef(false);
   const highlightTimer = useRef<number | undefined>(undefined);
   const [pending, setPending] = useState<ReaderSelection | null>(null);
   const [highlightOpen, setHighlightOpen] = useState(false);
   const pages = useMemo(() => readingPagesForDocument(documentRecord), [documentRecord]);
-  const goTo = (page: number) => rootRef.current?.querySelector(`[data-pdf-reading-page="${Math.max(1, Math.min(pages.length, page))}"]`)?.scrollIntoView({ block: 'start' });
+  const lastPosition = useRef('');
+  const goTo = usePdfScroll(rootRef, '.pdf-reading-page', true, location, navigationToken, (page, pageOffset, scrollY) => {
+    const model = pages[page - 1];
+    if (!model) return;
+    const key = `${page}:${Math.round(pageOffset * 1000)}:${Math.round(scrollY)}`;
+    if (lastPosition.current === key) return;
+    lastPosition.current = key;
+    const textOffset = Math.round(model.plainText.length * pageOffset);
+    onLocation({ kind: 'pdf', page, viewMode: 'reading', pageOffset, textOffset, absoluteOffset: model.startOffset + textOffset, scrollY, progress: (page - 1 + pageOffset) / pages.length, updatedAt: Date.now() });
+  });
   const captureSelection = (commitHighlight = false) => {
     if (!rootRef.current) return null;
     const next = readingSelectionFromDom(rootRef.current, documentRecord.content);
@@ -29,23 +39,6 @@ export function PdfReadingView({ documentRecord, location, style, activeMarkupTo
     }
     return next;
   };
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const observer = new IntersectionObserver(entries => {
-      const current = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (!current) return;
-      const page = Number((current.target as HTMLElement).dataset.pdfReadingPage);
-      const model = pages[page - 1];
-      const element = current.target as HTMLElement;
-      const pageOffset = Math.max(0, -element.getBoundingClientRect().top) / Math.max(1, element.offsetHeight);
-      const textOffset = Math.round(model.plainText.length * Math.min(1, pageOffset));
-      onLocation({ kind: 'pdf', page, viewMode: 'reading', pageOffset, textOffset, absoluteOffset: model.startOffset + textOffset, scrollY: root.scrollTop, progress: pages.length ? (page - 1 + pageOffset) / pages.length : 0, updatedAt: Date.now() });
-    }, { root, threshold: [.1, .35, .65] });
-    root.querySelectorAll('[data-pdf-reading-page]').forEach(page => observer.observe(page));
-    return () => observer.disconnect();
-  }, [documentRecord.id]);
-  useEffect(() => { requestAnimationFrame(() => goTo(location.page)); }, [location.page]);
   useEffect(() => {
     let timer: number | undefined;
     const capture = () => {
