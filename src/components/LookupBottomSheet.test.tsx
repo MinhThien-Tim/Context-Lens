@@ -78,3 +78,17 @@ it.each([false, true])('only traps focus when mobile is modal (desktop=%s)', des
     if (!desktop) expect(document.activeElement).toBe(buttons[0]);
   } finally { act(() => render(null, host)); host.remove(); previous.remove(); vi.unstubAllGlobals(); }
 });
+
+it('offers explicit controls for switching between word popup and side panel', () => {
+  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  const host = document.createElement('div'); document.body.append(host);
+  const onDisplayModeChange = vi.fn(); const noop = vi.fn();
+  try {
+    act(() => render(<LookupBottomSheet open displayMode="popup" onDisplayModeChange={onDisplayModeChange} result={validLookup} loading={false} error={null} mode="en" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    expect(host.querySelector('.word-popup')).not.toBeNull();
+    expect(host.querySelector('.deep-explanation')).toBeNull();
+    const panelButton = Array.from(host.querySelectorAll<HTMLButtonElement>('.lookup-view-switch button')).find(button => button.textContent === 'Bảng bên phải');
+    act(() => panelButton?.click());
+    expect(onDisplayModeChange).toHaveBeenCalledWith('panel');
+  } finally { act(() => render(null, host)); host.remove(); vi.unstubAllGlobals(); }
+});

@@ -19,5 +19,7 @@ export function pdfSelectionFromRange(root: HTMLElement, range: Range, documentT
   const context = sentenceContextForRange(documentText, offset, endOffset);
   const canonicalText = normalizeSelection(documentText.slice(offset, endOffset).replace(/-\s+/g, ''));
   const selectedText = /-\s+/.test(raw) ? text : canonicalText || text;
-  return { text: selectedText, offset, endOffset, type: selectedText.includes(' ') ? (normalizeSelection(context.current) === selectedText ? 'sentence' : 'phrase') : 'word', context };
+  const rect = range.getBoundingClientRect?.() ?? { left: 0, top: 0, right: 0, bottom: 0 };
+  return { text: selectedText, offset, endOffset, type: selectedText.includes(' ') ? (normalizeSelection(context.current) === selectedText ? 'sentence' : 'phrase') : 'word', context,
+    anchor: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom } };
 }

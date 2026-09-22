@@ -5,6 +5,7 @@ export interface ReaderSelection {
   text: string;
   offset: number;
   endOffset?: number;
+  anchor?: { left: number; top: number; right: number; bottom: number };
   type: 'word' | 'phrase' | 'sentence';
   context: ReturnType<typeof sentenceContextAt>;
 }
@@ -41,7 +42,9 @@ export function TextReader({ content, safeHtml, onLookup, style, offsets, onAddN
     before.setEnd(range.startContainer, range.startOffset);
     const offset = before.toString().length;
     const context = sentenceContextForRange(fullText, offset, offset + range.toString().length);
-    return { text, offset, type: text.includes(' ') ? normalizeSelection(context.current) === text ? 'sentence' : 'phrase' : 'word', context };
+    const rect = range.getBoundingClientRect?.() ?? { left: 0, top: 0, right: 0, bottom: 0 };
+    return { text, offset, type: text.includes(' ') ? normalizeSelection(context.current) === text ? 'sentence' : 'phrase' : 'word', context,
+      anchor: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom } };
   };
 
   const captureSelection = () => {
@@ -79,7 +82,9 @@ export function TextReader({ content, safeHtml, onLookup, style, offsets, onAddN
         if (!range || !rootRef.current?.contains(range.startContainer)) return;
         const word = wordAtPoint(range);
         if (!word) return;
-        onLookup({ text: word.text, offset: word.offset, type: 'word', context: sentenceContextAt(rootRef.current.textContent ?? '', word.offset) });
+        const rect = range.getBoundingClientRect?.() ?? { left: event.clientX, top: event.clientY, right: event.clientX, bottom: event.clientY };
+        onLookup({ text: word.text, offset: word.offset, type: 'word', context: sentenceContextAt(rootRef.current.textContent ?? '', word.offset),
+          anchor: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom } });
       }}
     >
       {safeHtml
