@@ -34,13 +34,13 @@ describe('portable backup', () => {
   });
 });
 
-it('round-trips TOC and structured note locations with backup v3', async () => {
+it('round-trips TOC and structured note locations with backup v4', async () => {
   const location = { kind: 'text' as const, absoluteOffset: 3, sectionId: 's1', scrollY: 20, progress: .5, updatedAt: 8 };
   const toc = [{ id: 's1', title: 'Section', level: 1, offset: 3 }];
   await db.documents.put({ ...documentRecord, toc, location });
   await db.notes.put({ ...noteRecord, structuredLocation: location });
   const backup = await buildBackup();
-  expect(backup.version).toBe(3);
+  expect(backup.version).toBe(4);
   await db.documents.clear(); await db.notes.clear();
   await restoreBackup(backup);
   expect((await db.documents.get(documentRecord.id))?.toc).toEqual(toc);
@@ -52,4 +52,17 @@ it('still restores legacy version 2 notes without invented anchors', async () =>
   await restoreBackup({ schema: 'context-lens.backup', version: 2, exportedAt: '', documents: [], vocabulary: [], notes: [noteRecord] });
   expect((await db.notes.get(noteRecord.id))?.structuredLocation).toBeUndefined();
   await db.notes.clear();
+});
+it('backup v4 preserves collections and source metadata, including empty collections', async () => {
+  await db.vocabularyCollections.clear(); await db.vocabulary.clear();
+  await db.vocabularyCollections.put({id:'empty',title:'Empty collection',createdAt:1,updatedAt:2});
+  await db.vocabularyCollections.put({id:'book',title:'Reading',createdAt:1,updatedAt:2});
+  await db.vocabulary.put({...vocabularyRecord,collectionId:'book',collectionTitle:'Reading',source:{...vocabularyRecord.source,page:83,type:'pdf',author:'Author',url:'https://example.org/book'}});
+  const backup = await buildBackup();
+  await db.vocabularyCollections.clear(); await db.vocabulary.clear();
+  await restoreBackup(backup);
+  expect(await db.vocabularyCollections.count()).toBe(2);
+  expect((await db.vocabularyCollections.get('empty'))?.title).toBe('Empty collection');
+  expect((await db.vocabulary.get(vocabularyRecord.id))?.source.page).toBe(83);
+  await db.vocabularyCollections.clear(); await db.vocabulary.clear();
 });

@@ -1,0 +1,2 @@
+﻿import { defineConfig } from '@playwright/test';
+export default defineConfig({testDir:'./e2e',testMatch:'vocabulary-handoff.spec.ts',workers:1,use:{channel:'chrome'},webServer:{command:'python -m http.server 8011 --bind 127.0.0.1 --directory ../English101',url:'http://127.0.0.1:8011',reuseExistingServer:true},projects:[{name:'360px',use:{viewport:{width:360,height:800}}},{name:'390px',use:{viewport:{width:390,height:844}}}]});

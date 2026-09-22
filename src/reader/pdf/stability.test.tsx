@@ -38,10 +38,9 @@ describe('canonical PDF selection', () => {
     const { result } = select(['one word. ', 'another word.'], 'one word.\n\nanother word.', [1, 8], [1, 12]);
     expect(result).toMatchObject({ offset: 19, endOffset: 23, text: 'word' });
   });
-  it('retains a useful fallback for valid text with extraction differences', () => {
+  it('does not invent canonical offsets when rendered and canonical text do not align', () => {
     const { result } = select(['unrecognized'], 'recognized text', [0, 0], [0, 12]);
-    expect(result?.text).toBe('unrecognized');
-    expect(result!.endOffset).toBeGreaterThan(result!.offset);
+    expect(result).toBeNull();
   });
   it('rejects collapsed and unrelated selections', () => {
     const { root } = select(['word'], 'word', [0, 0], [0, 0]);

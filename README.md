@@ -60,7 +60,7 @@ The interaction pipeline is intentionally latency-first:
 4. Context and Grammar reveal local information. AI Explain or the AI task menu explicitly invokes ContextRouter. Translate sentence is a separate action. Switching EN/VI modes never repeats requests.
 5. Preserve the quick card on timeout, quota exhaustion, unsupported languages, cancellation, or provider failure.
 
-Dexie v10 preserves TOC metadata and structured note anchors; v9 added reusable sentence analyses alongside translation/context caches and offline notes without replacing documents, vocabulary, dictionary packs, or legacy lookup records. Caches use bounded memory and deferred, hit-weighted LRU cleanup. Context AI returns a compact task-specific explanation adapted to the reader UI. `npm run typecheck` runs TypeScript validation; this repository has no separate lint configuration.
+Dexie v11 adds vocabulary collections; v10 preserves TOC metadata and structured note anchors; v9 added reusable sentence analyses alongside translation/context caches and offline notes without replacing documents, vocabulary, dictionary packs, or legacy lookup records. Caches use bounded memory and deferred, hit-weighted LRU cleanup. Context AI returns a compact task-specific explanation adapted to the reader UI. `npm run typecheck` runs TypeScript validation; this repository has no separate lint configuration.
 
 Locations store both an absolute offset and normalized progress. PDF locations also track pages; EPUB locations track chapters with a reserved CFI field. This keeps restoration stable when viewport or typography changes. IndexedDB migrations are versioned and older documents are upgraded automatically.
 
@@ -110,7 +110,7 @@ API keys are session-only by default. Persistent keys are stored in this browser
 
 - `DocumentRecord.kind` and `DocumentLocation` are extensible for future DOCX/renderers without changing existing records.
 - Importers return one `ImportedDocument` contract and accept cancellation/progress callbacks.
-- Vocabulary export uses `english101.context-vocabulary` version 1; later sync should adapt this payload rather than read IndexedDB directly.
+- Vocabulary export uses `english101.context-vocabulary` version 2 (with a V1 adapter); later sync should adapt this payload rather than read IndexedDB directly.
 - Provider prompts, cache keys, database migrations, and external response schemas are explicitly versioned.
 - Heavy reader code is isolated in lazy chunks and cached only after use.
 
@@ -119,7 +119,7 @@ API keys are session-only by default. Persistent keys are stored in this browser
 The staged local-first foundation is implemented:
 
 - Local dictionary data is behind a versioned provider registry, ready for downloadable or English101-owned language packs.
-- Portable `context-lens.backup` version 3 export/restore preserves documents, vocabulary, and notes while excluding API keys, AI cache, and original binary book files; version 1 and 2 backups remain importable.
+- Portable `context-lens.backup` version 4 export/restore preserves documents, vocabulary, and notes while excluding API keys, AI cache, and original binary book files; version 1, 2 and 3 backups remain importable.
 - The library exposes storage usage, persistent-storage status, AI-cache cleanup, and per-document deletion.
 - DOCX joins the shared importer contract and remains outside the initial bundle.
 - Dictionary packs require versioned schemas and explicit license/attribution metadata; see `docs/DICTIONARY_PACK.md`.
@@ -133,8 +133,8 @@ The staged local-first foundation is implemented:
 
 The reader now adapts between desktop Contents/reading/context columns and mobile
 Contents drawers, Quick/Expanded explanation sheets, and full-height notes.
-Quick shows the selection and core meanings; language controls, vocabulary, notes,
-context, grammar and optional AI actions are available after **Expand**.
+Quick shows the selection, core meanings, and one-tap vocabulary Save; language
+controls, notes, context, grammar and optional AI actions are available after **Expand**.
 Escape collapses Expanded first, then closes Quick.
 
 PDF navigation uses source page offsets (including blank pages), EPUB uses spine
@@ -150,3 +150,25 @@ editable and show an unavailable-location message rather than inventing a target
 Light/dark/system preferences remain local and persist across reloads.
 
 See [implementation and verification details](docs/READER_UI_UPGRADE.md).
+
+
+## English101 vocabulary handoff
+
+Context Lens captures contextual vocabulary.
+English101 consumes the versioned vocabulary export for study.
+
+Save in the quick or expanded lookup sheet creates a collection from the document
+name without opening a modal. Exact lemma/sentence saves reuse their record ID.
+PDF pages and EPUB chapters are retained. Dexie v11 adds `vocabularyCollections`
+and migrates old words into "Saved vocabulary", preserving other stores.
+
+In Saved vocabulary, **Open in English101** downloads a V2 JSON file. Open English101
+/ Personal Flashcards and import it. This is a manual file handoff, not live sync.
+The `english101.context-vocabulary` contract is the only integration boundary;
+`buildEnglish101ExportV1` remains available for older consumers. CSV is unchanged.
+Backup V4 preserves vocabulary, source metadata, and collections (including empty
+collections); backups V1-V3 remain supported. No AI response is exported.
+Accounts, cloud sync, multi-context merging, and review scheduling are deferred.
+
+Run the two-repository browser checks with both repositories side by side:
+`npx playwright test --config playwright.vocabulary.config.ts`.

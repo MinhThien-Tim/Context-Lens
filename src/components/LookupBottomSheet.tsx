@@ -24,6 +24,7 @@ interface Props {
   onToggleSave: () => void;
   onAddNote?: () => void;
   saved: boolean;
+  collectionTitle?: string;
   debug?: boolean;
 }
 
@@ -50,11 +51,12 @@ export function LookupBottomSheet(props: Props) {
         {!result ? <div class="lookup-skeleton">Finding meaning…</div> : (
           <>
 
+            <button class="secondary-button" aria-label={props.saved ? "Remove saved word" : "Save word"} aria-pressed={props.saved} onClick={props.onToggleSave}>{props.saved ? `Saved \u00b7 ${props.collectionTitle ?? "Saved vocabulary"}` : "Save"}</button>
             <QuickExplain result={result} mode={props.mode} expanded={deepOpen} />
             {props.loading && <p role="status">Finding context...</p>}
             {props.error && <div class="lookup-error" role="status">{props.error}</div>}
             {deepOpen && <>
-            <div class="context-actions"><button class="secondary-button" onClick={() => props.onSpeak(result.selection.lemma)}>Pronounce</button><button class="secondary-button" aria-pressed={props.saved} onClick={props.onToggleSave}>{props.saved ? 'Remove saved word' : 'Save word'}</button>{props.onAddNote && <button class="secondary-button" onClick={props.onAddNote}>Add note for selection</button>}<button class="secondary-button" onClick={props.onOpenSettings}>Settings</button></div>
+            <div class="context-actions"><button class="secondary-button" onClick={() => props.onSpeak(result.selection.lemma)}>Pronounce</button>{props.onAddNote && <button class="secondary-button" onClick={props.onAddNote}>Add note for selection</button>}<button class="secondary-button" onClick={props.onOpenSettings}>Settings</button></div>
             <LanguageTabs value={props.mode} onChange={props.onModeChange} />
             {props.debug && result.engine && <dl class="engine-debug"><div><dt>Provider</dt><dd>{result.engine.provider}</dd></div><div><dt>Cache</dt><dd>{result.engine.cached ? 'hit' : 'miss'}</dd></div>{result.engine.latencyMs !== undefined && <div><dt>Latency</dt><dd>{Math.round(result.engine.latencyMs)} ms</dd></div>}</dl>}
             <div class="context-actions">

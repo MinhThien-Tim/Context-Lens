@@ -4,7 +4,7 @@
 
 Before this change, PDF Reading reused the continuous `TextReader`, so page boundaries and basic document structure were lost. At mobile widths the 98 px shared header and a wrapping PDF toolbar consumed several rows. Original view used Fit page, which made printed text too small. PDF selection offsets were inferred from the rendered text layer rather than persisted canonical text.
 
-The automated baseline passed TypeScript and the existing PDF/reader tests. The repository has no Playwright setup or physical-device harness, so Android Chrome long-press behavior remains a manual release check.
+The automated baseline passed TypeScript and the existing PDF/reader tests. Playwright covers browser-level touch input and the production long-press fallback; Android Chrome's OS selection handles remain a manual release check because the repository has no physical-device harness.
 
 ## Implementation
 
@@ -13,7 +13,7 @@ The automated baseline passed TypeScript and the existing PDF/reader tests. The 
 - Imported PDFs retain serializable structured pages with canonical offsets, semantic blocks and extraction quality. Blank/scanned pages remain explicit page records.
 - Reading renders one semantic DOM section per PDF page with reflowed typography and compact page navigation.
 - Mobile defaults to Reading when usable extracted text exists. Scan-only documents fall back to Original.
-- Selection listens to `selectionchange`, pointer and keyboard activity. Block offsets map the DOM range back to canonical document text for lookup and notes.
+- Selection listens to `selectionchange` and interaction completion without a fixed debounce. Original view retains a canonical selection snapshot through scroll and text-layer rerenders. On touch devices, a held word also has a coordinate-based fallback when the browser does not expose its native selection in time; the fallback uses the same canonical PDF index and does not synthesize a DOM selection.
 - Existing PDF records without structured pages use a conservative page-level paragraph fallback.
 
 ## Manual acceptance checklist
@@ -27,4 +27,4 @@ The automated baseline passed TypeScript and the existing PDF/reader tests. The 
 
 ## Limits
 
-OCR is not included. Extraction heuristics intentionally fall back on uncertain layouts rather than invent structure. Repeated running headers/footers are not removed unless they can be identified safely. Original-view selection and selection spanning multiple Original pages remain separate hardening work. Physical Android accessibility and selection QA cannot be claimed from jsdom tests.
+OCR is not included. Extraction heuristics intentionally fall back on uncertain layouts rather than invent structure. Repeated running headers/footers are not removed unless they can be identified safely. Selection spanning multiple Original pages remains separate hardening work. Physical Android selection handles and accessibility still require release QA on a device; browser automation covers the production long-press fallback.

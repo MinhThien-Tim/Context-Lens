@@ -17,22 +17,39 @@ async function selectPhrase(page: Page, reverse = false) {
   const start = { x: box!.x + 1, y: box!.y + box!.height / 2 };
   const end = { x: box!.x + box!.width - 1, y: start.y };
   if (test.info().project.use.isMobile) {
-    // Mobile emulation cannot validate Android's OS selection handles. Exercise the
-    // real rendered text layer's Range/action path explicitly, and report that limit.
-    await span.evaluate((el, reverse) => {
-      const selection = window.getSelection()!;
-      const text = el.firstChild!;
-      selection.setBaseAndExtent(text, reverse ? text.textContent!.length : 0, text, reverse ? 0 : text.textContent!.length);
-      document.dispatchEvent(new Event('selectionchange'));
-    }, reverse);
+    // Dispatch a browser-level hold. Chromium may expose native selection; when it
+    // does not, this exercises the same coordinate fallback available to users.
+    const word = await span.evaluate(el => {
+      const node = el.firstChild!, value = node.textContent ?? '';
+      const from = value.indexOf('decision'), range = document.createRange();
+      range.setStart(node, from); range.setEnd(node, from + 'decision'.length);
+      const rect = range.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    });
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: word.x, y: word.y }] });
+    await page.waitForTimeout(750);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   } else {
-  await page.mouse.move((reverse ? end : start).x, start.y);
-  await page.mouse.down();
-  await page.mouse.move((reverse ? start : end).x, end.y, { steps: 12 });
-  await page.mouse.up();
+    await page.mouse.move((reverse ? end : start).x, start.y);
+    await page.mouse.down();
+    await page.mouse.move((reverse ? start : end).x, end.y, { steps: 12 });
+    await page.mouse.up();
   }
   await expect(page.getByRole('toolbar', { name: 'Selected text actions' })).toBeVisible();
-  expect(await page.evaluate(() => window.getSelection()?.toString())).toContain('decision');
+  if (!test.info().project.use.isMobile) expect(await page.evaluate(() => window.getSelection()?.toString())).toContain('decision');
+}
+
+async function selectAcrossSpans(page: Page) {
+  const first = page.locator('.pdf-page-slot[data-pdf-page="1"] .pdf-text-layer span').filter({ hasText: 'The decision had surprised' });
+  const last = page.locator('.pdf-page-slot[data-pdf-page="1"] .pdf-text-layer span').filter({ hasText: 'The government struggled' });
+  const [from, to] = await Promise.all([first.boundingBox(), last.boundingBox()]);
+  expect(from).not.toBeNull(); expect(to).not.toBeNull();
+  await page.mouse.move(from!.x + 1, from!.y + from!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to!.x + to!.width - 1, to!.y + to!.height / 2, { steps: 20 });
+  await page.mouse.up();
+  await expect(page.getByRole('toolbar', { name: 'Selected text actions' })).toBeVisible();
 }
 
 test('native forward/reverse selection, Explain, Highlight restore, Note and Copy', async ({ page }, info) => {
@@ -149,12 +166,9 @@ test('zoom, links, multiline selection and five mode switches preserve interacti
     await selectPhrase(page);
     await page.getByRole('button', { name: 'Close selection actions' }).click();
   }
-  const first = page.locator('.pdf-page-slot[data-pdf-page="1"] .pdf-text-layer span').filter({ hasText: 'The decision had surprised' });
-  const last = page.locator('.pdf-page-slot[data-pdf-page="1"] .pdf-text-layer span').filter({ hasText: 'The government struggled' });
-  await first.evaluate(el => { const selection = window.getSelection()!; selection.setBaseAndExtent(el.firstChild!, 0, el.firstChild!, el.textContent!.length); });
-  await last.evaluate(el => window.getSelection()!.extend(el.firstChild!, el.textContent!.length));
-  await expect(page.getByRole('toolbar', { name: 'Selected text actions' })).toBeVisible();
+  await selectAcrossSpans(page);
   expect(await page.evaluate(() => window.getSelection()?.toString())).toContain('government');
+  await page.getByRole('button', { name: 'Close selection actions' }).click();
   for (let i = 0; i < 10; i++) {
     await selectPhrase(page);
     await page.getByRole('button', { name: 'Explain', exact: true }).click();
@@ -192,7 +206,7 @@ test('local complex book imports and scrolls beyond fifty pages', async ({ page 
     cdp.on('HeapProfiler.addHeapSnapshotChunk', ({ chunk }) => chunks.push(chunk));
     await cdp.send('HeapProfiler.takeHeapSnapshot');
     writeFileSync('tmp/pdf-final.heapsnapshot', chunks.join(''));
-    console.log(await page.evaluate(() => ({ styles: document.querySelectorAll('style').length, canvases: document.querySelectorAll('canvas').length, filters: document.querySelectorAll('filter').length, fonts: document.fonts.size, elements: document.querySelectorAll('*').length })));
+    console.log(await page.evaluate(() => ({ styles: document.querySelectorAll('style').length, canvases: document.querySelectorAll('canvas').length, filters: document.querySelectorAll('filter').length, fonts: ((document as any).fonts?.size ?? 0), elements: document.querySelectorAll('*').length })));
   }
   await info.attach('complex-book-metrics', { body: JSON.stringify(samples), contentType: 'application/json' });
   expect(errors).toEqual([]);

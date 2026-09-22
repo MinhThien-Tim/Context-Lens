@@ -16,9 +16,10 @@ const backupDocumentSchema = z.object({
 }).strict();
 
 const vocabularySchema = z.object({
+  collectionId: z.string().optional(), collectionTitle: z.string().optional(),
   id: z.string(), lemma: z.string(), surface: z.string(), pos: z.string().nullable(), ipa: z.string().nullable(),
   contextualMeaning: z.string(), meaningVi: z.array(z.string()), lexicalUnit: z.string().nullable(), originalSentence: z.string(),
-  source: z.object({ document: z.string(), documentId: z.string().optional(), location: z.string() }), createdAt: z.number()
+  source: z.object({ document: z.string(), documentId: z.string().optional(), location: z.string(), author: z.string().optional(), type: z.string().optional(), url: z.string().optional(), page: z.number().optional(), chapter: z.union([z.string(), z.number()]).optional() }), createdAt: z.number()
 }).strict();
 
 const noteSchema = z.object({
@@ -36,28 +37,34 @@ const backupV2Schema = z.object({
   documents: z.array(backupDocumentSchema), vocabulary: z.array(vocabularySchema), notes: z.array(noteSchema)
 }).strict();
 const backupV3Schema = backupV2Schema.extend({ version: z.literal(3) });
-const backupSchema = z.discriminatedUnion('version', [backupV1Schema, backupV2Schema, backupV3Schema]);
+const backupV4Schema = backupV3Schema.extend({ version: z.literal(4), collections: z.array(z.object({ id: z.string(), title: z.string(), sourceDocumentId: z.string().optional(), sourceType: z.string().optional(), createdAt: z.number(), updatedAt: z.number() })) });
+const backupSchema = z.discriminatedUnion('version', [backupV1Schema, backupV2Schema, backupV3Schema, backupV4Schema]);
 
-export type ContextLensBackup = z.infer<typeof backupV3Schema>;
+export type ContextLensBackup = z.infer<typeof backupV4Schema>;
 
 export async function buildBackup(): Promise<ContextLensBackup> {
-  const [documents, vocabulary, notes] = await Promise.all([db.documents.toArray(), db.vocabulary.toArray(), db.notes.toArray()]);
+  const [documents, vocabulary, notes, collections] = await Promise.all([db.documents.toArray(), db.vocabulary.toArray(), db.notes.toArray(), db.vocabularyCollections.toArray()]);
   return {
-    schema: 'context-lens.backup', version: 3, exportedAt: new Date().toISOString(),
+    schema: 'context-lens.backup', version: 4, exportedAt: new Date().toISOString(),
     documents: documents.map(({ data: _data, lastPosition: _legacy, ...document }) => document),
-    vocabulary, notes
+    vocabulary, notes, collections
   };
 }
 
 export async function restoreBackup(input: unknown): Promise<{ documents: number; vocabulary: number; notes: number }> {
   const backup = backupSchema.parse(input);
   const notes = backup.version >= 2 ? ('notes' in backup ? backup.notes : []) : [];
-  await db.transaction('rw', [db.documents, db.vocabulary, db.notes], async () => {
+  await db.transaction('rw', [db.documents, db.vocabulary, db.notes, db.vocabularyCollections], async () => {
     for (const document of backup.documents) {
       const current = await db.documents.get(document.id);
       if (!current || current.updatedAt <= document.updatedAt) await db.documents.put(document as DocumentRecord);
     }
-    await db.vocabulary.bulkPut(backup.vocabulary as VocabularyRecord[]);
+    if (backup.version === 4) await db.vocabularyCollections.bulkPut(backup.collections);
+    for (const record of backup.vocabulary) {
+      const id = record.collectionId ?? 'saved-vocabulary';
+      if (!await db.vocabularyCollections.get(id)) await db.vocabularyCollections.put({ id, title: record.collectionTitle ?? 'Saved vocabulary', createdAt: record.createdAt, updatedAt: record.createdAt });
+      await db.vocabulary.put({ ...record, collectionId: id } as VocabularyRecord);
+    }
     for (const note of notes) {
       const current = await db.notes.get(note.id);
       if (!current || current.updatedAt <= note.updatedAt) await db.notes.put(note as NoteRecord);

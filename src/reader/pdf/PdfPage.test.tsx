@@ -54,13 +54,34 @@ it('waits for the text-layer generation and captures selection without clearing 
   await act(() => render(null, host));
 });
 
-it('scroll cancels a scheduled capture', async () => {
+it('scroll does not discard a valid canonical selection', async () => {
   const { host } = await mount(); await act(async () => state.layers[0].finish());
   const range = document.createRange(); range.selectNodeContents(host.querySelector('.pdf-text-layer')!);
   window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(range);
   vi.useFakeTimers(); document.dispatchEvent(new Event('selectionchange'));
   host.dispatchEvent(new Event('scroll')); await act(() => { vi.advanceTimersByTime(200); });
-  expect(document.querySelector('.pdf-original-actions')).toBeNull();
+  expect(document.querySelector('.pdf-original-actions')).not.toBeNull();
+  await act(() => render(null, host));
+});
+
+it('maps the touch long-press fallback through the canonical index', async () => {
+  const { host, onLookup } = await mount(); await act(async () => state.layers[0].finish());
+  const text = host.querySelector('.pdf-text-layer')!.firstChild!;
+  const caret = document.createRange(); caret.setStart(text, 6); caret.collapse(true);
+  Object.defineProperty(document, 'caretRangeFromPoint', { configurable: true, value: vi.fn(() => caret) });
+  vi.useFakeTimers();
+  const down = new Event('pointerdown', { bubbles: true }) as PointerEvent;
+  Object.assign(down, { pointerType: 'touch', clientX: 10, clientY: 10 });
+  host.querySelector('.pdf-text-host')!.dispatchEvent(down);
+  await act(() => { vi.advanceTimersByTime(651); });
+  const up = new Event('pointerup', { bubbles: true }) as PointerEvent;
+  Object.assign(up, { pointerType: 'touch', clientX: 10, clientY: 10 });
+  host.querySelector('.pdf-text-host')!.dispatchEvent(up);
+  await act(() => { vi.advanceTimersByTime(100); });
+  const explain = document.querySelector<HTMLButtonElement>('.pdf-original-actions .selection-lookup');
+  expect(explain).not.toBeNull();
+  await act(() => explain!.click());
+  expect(onLookup).toHaveBeenCalledWith(expect.objectContaining({ text: 'decision', offset: 4, endOffset: 12 }));
   await act(() => render(null, host));
 });
 

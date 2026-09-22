@@ -46,21 +46,24 @@ export class PdfTextIndex {
     if (rawStart === undefined || rawEnd === undefined || rawEnd <= rawStart) return null;
     const query = normalized(this.raw.slice(rawStart, rawEnd)).value;
     if (!query || !this.canonical.value) return null;
-    const domPosition = this.dom.offsets.findIndex(offset => offset >= rawStart);
-    // A left-context match disambiguates repeated phrases without assuming DOM length equals canonical length.
+    const foundPosition = this.dom.offsets.findIndex(offset => offset >= rawStart);
+    const domPosition = foundPosition < 0 ? this.dom.value.length : foundPosition;
+    // Both sides disambiguate repeated phrases without assuming DOM length equals canonical length.
     const prefix = this.dom.value.slice(Math.max(0, domPosition - 40), domPosition);
-    const expected = Math.max(0, domPosition);
+    const suffix = this.dom.value.slice(domPosition + query.length, domPosition + query.length + 40);
     let best = -1, score = Infinity;
     for (let at = this.canonical.value.indexOf(query); at >= 0; at = this.canonical.value.indexOf(query, at + 1)) {
-      const contextMatches = prefix && this.canonical.value.slice(Math.max(0, at - prefix.length), at) === prefix;
-      const distance = Math.abs(at - expected) - (contextMatches ? this.canonical.value.length : 0);
-      if (distance < score) { score = distance; best = at; }
+      const left = commonSuffix(prefix, this.canonical.value.slice(Math.max(0, at - prefix.length), at));
+      const right = commonPrefix(suffix, this.canonical.value.slice(at + query.length, at + query.length + suffix.length));
+      const candidateScore = Math.abs(at - domPosition) - (left + right) * (this.canonical.value.length + 1);
+      if (candidateScore < score) { score = candidateScore; best = at; }
     }
-    const exact = best >= 0;
-    if (!exact) best = Math.min(this.canonical.value.length - 1, Math.round(expected / Math.max(1, this.dom.value.length) * this.canonical.value.length));
+    // An invented proportional offset can attach lookup, notes, and highlights to the
+    // wrong sentence. Only publish offsets backed by canonical text.
+    if (best < 0) return null;
     const offset = this.start + this.canonical.offsets[best];
     const endOffset = this.start + this.canonical.ends[Math.min(this.canonical.ends.length - 1, best + query.length - 1)];
-    return { offset, endOffset, confidence: exact ? 'exact' as const : 'approximate' as const };
+    return { offset, endOffset, confidence: 'exact' as const };
   }
   ranges(start: number, end: number): Range[] {
     const result: Range[] = [];
@@ -69,22 +72,26 @@ export class PdfTextIndex {
       const range = document.createRange(); range.selectNodeContents(item.node);
       const mapped = this.map(range);
       if (!mapped || mapped.endOffset <= start || mapped.offset >= end) continue;
-      if (mapped.confidence === 'exact') {
-        const local = normalized(item.node.data);
-        const from = normalized(this.text.slice(mapped.offset, Math.max(mapped.offset, start))).value.length;
-        const to = normalized(this.text.slice(mapped.offset, Math.min(mapped.endOffset, end))).value.length;
-        if (to <= from) continue;
-        range.setStart(item.node, local.offsets[Math.min(local.offsets.length - 1, from)]);
-        range.setEnd(item.node, local.ends[Math.min(local.ends.length - 1, to - 1)]);
-        result.push(range);
-        continue;
-      }
-      const length = item.node.length;
-      const width = Math.max(1, mapped.endOffset - mapped.offset);
-      range.setStart(item.node, Math.max(0, Math.min(length, Math.round((start - mapped.offset) / width * length))));
-      range.setEnd(item.node, Math.max(0, Math.min(length, Math.round((end - mapped.offset) / width * length))));
+      const local = normalized(item.node.data);
+      const from = normalized(this.text.slice(mapped.offset, Math.max(mapped.offset, start))).value.length;
+      const to = normalized(this.text.slice(mapped.offset, Math.min(mapped.endOffset, end))).value.length;
+      if (to <= from) continue;
+      range.setStart(item.node, local.offsets[Math.min(local.offsets.length - 1, from)]);
+      range.setEnd(item.node, local.ends[Math.min(local.ends.length - 1, to - 1)]);
       result.push(range);
     }
     return result;
   }
+}
+
+function commonPrefix(left: string, right: string) {
+  let length = 0;
+  while (length < left.length && length < right.length && left[length] === right[length]) length++;
+  return length;
+}
+
+function commonSuffix(left: string, right: string) {
+  let length = 0;
+  while (length < left.length && length < right.length && left[left.length - 1 - length] === right[right.length - 1 - length]) length++;
+  return length;
 }

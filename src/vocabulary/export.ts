@@ -1,25 +1,9 @@
 import type { VocabularyRecord } from '../db/database';
 
-export interface English101VocabularyExportV1 {
-  schema: 'english101.context-vocabulary';
-  version: 1;
-  exportedAt: string;
-  entries: Array<{
-    id: string;
-    lemma: string;
-    surface: string;
-    partOfSpeech: string | null;
-    ipa: string | null;
-    meaningEn: string;
-    meaningsVi: string[];
-    lexicalUnit: string | null;
-    sentence: string;
-    source: VocabularyRecord['source'];
-    createdAt: string;
-  }>;
-}
+import type { English101VocabularyExportV1, English101VocabularyExportV2 } from './contract';
+export type { English101VocabularyExportV1, English101VocabularyExportV2 } from './contract';
 
-export function buildEnglish101Export(records: VocabularyRecord[], now = new Date()): English101VocabularyExportV1 {
+export function buildEnglish101ExportV1(records: VocabularyRecord[], now = new Date()): English101VocabularyExportV1 {
   return {
     schema: 'english101.context-vocabulary', version: 1, exportedAt: now.toISOString(),
     entries: records.map((record) => ({
@@ -42,4 +26,17 @@ export function vocabularyCsv(records: VocabularyRecord[]): string {
 
 function csvCell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
+}
+
+export function buildEnglish101Export(records: VocabularyRecord[], now = new Date()): English101VocabularyExportV2 {
+  const v1 = buildEnglish101ExportV1(records, now);
+  const collections = new Map<string, English101VocabularyExportV2['collections'][number]>();
+  const entries = v1.entries.map(({ sentence, source, ...entry }, index) => {
+    const record = records[index];
+    const collectionId = record.collectionId ?? 'saved-vocabulary';
+    if (!collections.has(collectionId)) collections.set(collectionId, { id: collectionId, title: record.collectionTitle ?? 'Saved vocabulary', sourceDocumentId: source.documentId, sourceType: source.type, createdAt: record.createdAt, updatedAt: record.createdAt });
+    const { document, ...metadata } = source;
+    return { ...entry, context: { sentence, selectedText: entry.surface }, source: { ...metadata, title: document }, collectionId };
+  });
+  return { schema: v1.schema, version: 2, exportedAt: v1.exportedAt, collections: [...collections.values()], entries };
 }

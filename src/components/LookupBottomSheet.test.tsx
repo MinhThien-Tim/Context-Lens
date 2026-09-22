@@ -43,9 +43,9 @@ it('keeps Quick minimal, resets expansion on selection, and handles Escape in tw
   try {
     act(() => render(<LookupBottomSheet {...props} selectionKey="first" />, host));
     expect(host.querySelector('.context-actions,.language-tabs,.engine-debug,select')).toBeNull();
-    expect(host.textContent).not.toContain('Save word');
+    expect(host.querySelector('[aria-label="Save word"]')).not.toBeNull();
     act(() => (host.querySelector('.explain-button') as HTMLButtonElement).click());
-    expect(host.textContent).toContain('Save word');
+    expect(host.querySelector('[aria-label="Save word"]')?.textContent).toBe('Save');
     act(() => render(<LookupBottomSheet {...props} selectionKey="first" loading error="Unavailable" />, host));
     expect(host.querySelector('.meaning-en')?.textContent).toBe(validLookup.quick.definition_en);
     act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })); });

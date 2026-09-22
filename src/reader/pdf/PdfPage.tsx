@@ -6,7 +6,7 @@ import { acquirePage } from './pageLease';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist';
 import type { ReaderSelection } from '../TextReader';
-import { pdfSelectionFromDom } from './selectionAdapter';
+import { pdfSelectionFromDom, pdfSelectionFromRange } from './selectionAdapter';
 
 export interface PdfPageSize { width: number; height: number }
 
@@ -46,7 +46,7 @@ export function PdfPage({ pdf, pageNumber, scale, active, documentText, pageOffs
     canvas.width = width; canvas.height = height;
     textContainer.style.setProperty('--total-scale-factor', String(scale * (page.userUnit || 1)));
     textContainer.style.setProperty('--scale-factor', String(scale));
-    indexRef.current = null; setPending(null);
+    indexRef.current = null;
     canvas.style.width = `${viewport.width}px`; canvas.style.height = `${viewport.height}px`;
     textContainer.replaceChildren();
     void (async () => {
@@ -61,11 +61,13 @@ export function PdfPage({ pdf, pageNumber, scale, active, documentText, pageOffs
       const content = await page.getTextContent();
       if (disposed) return;
       textLayer = new pdfjs.TextLayer({ textContentSource: content, container: textContainer, viewport });
-      await Promise.all([rendered, textLayer.render()]);
+      await textLayer.render();
       if (disposed) return;
-      if (renderError) throw renderError;
       indexRef.current = new PdfTextIndex(textContainer, documentText, pageOffset, pageEnd);
       setIndexVersion(value => value + 1);
+      await rendered;
+      if (disposed) return;
+      if (renderError) throw renderError;
       if (annotationRef.current) {
         annotationRef.current.replaceChildren();
         const annotations = await page.getAnnotations({ intent: 'display' });
@@ -99,22 +101,66 @@ export function PdfPage({ pdf, pageNumber, scale, active, documentText, pageOffs
     };
   }, [page, active, scale, documentText, pageOffset, pageEnd]);
 
-  const capture = () => {
-    if (!textRef.current || !indexRef.current) return;
+  const capture = (clearInvalid = false) => {
+    if (!textRef.current || !indexRef.current) return false;
     const selection = pdfSelectionFromDom(textRef.current, documentText, pageOffset, indexRef.current);
-    setPending(selection);
+    if (selection) setPending(selection);
+    else if (clearInvalid) setPending(null);
+    return Boolean(selection);
   };
   useEffect(() => {
+    let frame = 0;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const schedule = (clearInvalid = false, retryMobile = false) => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const captured = capture(clearInvalid);
+        if (retryMobile && !captured) retry = setTimeout(() => capture(clearInvalid), 80);
+      });
+    };
+    const selectionChange = () => schedule(false);
+    const pointerEnd = (event: PointerEvent) => {
+      if (event.target instanceof Element && event.target.closest('.pdf-original-actions')) return;
+      schedule(event.pointerType !== 'touch' && event.pointerType !== 'pen', true);
+    };
+    const touchEnd = () => schedule(false, true);
+    document.addEventListener('selectionchange', selectionChange);
+    document.addEventListener('pointerup', pointerEnd);
+    document.addEventListener('touchend', touchEnd);
+    return () => {
+      cancelAnimationFrame(frame); clearTimeout(retry);
+      document.removeEventListener('selectionchange', selectionChange);
+      document.removeEventListener('pointerup', pointerEnd);
+      document.removeEventListener('touchend', touchEnd);
+    };
+  }, [documentText, pageOffset, pageEnd, indexVersion]);
+  useEffect(() => { if (indexVersion) capture(false); }, [indexVersion]);
+  useEffect(() => {
+    const host = textRef.current;
+    if (!host) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const schedule = () => { clearTimeout(timer); timer = setTimeout(capture, 120); };
-    const scroll = () => { clearTimeout(timer); setPending(null); };
-    const root = textRef.current?.closest('.pdf-scroll');
-    document.addEventListener('selectionchange', schedule);
-    document.addEventListener('pointerup', schedule);
-    document.addEventListener('touchend', schedule);
-    root?.addEventListener('scroll', scroll, { passive: true });
-    return () => { clearTimeout(timer); document.removeEventListener('selectionchange', schedule); document.removeEventListener('pointerup', schedule); document.removeEventListener('touchend', schedule); root?.removeEventListener('scroll', scroll); };
-  }, [documentText, pageOffset, pageEnd]);
+    let origin: { x: number; y: number } | undefined;
+    const cancel = () => { clearTimeout(timer); timer = undefined; origin = undefined; };
+    const down = (event: PointerEvent) => {
+      if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+      cancel(); origin = { x: event.clientX, y: event.clientY };
+      timer = setTimeout(() => {
+        if (capture(false) || !indexRef.current) return;
+        const range = wordRangeAtPoint(document, event.clientX, event.clientY);
+        if (!range || !host.contains(range.startContainer)) return;
+        const selection = pdfSelectionFromRange(host, range, documentText, pageOffset, indexRef.current);
+        if (selection) setPending(selection);
+      }, 650);
+    };
+    const move = (event: PointerEvent) => {
+      if (origin && Math.hypot(event.clientX - origin.x, event.clientY - origin.y) > 12) cancel();
+    };
+    host.addEventListener('pointerdown', down);
+    host.addEventListener('pointermove', move);
+    host.addEventListener('pointerup', cancel);
+    host.addEventListener('pointercancel', cancel);
+    return () => { cancel(); host.removeEventListener('pointerdown', down); host.removeEventListener('pointermove', move); host.removeEventListener('pointerup', cancel); host.removeEventListener('pointercancel', cancel); };
+  }, [documentText, pageOffset, pageEnd, indexVersion]);
   useEffect(() => {
     const overlay = overlayRef.current, index = indexRef.current;
     if (!overlay || !index) return;
@@ -143,6 +189,28 @@ export function PdfPage({ pdf, pageNumber, scale, active, documentText, pageOffs
       <button aria-label="Close selection actions" onClick={() => { setPending(null); window.getSelection()?.removeAllRanges(); }}>?</button>
     </div>, document.body)}
   </section>;
+}
+
+function wordRangeAtPoint(owner: Document, x: number, y: number): Range | null {
+  const caretDocument = owner as Document & {
+    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null;
+    caretRangeFromPoint?: (x: number, y: number) => Range | null;
+  };
+  const position = caretDocument.caretPositionFromPoint?.(x, y);
+  const caret = position ? { node: position.offsetNode, offset: position.offset } : (() => {
+    const range = caretDocument.caretRangeFromPoint?.(x, y);
+    return range ? { node: range.startContainer, offset: range.startOffset } : null;
+  })();
+  if (!caret || caret.node.nodeType !== Node.TEXT_NODE || !caret.node.textContent) return null;
+  const content = caret.node.textContent;
+  const word = /[\p{L}\p{M}\p{N}'’-]/u;
+  let start = Math.min(caret.offset, content.length), end = start;
+  while (start > 0 && word.test(content[start - 1])) start--;
+  while (end < content.length && word.test(content[end])) end++;
+  if (end <= start) return null;
+  const range = owner.createRange();
+  range.setStart(caret.node, start); range.setEnd(caret.node, end);
+  return range;
 }
 
 async function resolveDestination(pdf: PDFDocumentProxy, destination: unknown): Promise<number> {

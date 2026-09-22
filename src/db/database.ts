@@ -52,7 +52,14 @@ export interface SettingRecord {
   value: unknown;
 }
 
+export interface VocabularyCollection {
+  id: string; title: string; sourceDocumentId?: string; sourceType?: string; createdAt: number; updatedAt: number;
+}
+
 export interface VocabularyRecord {
+  /** Optional only for legacy imports; new saves always assign a collection. */
+  collectionId?: string;
+  collectionTitle?: string;
   id: string;
   lemma: string;
   surface: string;
@@ -62,7 +69,7 @@ export interface VocabularyRecord {
   meaningVi: string[];
   lexicalUnit: string | null;
   originalSentence: string;
-  source: { document: string; documentId?: string; location: string };
+  source: { document: string; documentId?: string; location: string; author?: string; type?: string; url?: string; page?: number; chapter?: number | string };
   createdAt: number;
 }
 
@@ -91,6 +98,7 @@ export class ContextLensDatabase extends Dexie {
   documents!: EntityTable<DocumentRecord, 'id'>;
   lookups!: EntityTable<CachedLookupRecord, 'key'>;
   settings!: EntityTable<SettingRecord, 'key'>;
+  vocabularyCollections!: EntityTable<VocabularyCollection, 'id'>;
   vocabulary!: EntityTable<VocabularyRecord, 'id'>;
   dictionaryPacks!: EntityTable<DictionaryPackRecord, 'id'>;
   translations!: Table<EngineCacheRecord<TranslationResult>, string>;
@@ -163,6 +171,11 @@ export class ContextLensDatabase extends Dexie {
     this.version(9).stores({ sentenceAnalyses: 'key, lastUsedAt, provider, languagePair, hits' });
     // Optional TOC and note anchors preserve legacy records without inventing locations.
     this.version(10).stores({});
+    this.version(11).stores({ vocabulary: 'id, lemma, createdAt, collectionId', vocabularyCollections: 'id, sourceDocumentId, updatedAt' }).upgrade(async transaction => {
+      const now = Date.now();
+      await transaction.table('vocabularyCollections').put({ id: 'saved-vocabulary', title: 'Saved vocabulary', createdAt: now, updatedAt: now });
+      await transaction.table('vocabulary').toCollection().modify(record => { record.collectionId = 'saved-vocabulary'; record.collectionTitle = 'Saved vocabulary'; });
+    });
   }
 }
 
