@@ -101,3 +101,13 @@ it('shows a subtle AI caution in the lookup surface', () => {
     expect(host.querySelector('.ai-caution')?.textContent).toContain('AI có thể mắc lỗi');
   } finally { act(() => render(null, host)); host.remove(); }
 });
+
+it('does not flash the previous result after the active selection changes', () => {
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn();
+  try {
+    act(() => render(<LookupBottomSheet open selectionText="another" result={validLookup} loading={false} error={null} mode="en" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    expect(host.querySelector('.lookup-skeleton')).not.toBeNull();
+    expect(host.textContent).not.toContain(validLookup.selection.surface);
+  } finally { act(() => render(null, host)); host.remove(); }
+});

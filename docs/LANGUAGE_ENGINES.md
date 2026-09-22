@@ -25,7 +25,7 @@ Context Lens is a reading assistant with two independent routers. Translation ne
 
 ## Fallback flow
 
-Quick: bounded memory → Dexie → ready browser translation → installed/bundled dictionary → saved vocabulary → optional MyMemory → configured Google gateway → configured Bing gateway. Provider selection can promote a configured engine; Offline excludes all network adapters. Flags take precedence over selected priority. Automatic fallback can be disabled.
+Quick: bounded memory → Dexie → ready browser translation → installed/bundled dictionary → saved vocabulary → optional web lookup (Wiktionary, then MyMemory when translation is still needed) → configured Google gateway → configured Bing gateway. Web lookup requires the explicit `publicTranslation` opt-in; automatic fallback alone never enables it. Provider selection can promote a configured engine; Offline excludes all network adapters. Flags take precedence over selected priority. Automatic fallback can be disabled.
 
 Context: exact model cache (or previously available result when offline/no AI) → known phrase rule → simple dictionary explanation → user API → Hosted Lite → local model. Explicit engine selection can reorder this chain. Unknown or ambiguous phrases remain eligible for AI; recognized percentage “account for” and “make up one's mind” avoid it. Grammar and other explicit modes are never mistaken for ordinary word translation.
 
@@ -59,7 +59,7 @@ Reference: https://developer.chrome.com/docs/ai/translator-api
 
 ### Optional public translation
 
-MyMemory uses only the documented GET lookup API, never its contribution/upload endpoints. Opt-in, anonymous, no email or key. Maximum input is 500 UTF-8 bytes; daily quota and HTTP errors fall through. The selected text is sent in its required query parameter; document context and metadata are excluded. Its terms, availability and quotas are controlled by the provider.
+Wiktionary and MyMemory share one explicit web-lookup opt-in. Wiktionary definitions are cached on-device for 30 days; empty results are cached for six hours, transient failures for five minutes, and concurrent lookups for the same lemma share one request. MyMemory is invoked only through its translation provider, preventing the former duplicate call from the dictionary layer. It uses only the documented GET lookup API, never its contribution/upload endpoints. The request is anonymous, with no email or key. Maximum translation input is 500 UTF-8 bytes; daily quota and HTTP errors fall through. Only the selected word/text is sent; document context and metadata are excluded. Provider terms, availability and quotas remain externally controlled.
 
 References: https://mymemory.translated.net/doc/spec.php and https://mymemory.translated.net/doc/usagelimits.php
 

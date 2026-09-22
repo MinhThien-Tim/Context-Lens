@@ -39,7 +39,14 @@ describe('lookup service offline cache', () => {
       offlineDictionary: false, browserTranslation: false, publicTranslation: false, googleProvider: false,
       bingProvider: false, managedTranslation: false });
     expect(result.quick).toMatchObject({ definition_en: '', meaning_vi: [] });
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetch.mock.calls.filter(([url]) => String(url).startsWith('http'))).toHaveLength(0);
+  });
+  it('does not invoke web lookup without explicit public translation opt-in', async () => {
+    const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+    await new LookupService().quick({ ...request, selection: 'xyzzy' }, { ...defaultEngineSettings,
+      browserTranslation: false, publicTranslation: false, googleProvider: false,
+      bingProvider: false, managedTranslation: false });
+    expect(fetch.mock.calls.filter(([url]) => String(url).startsWith('http'))).toHaveLength(0);
   });
   it('publishes local English before a failing fallback and preserves the useful result', async () => {
     const service = new LookupService();

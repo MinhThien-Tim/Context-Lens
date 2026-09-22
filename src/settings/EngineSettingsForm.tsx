@@ -21,13 +21,13 @@ export function EngineSettingsForm({ value, onChange, health = [] }: { value: En
     {checkbox('cacheSentenceAnalysis', 'Reuse sentence analyses offline')}
     {checkbox('offlineDictionary', 'Offline dictionary')}{checkbox('browserTranslation', 'Browser translation (ready models)')}
     {value.browserTranslation && <><button class="secondary-button" disabled={browserStatus === 'Preparing…'} onClick={() => { setBrowserStatus('Preparing…'); void prepareBrowserTranslation(value.sourceLang, value.targetLang).then(() => setBrowserStatus('Ready')).catch(() => setBrowserStatus('Unavailable on this browser or language pair')); }}>Prepare browser language model</button><small role="status">{browserStatus}</small></>}
-    {checkbox('publicTranslation', 'Optional free web translation (MyMemory)')}
+    {checkbox('publicTranslation', 'Optional web lookup (Wiktionary + MyMemory)')}
     {import.meta.env.VITE_MANAGED_TRANSLATION === 'true' && <fieldset><legend>Online translation</legend>
       {checkbox('managedTranslation', 'Enable online translation')}
       <label>Provider<select disabled={!value.managedTranslation} value={value.onlineTranslationProvider} onChange={event => set('onlineTranslationProvider', event.currentTarget.value as EngineSettings['onlineTranslationProvider'])}><option value="auto">Auto</option><option value="google-web">Google</option><option value="bing-web">Bing</option></select></label>
       <p class="privacy-note">Selected text is sent only after cache and local engines cannot complete the lookup. Google and Bing web providers are experimental; availability may vary.</p>
     </fieldset>}
-    {value.publicTranslation && <p class="privacy-note">Selected text is sent to MyMemory when local translation is unavailable. Daily limits apply.</p>}
+    {value.publicTranslation && <p class="privacy-note">When local dictionaries are incomplete, the selected word may be sent to Wiktionary for an English definition and to MyMemory for translation. Results and misses are cached to limit repeat requests; provider limits apply.</p>}
     <details><summary>Advanced engines</summary>
       {checkbox('debugMode', 'Show provider diagnostics')}
       {checkbox('userApi', 'Enable user API for context')}

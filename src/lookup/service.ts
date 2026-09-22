@@ -58,7 +58,7 @@ export class LookupService {
       onLocal?.(base);
       const complete = Boolean(lens.english?.definition && (settings.targetLang === 'en' || lens.vietnamese?.meaning));
       if (settings.quickEngine === 'offline' || (complete && lens.confidence >= 0.6 && settings.quickEngine === 'auto')) return base;
-      if (settings.automaticFallback && settings.targetLang === 'vi') {
+      if (settings.automaticFallback && settings.publicTranslation && settings.targetLang === 'vi') {
         const web = await lookupWebDictionary(lens.selection.lemma, request.selection, settings.networkTimeoutMs, signal);
         if (web) {
           base = mergeDictionaryResult(base, web);

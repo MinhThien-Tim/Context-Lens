@@ -12,6 +12,7 @@ interface Props {
   onDisplayModeChange?: (mode: 'popup' | 'panel') => void;
   anchor?: { left: number; top: number; right: number; bottom: number };
   selectionKey?: string;
+  selectionText?: string;
   contextResult?: LookupResponse | null;
   onExplain?: (mode: ContextMode) => void;
   onTranslateSentence?: () => void;
@@ -45,8 +46,15 @@ export function LookupBottomSheet(props: Props) {
     }
   }, [deepOpen, desktop, props.open]);
   if (!props.open) return null;
-  const result = props.result;
-  const deep = props.contextResult ?? result;
+  // Selection and lookup state are updated independently. Never paint a result
+  // that belongs to the previous selection while the new lookup is starting.
+  const result = props.result && (!props.selectionText
+    || props.result.selection.surface.normalize('NFC').trim() === props.selectionText.normalize('NFC').trim())
+    ? props.result : null;
+  const contextResult = props.contextResult && result
+    && props.contextResult.selection.surface.normalize('NFC').trim() === result.selection.surface.normalize('NFC').trim()
+    ? props.contextResult : null;
+  const deep = contextResult ?? result;
   const popupLeft = props.anchor && props.anchor.right + 372 <= window.innerWidth
     ? props.anchor.right + 12
     : Math.max(12, (props.anchor?.left ?? 12) - 372);
