@@ -1,0 +1,367 @@
+{
+  "schema": "context-lens.dictionary-pack",
+  "version": 1,
+  "id": "context-lens.wiktionary.en-vi.reviewed",
+  "name": "Context Lens AI-assisted reviewed Wiktionary EN–VI",
+  "packVersion": "2026.09.2",
+  "quality": "reviewed",
+  "license": {
+    "name": "CC BY-SA 4.0",
+    "url": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attribution": "Sense-aligned English–Vietnamese translations from Wiktionary, extracted and cross-checked through Kaikki/Wiktextract. Per-sense source revisions and review method are embedded in each entry."
+  },
+  "entries": [
+    {
+      "lemma": "counterargument",
+      "partOfSpeech": "noun",
+      "ipa": null,
+      "definitionEn": "an argument that is opposed to another argument",
+      "meaningsVi": [
+        "lập luận phản biện"
+      ],
+      "senses": [
+        {
+          "id": "enwiktionary:counterargument:noun:1@91512864",
+          "definitionEn": "an argument that is opposed to another argument",
+          "meaningsVi": [
+            "lập luận phản biện"
+          ],
+          "partOfSpeech": "noun",
+          "provenance": {
+            "sourceId": "enwiktionary+editorial-translation",
+            "sourceUrl": "https://en.wiktionary.org/wiki/counterargument",
+            "sourceRevision": "en:91512864;vi-term:87918985",
+            "license": "CC BY-SA 4.0",
+            "retrievedAt": "2026-09-22T00:00:00.000Z",
+            "reviewStatus": "editor-reviewed",
+            "senseIds": [
+              "enwiktionary:counterargument:noun:1@91512864"
+            ],
+            "notes": "AI-assisted provisional translation for practical reading. The attested phản chứng is literary/rare, so lập luận phản biện is used as the transparent compositional default pending Vietnamese human review. Use lập luận phản biện provisionally for practical reading. The source-attested phản chứng was rejected as the default because it is marked literary/rare. Human Vietnamese review remains required.",
+            "reviewerKind": "ai-assisted",
+            "reviewedBy": "OpenAI Codex source review",
+            "reviewedAt": "2026-09-22T08:00:00.000Z"
+          }
+        }
+      ],
+      "provenance": {
+        "sourceId": "enwiktionary+editorial-translation",
+        "sourceUrl": "https://en.wiktionary.org/wiki/counterargument",
+        "sourceRevision": "en:91512864;vi-term:87918985",
+        "license": "CC BY-SA 4.0",
+        "retrievedAt": "2026-09-22T00:00:00.000Z",
+        "reviewStatus": "editor-reviewed",
+        "senseIds": [
+          "enwiktionary:counterargument:noun:1@91512864"
+        ],
+        "notes": "AI-assisted provisional translation for practical reading. The attested phản chứng is literary/rare, so lập luận phản biện is used as the transparent compositional default pending Vietnamese human review. Use lập luận phản biện provisionally for practical reading. The source-attested phản chứng was rejected as the default because it is marked literary/rare. Human Vietnamese review remains required.",
+        "reviewerKind": "ai-assisted",
+        "reviewedBy": "OpenAI Codex source review",
+        "reviewedAt": "2026-09-22T08:00:00.000Z"
+      }
+    },
+    {
+      "lemma": "white",
+      "partOfSpeech": "adjective",
+      "ipa": null,
+      "definitionEn": "bright and colourless",
+      "meaningsVi": [
+        "trắng"
+      ],
+      "senses": [
+        {
+          "id": "enwiktionary:white:colourless",
+          "definitionEn": "bright and colourless",
+          "meaningsVi": [
+            "trắng"
+          ],
+          "partOfSpeech": "adjective",
+          "provenance": {
+            "sourceId": "enwiktionary;kaikki-cross-check",
+            "sourceUrl": "https://en.wiktionary.org/wiki/white",
+            "sourceRevision": "enwiktionary:92747505",
+            "license": "CC BY-SA 4.0",
+            "retrievedAt": "2026-09-22T00:00:00.000Z",
+            "reviewStatus": "editor-reviewed",
+            "senseIds": [
+              "enwiktionary:white:colourless"
+            ],
+            "reviewerKind": "ai-assisted",
+            "reviewedBy": "OpenAI Codex source review",
+            "reviewedAt": "2026-09-22T08:00:00.000Z",
+            "notes": "Translation is directly attached to the colourless adjective sense; compound-only bạch and person senses were excluded."
+          }
+        }
+      ],
+      "provenance": {
+        "sourceId": "enwiktionary;kaikki-cross-check",
+        "sourceUrl": "https://en.wiktionary.org/wiki/white",
+        "sourceRevision": "enwiktionary:92747505",
+        "license": "CC BY-SA 4.0",
+        "retrievedAt": "2026-09-22T00:00:00.000Z",
+        "reviewStatus": "editor-reviewed",
+        "senseIds": [
+          "enwiktionary:white:colourless"
+        ],
+        "reviewerKind": "ai-assisted",
+        "reviewedBy": "OpenAI Codex source review",
+        "reviewedAt": "2026-09-22T08:00:00.000Z",
+        "notes": "Translation is directly attached to the colourless adjective sense; compound-only bạch and person senses were excluded."
+      }
+    },
+    {
+      "lemma": "bore",
+      "partOfSpeech": "verb",
+      "ipa": null,
+      "definitionEn": "to make a hole through something",
+      "meaningsVi": [
+        "khoan",
+        "đục",
+        "khoét"
+      ],
+      "senses": [
+        {
+          "id": "enwiktionary:bore:to-make-a-hole",
+          "definitionEn": "to make a hole through something",
+          "meaningsVi": [
+            "khoan",
+            "đục",
+            "khoét"
+          ],
+          "partOfSpeech": "verb",
+          "provenance": {
+            "sourceId": "enwiktionary;kaikki-cross-check",
+            "sourceUrl": "https://en.wiktionary.org/wiki/bore",
+            "sourceRevision": "enwiktionary:92702945",
+            "license": "CC BY-SA 4.0",
+            "retrievedAt": "2026-09-22T00:00:00.000Z",
+            "reviewStatus": "editor-reviewed",
+            "senseIds": [
+              "enwiktionary:bore:to-make-a-hole"
+            ],
+            "reviewerKind": "ai-assisted",
+            "reviewedBy": "OpenAI Codex source review",
+            "reviewedAt": "2026-09-22T08:00:00.000Z",
+            "notes": "Translations are directly attached to the make-a-hole verb sense; boredom and noun senses were excluded."
+          }
+        }
+      ],
+      "provenance": {
+        "sourceId": "enwiktionary;kaikki-cross-check",
+        "sourceUrl": "https://en.wiktionary.org/wiki/bore",
+        "sourceRevision": "enwiktionary:92702945",
+        "license": "CC BY-SA 4.0",
+        "retrievedAt": "2026-09-22T00:00:00.000Z",
+        "reviewStatus": "editor-reviewed",
+        "senseIds": [
+          "enwiktionary:bore:to-make-a-hole"
+        ],
+        "reviewerKind": "ai-assisted",
+        "reviewedBy": "OpenAI Codex source review",
+        "reviewedAt": "2026-09-22T08:00:00.000Z",
+        "notes": "Translations are directly attached to the make-a-hole verb sense; boredom and noun senses were excluded."
+      }
+    },
+    {
+      "lemma": "machine",
+      "partOfSpeech": "noun",
+      "ipa": null,
+      "definitionEn": "a mechanical or electrical device",
+      "meaningsVi": [
+        "máy",
+        "máy móc"
+      ],
+      "senses": [
+        {
+          "id": "enwiktionary:machine:Q11019",
+          "definitionEn": "a mechanical or electrical device",
+          "meaningsVi": [
+            "máy",
+            "máy móc"
+          ],
+          "partOfSpeech": "noun",
+          "provenance": {
+            "sourceId": "enwiktionary;kaikki-cross-check",
+            "sourceUrl": "https://en.wiktionary.org/wiki/machine",
+            "sourceRevision": "enwiktionary:92359772",
+            "license": "CC BY-SA 4.0",
+            "retrievedAt": "2026-09-22T00:00:00.000Z",
+            "reviewStatus": "editor-reviewed",
+            "senseIds": [
+              "enwiktionary:machine:Q11019"
+            ],
+            "reviewerKind": "ai-assisted",
+            "reviewedBy": "OpenAI Codex source review",
+            "reviewedAt": "2026-09-22T08:00:00.000Z",
+            "notes": "Direct sense-aligned translation for the mechanical/electrical device sense."
+          }
+        }
+      ],
+      "provenance": {
+        "sourceId": "enwiktionary;kaikki-cross-check",
+        "sourceUrl": "https://en.wiktionary.org/wiki/machine",
+        "sourceRevision": "enwiktionary:92359772",
+        "license": "CC BY-SA 4.0",
+        "retrievedAt": "2026-09-22T00:00:00.000Z",
+        "reviewStatus": "editor-reviewed",
+        "senseIds": [
+          "enwiktionary:machine:Q11019"
+        ],
+        "reviewerKind": "ai-assisted",
+        "reviewedBy": "OpenAI Codex source review",
+        "reviewedAt": "2026-09-22T08:00:00.000Z",
+        "notes": "Direct sense-aligned translation for the mechanical/electrical device sense."
+      }
+    },
+    {
+      "lemma": "single",
+      "partOfSpeech": "noun",
+      "ipa": null,
+      "definitionEn": "a popular song released on its own",
+      "meaningsVi": [
+        "đĩa đơn"
+      ],
+      "senses": [
+        {
+          "id": "enwiktionary:single:Q134556",
+          "definitionEn": "a popular song released on its own",
+          "meaningsVi": [
+            "đĩa đơn"
+          ],
+          "partOfSpeech": "noun",
+          "provenance": {
+            "sourceId": "enwiktionary;kaikki-cross-check",
+            "sourceUrl": "https://en.wiktionary.org/wiki/single",
+            "sourceRevision": "enwiktionary:92202975",
+            "license": "CC BY-SA 4.0",
+            "retrievedAt": "2026-09-22T00:00:00.000Z",
+            "reviewStatus": "editor-reviewed",
+            "senseIds": [
+              "enwiktionary:single:Q134556"
+            ],
+            "reviewerKind": "ai-assisted",
+            "reviewedBy": "OpenAI Codex source review",
+            "reviewedAt": "2026-09-22T08:00:00.000Z",
+            "notes": "Only the music-release noun sense is included; unmarried and adjective senses are deliberately excluded."
+          }
+        }
+      ],
+      "provenance": {
+        "sourceId": "enwiktionary;kaikki-cross-check",
+        "sourceUrl": "https://en.wiktionary.org/wiki/single",
+        "sourceRevision": "enwiktionary:92202975",
+        "license": "CC BY-SA 4.0",
+        "retrievedAt": "2026-09-22T00:00:00.000Z",
+        "reviewStatus": "editor-reviewed",
+        "senseIds": [
+          "enwiktionary:single:Q134556"
+        ],
+        "reviewerKind": "ai-assisted",
+        "reviewedBy": "OpenAI Codex source review",
+        "reviewedAt": "2026-09-22T08:00:00.000Z",
+        "notes": "Only the music-release noun sense is included; unmarried and adjective senses are deliberately excluded."
+      }
+    },
+    {
+      "lemma": "southeast",
+      "partOfSpeech": "noun / adjective / adverb",
+      "ipa": null,
+      "definitionEn": "the compass point midway between south and east",
+      "meaningsVi": [
+        "phía đông nam",
+        "hướng đông nam",
+        "đông nam"
+      ],
+      "senses": [
+        {
+          "id": "enwiktionary:southeast:compass-point@92427651",
+          "definitionEn": "the compass point midway between south and east",
+          "meaningsVi": [
+            "phía đông nam",
+            "hướng đông nam",
+            "đông nam"
+          ],
+          "provenance": {
+            "sourceId": "enwiktionary;kaikki-cross-check",
+            "sourceUrl": "https://en.wiktionary.org/wiki/southeast",
+            "sourceRevision": "enwiktionary:92427651",
+            "license": "CC BY-SA 4.0",
+            "retrievedAt": "2026-09-22T00:00:00.000Z",
+            "reviewStatus": "editor-reviewed",
+            "senseIds": [
+              "enwiktionary:southeast:compass-point@92427651"
+            ],
+            "reviewerKind": "ai-assisted",
+            "reviewedBy": "OpenAI Codex source review",
+            "reviewedAt": "2026-09-22T08:00:00.000Z",
+            "notes": "Direct translations under the compass-point gloss."
+          }
+        }
+      ],
+      "provenance": {
+        "sourceId": "enwiktionary;kaikki-cross-check",
+        "sourceUrl": "https://en.wiktionary.org/wiki/southeast",
+        "sourceRevision": "enwiktionary:92427651",
+        "license": "CC BY-SA 4.0",
+        "retrievedAt": "2026-09-22T00:00:00.000Z",
+        "reviewStatus": "editor-reviewed",
+        "senseIds": [
+          "enwiktionary:southeast:compass-point@92427651"
+        ],
+        "reviewerKind": "ai-assisted",
+        "reviewedBy": "OpenAI Codex source review",
+        "reviewedAt": "2026-09-22T08:00:00.000Z",
+        "notes": "Direct translations under the compass-point gloss."
+      }
+    },
+    {
+      "lemma": "congee",
+      "partOfSpeech": "noun",
+      "ipa": null,
+      "definitionEn": "a type of rice porridge",
+      "meaningsVi": [
+        "cháo"
+      ],
+      "senses": [
+        {
+          "id": "enwiktionary:congee:rice-porridge@92132301",
+          "definitionEn": "a type of rice porridge",
+          "meaningsVi": [
+            "cháo"
+          ],
+          "partOfSpeech": "noun",
+          "provenance": {
+            "sourceId": "enwiktionary;kaikki-cross-check",
+            "sourceUrl": "https://en.wiktionary.org/wiki/congee",
+            "sourceRevision": "enwiktionary:92132301",
+            "license": "CC BY-SA 4.0",
+            "retrievedAt": "2026-09-22T00:00:00.000Z",
+            "reviewStatus": "editor-reviewed",
+            "senseIds": [
+              "enwiktionary:congee:rice-porridge@92132301"
+            ],
+            "reviewerKind": "ai-assisted",
+            "reviewedBy": "OpenAI Codex source review",
+            "reviewedAt": "2026-09-22T08:00:00.000Z",
+            "notes": "Direct Vietnamese lexical equivalent under the rice-porridge sense."
+          }
+        }
+      ],
+      "provenance": {
+        "sourceId": "enwiktionary;kaikki-cross-check",
+        "sourceUrl": "https://en.wiktionary.org/wiki/congee",
+        "sourceRevision": "enwiktionary:92132301",
+        "license": "CC BY-SA 4.0",
+        "retrievedAt": "2026-09-22T00:00:00.000Z",
+        "reviewStatus": "editor-reviewed",
+        "senseIds": [
+          "enwiktionary:congee:rice-porridge@92132301"
+        ],
+        "reviewerKind": "ai-assisted",
+        "reviewedBy": "OpenAI Codex source review",
+        "reviewedAt": "2026-09-22T08:00:00.000Z",
+        "notes": "Direct Vietnamese lexical equivalent under the rice-porridge sense."
+      }
+    }
+  ]
+}

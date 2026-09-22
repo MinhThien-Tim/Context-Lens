@@ -33,6 +33,14 @@ describe('lookup service offline cache', () => {
     await new LookupService().quick(request, { ...defaultEngineSettings, cacheSentenceAnalysis: false, quickEngine: 'offline' });
     expect(put).not.toHaveBeenCalled();
   });
+  it('returns a local miss without invoking translation when all optional features are off', async () => {
+    const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+    const result = await new LookupService().quick({ ...request, selection: 'xyzzy' }, { ...defaultEngineSettings,
+      offlineDictionary: false, browserTranslation: false, publicTranslation: false, googleProvider: false,
+      bingProvider: false, managedTranslation: false });
+    expect(result.quick).toMatchObject({ definition_en: '', meaning_vi: [] });
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it('publishes local English before a failing fallback and preserves the useful result', async () => {
     const service = new LookupService();
     const local = vi.fn();
@@ -43,7 +51,9 @@ describe('lookup service offline cache', () => {
   it('returns a successful AI response even when cache reads and writes fail', async () => {
     vi.spyOn(db.contexts, 'get').mockRejectedValue(new Error('Storage unavailable'));
     vi.spyOn(db.contexts, 'put').mockRejectedValue(new Error('Storage full'));
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify({ meaning: 'duy trì trong ngữ cảnh', confidence: 0.9 }) }] } }] }))));
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: JSON.stringify({ meaning: 'duy trì trong ngữ cảnh', confidence: 0.9 }) }] } }]
+    })))));
     const result = await new LookupService().contextual({ ...request, context_mode: 'grammar' }, { ...defaultAiSettings, provider: 'gemini', apiKey: 'test' });
     expect(result).toMatchObject({ source: 'ai', engine: { provider: 'user-api' } });
   });

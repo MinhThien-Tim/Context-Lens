@@ -12,9 +12,10 @@ const entries: Record<string, DictionaryEntry> = {
 export class SeedDictionary implements DictionaryProvider {
   readonly id = 'context-lens-seed';
   readonly version = '1';
+  readonly quality = 'curated' as const;
 
   lookup(surface: string): DictionaryMatch | null {
-    const normalized = surface.toLocaleLowerCase().replace(/[^a-z'-]/g, '');
+    const normalized = surface.toLocaleLowerCase().trim().replace(/[^a-z' -]/g, '').replace(/\s+/g, ' ');
     for (const candidate of rankedLemmaCandidates(normalized)) {
       const entry = entries[candidate];
       if (entry) return { entry, surface };

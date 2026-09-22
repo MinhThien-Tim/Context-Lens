@@ -2,7 +2,6 @@ import { cacheKey, normalizeText, type ResultCache } from '../cache';
 import { checkAbort, withDeadline } from '../errors';
 import { SharedRequests } from '../requests';
 import { ProviderHealthManager } from '../translation/provider-health';
-import { localLookup } from '../../lookup/localDictionary';
 import { findContextLookup } from '../../lookup/cacheRepository';
 import { createContextCacheKey } from '../../lookup/cache';
 import { boundedContext } from './prompt-builder';
@@ -12,6 +11,8 @@ import type { ContextInput, ContextProvider, ContextResult } from './types';
 import { explanationFromLookup } from './adapter';
 import { LocalLanguageEngine } from '../language/local-language-engine';
 import { selectionInput } from '../language/adapter';
+import { applyLocalResult } from '../language/adapter';
+import { localLookup } from '../../lookup/localDictionary';
 export const CONTEXT_VERSION = 'context-v5';
 export function contextKey(input: ContextInput, family: string): string {
   return cacheKey([CONTEXT_VERSION, normalizeText(input.request.selection), normalizeText(input.request.sentence), input.request.previous_sentence, input.request.next_sentence, input.request.paragraph,
@@ -44,16 +45,17 @@ export class ContextRouter {
           if (result) return { explanation: explanationFromLookup(result), provider: 'legacy-cache', cached: true };
         }
       }
+      const local = input.localResult ?? (input.sourceLang === 'en' ? await this.local.analyzeSelection(selectionInput(input.request, input.sourceLang, input.targetLang)) : undefined);
+      checkAbort(signal);
+      const localLookupResult = local ? applyLocalResult(localLookup(input.request), local) : localLookup(input.request);
       const heuristic = heuristicContext(input);
       const complexity = estimateComplexity(input.request.selection, input.request.sentence);
       const simple = input.mode === 'meaning-in-context' && input.sourceLang === 'en' && complexity.level === 'simple';
       if (!input.aiRequested && (heuristic || simple)) {
-        const result = heuristic ?? { explanation: explanationFromLookup(localLookup(input.request)), provider: 'dictionary' };
+        const result = heuristic ?? { explanation: explanationFromLookup(localLookupResult), provider: 'dictionary' };
         await this.cache.put(localKey, result, result.provider, pair);
         return result;
       }
-      const local = input.sourceLang === 'en' ? await this.local.analyzeSelection(selectionInput(input.request, input.sourceLang, input.targetLang)) : undefined;
-      checkAbort(signal);
       if (local?.sense && !input.aiRequested && input.mode === 'meaning-in-context' && local.confidence >= 0.6) {
         const result: ContextResult = { explanation: { meaning: input.targetLang === 'vi' ? local.vietnamese?.contextualMeaning ?? local.vietnamese?.meaning : local.english?.definition,
           sense: local.english?.definition, whyHere: local.sense.reasons.join('; '), confidence: local.confidence }, provider: 'local' };

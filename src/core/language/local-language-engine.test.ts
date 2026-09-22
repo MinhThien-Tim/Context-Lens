@@ -34,6 +34,12 @@ describe('local language foundation', () => {
     expect((await engine.analyzeSelection(input('xyzzy'))).confidence).toBe(0);
     expect(fetch).not.toHaveBeenCalled();
   });
+  it('repairs evidence-backed PDF fragments and rejects isolated fragments', async () => {
+    const { engine } = setup();
+    const repaired = await engine.analyzeSelection({ ...input('marizing', 'We are summarizing the result.'), selectionStart: 10 });
+    expect(repaired.selection.reconstructedFrom).toBe('marizing');
+    expect((await engine.analyzeSelection(input('marizing'))).selection.status).toBe('fragment-or-unknown');
+  });
   it.each([
     ['accounts for', 'The sector accounts for 45% of total employment.', 'account-for.proportion', 'chiếm'],
     ['account for', 'Several factors account for the decline.', 'account-for.explain', 'giải thích'],
@@ -126,6 +132,6 @@ describe('local language foundation', () => {
     const upgraded = new ContextLensDatabase(name); databases.push(upgraded);
     expect(await upgraded.settings.get('retained')).toEqual({ key: 'retained', value: true });
     expect(await upgraded.sentenceAnalyses.count()).toBe(0);
-    expect(upgraded.verno).toBe(11);
+    expect(upgraded.verno).toBe(12);
   });
 });

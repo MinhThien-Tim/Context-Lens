@@ -2,50 +2,87 @@ import { z } from 'zod';
 import { db, type DictionaryPackRecord } from '../../db/database';
 import { dictionaryRegistry } from './registry';
 import { rankedLemmaCandidates } from './seedDictionary';
-import type { DictionaryEntry, DictionaryMatch, DictionaryProvider } from './types';
+import type { DictionaryEntry, DictionaryMatch, DictionaryProvider, DictionaryQuality } from './types';
 import bundledPackUrl from '../../../release/dictionary/context-lens-en-vi-2026.09.1.json?url';
+import reviewedPackUrl from '../../../release/dictionary/context-lens-wiktionary-en-vi-reviewed-2026.09.2.json?url';
 
 let bundledPackReady: Promise<void> | undefined;
 
 export function loadBundledDictionary(): Promise<void> {
   if (!bundledPackReady) {
     bundledPackReady = (async () => {
-      const response = await fetch(bundledPackUrl);
-      if (!response.ok) throw new Error('Unable to load the offline dictionary.');
-      const pack = dictionaryPackSchema.parse(await response.json());
+      const loadPack = async (url: string) => {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Unable to load the offline dictionary.');
+        return dictionaryPackSchema.parse(await response.json());
+      };
+      const [pack, reviewedPack] = await Promise.all([
+        loadPack(bundledPackUrl),
+        loadPack(reviewedPackUrl).catch(() => null)
+      ]);
       dictionaryRegistry.register(new InstalledDictionaryPack({
         id: `bundled.${pack.id}`, name: pack.name, version: pack.packVersion,
-        license: pack.license, entries: pack.entries, installedAt: 0
+        license: pack.license, quality: 'curated', entries: pack.entries, installedAt: 0
+      }), true);
+      if (reviewedPack) dictionaryRegistry.register(new InstalledDictionaryPack({
+        id: `bundled.${reviewedPack.id}`, name: reviewedPack.name, version: reviewedPack.packVersion,
+        license: reviewedPack.license, quality: reviewedPack.quality, entries: reviewedPack.entries, installedAt: 0
       }), true);
     })().catch((error) => { bundledPackReady = undefined; throw error; });
   }
   return bundledPackReady;
 }
 
+const provenanceSchema = z.object({
+  sourceId: z.string().min(1).max(100), sourceUrl: z.string().url(), sourceRevision: z.string().min(1).max(120),
+  license: z.string().min(1).max(120), retrievedAt: z.string().datetime(),
+  reviewStatus: z.enum(['imported', 'cross-checked', 'editor-reviewed', 'human-reviewed']),
+  reviewerKind: z.enum(['human', 'ai-assisted']).optional(),
+  reviewedBy: z.string().min(1).max(120).optional(), reviewedAt: z.string().datetime().optional(),
+  senseIds: z.array(z.string().min(1).max(160)).max(20).optional(), notes: z.string().max(1000).optional()
+}).strict();
+
 const entrySchema = z.object({
   lemma: z.string().min(1).max(80), partOfSpeech: z.string().min(1).max(80), ipa: z.string().max(120).nullable(),
   definitionEn: z.string().max(500), meaningsVi: z.array(z.string().min(1).max(250)).min(1).max(12),
   baseLemma: z.string().min(1).max(80).optional(),
-  inflection: z.enum(['past', 'past-participle', 'present-participle', 'third-person', 'plural', 'comparative', 'superlative', 'variant']).optional()
+  inflection: z.enum(['past', 'past-participle', 'present-participle', 'third-person', 'plural', 'comparative', 'superlative', 'variant']).optional(),
+  provenance: provenanceSchema.optional(),
+  senses: z.array(z.object({
+    id: z.string().min(1).max(200), definitionEn: z.string().min(1).max(500),
+    meaningsVi: z.array(z.string().min(1).max(250)).min(1).max(12), partOfSpeech: z.string().min(1).max(80).optional(),
+    provenance: provenanceSchema.optional()
+  }).strict()).min(1).max(40).optional()
 }).strict();
 
 export const dictionaryPackSchema = z.object({
   schema: z.literal('context-lens.dictionary-pack'), version: z.literal(1), id: z.string().regex(/^[a-z0-9][a-z0-9._-]{1,63}$/),
   name: z.string().min(1).max(100), packVersion: z.string().min(1).max(40),
+  quality: z.enum(['reviewed', 'curated', 'imported']).default('imported'),
   license: z.object({ name: z.string().min(1), url: z.string().url(), attribution: z.string().min(1).max(1000) }).strict(),
   entries: z.array(entrySchema).min(1).max(200_000)
-}).strict();
+}).strict().superRefine((pack, context) => {
+  if (pack.quality !== 'reviewed') return;
+  pack.entries.forEach((entry, index) => {
+    const provenances = entry.senses?.map(sense => sense.provenance) ?? [entry.provenance];
+    if (provenances.some(provenance => !provenance || !['editor-reviewed', 'human-reviewed'].includes(provenance.reviewStatus)
+      || !provenance.reviewedBy || !provenance.reviewedAt || !provenance.reviewerKind)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: ['entries', index, 'provenance'], message: 'Reviewed packs require reviewed provenance, reviewer identity/type, and review time for every sense.' });
+    }
+  });
+});
 
 export type DictionaryPackInput = z.infer<typeof dictionaryPackSchema>;
 
 class InstalledDictionaryPack implements DictionaryProvider {
   readonly id: string;
   readonly version: string;
+  readonly quality: DictionaryQuality;
   private readonly entries: Map<string, DictionaryEntry>;
   private readonly reverseHits = new Map<string, DictionaryEntry | null>();
 
   constructor(record: DictionaryPackRecord) {
-    this.id = record.id; this.version = record.version;
+    this.id = record.id; this.version = record.version; this.quality = record.quality ?? 'imported';
     this.entries = new Map(record.entries.map((entry) => [entry.lemma.toLocaleLowerCase(), entry]));
     // Version-1 packs predate explicit morphology. Upgrade trusted redirects in memory.
     for (const entry of this.entries.values()) {
@@ -67,7 +104,7 @@ class InstalledDictionaryPack implements DictionaryProvider {
   }
 
   lookup(surface: string): DictionaryMatch | null {
-    const normalized = surface.toLocaleLowerCase().replace(/[^a-z'-]/g, '');
+    const normalized = surface.toLocaleLowerCase().trim().replace(/[^a-z' -]/g, '').replace(/\s+/g, ' ');
     const exact = this.entries.get(normalized);
     if (exact?.baseLemma) {
       const base = this.entries.get(exact.baseLemma);
@@ -133,7 +170,7 @@ function normalizeVietnamese(value: string): string { return value.normalize('NF
 export async function installDictionaryPack(input: unknown): Promise<DictionaryPackRecord> {
   const pack = dictionaryPackSchema.parse(input);
   const record: DictionaryPackRecord = {
-    id: pack.id, name: pack.name, version: pack.packVersion, license: pack.license,
+    id: pack.id, name: pack.name, version: pack.packVersion, quality: pack.quality, license: pack.license,
     entries: pack.entries, installedAt: Date.now()
   };
   await db.dictionaryPacks.put(record);

@@ -2,6 +2,8 @@ import { z } from 'zod';
 import type { ContextExplanation } from './types';
 
 export const contextExplanationSchema = z.object({
+  definitionEn: z.string().max(800).optional(),
+  meaningVi: z.string().max(800).optional(),
   meaning: z.string().max(800).optional(),
   naturalTranslation: z.string().max(1200).optional(),
   sense: z.string().max(400).optional(),
@@ -17,6 +19,8 @@ export const contextExplanationSchema = z.object({
 }).strict().refine(value => Object.keys(value).some(key => key !== 'confidence'), 'At least one explanation field is required');
 
 const nullableProviderExplanationSchema = z.object({
+  definitionEn: z.string().max(800).nullable().optional(),
+  meaningVi: z.string().max(800).nullable().optional(),
   meaning: z.string().max(800).nullable(),
   naturalTranslation: z.string().max(1200).nullable(),
   sense: z.string().max(400).nullable(),
@@ -43,6 +47,7 @@ export const contextExplanationJsonSchema = {
   type: 'object', additionalProperties: false,
   required: ['meaning', 'naturalTranslation', 'sense', 'grammar', 'whyHere', 'notThisMeaning', 'pattern', 'example', 'simplified', 'sentenceTranslation', 'chunks', 'confidence'],
   properties: {
+    definitionEn: { type: ['string', 'null'] }, meaningVi: { type: ['string', 'null'] },
     meaning: { type: ['string', 'null'] }, naturalTranslation: { type: ['string', 'null'] }, sense: { type: ['string', 'null'] },
     grammar: { anyOf: [{ type: 'object', additionalProperties: false, required: ['pattern', 'explanation'], properties: { pattern: { type: ['string', 'null'] }, explanation: { type: 'string' } } }, { type: 'null' }] },
     whyHere: { type: ['string', 'null'] }, notThisMeaning: { type: ['string', 'null'] }, pattern: { type: ['string', 'null'] }, example: { type: ['string', 'null'] },

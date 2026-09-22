@@ -7,6 +7,7 @@ export interface ContextInput {
   sourceLang: string;
   targetLang: string;
   signal?: AbortSignal;
+  localResult?: import('../language/types').LensResult;
 }
 export interface ContextResult {
   explanation: ContextExplanation;
@@ -16,6 +17,8 @@ export interface ContextResult {
   status?: 'offline' | 'quota' | 'unavailable';
 }
 export interface ContextExplanation {
+  definitionEn?: string;
+  meaningVi?: string;
   meaning?: string;
   naturalTranslation?: string;
   sense?: string;

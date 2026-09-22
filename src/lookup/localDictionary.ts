@@ -23,8 +23,8 @@ export function localLookup(request: LookupRequest, useDictionary = true): Looku
     },
     context: { sentence: request.sentence, previous_sentence: request.previous_sentence, next_sentence: request.next_sentence },
     quick: {
-      definition_en: lexical?.meaning_en ?? (entry ? entry.definitionEn : 'No offline entry for this selection.'),
-      meaning_vi: lexical ? [lexical.meaning_vi] : entry?.meaningsVi ?? ['Chưa có nghĩa ngoại tuyến'],
+      definition_en: lexical?.meaning_en ?? entry?.definitionEn ?? '',
+      meaning_vi: lexical ? [lexical.meaning_vi] : entry?.meaningsVi ?? [],
       lexical_unit: lexical
     },
     deep: {

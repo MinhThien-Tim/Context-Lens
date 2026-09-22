@@ -8,7 +8,8 @@ import type { ContextResult } from '../core/context/types';
 import { explanationFromLookup } from '../core/context/adapter';
 import type { SentenceAnalysis } from '../core/language/types';
 import type { PdfStructuredPage } from '../documents/pdf/types';
-import type { DictionaryEntry } from '../lookup/dictionary/types';
+import type { DictionaryEntry, DictionaryQuality } from '../lookup/dictionary/types';
+import type { LexicalEntry } from '../core/language/types';
 
 export interface DocumentRecord {
   toc?: DocumentSection[];
@@ -77,9 +78,14 @@ export interface DictionaryPackRecord {
   id: string;
   name: string;
   version: string;
+  quality?: DictionaryQuality;
   license: { name: string; url: string; attribution: string };
   entries: DictionaryEntry[];
   installedAt: number;
+}
+export interface LearnedLexiconRecord {
+  key: string; normalizedKey: string; lemma: string; surfaceForms: string[]; partOfSpeech: string[];
+  definitionEn?: string; meaningsVi: string[]; source: string[]; version: string; entry: LexicalEntry; updatedAt: number;
 }
 export interface NoteRecord {
   structuredLocation?: DocumentLocation;
@@ -105,6 +111,7 @@ export class ContextLensDatabase extends Dexie {
   contexts!: Table<EngineCacheRecord<ContextResult>, string>;
   notes!: EntityTable<NoteRecord, 'id'>;
   sentenceAnalyses!: Table<EngineCacheRecord<SentenceAnalysis>, string>;
+  learnedLexicon!: EntityTable<LearnedLexiconRecord, 'key'>;
 
   constructor(name = 'context-lens') {
     super(name);
@@ -176,6 +183,7 @@ export class ContextLensDatabase extends Dexie {
       await transaction.table('vocabularyCollections').put({ id: 'saved-vocabulary', title: 'Saved vocabulary', createdAt: now, updatedAt: now });
       await transaction.table('vocabulary').toCollection().modify(record => { record.collectionId = 'saved-vocabulary'; record.collectionTitle = 'Saved vocabulary'; });
     });
+    this.version(12).stores({ learnedLexicon: 'key, normalizedKey, lemma, updatedAt' });
   }
 }
 

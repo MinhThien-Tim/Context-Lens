@@ -3,7 +3,13 @@ import { BrowserTranslationProvider } from './browser';
 import { DictionaryTranslationProvider, VocabularyTranslationProvider } from './dictionary';
 import { GatewayTranslationProvider } from './gateway';
 import { PublicTranslationProvider } from './public';
+import { optionalTranslationEnabled } from '../provider-registry';
+import { defaultEngineSettings } from '../../../settings/engines';
 afterEach(() => vi.unstubAllGlobals());
+it('does not enable optional translation when every corresponding feature is off', () => {
+  expect(optionalTranslationEnabled({ ...defaultEngineSettings, browserTranslation: false, publicTranslation: false,
+    googleProvider: false, bingProvider: false, managedTranslation: false })).toBe(false);
+});
 it('never presents Vietnamese saved vocabulary as an English definition or a composed sentence', async () => {
   expect(new VocabularyTranslationProvider().supports('en', 'en')).toBe(false);
   await expect(new DictionaryTranslationProvider().translate({ text: 'prerequisite', sourceLang: 'en', targetLang: 'vi', mode: 'sentence' })).rejects.toMatchObject({ code: 'UNSUPPORTED_LANGUAGE' });

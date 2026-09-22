@@ -33,8 +33,7 @@ export class PhraseDetector {
         const text = sentence.slice(span[0].start, span.at(-1)!.end);
         const canonical = this.normalizer.normalize(text);
         const known = this.entries.find(item => this.normalizer.normalize(item.lemma) === canonical);
-        const lexical = known ? undefined : this.lexical.lookup(canonical);
-        const entry = known ?? (lexical ? { ...lexical, type: 'fixed expression' as const } : undefined);
+        const entry = known;
         if (!entry) continue;
         matches.push({ canonical: entry.lemma, text, start: span[0].start, end: span.at(-1)!.end, type: entry.type });
         start += length - 1;

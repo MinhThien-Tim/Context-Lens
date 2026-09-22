@@ -13,7 +13,7 @@ it('does not substitute a Vietnamese translation for a missing English definitio
   try {
     act(() => render(<LookupBottomSheet open result={result} loading={false} error={null} mode="en"
       onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
-    expect(host.textContent).toContain('No English definition is available');
+    expect(host.textContent).toContain('Not found in the local dictionary.');
     expect(host.querySelector('.meaning-vi')).toBeNull();
   } finally { act(() => render(null, host)); host.remove(); }
 });

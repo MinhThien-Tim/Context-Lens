@@ -3,7 +3,7 @@ import { defaultEngineSettings, type EngineSettings } from '../settings/engines'
 import { db } from '../db/database';
 import { EngineCache } from '../core/cache';
 import { TranslationRouter, TRANSLATION_VERSION } from '../core/translation/router';
-import { translationProviders } from '../core/translation/provider-registry';
+import { optionalTranslationEnabled, translationProviders } from '../core/translation/provider-registry';
 import { ContextRouter, CONTEXT_VERSION } from '../core/context/context-router';
 import { contextProviders } from '../core/context/providers';
 import type { ContextMode, ContextResult } from '../core/context/types';
@@ -15,10 +15,10 @@ import type { ProviderHealthSnapshot } from '../core/translation/provider-health
 import { LocalLanguageEngine } from '../core/language/local-language-engine';
 import { applyLocalResult, selectionInput } from '../core/language/adapter';
 import { checkAbort } from '../core/errors';
-import { waitForWordNet } from '../core/language/wordnet';
 import { LexicalEngine } from '../core/language/lexicon';
 import { PhraseDetector } from '../core/language/phrases';
 import { SentenceAnalysisCache, SentenceEngine } from '../core/language/sentence-engine';
+import { ensureLocalDictionaryAssets } from './localAssets';
 export { createProvider } from '../core/context/providers';
 
 /** Compatibility facade: UI consumes normalized reading results, never provider payloads. */
@@ -49,7 +49,7 @@ export class LookupService {
     this.configure(settings);
     let base = this.immediate(request, settings);
     if (settings.offlineDictionary && settings.sourceLang === 'en') {
-      await waitForWordNet();
+      await ensureLocalDictionaryAssets().catch(() => { /* Curated and any successfully loaded source remain usable. */ });
       checkAbort(signal);
       const lens = await this.local.analyzeSelection(selectionInput(request, settings.sourceLang, settings.targetLang));
       checkAbort(signal);
@@ -58,6 +58,7 @@ export class LookupService {
       const complete = Boolean(lens.english?.definition && (settings.targetLang === 'en' || lens.vietnamese?.meaning));
       if (settings.quickEngine === 'offline' || (complete && lens.confidence >= 0.6 && settings.quickEngine === 'auto')) return base;
     }
+    if (!optionalTranslationEnabled(settings)) return base;
     let translated: TranslationResult;
     try { translated = await this.translation!.translate({ text: request.selection, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: request.selection_type, signal }); }
     catch (error) { checkAbort(signal); if (base.difficulty.worth_learning) return base; throw error; }
@@ -69,12 +70,15 @@ export class LookupService {
   }
   async explain(request: LookupRequest, ai: AiSettings, settings = defaultEngineSettings, mode: ContextMode = 'meaning-in-context', signal?: AbortSignal): Promise<ContextResult & { result: LookupResponse }> {
     this.configure(settings, ai);
-    const routed = await this.context!.explain({ request, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode, signal, aiRequested: ai.provider !== 'none' && ai.provider !== 'demo' });
-    const base = settings.offlineDictionary && settings.sourceLang === 'en'
-      ? applyLocalResult(this.immediate(request, settings), await this.local.analyzeSelection(selectionInput(request, settings.sourceLang, settings.targetLang))) : this.immediate(request, settings);
+    if (settings.offlineDictionary && settings.sourceLang === 'en') await ensureLocalDictionaryAssets().catch(() => {});
+    const local = settings.offlineDictionary && settings.sourceLang === 'en'
+      ? await this.local.analyzeSelection(selectionInput(request, settings.sourceLang, settings.targetLang)) : undefined;
+    const base = local ? applyLocalResult(this.immediate(request, settings), local) : this.immediate(request, settings);
+    const aiRequested = (settings.userApi || settings.hostedAiLite || settings.localLlm) && ai.provider !== 'none' && ai.provider !== 'demo';
+    const routed = await this.context!.explain({ request, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode, signal, aiRequested, localResult: local });
     checkAbort(signal);
     const source = routed.cached ? 'cache' : !routed.model && ['offline', 'dictionary', 'heuristic', 'local', 'unresolved'].includes(routed.provider) ? 'offline' : 'ai';
-    return { ...routed, result: applyExplanation(base, routed.explanation, source, { provider: routed.provider, model: routed.model, cached: routed.cached, status: routed.status }) };
+    return { ...routed, result: applyExplanation(base, routed.explanation, source, { provider: routed.provider, model: routed.model, cached: routed.cached, status: routed.status }, settings.targetLang) };
   }
   /** Explicit sentence translation: shares the router cache, never runs on scroll. */
   async translateSentence(request: LookupRequest, settings = defaultEngineSettings, signal?: AbortSignal): Promise<TranslationResult> {

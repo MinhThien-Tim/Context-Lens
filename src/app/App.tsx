@@ -33,13 +33,13 @@ import { collectionTitle, isVocabularySaved, removeVocabulary, saveVocabulary } 
 import type { VocabularyRecord } from '../db/database';
 import { VocabularyLibrary } from '../vocabulary/VocabularyLibrary';
 import { DataManagement } from '../storage/DataManagement';
-import { loadBundledDictionary, loadDictionaryPacks } from '../lookup/dictionary/packs';
+import { loadDictionaryPacks } from '../lookup/dictionary/packs';
 import { maintainStorageBudget } from '../storage/storageService';
 import { defaultEngineSettings, loadEngineSettings, saveEngineSettings, type EngineSettings } from '../settings/engines';
 import type { ContextMode } from '../core/context/types';
 import { NotesPanel } from '../notes/NotesPanel';
 import { EngineError } from '../core/errors';
-import { loadWordNet } from '../core/language/wordnet';
+import { ensureLocalDictionaryAssets } from '../lookup/localAssets';
 import { ContextLensOnboarding, OnboardingCard } from '../onboarding/ContextLensOnboarding';
 import { hasSeenContextLensOnboarding, markContextLensOnboardingSeen } from '../onboarding/store';
 
@@ -62,7 +62,6 @@ function makeRequest(selection: ReaderSelection, mode: LanguageMode): LookupRequ
 
 export function App() {
   const desktop = useDesktop();
-  useEffect(() => { void loadWordNet().catch(() => { /* Pack availability is shown in engine settings; curated entries remain usable. */ }); }, []);
   const [documentRecord, setDocumentRecord] = useState<DocumentRecord | null>(null);
   const [draft, setDraft] = useState(SAMPLE);
   const [title, setTitle] = useState('Untitled reading');
@@ -112,7 +111,7 @@ export function App() {
 
   useEffect(() => {
     void loadEngineSettings().then(setEngineSettings).catch(() => {});
-    void Promise.all([loadBundledDictionary(), loadDictionaryPacks()]).catch(() => {
+    void Promise.all([ensureLocalDictionaryAssets(), loadDictionaryPacks()]).catch(() => {
       setImportError('The offline dictionary could not load. Reconnect and reload to download it.');
     });
     void maintainStorageBudget();
@@ -255,8 +254,10 @@ export function App() {
       }
     }).catch((failure: unknown) => {
       if (controller.signal.aborted || immediate.difficulty.worth_learning || immediate.quick.lexical_unit) return;
-      if (failure instanceof EngineError && failure.code === 'QUOTA') setError('Online translation limit reached. Cached and offline meanings remain available.');
-      else if (failure instanceof EngineError && ['TIMEOUT', 'PROVIDER_DOWN', 'NETWORK'].includes(failure.code)) setError('Online translation is temporarily unavailable. You can continue reading.');
+      if (import.meta.env.VITE_MANAGED_TRANSLATION === 'true') {
+        if (failure instanceof EngineError && failure.code === 'QUOTA') setError('Online translation limit reached. Cached and offline meanings remain available.');
+        else if (failure instanceof EngineError && ['TIMEOUT', 'PROVIDER_DOWN', 'NETWORK'].includes(failure.code)) setError('Online translation is temporarily unavailable. You can continue reading.');
+      }
     }); }, 150);
     controller.signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
   };

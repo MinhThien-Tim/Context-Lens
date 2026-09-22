@@ -7,6 +7,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('/src/core/language/') || id.includes('/src/lookup/normalization/') || /\/src\/lookup\/(?:localAssets|localLexeme|learnedLexicon)\./.test(id)) return 'local-language';
           if (id.includes('node_modules/pdfjs-dist')) return 'pdf-reader';
           if (id.includes('node_modules/jszip') || id.includes('node_modules/@xmldom')) return 'archive-runtime';
           if (id.includes('node_modules/epubjs')) return 'epub-reader';

@@ -35,3 +35,8 @@ export function translationProviders(settings: EngineSettings): TranslationProvi
   }
   return providers;
 }
+
+export function optionalTranslationEnabled(settings: EngineSettings): boolean {
+  return settings.browserTranslation || settings.publicTranslation || settings.googleProvider || settings.bingProvider
+    || (settings.managedTranslation && import.meta.env.VITE_MANAGED_TRANSLATION === 'true');
+}

@@ -14,7 +14,9 @@ const request = (word: string, sentence: string): LookupRequest => ({ selection:
 beforeAll(async () => {
   vi.stubGlobal('fetch', vi.fn(async (url: string) => {
     const wordnet = url.match(/wordnet-(noun|verb|adj|adv)/)?.[1];
-    const path = wordnet ? `release/wordnet/wordnet-${wordnet}.json` : 'release/dictionary/context-lens-en-vi-2026.09.1.json';
+    const path = wordnet ? `release/wordnet/wordnet-${wordnet}.json`
+      : url.includes('wiktionary') ? 'release/dictionary/context-lens-wiktionary-en-vi-reviewed-2026.09.2.json'
+        : 'release/dictionary/context-lens-en-vi-2026.09.1.json';
     return new Response(readFileSync(path, 'utf8'));
   }));
   await Promise.all([loadWordNet(), loadWordNet(), loadBundledDictionary()]);
@@ -72,6 +74,35 @@ it('resolves attended as the finite verb in subject-verb-object context', async 
   expect(result.quick.meaning_vi.join(' ')).not.toMatch(/station|đài|trạm/i);
   expect(result.quick.definition_en).not.toMatch(/singing|instrumental|accompaniment/i);
   expect(result.deep.grammar?.pattern).toContain('attend');
+});
+it.each([
+  ['counterargument', 'counterargument'],
+  ['counterarguments', 'counterargument'],
+  ['lowest-common-denominator', 'common denominator'],
+  ['lowest-commondenominator', 'common denominator'],
+  ['lowest common denominator', 'common denominator'],
+  ['summarizing', 'summarize'],
+  ['attempted', 'attempt'],
+  ['maintaining', 'maintain'],
+  ['constraints', 'constraint']
+])('provides a usable local result for %s', async (surface, lemma) => {
+  const result = await new LookupService().quick(request(surface, `We selected ${surface} here.`), { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(result.selection.lemma).toBe(lemma);
+  expect(result.quick.definition_en || result.quick.meaning_vi.join(' ')).toBeTruthy();
+});
+it.each(['institutional constraints', 'account for', "make up one's mind"])('resolves the local phrase %s', async phrase => {
+  const result = await new LookupService().quick(request(phrase, `They use ${phrase} in context.`), { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(result.quick.lexical_unit?.text).toBeTruthy();
+  expect(result.quick.definition_en).toBeTruthy();
+  expect(result.quick.meaning_vi.length).toBeGreaterThan(0);
+});
+it('uses the provisional sense-aligned Vietnamese entry for counterargument', async () => {
+  const result = await new LookupService().quick(request('counterargument', 'She offered a counterargument.'), { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(result.quick.definition_en).toBeTruthy();
+  expect(result.quick.meaning_vi).toEqual(['lập luận phản biện']);
+  expect(result.lens?.selection.status).toBe('complete');
+  expect(result.lens?.vietnamese?.senseAligned).toBe(true);
+  expect(result.lens?.providers.lexical).toBe('local-dictionary');
 });
 it('keeps contextual phrase results local and does not reuse the wrong sentence sense', async () => {
   const fetch = vi.fn().mockRejectedValue(new Error('must not fetch')); vi.stubGlobal('fetch', fetch);

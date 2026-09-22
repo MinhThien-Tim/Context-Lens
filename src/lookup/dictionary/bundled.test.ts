@@ -9,10 +9,11 @@ afterEach(() => vi.unstubAllGlobals());
 
 it('loads the released dictionary once and resolves happened without network access', async () => {
   const source = readFileSync('release/dictionary/context-lens-en-vi-2026.09.1.json', 'utf8');
-  const fetchMock = vi.fn().mockResolvedValue(new Response(source));
+  const reviewed = readFileSync('release/dictionary/context-lens-wiktionary-en-vi-reviewed-2026.09.2.json', 'utf8');
+  const fetchMock = vi.fn(async (url: string) => new Response(url.includes('wiktionary') ? reviewed : source));
   vi.stubGlobal('fetch', fetchMock);
   await Promise.all([loadBundledDictionary(), loadBundledDictionary()]);
-  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock).toHaveBeenCalledTimes(2);
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Offline')));
   await loadBundledDictionary();
   expect(dictionaryRegistry.lookup('happened')?.entry.lemma).toBe('happen');
@@ -23,6 +24,7 @@ it('loads the released dictionary once and resolves happened without network acc
   expect(result.quick.definition_en).toBe('');
   expect(result.quick.meaning_vi.length).toBeGreaterThan(0);
   expect(dictionaryRegistry.lookup('maintain')?.entry.definitionEn).toContain('keep');
+  expect(dictionaryRegistry.lookup('counterargument')?.entry.meaningsVi).toContain('lập luận phản biện');
 });
 
 it('resolves bundled morphology to the base lexical meaning', async () => {

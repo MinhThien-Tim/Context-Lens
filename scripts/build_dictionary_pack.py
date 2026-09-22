@@ -86,7 +86,7 @@ def build(source: Path, output_dir: Path, version: str, attribution_file: Path) 
                 break
     entries = list(grouped.values())
     if not 1 <= len(entries) <= 200_000: raise SystemExit(f"Unexpected entry count: {len(entries)}")
-    pack = {"schema":"context-lens.dictionary-pack","version":1,"id":"context-lens.skypedia.en-vi","name":"Context Lens English-Vietnamese (Skypedia)","packVersion":version,"license":{"name":"CC BY-SA 4.0","url":LICENSE_URL,"attribution":ATTRIBUTION},"entries":entries}
+    pack = {"schema":"context-lens.dictionary-pack","version":1,"id":"context-lens.skypedia.en-vi","name":"Context Lens English-Vietnamese (Skypedia)","packVersion":version,"quality":"curated","license":{"name":"CC BY-SA 4.0","url":LICENSE_URL,"attribution":ATTRIBUTION},"entries":entries}
     pack_path = output_dir / f"context-lens-en-vi-{version}.json"
     pack_path.write_text(json.dumps(pack, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     size = pack_path.stat().st_size
