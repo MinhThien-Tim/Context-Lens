@@ -40,8 +40,8 @@ import type { ContextMode } from '../core/context/types';
 import { NotesPanel } from '../notes/NotesPanel';
 import { EngineError } from '../core/errors';
 import { ensureLocalDictionaryAssets } from '../lookup/localAssets';
-import { ContextLensOnboarding, OnboardingCard } from '../onboarding/ContextLensOnboarding';
-import { hasSeenContextLensOnboarding, markContextLensOnboardingSeen } from '../onboarding/store';
+import { ContextLensOnboarding, LanguageToggle, OnboardingCard } from '../onboarding/ContextLensOnboarding';
+import { hasSeenContextLensOnboarding, loadGuideLanguage, markContextLensOnboardingSeen, saveGuideLanguage, type GuideLanguage } from '../onboarding/store';
 
 const SAMPLE = `The decision had surprised many voters. The government struggled to maintain public confidence after the announcement. Several ministers defended the policy.
 
@@ -103,6 +103,7 @@ export function App() {
   const [showNotes, setShowNotes] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showOnboardingCard, setShowOnboardingCard] = useState(false);
+  const [guideLanguage, setGuideLanguage] = useState<GuideLanguage>('en');
   const preferredPdfMode = desktop ? preferences.pdfViewMode : preferences.pdfMobileViewMode;
   const pdfMode = documentRecord?.kind === 'pdf' && preferredPdfMode === 'reading' && !pdfHasReadableText(documentRecord) ? 'original' : preferredPdfMode;
   useEffect(() => { if (!desktop && (lookupOpen || showNotes)) setContentsOpen(false); }, [desktop, lookupOpen, showNotes]);
@@ -117,6 +118,7 @@ export function App() {
     });
     void maintainStorageBudget();
     void hasSeenContextLensOnboarding().then(seen => setShowOnboardingCard(!seen)).catch(() => {});
+    void loadGuideLanguage().then(setGuideLanguage).catch(() => {});
     void Promise.all([loadPreferences(), loadAiSettings(), db.documents.orderBy('updatedAt').reverse().limit(8).toArray(), db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray()]).then(([prefs, ai, docs, words]) => {
       setPreferences(prefs); setPreferencesLoaded(true); setAiSettings(ai); setRecent(docs); setVocabulary(words);
     });
@@ -372,11 +374,13 @@ export function App() {
   const sections = useMemo(() => documentRecord?.toc ?? (documentRecord?.safeHtml ? htmlSections(documentRecord.safeHtml).toc : textSections(documentRecord?.content ?? '')), [documentRecord]);
   const openOnboarding = () => { setShowOnboarding(true); setShowOnboardingCard(false); void markContextLensOnboardingSeen(); };
   const dismissOnboarding = () => { setShowOnboardingCard(false); void markContextLensOnboardingSeen(); };
+  const changeGuideLanguage = (value: GuideLanguage) => { setGuideLanguage(value); void saveGuideLanguage(value); };
 
   if (!documentRecord) return (
     <main class="home-shell">
       {!online && <div class="status-banner" role="status">Offline mode · Saved documents and cached meanings remain available.</div>}
       {updateReady && <button class="status-banner update-banner" onClick={() => window.dispatchEvent(new Event('context-lens:apply-update'))}>An update is ready · Reload</button>}
+      <div class="home-language"><LanguageToggle language={guideLanguage} onChange={changeGuideLanguage} /></div>
       <header class="brand-header">
         <div class="brand-lockup"><div class="brand-mark">C</div><div><h1>Context Lens</h1><p>Read English. Stay in context.</p></div></div>
         <nav class="home-nav" aria-label="Library tools">
@@ -395,11 +399,11 @@ export function App() {
         <div class="paste-footer"><span>{draft.trim().split(/\s+/).filter(Boolean).length} words</span><div class="paste-actions"><label class="secondary-button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 16V3m0 0L7 8m5-5 5 5M4 14v6h16v-6"/></svg>{importing ? 'Importing…' : 'Open document'}<input class="visually-hidden" type="file" disabled={importing} accept=".txt,.md,.markdown,.pdf,.epub,.docx,text/plain,text/markdown,application/pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => void importTextFile(event.currentTarget.files?.[0])} /></label><button class="primary-button" onClick={createDocument} disabled={!draft.trim() || importing}>Start reading <span aria-hidden="true">→</span></button></div></div>
       </section>
       <section class="url-panel"><label for="article-url">Read an article URL</label><div><input id="article-url" type="url" inputMode="url" value={articleUrl} onInput={(event) => setArticleUrl(event.currentTarget.value)} placeholder="https://example.com/article" /><button class="secondary-button" onClick={importArticleUrl} disabled={!articleUrl.trim() || importing}>Import</button></div><small>Direct fetch first. If the site blocks access, paste the text or configure the optional proxy.</small></section>
-      {showOnboardingCard && <OnboardingCard onOpen={openOnboarding} onDismiss={dismissOnboarding} />}
+      {showOnboardingCard && <OnboardingCard language={guideLanguage} onOpen={openOnboarding} onDismiss={dismissOnboarding} />}
       {recent.length > 0 && <section class="recent-section"><h2>Previously opened</h2>{recent.map((doc) => <div class="recent-row"><button class="recent-item" onClick={() => openDocument(doc)}><span><strong>{doc.title}</strong><small>{doc.content.slice(0, 86)}…</small></span><span>›</span></button><button class="icon-button recent-delete" aria-label={`Delete ${doc.title}`} onClick={() => { if (confirm(`Delete “${doc.title}” and its notes from this device?`)) { void db.transaction('rw', [db.documents, db.notes], async () => { await db.documents.delete(doc.id); await db.notes.where('documentId').equals(doc.id).delete(); }); setRecent((items) => items.filter((item) => item.id !== doc.id)); } }}>×</button></div>)}</section>}
       {vocabulary.length > 0 && <section class="recent-section vocabulary-preview"><h2>Saved in context</h2>{vocabulary.slice(0, 8).map((word) => <div class="vocabulary-item"><span><strong>{word.lemma}</strong><small>{word.lexicalUnit ?? word.contextualMeaning}</small></span><span>{word.meaningVi.join(' · ')}</span></div>)}</section>}
-      <p class="home-note">Documents stay on this device. Offline reading is available after the first visit. <button class="inline-help" onClick={openOnboarding}>How Context Lens works</button></p>
-      {showOnboarding && <ContextLensOnboarding onClose={() => setShowOnboarding(false)} />}
+      <p class="home-note">Documents stay on this device. Offline reading is available after the first visit. <button class="inline-help" onClick={openOnboarding}>{guideLanguage === 'vi' ? 'Context Lens hoạt động thế nào' : 'How Context Lens works'}</button></p>
+      {showOnboarding && <ContextLensOnboarding language={guideLanguage} onLanguageChange={changeGuideLanguage} onClose={() => setShowOnboarding(false)} />}
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
       {showVocabulary && <VocabularyLibrary records={vocabulary} onClose={() => setShowVocabulary(false)} onDelete={(id) => { void db.vocabulary.delete(id); setVocabulary((items) => items.filter((item) => item.id !== id)); }} />}
       {showDataManagement && <DataManagement onClose={() => setShowDataManagement(false)} onRestored={() => { void db.documents.orderBy('updatedAt').reverse().limit(8).toArray().then(setRecent); void db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray().then(setVocabulary); }} />}

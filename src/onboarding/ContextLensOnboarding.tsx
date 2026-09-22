@@ -1,28 +1,12 @@
 import { useDialog } from '../components/useDialog';
+import type { GuideLanguage } from './store';
 
 export const ENGLISH101_FLASHCARDS_URL = 'https://english101.hermesurf.workers.dev/viewer?id=personal-flashcards';
+const copy = {
+  en: { newHere:'New here?', title:'Read, save, then review', summary:'Tap a word for its meaning. Save useful vocabulary and review it later in English101.', dismiss:'Dismiss', open:'See how it works', how:'How it works', flow:'Read → Save → Review', close:'Close how Context Lens works', steps:[['Read normally','Open an article, PDF, EPUB, DOCX, or paste text.'],['Tap a word or phrase','Context Lens shows the meaning that fits the sentence.'],['Save useful vocabulary','Tap ☆ Save. The word, meaning, sentence, and source stay together.'],['Review in English101','Context Lens and English101 are separate apps. Export your vocabulary here, then import the file into Personal Flashcards.']], transfer:'Vocabulary transfer steps', export:'Export ↓', import:'Import', cta:'Open Personal Flashcards' },
+  vi: { newHere:'Bạn mới sử dụng?', title:'Đọc, lưu rồi ôn tập', summary:'Chạm vào từ để xem nghĩa. Lưu từ vựng hữu ích và ôn lại sau trong English101.', dismiss:'Bỏ qua', open:'Xem cách hoạt động', how:'Cách hoạt động', flow:'Đọc → Lưu → Ôn tập', close:'Đóng hướng dẫn Context Lens', steps:[['Đọc như bình thường','Mở bài viết, PDF, EPUB, DOCX hoặc dán văn bản.'],['Chạm vào từ hoặc cụm từ','Context Lens hiển thị nghĩa phù hợp với câu đang đọc.'],['Lưu từ vựng hữu ích','Chạm ☆ Lưu. Từ, nghĩa, câu và nguồn sẽ được lưu cùng nhau.'],['Ôn tập trong English101','Context Lens và English101 là hai ứng dụng riêng. Xuất từ vựng tại đây, rồi nhập tệp vào Personal Flashcards.']], transfer:'Các bước chuyển từ vựng', export:'Xuất tệp ↓', import:'Nhập tệp', cta:'Mở Personal Flashcards' }
+} as const;
 
-export function OnboardingCard({ onOpen, onDismiss }: { onOpen: () => void; onDismiss: () => void }) {
-  return <aside class="onboarding-card" aria-labelledby="onboarding-card-title">
-    <div><p class="eyebrow">New here?</p><h2 id="onboarding-card-title">Read, save, then review</h2><p>Tap a word for its meaning. Save useful vocabulary and review it later in English101.</p></div>
-    <div class="onboarding-card-actions"><button class="text-button" onClick={onDismiss}>Dismiss</button><button class="secondary-button" onClick={onOpen}>See how it works</button></div>
-  </aside>;
-}
-
-export function ContextLensOnboarding({ onClose }: { onClose: () => void }) {
-  const dialogRef = useDialog(onClose);
-  return <div class="modal-layer">
-    <button class="modal-backdrop" aria-label="Close how Context Lens works" onClick={onClose} />
-    <section ref={dialogRef} tabIndex={-1} class="settings-modal onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
-      <header><div><p class="eyebrow">How it works</p><h2 id="onboarding-title">Read → Save → Review</h2></div><button class="icon-button close-button" onClick={onClose} aria-label="Close how Context Lens works">×</button></header>
-      <ol class="onboarding-steps">
-        <li><span aria-hidden="true">1</span><div><h3>Read normally</h3><p>Open an article, PDF, EPUB, DOCX, or paste text.</p></div></li>
-        <li><span aria-hidden="true">2</span><div><h3>Tap a word or phrase</h3><p>Context Lens shows the meaning that fits the sentence.</p><div class="onboarding-example"><strong>indicated</strong><small>verb · showed / pointed out · cho thấy / chỉ ra</small></div></div></li>
-        <li><span aria-hidden="true">3</span><div><h3>Save useful vocabulary</h3><p>Tap ☆ Save. The word, meaning, sentence, and source stay together.</p></div></li>
-        <li><span aria-hidden="true">4</span><div><h3>Review in English101</h3><p>Context Lens and English101 are separate apps. Export your vocabulary here, then import the file into Personal Flashcards.</p></div></li>
-      </ol>
-      <div class="onboarding-transfer" aria-label="Vocabulary transfer steps"><strong>Context Lens</strong><span>Export ↓</span><strong>English101 Personal Flashcards</strong><span>Import</span></div>
-      <a class="primary-button onboarding-cta" href={ENGLISH101_FLASHCARDS_URL} target="_blank" rel="noreferrer noopener">Open Personal Flashcards</a>
-    </section>
-  </div>;
-}
+export function LanguageToggle({ language, onChange }: { language: GuideLanguage; onChange: (value: GuideLanguage) => void }) { return <div class="guide-language" role="group" aria-label={language === 'vi' ? 'Ngôn ngữ hướng dẫn' : 'Guide language'}><button aria-pressed={language === 'en'} onClick={() => onChange('en')}>EN</button><button aria-pressed={language === 'vi'} onClick={() => onChange('vi')}>VN</button></div>; }
+export function OnboardingCard({ language, onOpen, onDismiss }: { language: GuideLanguage; onOpen: () => void; onDismiss: () => void }) { const t=copy[language]; return <aside class="onboarding-card" aria-labelledby="onboarding-card-title"><div><p class="eyebrow">{t.newHere}</p><h2 id="onboarding-card-title">{t.title}</h2><p>{t.summary}</p></div><div class="onboarding-card-actions"><button class="text-button" onClick={onDismiss}>{t.dismiss}</button><button class="secondary-button" onClick={onOpen}>{t.open}</button></div></aside>; }
+export function ContextLensOnboarding({ language, onLanguageChange, onClose }: { language: GuideLanguage; onLanguageChange: (value: GuideLanguage) => void; onClose: () => void }) { const dialogRef=useDialog(onClose),t=copy[language]; return <div class="modal-layer"><button class="modal-backdrop" aria-label={t.close} onClick={onClose}/><section ref={dialogRef} tabIndex={-1} class="settings-modal onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title"><div class="onboarding-modal-top"><LanguageToggle language={language} onChange={onLanguageChange}/><button class="icon-button close-button" onClick={onClose} aria-label={t.close}>×</button></div><header><div><p class="eyebrow">{t.how}</p><h2 id="onboarding-title">{t.flow}</h2></div></header><ol class="onboarding-steps">{t.steps.map((step,index)=><li><span aria-hidden="true">{index+1}</span><div><h3>{step[0]}</h3><p>{step[1]}</p>{index===1&&<div class="onboarding-example"><strong>indicated</strong><small>verb · showed / pointed out · cho thấy / chỉ ra</small></div>}</div></li>)}</ol><div class="onboarding-transfer" aria-label={t.transfer}><strong>Context Lens</strong><span>{t.export}</span><strong>English101 Personal Flashcards</strong><span>{t.import}</span></div><a class="primary-button onboarding-cta" href={ENGLISH101_FLASHCARDS_URL} target="_blank" rel="noreferrer noopener">{t.cta}</a></section></div>; }
