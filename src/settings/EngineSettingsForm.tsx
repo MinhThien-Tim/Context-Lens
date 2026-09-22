@@ -41,7 +41,7 @@ export function EngineSettingsForm({ value, onChange, health = [] }: { value: En
       {checkbox('localLlm', 'Enable local model')}
       <label>Local model URL<input type="url" value={value.localEndpoint} onInput={event => set('localEndpoint', event.currentTarget.value)} /></label>
       <label>Local model name<input value={value.localModel} onInput={event => set('localModel', event.currentTarget.value)} /></label>
-      <label>Network timeout (ms)<input type="number" min="200" max="2000" value={value.networkTimeoutMs} onInput={event => set('networkTimeoutMs', Number(event.currentTarget.value))} /></label>
+      <label>Network timeout (ms)<input type="number" min="200" max="4000" value={value.networkTimeoutMs} onInput={event => set('networkTimeoutMs', Number(event.currentTarget.value))} /></label>
       <ProviderOrder title="Quick provider order" order={value.translationProviderOrder} labels={translationLabels} onChange={order => set('translationProviderOrder', order as TranslationProviderId[])} />
       <ProviderOrder title="Context provider order" order={value.contextProviderOrder} labels={contextLabels} onChange={order => set('contextProviderOrder', order as ContextProviderId[])} />
       <div class="engine-status" role="status">

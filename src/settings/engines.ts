@@ -1,5 +1,6 @@
 import { db } from '../db/database';
 export interface EngineSettings {
+  webLookupDefaultsVersion: number;
   sourceLang: 'en' | 'vi';
   targetLang: 'en' | 'vi';
   quickEngine: 'auto' | 'browser' | 'google' | 'bing' | 'offline';
@@ -37,17 +38,24 @@ export type ContextProviderId = 'user-api' | 'hosted-lite' | 'local';
 export const defaultTranslationProviderOrder: TranslationProviderId[] = ['browser', 'dictionary', 'vocabulary', 'mymemory', 'google', 'bing'];
 export const defaultContextProviderOrder: ContextProviderId[] = ['user-api', 'hosted-lite', 'local'];
 export const defaultEngineSettings: EngineSettings = {
+  webLookupDefaultsVersion: 1,
   sourceLang: 'en', targetLang: 'vi', quickEngine: 'auto', contextEngine: 'auto', automaticFallback: true,
   cacheTranslations: true, cacheContext: true, cacheSentenceAnalysis: true, browserTranslation: true, offlineDictionary: true,
-  googleProvider: false, bingProvider: false, publicTranslation: false, managedTranslation: true, onlineTranslationProvider: 'auto', experimentalProviders: false,
+  googleProvider: false, bingProvider: false, publicTranslation: true, managedTranslation: true, onlineTranslationProvider: 'auto', experimentalProviders: false,
   hostedAiLite: false, userApi: true, localLlm: false,
   translationEndpoint: '', hostedEndpoint: '', localEndpoint: 'http://localhost:1234/v1', localModel: '',
-  hostedDailyQuota: 20, networkTimeoutMs: 1200, translationCacheLimit: 5000, contextCacheLimit: 1000,
+  hostedDailyQuota: 20, networkTimeoutMs: 2500, translationCacheLimit: 5000, contextCacheLimit: 1000,
   translationProviderOrder: defaultTranslationProviderOrder, contextProviderOrder: defaultContextProviderOrder, debugMode: false
 };
 export async function loadEngineSettings(): Promise<EngineSettings> {
   const row = await db.settings.get('language-engines');
-  const value = { ...defaultEngineSettings, ...(row?.value && typeof row.value === 'object' ? row.value : {}) } as EngineSettings;
+  const stored = row?.value && typeof row.value === 'object' ? row.value as Partial<EngineSettings> : {};
+  // Older builds stored the then-default `false`, which is indistinguishable
+  // from an explicit opt-out. Migrate once; subsequent user choices carry v1.
+  const migrated = stored.webLookupDefaultsVersion === undefined
+    ? { ...stored, publicTranslation: true, webLookupDefaultsVersion: 1 }
+    : stored;
+  const value = { ...defaultEngineSettings, ...migrated } as EngineSettings;
   return { ...value, translationProviderOrder: mergeOrder(value.translationProviderOrder, defaultTranslationProviderOrder), contextProviderOrder: mergeOrder(value.contextProviderOrder, defaultContextProviderOrder) };
 }
 export async function saveEngineSettings(value: EngineSettings): Promise<void> {

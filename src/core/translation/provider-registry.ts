@@ -9,7 +9,7 @@ export function translationProviders(settings: EngineSettings): TranslationProvi
   let providers: TranslationProvider[] = [];
   if (settings.browserTranslation) providers.push(new BrowserTranslationProvider());
   if (settings.offlineDictionary) providers.push(new DictionaryTranslationProvider(), new VocabularyTranslationProvider());
-  const timeout = Math.max(200, Math.min(2000, settings.networkTimeoutMs));
+  const timeout = Math.max(200, Math.min(4000, settings.networkTimeoutMs));
   if (settings.publicTranslation) { const provider = new PublicTranslationProvider(); provider.timeoutMs = timeout; providers.push(provider); }
   if (settings.googleProvider) providers.push(new GatewayTranslationProvider('google', 30, settings.translationEndpoint, timeout));
   if (settings.bingProvider) providers.push(new GatewayTranslationProvider('bing', 40, settings.translationEndpoint, timeout));

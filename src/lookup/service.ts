@@ -55,8 +55,11 @@ export class LookupService {
       const lens = await this.local.analyzeSelection(selectionInput(request, settings.sourceLang, settings.targetLang));
       checkAbort(signal);
       base = applyLocalResult(base, lens);
-      onLocal?.(base);
       const complete = Boolean(lens.english?.definition && (settings.targetLang === 'en' || lens.vietnamese?.meaning));
+      // Publish immediately only when the local result is already complete (or
+      // when no optional source can enrich it). Otherwise wait for the merged
+      // Wiktionary/translation result so the UI does not flash English-only text.
+      if (complete || !optionalTranslationEnabled(settings)) onLocal?.(base);
       if (settings.quickEngine === 'offline' || (complete && lens.confidence >= 0.6 && settings.quickEngine === 'auto')) return base;
       if (settings.automaticFallback && settings.publicTranslation && settings.targetLang === 'vi') {
         const web = await lookupWebDictionary(lens.selection.lemma, request.selection, settings.networkTimeoutMs, signal);
@@ -71,10 +74,12 @@ export class LookupService {
     try { translated = await this.translation!.translate({ text: request.selection, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: request.selection_type, signal }); }
     catch (error) { checkAbort(signal); if (base.difficulty.worth_learning) return base; throw error; }
     const translatedDefinition = settings.sourceLang === 'en' && settings.targetLang === 'en' ? translated.text : '';
-    return { ...base, source: translated.cached ? 'cache' : translated.provider === 'browser' ? 'browser' : translated.offline ? 'offline' : 'translation',
+    const translatedMeanings = settings.targetLang === 'vi' ? translated.dictionary?.meanings ?? [translated.text] : [];
+    const dictionary = translatedMeanings.length ? attachTranslationToPrimarySense(base.dictionary, translatedMeanings) : base.dictionary;
+    return { ...base, dictionary, source: translated.cached ? 'cache' : translated.provider === 'browser' ? 'browser' : translated.offline ? 'offline' : 'translation',
       engine: { provider: translated.provider, cached: translated.cached, latencyMs: translated.latencyMs },
       quick: base.quick.lexical_unit ? base.quick : { definition_en: (base.difficulty.worth_learning ? base.quick.definition_en : '') || translated.dictionary?.definition || translatedDefinition,
-        meaning_vi: settings.targetLang === 'vi' ? translated.dictionary?.meanings ?? [translated.text] : [], lexical_unit: null } };
+        meaning_vi: translatedMeanings, lexical_unit: null } };
   }
   async explain(request: LookupRequest, ai: AiSettings, settings = defaultEngineSettings, mode: ContextMode = 'meaning-in-context', signal?: AbortSignal): Promise<ContextResult & { result: LookupResponse }> {
     this.configure(settings, ai);
@@ -119,4 +124,11 @@ function mergeDictionaryResult(base: LookupResponse, web: NonNullable<LookupResp
   return { ...base, dictionary, source: 'translation', engine: { provider: 'wiktionary-web', cached: false },
     quick: { ...base.quick, definition_en: base.quick.definition_en || first?.definitionEn || '', meaning_vi: base.quick.meaning_vi.length ? base.quick.meaning_vi : meanings.slice(0, 4) },
     difficulty: { ...base.difficulty, worth_learning: Boolean(first?.definitionEn || meanings.length) } };
+}
+
+function attachTranslationToPrimarySense(dictionary: LookupResponse['dictionary'], meaningsVi: string[]): LookupResponse['dictionary'] {
+  if (!dictionary?.senses.length) return dictionary;
+  const primaryIndex = Math.max(0, dictionary.senses.findIndex(sense => sense.contextMatch));
+  if (dictionary.senses[primaryIndex].meaningsVi.length) return dictionary;
+  return { ...dictionary, senses: dictionary.senses.map((sense, index) => index === primaryIndex ? { ...sense, meaningsVi } : sense) };
 }
