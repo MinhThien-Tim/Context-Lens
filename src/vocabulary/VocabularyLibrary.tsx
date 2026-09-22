@@ -26,7 +26,7 @@ export function VocabularyLibrary({ records, onClose, onDelete }: { records: Voc
           <small>{record.source.document} · {record.source.location}</small>
         </article>)}
       </div>
-      <p>Download your English101 JSON, then import it in English101 / Personal Flashcards.</p><div class="export-actions"><button class="secondary-button" disabled={!records.length} onClick={() => download('context-lens-vocabulary.csv', vocabularyCsv(records), 'text/csv;charset=utf-8')}>Export CSV</button><button class="primary-button" disabled={!records.length} onClick={() => download('context-lens-english101.json', JSON.stringify(buildEnglish101Export(records), null, 2), 'application/json')}>Open in English101</button></div>
+      <p class="export-helper">Use this file in English101 → Personal Flashcards.</p><div class="export-actions"><button class="secondary-button" disabled={!records.length} onClick={() => download('context-lens-vocabulary.csv', vocabularyCsv(records), 'text/csv;charset=utf-8')}>Export CSV</button><button class="primary-button" disabled={!records.length} onClick={() => download('context-lens-english101.json', JSON.stringify(buildEnglish101Export(records), null, 2), 'application/json')}>Export to English101</button></div>
     </section>
   </div>;
 }

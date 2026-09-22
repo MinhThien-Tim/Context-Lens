@@ -154,6 +154,10 @@ See [implementation and verification details](docs/READER_UI_UPGRADE.md).
 
 ## English101 vocabulary handoff
 
+### Context Lens + English101
+
+Context Lens helps you understand and capture vocabulary while reading. English101 helps you practice and review it. The apps do not sync automatically: export **English101 Vocabulary** from Context Lens, then import that JSON file in **English101 → Personal Flashcards**.
+
 Context Lens captures contextual vocabulary.
 English101 consumes the versioned vocabulary export for study.
 

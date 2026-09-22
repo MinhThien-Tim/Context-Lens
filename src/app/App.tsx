@@ -40,6 +40,8 @@ import type { ContextMode } from '../core/context/types';
 import { NotesPanel } from '../notes/NotesPanel';
 import { EngineError } from '../core/errors';
 import { loadWordNet } from '../core/language/wordnet';
+import { ContextLensOnboarding, OnboardingCard } from '../onboarding/ContextLensOnboarding';
+import { hasSeenContextLensOnboarding, markContextLensOnboardingSeen } from '../onboarding/store';
 
 const SAMPLE = `The decision had surprised many voters. The government struggled to maintain public confidence after the announcement. Several ministers defended the policy.
 
@@ -99,6 +101,8 @@ export function App() {
   const [showVocabulary, setShowVocabulary] = useState(false);
   const [showDataManagement, setShowDataManagement] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showOnboardingCard, setShowOnboardingCard] = useState(false);
   const preferredPdfMode = desktop ? preferences.pdfViewMode : preferences.pdfMobileViewMode;
   const pdfMode = documentRecord?.kind === 'pdf' && preferredPdfMode === 'reading' && !pdfHasReadableText(documentRecord) ? 'original' : preferredPdfMode;
   useEffect(() => { if (!desktop && (lookupOpen || showNotes)) setContentsOpen(false); }, [desktop, lookupOpen, showNotes]);
@@ -112,6 +116,7 @@ export function App() {
       setImportError('The offline dictionary could not load. Reconnect and reload to download it.');
     });
     void maintainStorageBudget();
+    void hasSeenContextLensOnboarding().then(seen => setShowOnboardingCard(!seen)).catch(() => {});
     void Promise.all([loadPreferences(), loadAiSettings(), db.documents.orderBy('updatedAt').reverse().limit(8).toArray(), db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray()]).then(([prefs, ai, docs, words]) => {
       setPreferences(prefs); setPreferencesLoaded(true); setAiSettings(ai); setRecent(docs); setVocabulary(words);
     });
@@ -363,6 +368,8 @@ export function App() {
     return () => window.removeEventListener('keydown', keydown);
   }, [documentRecord, currentLocation]);
   const sections = useMemo(() => documentRecord?.toc ?? (documentRecord?.safeHtml ? htmlSections(documentRecord.safeHtml).toc : textSections(documentRecord?.content ?? '')), [documentRecord]);
+  const openOnboarding = () => { setShowOnboarding(true); setShowOnboardingCard(false); void markContextLensOnboardingSeen(); };
+  const dismissOnboarding = () => { setShowOnboardingCard(false); void markContextLensOnboardingSeen(); };
 
   if (!documentRecord) return (
     <main class="home-shell">
@@ -378,9 +385,11 @@ export function App() {
         <div class="paste-footer"><span>{draft.trim().split(/\s+/).filter(Boolean).length} words</span><div class="paste-actions"><label class="secondary-button">{importing ? 'Importing…' : 'Open file'}<input class="visually-hidden" type="file" disabled={importing} accept=".txt,.md,.markdown,.pdf,.epub,.docx,text/plain,text/markdown,application/pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => void importTextFile(event.currentTarget.files?.[0])} /></label><button class="primary-button" onClick={createDocument} disabled={!draft.trim() || importing}>Start reading</button></div></div>
       </section>
       <section class="url-panel"><label for="article-url">Read an article URL</label><div><input id="article-url" type="url" inputMode="url" value={articleUrl} onInput={(event) => setArticleUrl(event.currentTarget.value)} placeholder="https://example.com/article" /><button class="secondary-button" onClick={importArticleUrl} disabled={!articleUrl.trim() || importing}>Import</button></div><small>Direct fetch first. If the site blocks access, paste the text or configure the optional proxy.</small></section>
+      {showOnboardingCard && <OnboardingCard onOpen={openOnboarding} onDismiss={dismissOnboarding} />}
       {recent.length > 0 && <section class="recent-section"><h2>Previously opened</h2>{recent.map((doc) => <div class="recent-row"><button class="recent-item" onClick={() => openDocument(doc)}><span><strong>{doc.title}</strong><small>{doc.content.slice(0, 86)}…</small></span><span>›</span></button><button class="icon-button recent-delete" aria-label={`Delete ${doc.title}`} onClick={() => { if (confirm(`Delete “${doc.title}” and its notes from this device?`)) { void db.transaction('rw', [db.documents, db.notes], async () => { await db.documents.delete(doc.id); await db.notes.where('documentId').equals(doc.id).delete(); }); setRecent((items) => items.filter((item) => item.id !== doc.id)); } }}>×</button></div>)}</section>}
       {vocabulary.length > 0 && <section class="recent-section vocabulary-preview"><h2>Saved in context</h2>{vocabulary.slice(0, 8).map((word) => <div class="vocabulary-item"><span><strong>{word.lemma}</strong><small>{word.lexicalUnit ?? word.contextualMeaning}</small></span><span>{word.meaningVi.join(' · ')}</span></div>)}</section>}
-      <p class="home-note">Documents stay on this device. Offline reading is available after the first visit.</p>
+      <p class="home-note">Documents stay on this device. Offline reading is available after the first visit. <button class="inline-help" onClick={openOnboarding}>How Context Lens works</button></p>
+      {showOnboarding && <ContextLensOnboarding onClose={() => setShowOnboarding(false)} />}
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
       {showVocabulary && <VocabularyLibrary records={vocabulary} onClose={() => setShowVocabulary(false)} onDelete={(id) => { void db.vocabulary.delete(id); setVocabulary((items) => items.filter((item) => item.id !== id)); }} />}
       {showDataManagement && <DataManagement onClose={() => setShowDataManagement(false)} onRestored={() => { void db.documents.orderBy('updatedAt').reverse().limit(8).toArray().then(setRecent); void db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray().then(setVocabulary); }} />}
