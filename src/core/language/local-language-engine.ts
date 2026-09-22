@@ -62,7 +62,7 @@ export class LocalLanguageEngine {
     const matchType = phraseEntry ? 'phrase' : directEntry ? (directEntry.morphology ? 'lemma' : 'exact')
       : matchedText?.includes(' ') ? (matchedText === canonical ? 'phrase' : 'subphrase') : entry ? 'head' : undefined;
     const orderedSenses = entry ? [sense, ...resolved.alternatives].filter((item, index, all): item is NonNullable<typeof item> => Boolean(item) && all.findIndex(other => other?.id === item!.id) === index) : [];
-    const rulePos = inferContextPos(lookupText, analysis.normalizedText);
+    const rulePos = inferContextPos(lookupText, analysis.normalizedText, entry?.pos);
     const contextPos = rulePos ?? sense?.pos ?? occurrence?.pos;
     const strongContext = Boolean(rulePos) || (resolved.confidence >= 0.6 && resolved.reasons.some(reason => !reason.startsWith('Dictionary sense')));
     const contextOrderedSenses = rulePos ? [...orderedSenses].sort((left, right) => Number(right.pos === rulePos) - Number(left.pos === rulePos)) : orderedSenses;
@@ -103,12 +103,16 @@ function dictionaryPronunciation(lemma: string): string | null {
   return dictionaryRegistry.lookup(lemma)?.entry.ipa ?? null;
 }
 
-function inferContextPos(selection: string, sentence: string): string | undefined {
+function inferContextPos(selection: string, sentence: string, availablePos: string[] = []): string | undefined {
   const index = sentence.toLocaleLowerCase().indexOf(selection.toLocaleLowerCase());
   if (index < 0) return undefined;
   const prefix = sentence.slice(0, index);
+  const suffix = sentence.slice(index + selection.length);
   if (/(?:\b(?:can|could|may|might|must|shall|should|will|would|do|does|did)|\bto)\s+$/i.test(prefix)) return 'verb';
-  if (/\b(?:a|an|the|this|that|my|our|their|his|her|its)\s+$/i.test(prefix)) return 'noun';
+  if (/\b(?:a|an|the|this|that|my|our|their|his|her|its)\s+$/i.test(prefix)) {
+    if (/^\s+[\p{L}\p{M}]/u.test(suffix) && availablePos.includes('adjective')) return 'adjective';
+    return 'noun';
+  }
   if (/\b(?:be|is|am|are|was|were|seem|seems|seemed|feel|feels|felt|become|became)\s+$/i.test(prefix)) return 'adjective';
   return undefined;
 }

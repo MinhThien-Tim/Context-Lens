@@ -8,6 +8,7 @@ import { defaultEngineSettings } from '../../settings/engines';
 import { db } from '../../db/database';
 import type { LookupRequest } from '../../lookup/types';
 import { LexicalEngine } from './lexicon';
+import { compactDictionarySenses, pairDictionarySenses } from '../../components/dictionaryDisplay';
 
 const request = (word: string, sentence: string): LookupRequest => ({ selection: word, sentence, selection_type: 'word', previous_sentence: null, next_sentence: null,
   language_mode: 'bilingual', learner: { native_language: 'vi', english_level: 'B2' }, options: { include_ipa: true, include_contrast: true, include_grammar: true, include_sentence_translation: true } });
@@ -50,6 +51,13 @@ it('keeps every POS while prioritizing the modal-driven verb sense', async () =>
   expect(result.dictionary?.contextPos).toBe('verb');
   expect(result.dictionary?.senses[0]).toMatchObject({ pos: 'verb', contextMatch: true });
   expect(result.dictionary?.senses.some(sense => sense.pos === 'noun')).toBe(true);
+});
+it('treats particular as an adjective before a following noun and keeps its important meanings visible', async () => {
+  const result = await new LookupService().quick(request('particular', 'What this particular template helps students do is question beliefs.'), { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(result.dictionary?.contextPos).toBe('adjective');
+  expect(result.dictionary?.senses[0]).toMatchObject({ pos: 'adjective', contextMatch: true });
+  expect(result.dictionary?.senses.flatMap(sense => sense.meaningsVi).join(' ')).toMatch(/đặc biệt|đặc thù|riêng biệt/i);
+  expect(compactDictionarySenses(pairDictionarySenses(result.dictionary?.senses ?? [])).flatMap(sense => sense.meaningsVi).join(' ')).toMatch(/đặc biệt|đặc thù|riêng biệt/i);
 });
 it.each([
   ['delivered', 'deliver'], ['indicated', 'indicate'], ['guaranteed', 'guarantee'], ['children', 'child'], ['better', 'good']

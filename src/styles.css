@@ -330,9 +330,12 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
 .definition-block small,.compact-block small { display:block; margin-bottom:3px; color:var(--muted); font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
 .lookup-sheet .meaning-en,.lookup-sheet .meaning-vi { margin:0; font-size:13.5px; line-height:1.45; }
 .lookup-sheet .meaning-vi { color:var(--vi); font-weight:650; }
-.lookup-sheet .quick-explanation { animation:lookup-content-in 180ms ease-out both; }
+.lookup-pending { min-height:72px; display:grid; align-content:center; gap:5px; }
+.lookup-pending strong { font-size:22px; }
+.lookup-pending span { color:var(--muted); font-size:11px; }
+.lookup-sheet .sense-row { animation:lookup-content-in 160ms ease-out both; }
 @keyframes lookup-content-in { from { opacity:.45; transform:translateY(2px); } to { opacity:1; transform:translateY(0); } }
-@media (prefers-reduced-motion:reduce) { .lookup-sheet .quick-explanation,.lookup-sheet .explain-level { animation:none; } }
+@media (prefers-reduced-motion:reduce) { .lookup-sheet .sense-row,.lookup-sheet .explain-level { animation:none; } }
 .context-hint { display:inline-flex; margin:2px 0 8px; padding:2px 7px; border-radius:999px; background:var(--accent-soft); color:var(--muted); font-size:10px; font-weight:700; }
 .context-hint.matched { color:var(--accent); }
 .sense-list { display:grid; gap:7px; }
@@ -346,6 +349,9 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
 .sense-vi { color:var(--vi); font-size:12.5px; font-weight:650; }
 .sense-definition + .sense-vi::before { content:'— '; color:var(--muted); font-weight:400; }
 .more-meanings,.lookup-empty { margin:8px 0 2px; color:var(--muted); font-size:11px; }
+.lookup-sheet button.more-meanings { min-height:28px; padding:0; border:0; background:transparent; color:var(--accent); font-weight:700; cursor:pointer; }
+.lookup-sheet button.more-meanings::after { content:' ▾'; font-size:9px; }
+.lookup-sheet button.more-meanings[aria-expanded="true"]::after { content:' ▴'; }
 .expanded-senses { display:grid; gap:5px; }
 .sense-group { padding:7px 0; border-bottom:1px solid var(--border); }
 .sense-group h3 { margin:0 0 4px; color:var(--text); font-size:12px; letter-spacing:0; text-transform:none; }
@@ -360,6 +366,16 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
 .lexical-unit strong { color:var(--text); font-size:13.5px; line-height:1.4; }
 .lexical-unit p,.context-card p { margin:0; color:color-mix(in srgb,#5b21b6 72%,var(--text)); font-size:13px; line-height:1.45; }
 .language-tabs { margin-top:8px; }
+.lookup-sheet .language-tabs button { min-height:30px; font-size:11px; }
+.explain-toolstrip { display:grid; grid-template-columns:repeat(auto-fit,minmax(68px,1fr)); gap:5px; margin-top:6px; }
+.explain-toolstrip>.secondary-button,.explain-more-actions>summary { min-width:0; min-height:32px; padding:0 6px; font-size:11px; white-space:nowrap; }
+.explain-more-actions { position:relative; }
+.explain-more-actions>summary { display:flex; align-items:center; justify-content:center; border:1px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); font-weight:650; cursor:pointer; list-style:none; }
+.explain-more-actions>summary::-webkit-details-marker { display:none; }
+.explain-more-actions>summary::after { content:'▾'; margin-left:5px; color:var(--muted); font-size:9px; }
+.explain-more-actions[open]>summary::after { content:'▴'; }
+.explain-more-actions>div { position:absolute; z-index:4; top:calc(100% + 5px); right:0; display:grid; gap:6px; width:210px; padding:8px; border:1px solid var(--border); border-radius:10px; background:var(--elevated-surface); box-shadow:var(--shadow); }
+.explain-more-actions>div>* { width:100%; min-height:34px; }
 .context-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; margin-top:8px; }
 .context-actions button,.context-actions select { width:100%; min-width:0; min-height:34px; padding:0 6px; justify-content:center; font-size:11px; text-align:center; }
 .context-actions select { grid-column:1 / -1; padding:0 8px; }

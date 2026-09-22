@@ -77,28 +77,26 @@ export function LookupBottomSheet(props: Props) {
         </div>
         <button class="explain-close" aria-label="Close meaning" onClick={props.onClose}>✕</button>
       </div>
-      {!result ? <div class="lookup-skeleton">Finding meaning…</div> : <>
+      {!result ? <div class="lookup-pending"><strong>{props.selectionText}</strong><span>Finding meaning…</span></div> : <>
         <div class="lookup-header-row">
-          <QuickExplain key={lookupRevision(result)} result={result} mode={props.mode} expanded={deepOpen} />
+          <QuickExplain result={result} mode={props.mode} expanded={deepOpen} />
           <button class="save-inline" aria-label={props.saved ? 'Remove saved word' : 'Save word'} aria-pressed={props.saved} onClick={props.onToggleSave}>{props.saved ? '✓ Saved' : 'Save'}</button>
         </div>
         {props.loading && <p class="lookup-status" role="status">Finding context...</p>}
         {props.error && <div class="lookup-error" role="status">{props.error}</div>}
         {!popup && <button class="explain-toggle explain-button" disabled={!result} aria-expanded={deepOpen} onClick={() => setDeepOpen(!deepOpen)}><span aria-hidden="true">{deepOpen ? '▾' : '▸'}</span> {deepOpen ? 'Thu gọn nội dung' : 'Mở giải thích đầy đủ'}</button>}
         {!popup && deepOpen && <>
-          <div class="context-actions utility-actions">
-            <button class="secondary-button compact-action" onClick={() => props.onSpeak(result.selection.lemma)}>Pronounce</button>
-            {props.onAddNote && <button class="secondary-button compact-action" onClick={props.onAddNote}>Add note</button>}
-            <button class="secondary-button compact-action" onClick={props.onOpenSettings}>Settings</button>
-          </div>
           <LanguageTabs value={props.mode} onChange={props.onModeChange} />
           {props.debug && result.engine && <dl class="engine-debug"><div><dt>Provider</dt><dd>{result.engine.provider}</dd></div><div><dt>Cache</dt><dd>{result.engine.cached ? 'hit' : 'miss'}</dd></div>{result.engine.latencyMs !== undefined && <div><dt>Latency</dt><dd>{Math.round(result.engine.latencyMs)} ms</dd></div>}</dl>}
-          <div class="context-actions detail-actions">
-            <button class="secondary-button compact-action" onClick={() => sheetRef.current?.querySelector<HTMLElement>('[data-context]')?.focus()}>Context</button>
-            <button class="secondary-button compact-action" onClick={() => sheetRef.current?.querySelector<HTMLElement>('[data-grammar]')?.focus()}>Grammar</button>
+          <div class="explain-toolstrip">
+            <button class="secondary-button compact-action" onClick={() => props.onSpeak(result.selection.lemma)}>Pronounce</button>
+            {props.onAddNote && <button class="secondary-button compact-action" onClick={props.onAddNote}>Add note</button>}
             <button class="ai-explain-button secondary-button compact-action" onClick={() => { setDeepOpen(true); props.onExplain?.('meaning-in-context'); }}>AI Explain</button>
-            {props.onTranslateSentence && <button class="secondary-button compact-action" onClick={() => { setDeepOpen(true); props.onTranslateSentence?.(); }}>Translate</button>}
-            <select class="compact-select" aria-label="AI explanation type" value="" onChange={event => { if (event.currentTarget.value) { setDeepOpen(true); props.onExplain?.(event.currentTarget.value as ContextMode); } }}><option value="">AI: more…</option><option value="grammar">Grammar</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>
+            <details class="explain-more-actions"><summary>More</summary><div>
+              {props.onTranslateSentence && <button class="secondary-button compact-action" onClick={() => { setDeepOpen(true); props.onTranslateSentence?.(); }}>Translate sentence</button>}
+              <button class="secondary-button compact-action" onClick={props.onOpenSettings}>Settings</button>
+              <select class="compact-select" aria-label="AI explanation type" value="" onChange={event => { if (event.currentTarget.value) { setDeepOpen(true); props.onExplain?.(event.currentTarget.value as ContextMode); } }}><option value="">AI task…</option><option value="grammar">Grammar</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>
+            </div></details>
           </div>
           {deep && <ExpandedExplain result={result} deep={deep} mode={props.mode} loading={props.loading} contextResult={props.contextResult} />}
         </>}
@@ -106,11 +104,4 @@ export function LookupBottomSheet(props: Props) {
       </>}
     </section>
   </>;
-}
-
-function lookupRevision(result: LookupResponse): string {
-  const senses = result.dictionary?.senses.map(sense =>
-    `${sense.id}:${sense.definitionEn}:${sense.meaningsVi.join('|')}:${sense.contextMatch ? 1 : 0}`).join('~') ?? '';
-  return [result.selection.surface, result.source, result.engine?.provider ?? '', result.quick.definition_en,
-    result.quick.meaning_vi.join('|'), senses].join('::');
 }

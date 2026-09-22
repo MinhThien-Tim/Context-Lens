@@ -26,14 +26,19 @@ export function prioritizeDictionarySenses(senses: DictionarySenseResult[]): Dic
     || a.index - b.index).map(item => item.sense);
 }
 
-export function compactDictionarySenses(senses: DictionarySenseResult[], limit = 2): DictionarySenseResult[] {
+export function compactDictionarySenses(senses: DictionarySenseResult[]): DictionarySenseResult[] {
   const prioritized = prioritizeDictionarySenses(senses);
-  const result: DictionarySenseResult[] = [];
-  for (const sense of prioritized) {
-    if (result.length >= limit) break;
-    if (result.length === 0 || !result.some(item => item.pos === sense.pos) || sense.contextMatch) result.push(sense);
+  if (prioritized.length <= 4) return prioritized;
+  const matched = prioritized.find(sense => sense.contextMatch);
+  if (matched) {
+    const contextual = prioritized.filter(sense => sense.pos === matched.pos).slice(0, 4);
+    if (contextual.length >= 2) return contextual;
+    return [...contextual, ...prioritized.filter(sense => sense.pos !== matched.pos).slice(0, 2 - contextual.length)];
   }
-  return result.slice(0, limit);
+  const visible = prioritized.slice(0, 3);
+  const alternativePos = prioritized.find(sense => !visible.some(item => item.pos === sense.pos));
+  if (alternativePos && visible.every(sense => sense.pos === visible[0].pos)) visible[2] = alternativePos;
+  return visible;
 }
 
 function normalize(value: string): string { return value.normalize('NFC').toLocaleLowerCase('vi').replace(/\s+/g, ' ').trim(); }

@@ -248,9 +248,7 @@ export function App() {
     setActiveSelection(selection); setShowNotes(false); if (!desktop) setContentsOpen(false); setLookupOpen(true); setError(null);
     setContextResult(null); setLoading(false);
     const immediate = lookupService.immediate(request, engines);
-    // Show the best synchronous result now; richer local/web data replaces its
-    // contents in the same surface as it arrives.
-    setLookup(immediate); setSaved(false);
+    setSaved(false);
     if (documentRecord) void isVocabularySaved(documentRecord.id, immediate).then(value => { if (!controller.signal.aborted) setSaved(value); });
     // A stable selection delay avoids network calls during repeated mobile selection changes.
     const timer = window.setTimeout(() => { void lookupService.quick(request, engines, controller.signal, local => {
@@ -266,7 +264,7 @@ export function App() {
         if (failure instanceof EngineError && failure.code === 'QUOTA') setError('Online translation limit reached. Cached and offline meanings remain available.');
         else if (failure instanceof EngineError && ['TIMEOUT', 'PROVIDER_DOWN', 'NETWORK'].includes(failure.code)) setError('Online translation is temporarily unavailable. You can continue reading.');
       }
-    }); }, 150);
+    }); }, 0);
     controller.signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
   };
 

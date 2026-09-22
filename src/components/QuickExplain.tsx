@@ -1,10 +1,15 @@
+import { useState } from 'preact/hooks';
 import type { LanguageMode, LookupResponse } from '../lookup/types';
-import { compactDictionarySenses, pairDictionarySenses } from './dictionaryDisplay';
+import { compactDictionarySenses, pairDictionarySenses, prioritizeDictionarySenses } from './dictionaryDisplay';
 
 export function QuickExplain({ result, mode, expanded = false }: { result: LookupResponse; mode: LanguageMode; expanded?: boolean }) {
+  const selectionKey = `${result.selection.surface}\n${result.context.sentence}`;
+  const [meaningExpansion, setMeaningExpansion] = useState({ key: selectionKey, open: false });
+  const showAllMeanings = meaningExpansion.key === selectionKey && meaningExpansion.open;
   const showEn = mode !== 'vi', showVi = mode !== 'en';
-  const senses = pairDictionarySenses(result.dictionary?.senses ?? []);
-  const visible = compactDictionarySenses(senses);
+  const senses = prioritizeDictionarySenses(pairDictionarySenses(result.dictionary?.senses ?? []));
+  const compact = compactDictionarySenses(senses);
+  const visible = showAllMeanings && !expanded ? senses : compact;
   return <div class={`quick-explanation${expanded ? ' is-expanded' : ''}`}>
     <header class="lookup-heading"><div><div class="word-line"><strong>{result.selection.surface}</strong>
       {result.selection.part_of_speech && <span class="pos-chip">{result.selection.part_of_speech}</span>}</div>
@@ -22,7 +27,10 @@ export function QuickExplain({ result, mode, expanded = false }: { result: Looku
         {showVi && sense.meaningsVi.length > 0 && <span class="sense-vi">{sense.meaningsVi.join('; ')}</span>}
       </div>
     </div>)}</div> : <LegacyMeanings result={result} showEn={showEn} showVi={showVi} />}
-    {senses.length > visible.length && <p class="more-meanings">Còn {senses.length - visible.length} nghĩa ở tầng mở rộng</p>}
+    {!expanded && senses.length > compact.length && <button class="more-meanings" aria-expanded={showAllMeanings} onClick={() => setMeaningExpansion({ key: selectionKey, open: !showAllMeanings })}>
+      {showAllMeanings ? 'Thu gọn nghĩa' : `Mở thêm ${senses.length - compact.length} nghĩa`}
+    </button>}
+    {expanded && senses.length > compact.length && <p class="more-meanings">Còn {senses.length - compact.length} nghĩa ở tầng mở rộng</p>}
     {result.quick.lexical_unit && <div class="lexical-unit"><span class="lexical-label">In this sentence</span>
       <strong>{result.quick.lexical_unit.text}</strong><p>→ {showVi ? result.quick.lexical_unit.meaning_vi : result.quick.lexical_unit.meaning_en}</p></div>}
   </div>;
