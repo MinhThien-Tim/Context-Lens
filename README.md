@@ -166,8 +166,9 @@ name without opening a modal. Exact lemma/sentence saves reuse their record ID.
 PDF pages and EPUB chapters are retained. Dexie v11 adds `vocabularyCollections`
 and migrates old words into "Saved vocabulary", preserving other stores.
 
-In Saved vocabulary, **Open in English101** downloads a V2 JSON file. Open English101
-/ Personal Flashcards and import it. This is a manual file handoff, not live sync.
+In Saved vocabulary, **Open in English101** downloads a V2 JSON file. Open
+[English101 Personal Flashcards](https://english101.hermesurf.workers.dev/viewer?id=personal-flashcards)
+and import it. This is a manual file handoff, not live sync.
 The `english101.context-vocabulary` contract is the only integration boundary;
 `buildEnglish101ExportV1` remains available for older consumers. CSV is unchanged.
 Backup V4 preserves vocabulary, source metadata, and collections (including empty

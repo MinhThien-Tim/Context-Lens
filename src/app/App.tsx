@@ -375,14 +375,22 @@ export function App() {
     <main class="home-shell">
       {!online && <div class="status-banner" role="status">Offline mode · Saved documents and cached meanings remain available.</div>}
       {updateReady && <button class="status-banner update-banner" onClick={() => window.dispatchEvent(new Event('context-lens:apply-update'))}>An update is ready · Reload</button>}
-      <header class="brand-header"><div class="brand-mark">C</div><div><h1>Context Lens</h1><p>Read English. Stay in context.</p></div><button class="icon-button settings-button" aria-label="Saved vocabulary" onClick={() => setShowVocabulary(true)}>★</button><button class="icon-button" aria-label="Data and storage" onClick={() => setShowDataManagement(true)}>▣</button><button class="icon-button" aria-label="AI settings" onClick={() => setShowApiSettings(true)}>⚙</button></header>
+      <header class="brand-header">
+        <div class="brand-lockup"><div class="brand-mark">C</div><div><h1>Context Lens</h1><p>Read English. Stay in context.</p></div></div>
+        <nav class="home-nav" aria-label="Library tools">
+          <button class="nav-button" onClick={() => setShowVocabulary(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12a2 2 0 0 1 2 2v14l-8-3.5L4 20V6a2 2 0 0 1 2-2Z"/></svg><span>Vocabulary</span></button>
+          <button class="nav-button" onClick={() => setShowDataManagement(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M6 3h12l2 4v13H4V7l2-4Zm3 8h6"/></svg><span>Storage</span></button>
+          <button class="nav-button" onClick={() => setShowApiSettings(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M4.9 4.9 7 7m10 10 2.1 2.1M2 12h3m14 0h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span>Settings</span></button>
+        </nav>
+      </header>
+      <section class="home-intro"><p class="eyebrow">Your focused reading space</p><h2>Read with context, not interruption.</h2><p>Open a document, select any word or phrase, and understand it right where you are.</p><div class="intro-steps" aria-label="How it works"><span><b>1</b> Open</span><i aria-hidden="true">→</i><span><b>2</b> Select</span><i aria-hidden="true">→</i><span><b>3</b> Understand &amp; save</span></div></section>
       <section class="paste-panel">
         <label class="title-input">Title<input value={title} onInput={(event) => setTitle(event.currentTarget.value)} /></label>
-        <label class="paste-label" for="content-input">Paste English text</label>
+        <label class="paste-label" for="content-input">Paste text to start reading</label>
         <textarea id="content-input" value={draft} onInput={(event) => setDraft(event.currentTarget.value)} placeholder="Paste an article, passage, or notes…" />
         {importError && <p class="import-error" role="alert">{importError}</p>}
         {importProgress && <div class="import-progress" role="status"><span>{importProgress}</span><button onClick={() => importControllerRef.current?.abort()}>Cancel</button></div>}
-        <div class="paste-footer"><span>{draft.trim().split(/\s+/).filter(Boolean).length} words</span><div class="paste-actions"><label class="secondary-button">{importing ? 'Importing…' : 'Open file'}<input class="visually-hidden" type="file" disabled={importing} accept=".txt,.md,.markdown,.pdf,.epub,.docx,text/plain,text/markdown,application/pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => void importTextFile(event.currentTarget.files?.[0])} /></label><button class="primary-button" onClick={createDocument} disabled={!draft.trim() || importing}>Start reading</button></div></div>
+        <div class="paste-footer"><span>{draft.trim().split(/\s+/).filter(Boolean).length} words</span><div class="paste-actions"><label class="secondary-button"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 16V3m0 0L7 8m5-5 5 5M4 14v6h16v-6"/></svg>{importing ? 'Importing…' : 'Open document'}<input class="visually-hidden" type="file" disabled={importing} accept=".txt,.md,.markdown,.pdf,.epub,.docx,text/plain,text/markdown,application/pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => void importTextFile(event.currentTarget.files?.[0])} /></label><button class="primary-button" onClick={createDocument} disabled={!draft.trim() || importing}>Start reading <span aria-hidden="true">→</span></button></div></div>
       </section>
       <section class="url-panel"><label for="article-url">Read an article URL</label><div><input id="article-url" type="url" inputMode="url" value={articleUrl} onInput={(event) => setArticleUrl(event.currentTarget.value)} placeholder="https://example.com/article" /><button class="secondary-button" onClick={importArticleUrl} disabled={!articleUrl.trim() || importing}>Import</button></div><small>Direct fetch first. If the site blocks access, paste the text or configure the optional proxy.</small></section>
       {showOnboardingCard && <OnboardingCard onOpen={openOnboarding} onDismiss={dismissOnboarding} />}

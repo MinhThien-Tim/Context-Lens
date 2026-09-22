@@ -1,6 +1,6 @@
 import { useDialog } from '../components/useDialog';
 
-export const ENGLISH101_FLASHCARDS_URL = 'https://minhthien-tim.github.io/English101/Vocabulary/personal-flashcards.html';
+export const ENGLISH101_FLASHCARDS_URL = 'https://english101.hermesurf.workers.dev/viewer?id=personal-flashcards';
 
 export function OnboardingCard({ onOpen, onDismiss }: { onOpen: () => void; onDismiss: () => void }) {
   return <aside class="onboarding-card" aria-labelledby="onboarding-card-title">
