@@ -1,10 +1,10 @@
-import type { DictionarySenseResult, LanguageMode, LookupResponse } from '../lookup/types';
-import { pairDictionarySenses } from './dictionaryDisplay';
+import type { LanguageMode, LookupResponse } from '../lookup/types';
+import { compactDictionarySenses, pairDictionarySenses } from './dictionaryDisplay';
 
 export function QuickExplain({ result, mode, expanded = false }: { result: LookupResponse; mode: LanguageMode; expanded?: boolean }) {
   const showEn = mode !== 'vi', showVi = mode !== 'en';
   const senses = pairDictionarySenses(result.dictionary?.senses ?? []);
-  const visible = expanded ? senses : compactSenses(senses);
+  const visible = compactDictionarySenses(senses);
   return <div class={`quick-explanation${expanded ? ' is-expanded' : ''}`}>
     <header class="lookup-heading"><div><div class="word-line"><strong>{result.selection.surface}</strong>
       {result.selection.part_of_speech && <span class="pos-chip">{result.selection.part_of_speech}</span>}</div>
@@ -22,7 +22,7 @@ export function QuickExplain({ result, mode, expanded = false }: { result: Looku
         {showVi && sense.meaningsVi.length > 0 && <span class="sense-vi">{sense.meaningsVi.join('; ')}</span>}
       </div>
     </div>)}</div> : <LegacyMeanings result={result} showEn={showEn} showVi={showVi} />}
-    {!expanded && senses.length > visible.length && <p class="more-meanings">Show {senses.length - visible.length} more meanings</p>}
+    {senses.length > visible.length && <p class="more-meanings">Còn {senses.length - visible.length} nghĩa ở tầng mở rộng</p>}
     {result.quick.lexical_unit && <div class="lexical-unit"><span class="lexical-label">In this sentence</span>
       <strong>{result.quick.lexical_unit.text}</strong><p>→ {showVi ? result.quick.lexical_unit.meaning_vi : result.quick.lexical_unit.meaning_en}</p></div>}
   </div>;
@@ -33,14 +33,6 @@ function LegacyMeanings({ result, showEn, showVi }: { result: LookupResponse; sh
     {showVi && <p class="meaning-vi">{result.quick.meaning_vi.length ? result.quick.meaning_vi.join(' · ') : 'No definition found.'}</p>}</>;
 }
 
-function compactSenses(senses: DictionarySenseResult[]): DictionarySenseResult[] {
-  const result: DictionarySenseResult[] = [];
-  for (const sense of senses) {
-    if (result.length >= 4) break;
-    if (result.length < 2 || !result.some(item => item.pos === sense.pos)) result.push(sense);
-  }
-  return result;
-}
 function shortPos(pos: string): string {
   const value = pos.toLocaleLowerCase();
   return value.includes('verb') ? 'v.' : value.includes('noun') ? 'n.' : value.includes('adjective') ? 'adj.' : value.includes('adverb') ? 'adv.' : pos;

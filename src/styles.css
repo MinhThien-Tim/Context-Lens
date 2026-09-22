@@ -330,6 +330,9 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
 .definition-block small,.compact-block small { display:block; margin-bottom:3px; color:var(--muted); font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
 .lookup-sheet .meaning-en,.lookup-sheet .meaning-vi { margin:0; font-size:13.5px; line-height:1.45; }
 .lookup-sheet .meaning-vi { color:var(--vi); font-weight:650; }
+.lookup-sheet .quick-explanation { animation:lookup-content-in 180ms ease-out both; }
+@keyframes lookup-content-in { from { opacity:.45; transform:translateY(2px); } to { opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion:reduce) { .lookup-sheet .quick-explanation,.lookup-sheet .explain-level { animation:none; } }
 .context-hint { display:inline-flex; margin:2px 0 8px; padding:2px 7px; border-radius:999px; background:var(--accent-soft); color:var(--muted); font-size:10px; font-weight:700; }
 .context-hint.matched { color:var(--accent); }
 .sense-list { display:grid; gap:7px; }
@@ -366,6 +369,12 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
 .deep-meta { display:flex; align-items:center; min-height:0; margin-bottom:6px; }
 .deep-meta:empty { display:none; }
 .deep-meta .lookup-status { margin:0; }
+.priority-detail { border-left:2px solid color-mix(in srgb,var(--accent) 22%,transparent); padding-left:9px; }
+.explain-level { animation:lookup-content-in 160ms ease-out both; }
+.explain-level>h3:first-child { margin-top:12px; }
+.explain-level-controls { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:12px; padding-top:9px; border-top:1px solid var(--border); }
+.explain-level-controls .text-button,.explain-level-controls .secondary-button { min-height:30px; margin:0; font-size:11px; }
+.explain-level-controls .text-button { margin-right:auto; }
 .source-pill { display:inline-flex; margin:0; padding:2px 6px; font-size:9px; }
 .context-card { margin-bottom:10px; }
 .context-card h3 { margin-bottom:4px; }

@@ -111,3 +111,47 @@ it('does not flash the previous result after the active selection changes', () =
     expect(host.textContent).not.toContain(validLookup.selection.surface);
   } finally { act(() => render(null, host)); host.remove(); }
 });
+
+it('shows available content immediately and enriches it inside the same sheet', () => {
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn();
+  const initial = { ...validLookup, quick: { ...validLookup.quick, meaning_vi: [] } };
+  try {
+    act(() => render(<LookupBottomSheet open selectionText="maintain" result={initial} loading={false} error={null} mode="bilingual" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    const sheet = host.querySelector('.lookup-sheet');
+    const firstContent = host.querySelector('.quick-explanation');
+    expect(host.querySelector('.lookup-skeleton')).toBeNull();
+    expect(firstContent?.textContent).toContain(validLookup.quick.definition_en);
+
+    act(() => render(<LookupBottomSheet open selectionText="maintain" result={validLookup} loading={false} error={null} mode="bilingual" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    expect(host.querySelector('.lookup-sheet')).toBe(sheet);
+    expect(host.querySelector('.quick-explanation')).not.toBe(firstContent);
+    expect(host.querySelector('.meaning-vi')?.textContent).toContain(validLookup.quick.meaning_vi[0]);
+  } finally { act(() => render(null, host)); host.remove(); }
+});
+
+it('keeps priority content visible and reveals long panel details in ordered levels', () => {
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn();
+  const senses = ['Priority one', 'Priority two', 'Additional three', 'Additional four'].map((definitionEn, index) => ({
+    id: `sense-${index}`, pos: index === 1 ? 'noun' : 'verb', definitionEn, meaningsVi: [`Nghĩa ${index + 1}`],
+    source: 'local' as const, contextScore: 4 - index, contextMatch: index === 0
+  }));
+  const result = { ...validLookup, dictionary: { word: 'maintain', surfaceForm: 'maintain', lemma: 'maintain', pronunciation: null, contextConfidence: .9, senses } };
+  try {
+    act(() => render(<LookupBottomSheet open displayMode="panel" selectionText="maintain" result={result} loading={false} error={null} mode="bilingual" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    act(() => (host.querySelector('.explain-button') as HTMLButtonElement).click());
+    expect(host.textContent).toContain('Priority one');
+    expect(host.textContent).not.toContain('Additional three');
+
+    const openNext = () => act(() => (Array.from(host.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent?.startsWith('Mở thêm:')) as HTMLButtonElement).click());
+    openNext();
+    expect(host.textContent).toContain('Grammar');
+    expect(host.textContent).not.toContain('Additional three');
+    openNext();
+    expect(host.textContent).toContain('Additional three');
+    expect(host.textContent).not.toContain('Structure');
+    openNext();
+    expect(host.textContent).toContain('Structure');
+  } finally { act(() => render(null, host)); host.remove(); }
+});

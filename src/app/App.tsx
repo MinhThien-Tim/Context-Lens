@@ -248,7 +248,9 @@ export function App() {
     setActiveSelection(selection); setShowNotes(false); if (!desktop) setContentsOpen(false); setLookupOpen(true); setError(null);
     setContextResult(null); setLoading(false);
     const immediate = lookupService.immediate(request, engines);
-    setSaved(false);
+    // Show the best synchronous result now; richer local/web data replaces its
+    // contents in the same surface as it arrives.
+    setLookup(immediate); setSaved(false);
     if (documentRecord) void isVocabularySaved(documentRecord.id, immediate).then(value => { if (!controller.signal.aborted) setSaved(value); });
     // A stable selection delay avoids network calls during repeated mobile selection changes.
     const timer = window.setTimeout(() => { void lookupService.quick(request, engines, controller.signal, local => {

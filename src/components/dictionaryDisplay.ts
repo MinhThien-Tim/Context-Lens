@@ -19,4 +19,21 @@ export function pairDictionarySenses(senses: DictionarySenseResult[]): Dictionar
   return definitions.length ? definitions : senses;
 }
 
+export function prioritizeDictionarySenses(senses: DictionarySenseResult[]): DictionarySenseResult[] {
+  return senses.map((sense, index) => ({ sense, index })).sort((a, b) =>
+    Number(b.sense.contextMatch) - Number(a.sense.contextMatch)
+    || Number(Boolean(b.sense.definitionEn && b.sense.meaningsVi.length)) - Number(Boolean(a.sense.definitionEn && a.sense.meaningsVi.length))
+    || a.index - b.index).map(item => item.sense);
+}
+
+export function compactDictionarySenses(senses: DictionarySenseResult[], limit = 2): DictionarySenseResult[] {
+  const prioritized = prioritizeDictionarySenses(senses);
+  const result: DictionarySenseResult[] = [];
+  for (const sense of prioritized) {
+    if (result.length >= limit) break;
+    if (result.length === 0 || !result.some(item => item.pos === sense.pos) || sense.contextMatch) result.push(sense);
+  }
+  return result.slice(0, limit);
+}
+
 function normalize(value: string): string { return value.normalize('NFC').toLocaleLowerCase('vi').replace(/\s+/g, ' ').trim(); }

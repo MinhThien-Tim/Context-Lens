@@ -56,10 +56,9 @@ export class LookupService {
       checkAbort(signal);
       base = applyLocalResult(base, lens);
       const complete = Boolean(lens.english?.definition && (settings.targetLang === 'en' || lens.vietnamese?.meaning));
-      // Publish immediately only when the local result is already complete (or
-      // when no optional source can enrich it). Otherwise wait for the merged
-      // Wiktionary/translation result so the UI does not flash English-only text.
-      if (complete || !optionalTranslationEnabled(settings)) onLocal?.(base);
+      // Let the surface progressively enrich the synchronous result instead of
+      // holding useful local content behind a network fallback.
+      onLocal?.(base);
       if (settings.quickEngine === 'offline' || (complete && lens.confidence >= 0.6 && settings.quickEngine === 'auto')) return base;
       if (settings.automaticFallback && settings.publicTranslation && settings.targetLang === 'vi') {
         const web = await lookupWebDictionary(lens.selection.lemma, request.selection, settings.networkTimeoutMs, signal);

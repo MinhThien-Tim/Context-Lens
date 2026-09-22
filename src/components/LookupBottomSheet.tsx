@@ -79,7 +79,7 @@ export function LookupBottomSheet(props: Props) {
       </div>
       {!result ? <div class="lookup-skeleton">Finding meaning…</div> : <>
         <div class="lookup-header-row">
-          <QuickExplain result={result} mode={props.mode} expanded={deepOpen} />
+          <QuickExplain key={lookupRevision(result)} result={result} mode={props.mode} expanded={deepOpen} />
           <button class="save-inline" aria-label={props.saved ? 'Remove saved word' : 'Save word'} aria-pressed={props.saved} onClick={props.onToggleSave}>{props.saved ? '✓ Saved' : 'Save'}</button>
         </div>
         {props.loading && <p class="lookup-status" role="status">Finding context...</p>}
@@ -106,4 +106,11 @@ export function LookupBottomSheet(props: Props) {
       </>}
     </section>
   </>;
+}
+
+function lookupRevision(result: LookupResponse): string {
+  const senses = result.dictionary?.senses.map(sense =>
+    `${sense.id}:${sense.definitionEn}:${sense.meaningsVi.join('|')}:${sense.contextMatch ? 1 : 0}`).join('~') ?? '';
+  return [result.selection.surface, result.source, result.engine?.provider ?? '', result.quick.definition_en,
+    result.quick.meaning_vi.join('|'), senses].join('::');
 }
