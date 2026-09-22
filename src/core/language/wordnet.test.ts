@@ -44,6 +44,22 @@ it('delivers English definitions and Vietnamese meanings through the actual serv
   }
   expect(fetch).not.toHaveBeenCalled();
 });
+it('keeps every POS while prioritizing the modal-driven verb sense', async () => {
+  const result = await new LookupService().quick(request('guarantee', 'No teaching tool can guarantee that students learn.'), { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(result.selection.lemma).toBe('guarantee');
+  expect(result.dictionary?.contextPos).toBe('verb');
+  expect(result.dictionary?.senses[0]).toMatchObject({ pos: 'verb', contextMatch: true });
+  expect(result.dictionary?.senses.some(sense => sense.pos === 'noun')).toBe(true);
+});
+it.each([
+  ['delivered', 'deliver'], ['indicated', 'indicate'], ['guaranteed', 'guarantee'], ['children', 'child'], ['better', 'good']
+])('keeps surface %s and resolves the full lemma %s', async (surface, lemma) => {
+  const result = await new LookupService().quick(request(surface, `They ${surface} the result.`), { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(result.selection.surface).toBe(surface);
+  expect(result.selection.lemma).toBe(lemma);
+  expect(result.dictionary?.senses.length).toBeGreaterThan(0);
+  expect(result.quick.meaning_vi.join(' ')).not.toMatch(/^(Quá khứ|Dạng phân từ)/i);
+});
 it.each([
   ['indicated', 'indicate', 'The arrow indicated the correct route.'],
   ['delivered', 'deliver', 'The courier delivered the parcel yesterday.'],

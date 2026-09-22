@@ -92,3 +92,12 @@ it('offers explicit controls for switching between word popup and side panel', (
     expect(onDisplayModeChange).toHaveBeenCalledWith('panel');
   } finally { act(() => render(null, host)); host.remove(); vi.unstubAllGlobals(); }
 });
+
+it('shows a subtle AI caution in the lookup surface', () => {
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn();
+  try {
+    act(() => render(<LookupBottomSheet open result={validLookup} loading={false} error={null} mode="bilingual" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    expect(host.querySelector('.ai-caution')?.textContent).toContain('AI có thể mắc lỗi');
+  } finally { act(() => render(null, host)); host.remove(); }
+});

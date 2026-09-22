@@ -19,6 +19,7 @@ import { LexicalEngine } from '../core/language/lexicon';
 import { PhraseDetector } from '../core/language/phrases';
 import { SentenceAnalysisCache, SentenceEngine } from '../core/language/sentence-engine';
 import { ensureLocalDictionaryAssets } from './localAssets';
+import { lookupWebDictionary } from './webDictionary';
 export { createProvider } from '../core/context/providers';
 
 /** Compatibility facade: UI consumes normalized reading results, never provider payloads. */
@@ -57,6 +58,13 @@ export class LookupService {
       onLocal?.(base);
       const complete = Boolean(lens.english?.definition && (settings.targetLang === 'en' || lens.vietnamese?.meaning));
       if (settings.quickEngine === 'offline' || (complete && lens.confidence >= 0.6 && settings.quickEngine === 'auto')) return base;
+      if (settings.automaticFallback && settings.targetLang === 'vi') {
+        const web = await lookupWebDictionary(lens.selection.lemma, request.selection, settings.networkTimeoutMs, signal);
+        if (web) {
+          base = mergeDictionaryResult(base, web);
+          if (base.quick.definition_en && base.quick.meaning_vi.length) return base;
+        }
+      }
     }
     if (!optionalTranslationEnabled(settings)) return base;
     let translated: TranslationResult;
@@ -97,3 +105,18 @@ export class LookupService {
   }
 }
 export const lookupService = new LookupService();
+
+function mergeDictionaryResult(base: LookupResponse, web: NonNullable<LookupResponse['dictionary']>): LookupResponse {
+  const local = base.dictionary;
+  const seen = new Set<string>();
+  const senses = [...(local?.senses ?? []), ...web.senses].map(sense => ({ ...sense, meaningsVi: sense.meaningsVi.filter(meaning => {
+    const key = meaning.normalize('NFC').toLocaleLowerCase('vi').replace(/\s+/g, ' ').trim();
+    if (!key || seen.has(key)) return false; seen.add(key); return true;
+  })})).filter(sense => sense.definitionEn || sense.meaningsVi.length);
+  const dictionary = { ...web, ...local, surfaceForm: base.selection.surface, senses };
+  const first = senses[0];
+  const meanings = senses.flatMap(sense => sense.meaningsVi);
+  return { ...base, dictionary, source: 'translation', engine: { provider: 'wiktionary-web', cached: false },
+    quick: { ...base.quick, definition_en: base.quick.definition_en || first?.definitionEn || '', meaning_vi: base.quick.meaning_vi.length ? base.quick.meaning_vi : meanings.slice(0, 4) },
+    difficulty: { ...base.difficulty, worth_learning: Boolean(first?.definitionEn || meanings.length) } };
+}

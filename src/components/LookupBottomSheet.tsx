@@ -94,6 +94,7 @@ export function LookupBottomSheet(props: Props) {
           </div>
           {deep && <ExpandedExplain result={result} deep={deep} mode={props.mode} loading={props.loading} contextResult={props.contextResult} />}
         </>}
+        <p class="ai-caution" role="note">AI có thể mắc lỗi. Hãy kiểm tra lại thông tin quan trọng.</p>
       </>}
     </section>
   </>;

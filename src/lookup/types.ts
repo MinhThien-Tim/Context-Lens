@@ -1,6 +1,26 @@
 export type LanguageMode = 'en' | 'vi' | 'bilingual';
 export type SelectionType = 'word' | 'phrase' | 'sentence';
 
+export type DictionarySenseSource = 'local' | 'wiktionary' | 'web';
+export interface DictionarySenseResult {
+  id: string;
+  pos: string;
+  definitionEn: string;
+  meaningsVi: string[];
+  source: DictionarySenseSource;
+  contextScore: number;
+  contextMatch: boolean;
+}
+export interface DictionaryResult {
+  word: string;
+  surfaceForm: string;
+  lemma: string;
+  pronunciation: string | null;
+  contextPos?: string;
+  contextConfidence: number;
+  senses: DictionarySenseResult[];
+}
+
 export interface LookupRequest {
   selection_start?: number;
   context_mode?: import('../core/context/types').ContextMode;
@@ -23,6 +43,7 @@ export interface LookupRequest {
 }
 
 export interface LookupResponse {
+  dictionary?: DictionaryResult;
   lens?: import('../core/language/types').LensResult;
   request_id: string;
   language_mode: LanguageMode;

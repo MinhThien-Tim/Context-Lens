@@ -47,7 +47,7 @@ export class LexicalEngine {
     const normalized = normalizeLexical(surface);
     const learned = this.learned.get(normalized);
     if (learned) return learned;
-    const candidates = [...new Set([normalized, irregular[normalized], ...rankedLemmaCandidates(normalized)].filter((v): v is string => Boolean(v)))];
+    const candidates = [...new Set([irregular[normalized], normalized, ...rankedLemmaCandidates(normalized)].filter((v): v is string => Boolean(v)))];
     for (const candidate of candidates) {
       const curated = this.entries.find(item => item.lemma === candidate || item.forms?.includes(candidate));
       const merged = lookupLocalLexeme(candidate, normalized, curated);

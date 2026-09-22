@@ -42,6 +42,7 @@ export interface LensResult {
   grammar?: { role?: string; pattern?: string; form?: string };
   context: { sentence: string; sentenceTranslation?: string; simpleEnglish?: string; previousSentence?: string; nextSentence?: string; needsPreviousSentence?: boolean };
   sense?: { id: string; alternatives: string[]; reasons: string[] };
+  dictionary?: import('../../lookup/types').DictionaryResult;
   confidence: number; providers: { lexical?: string; sentence?: string; context?: string };
   cached: boolean; offline: boolean;
 }

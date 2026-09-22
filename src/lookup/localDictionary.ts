@@ -13,9 +13,14 @@ export function localLookup(request: LookupRequest, useDictionary = true): Looku
   const entry = match?.entry;
   const lemma = entry?.lemma ?? key;
   const lexical = useDictionary ? lexicalUnit(request.selection, request.sentence) : null;
+  const senses = entry ? (entry.senses?.map((sense, index) => ({ id: sense.id, pos: sense.partOfSpeech ?? entry.partOfSpeech,
+    definitionEn: sense.definitionEn, meaningsVi: sense.meaningsVi, source: 'local' as const, contextScore: 0, contextMatch: false }))
+    ?? [{ id: `${entry.lemma}.local`, pos: entry.partOfSpeech, definitionEn: entry.definitionEn, meaningsVi: entry.meaningsVi,
+      source: 'local' as const, contextScore: 0, contextMatch: false }]) : [];
   return {
     request_id: `local_${Date.now()}`,
     language_mode: request.language_mode,
+    dictionary: { word: lemma, surfaceForm: request.selection, lemma, pronunciation: entry?.ipa ?? null, contextConfidence: 0, senses },
     selection: {
       surface: request.selection, lemma, normalized: key,
       selection_type: request.selection_type,

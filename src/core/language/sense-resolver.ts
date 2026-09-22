@@ -15,10 +15,12 @@ export class SenseResolver {
     const ranked = input.candidateSenses.map(sense => {
       let score = 0;
       const reasons: string[] = [];
-      if (input.pos && sense.pos === input.pos) { score += 2; reasons.push('Matching part of speech'); }
+      if (input.pos && (!syntacticRole || input.pos === syntacticRole) && sense.pos === input.pos) { score += 2; reasons.push('Matching part of speech'); }
       if (syntacticRole === 'verb') {
         if (sense.pos === 'verb') { score += 0.5; reasons.push('Verb position in sentence'); }
         if (sense.pos === 'adjective') score -= 0.4;
+      } else if (syntacticRole === 'noun' && sense.pos === 'noun') {
+        score += 0.5; reasons.push('Noun position in sentence');
       } else if (syntacticRole === 'adjective' && sense.pos === 'adjective') {
         score += 0.5; reasons.push('Adjective position in sentence');
       }
@@ -44,7 +46,11 @@ export class SenseResolver {
   }
 }
 
-function inferSyntacticRole(input: SenseInput): 'verb' | 'adjective' | undefined {
+function inferSyntacticRole(input: SenseInput): 'verb' | 'noun' | 'adjective' | undefined {
+  const prefix = input.sentence.slice(0, Math.max(0, input.sentence.toLocaleLowerCase().indexOf(input.selection.toLocaleLowerCase())));
+  if (new RegExp(`(?:\\b(?:can|could|may|might|must|shall|should|will|would|do|does|did)|\\bto)\\s+$`, 'i').test(prefix)) return 'verb';
+  if (new RegExp(`\\b(?:a|an|the|this|that|my|our|their|his|her|its)\\s+$`, 'i').test(prefix)) return 'noun';
+  if (new RegExp(`\\b(?:be|is|am|are|was|were|seem|seems|seemed|feel|feels|felt|become|became)\\s+$`, 'i').test(prefix)) return 'adjective';
   const tokens = input.sentenceAnalysis?.tokens ?? [];
   const normalized = input.selection.toLocaleLowerCase();
   const index = tokens.findIndex(token => token.normalized === normalized || token.start === input.sentence.toLocaleLowerCase().indexOf(normalized));
@@ -56,7 +62,9 @@ function inferSyntacticRole(input: SenseInput): 'verb' | 'adjective' | undefined
   const auxiliaries = new Set(['did', 'do', 'does', 'have', 'has', 'had', 'would', 'could', 'will', 'shall', 'should', 'can', 'may', 'might', 'must']);
   const determiners = new Set(['a', 'an', 'the', 'this', 'that', 'my', 'our', 'their', 'his', 'her', 'its']);
   const linking = new Set(['be', 'is', 'am', 'are', 'was', 'were', 'seem', 'seems', 'seemed', 'feel', 'feels', 'felt', 'become', 'became']);
-  if (subjects.has(previous) || auxiliaries.has(previous) || determiners.has(next)) return 'verb';
+  if (subjects.has(previous) || auxiliaries.has(previous) || previous === 'to') return 'verb';
+  if (determiners.has(previous)) return 'noun';
+  if (tokens[index + 1]?.pos === 'noun') return 'adjective';
   // An adverb between a copula and participial adjective: "was very tired".
   if (linking.has(previous) || (linking.has(beforePrevious) && /ly$|^(?:very|quite|rather|so|too)$/.test(previous ?? ''))) return 'adjective';
   return undefined;

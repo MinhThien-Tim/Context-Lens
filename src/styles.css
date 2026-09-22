@@ -329,6 +329,27 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
 .definition-block small,.compact-block small { display:block; margin-bottom:3px; color:var(--muted); font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
 .lookup-sheet .meaning-en,.lookup-sheet .meaning-vi { margin:0; font-size:13.5px; line-height:1.45; }
 .lookup-sheet .meaning-vi { color:var(--vi); font-weight:650; }
+.context-hint { display:inline-flex; margin:2px 0 8px; padding:2px 7px; border-radius:999px; background:var(--accent-soft); color:var(--muted); font-size:10px; font-weight:700; }
+.context-hint.matched { color:var(--accent); }
+.sense-list { display:grid; gap:7px; }
+.sense-row { display:grid; grid-template-columns:auto auto 1fr; align-items:start; gap:5px; }
+.sense-row.context-match { margin:0 -5px; padding:3px 5px; border-radius:6px; background:color-mix(in srgb,var(--accent) 6%,transparent); }
+.sense-row.context-match .sense-definition,.sense-row.context-match .sense-vi { text-decoration-line:underline; text-decoration-color:color-mix(in srgb,var(--accent) 35%,transparent); text-decoration-thickness:1px; text-underline-offset:3px; }
+.sense-pos { color:var(--accent); font-size:11px; font-weight:800; }
+.web-badge { margin-left:4px; color:var(--muted); font-size:10px; font-weight:700; }
+.sense-bilingual { grid-column:3; display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; margin:0; }
+.sense-definition { margin:0!important; color:var(--text); font-size:12.5px; font-weight:400; }
+.sense-vi { color:var(--vi); font-size:12.5px; font-weight:650; }
+.sense-definition + .sense-vi::before { content:'— '; color:var(--muted); font-weight:400; }
+.more-meanings,.lookup-empty { margin:8px 0 2px; color:var(--muted); font-size:11px; }
+.expanded-senses { display:grid; gap:5px; }
+.sense-group { padding:7px 0; border-bottom:1px solid var(--border); }
+.sense-group h3 { margin:0 0 4px; color:var(--text); font-size:12px; letter-spacing:0; text-transform:none; }
+.sense-group ul { margin:0; padding-left:18px; color:var(--vi); }
+.expanded-sense-list { display:grid; gap:5px; }
+.expanded-sense-list .sense-bilingual.context-match { margin:0 -5px; padding:4px 5px; border-radius:6px; background:color-mix(in srgb,var(--accent) 6%,transparent); }
+.expanded-sense-list .sense-bilingual.context-match .sense-definition,.expanded-sense-list .sense-bilingual.context-match .sense-vi { text-decoration-line:underline; text-decoration-color:color-mix(in srgb,var(--accent) 35%,transparent); text-decoration-thickness:1px; text-underline-offset:3px; }
+.ai-caution { margin:10px 0 2px; color:var(--muted); font-size:10.5px; line-height:1.35; }
 .lexical-unit,.context-card { padding:10px 11px; border:0; border-radius:9px; background:color-mix(in srgb,#8b5cf6 13%,var(--surface)); }
 .lexical-unit { display:grid; gap:3px; margin-top:10px; }
 .lexical-label,.context-card h3 { margin:0; color:color-mix(in srgb,#6d28d9 82%,var(--text)); font-size:10px; font-weight:750; letter-spacing:.07em; text-transform:uppercase; }

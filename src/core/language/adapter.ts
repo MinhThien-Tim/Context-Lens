@@ -5,7 +5,7 @@ import type { LensResult } from './types';
 export function applyLocalResult(base: LookupResponse, lens: LensResult): LookupResponse {
   const en = lens.english?.definition ?? '';
   const vi = lens.vietnamese?.meaning;
-  return { ...base, lens, source: lens.cached ? 'cache' : 'offline', confidence: lens.confidence,
+  return { ...base, lens, dictionary: lens.dictionary ?? base.dictionary, source: lens.cached ? 'cache' : 'offline', confidence: lens.confidence,
     selection: { ...base.selection, lemma: lens.selection.lemma, part_of_speech: lens.selection.pos ?? null },
     quick: { definition_en: en, meaning_vi: vi ? [vi] : [], lexical_unit: lens.phrase ? {
       text: lens.phrase.canonical, type: lens.phrase.type, meaning_en: en, meaning_vi: vi ?? ''
