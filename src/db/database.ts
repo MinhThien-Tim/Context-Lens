@@ -184,10 +184,29 @@ export class ContextLensDatabase extends Dexie {
       await transaction.table('vocabulary').toCollection().modify(record => { record.collectionId = 'saved-vocabulary'; record.collectionTitle = 'Saved vocabulary'; });
     });
     this.version(12).stores({ learnedLexicon: 'key, normalizedKey, lemma, updatedAt' });
+    this.version(13).stores({ documents: 'id, kind, title, updatedAt, [kind+updatedAt]' });
   }
 }
 
 export const db = new ContextLensDatabase();
+
+export async function queryDocumentLibrary(options: { query?: string; kind?: DocumentRecord['kind'] | 'all'; offset?: number; limit?: number } = {}): Promise<{ items: DocumentRecord[]; hasMore: boolean }> {
+  const query = options.query?.trim() ?? '';
+  const kind = options.kind ?? 'all';
+  const offset = options.offset ?? 0;
+  const limit = options.limit ?? 18;
+  let items: DocumentRecord[];
+  if (query) {
+    const collection = db.documents.where('title').startsWithIgnoreCase(query);
+    const matches = await (kind === 'all' ? collection : collection.filter(document => document.kind === kind)).offset(offset).limit(limit + 1).toArray();
+    items = matches.sort((a, b) => b.updatedAt - a.updatedAt);
+  } else if (kind !== 'all') {
+    items = await db.documents.where('[kind+updatedAt]').between([kind, Dexie.minKey], [kind, Dexie.maxKey]).reverse().offset(offset).limit(limit + 1).toArray();
+  } else {
+    items = await db.documents.orderBy('updatedAt').reverse().offset(offset).limit(limit + 1).toArray();
+  }
+  return { items: items.slice(0, limit), hasMore: items.length > limit };
+}
 
 export interface AppPreferences {
   languageMode: LanguageMode;

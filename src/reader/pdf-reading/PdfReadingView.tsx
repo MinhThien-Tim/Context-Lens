@@ -3,12 +3,11 @@ import type { DocumentRecord, ReaderHighlight } from '../../db/database';
 import type { PdfDocumentLocation } from '../../documents/location';
 import { usePdfScroll } from '../pdf/usePdfScroll';
 import { PdfReadingPage } from './PdfReadingPage';
-import { PdfReadingNavigation } from './PdfReadingNavigation';
 import { readingPagesForDocument } from './structuredPages';
 import type { ReaderSelection } from '../TextReader';
 import { readingSelectionFromDom, readingWordAtPoint } from './readingSelectionAdapter';
 
-export function PdfReadingView({ documentRecord, location, style, activeMarkupTool, activeMarkupColor, onOriginal, onLocation, onLookup, onAddNote, onHighlight, onErase, navigationToken = 0 }: { navigationToken?: number; documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; activeMarkupTool?: 'highlight' | 'underline' | 'eraser' | null; activeMarkupColor: ReaderHighlight['color']; onOriginal: () => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onHighlight: (highlight: ReaderHighlight) => void; onErase: (startOffset: number, endOffset: number) => void }) {
+export function PdfReadingView({ documentRecord, location, style, activeMarkupTool, activeMarkupColor, onLocation, onLookup, onAddNote, onHighlight, onErase, navigationToken = 0 }: { navigationToken?: number; documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; activeMarkupTool?: 'highlight' | 'underline' | 'eraser' | null; activeMarkupColor: ReaderHighlight['color']; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onHighlight: (highlight: ReaderHighlight) => void; onErase: (startOffset: number, endOffset: number) => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const ignoreClick = useRef(false);
   const highlightTimer = useRef<number | undefined>(undefined);
@@ -53,7 +52,6 @@ export function PdfReadingView({ documentRecord, location, style, activeMarkupTo
     return () => { clearTimeout(timer); clearTimeout(highlightTimer.current); document.removeEventListener('selectionchange', capture); };
   }, [documentRecord.id, documentRecord.content, activeMarkupTool, activeMarkupColor]);
   return <div class="pdf-reading-view" style={style}>
-    <PdfReadingNavigation page={location.page} total={pages.length} onPrevious={() => goTo(location.page - 1)} onNext={() => goTo(location.page + 1)} onOriginal={onOriginal} />
     <div ref={rootRef} class={`pdf-reading-scroll ${activeMarkupTool ? 'highlight-mode-active' : ''} ${activeMarkupTool ? `markup-${activeMarkupTool}` : ''}`} onPointerUp={() => window.setTimeout(() => captureSelection(Boolean(activeMarkupTool)), 0)} onKeyUp={event => { if (event.shiftKey) captureSelection(Boolean(activeMarkupTool)); }} onClick={event => {
       if (ignoreClick.current) { ignoreClick.current = false; return; }
       const nativeSelection = window.getSelection();

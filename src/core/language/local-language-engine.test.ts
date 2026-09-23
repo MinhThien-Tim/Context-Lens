@@ -132,6 +132,6 @@ describe('local language foundation', () => {
     const upgraded = new ContextLensDatabase(name); databases.push(upgraded);
     expect(await upgraded.settings.get('retained')).toEqual({ key: 'retained', value: true });
     expect(await upgraded.sentenceAnalyses.count()).toBe(0);
-    expect(upgraded.verno).toBe(12);
+    expect(upgraded.verno).toBe(13);
   });
 });

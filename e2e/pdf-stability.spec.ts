@@ -80,7 +80,7 @@ test('native forward/reverse selection, Explain, Highlight restore, Note and Cop
   await page.getByRole('button', { name: 'Go to location', exact: true }).click();
   await expect(page.locator('.pdf-scroll')).toBeVisible();
   await page.getByRole('button', { name: 'Back to library' }).click();
-  await page.locator('.recent-item').filter({ hasText: 'stability-fixture' }).click();
+  await page.locator('.continue-card').filter({ hasText: 'stability-fixture' }).click();
   await expect(page.locator('.pdf-saved-highlight').first()).toBeVisible();
   await selectPhrase(page);
   expect(errors).toEqual([]);
@@ -152,11 +152,8 @@ test('zoom, links, multiline selection and five mode switches preserve interacti
   for (let i = 0; i < 5; i++) {
     await page.getByRole('button', { name: 'Next page', exact: true }).click();
     await expect(page.getByLabel('Current PDF page')).toHaveText('2 / 8');
-    if (info.project.use.isMobile) {
-      await page.getByRole('button', { name: 'PDF options' }).click();
-      await page.getByRole('button', { name: 'Reading mode', exact: true }).click();
-    } else await page.getByRole('button', { name: 'Reading', exact: true }).click();
-    await expect(page.locator('.pdf-reading-navigation span')).toHaveText('Page 2 / 8');
+    await page.getByRole('button', { name: 'Reading', exact: true }).click();
+    await expect(page.getByLabel('Current PDF page')).toHaveText('2 / 8');
     const top = await page.locator('.pdf-reading-scroll').evaluate(el => el.scrollTop);
     await page.waitForTimeout(250);
     expect(await page.locator('.pdf-reading-scroll').evaluate(el => el.scrollTop)).toBe(top);
@@ -222,15 +219,14 @@ test('Contents issues one jump in each mode', async ({ page }, info) => {
   });
   for (const mode of ['original', 'reading']) {
     if (mode === 'reading') {
-      if (info.project.use.isMobile) { await page.getByRole('button', { name: 'PDF options' }).click(); await page.getByRole('button', { name: 'Reading mode', exact: true }).click(); }
-      else await page.getByRole('button', { name: 'Reading', exact: true }).click();
+      await page.getByRole('button', { name: 'Reading', exact: true }).click();
     }
     await page.getByRole('button', { name: 'Contents', exact: true }).click();
     await expect(page.locator('.contents-item')).toHaveText('Chapter 3p. 3');
     await page.waitForTimeout(300);
     const before = await page.evaluate(() => (window as any).navigationWrites);
     await page.locator('.contents-item').click();
-    await expect(mode === 'original' ? page.getByLabel('Current PDF page') : page.locator('.pdf-reading-navigation span')).toContainText('3 / 8');
+    await expect(page.getByLabel('Current PDF page')).toContainText('3 / 8');
     await page.waitForTimeout(300);
     expect(await page.evaluate(() => (window as any).navigationWrites)).toBe(before + 1);
     if (!info.project.use.isMobile) await page.locator('.contents-panel').getByRole('button', { name: 'Close', exact: true }).click();

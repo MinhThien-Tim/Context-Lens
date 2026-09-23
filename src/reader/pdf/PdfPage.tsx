@@ -7,10 +7,11 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist';
 import type { ReaderSelection } from '../TextReader';
 import { pdfSelectionFromDom, pdfSelectionFromRange } from './selectionAdapter';
+import type { MarkupTool } from '../MarkupPalette';
 
 export interface PdfPageSize { width: number; height: number }
 
-export function PdfPage({ pdf, pageNumber, scale, active, documentText, pageOffset, onSize, onNavigate, onLookup, onAddNote, pageEnd, highlights = [], onHighlight }: { pageEnd?: number; highlights?: ReaderHighlight[]; onHighlight?: (highlight: ReaderHighlight) => void; pdf: PDFDocumentProxy; pageNumber: number; scale: number; active: boolean; documentText: string; pageOffset: number; onSize: (size: PdfPageSize) => void; onNavigate: (page: number) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void }) {
+export function PdfPage({ pdf, pageNumber, scale, active, documentText, pageOffset, onSize, onNavigate, onLookup, onAddNote, pageEnd, highlights = [], activeMarkupTool, activeMarkupColor = 'yellow', onHighlight, onErase }: { pageEnd?: number; highlights?: ReaderHighlight[]; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: ReaderHighlight['color']; onHighlight?: (highlight: ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; pdf: PDFDocumentProxy; pageNumber: number; scale: number; active: boolean; documentText: string; pageOffset: number; onSize: (size: PdfPageSize) => void; onNavigate: (page: number) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void }) {
   const indexRef = useRef<PdfTextIndex | null>(null);
   const [indexVersion, setIndexVersion] = useState(0);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -19,6 +20,11 @@ export function PdfPage({ pdf, pageNumber, scale, active, documentText, pageOffs
   const annotationRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState<PDFPageProxy | null>(null);
   const [pending, setPending] = useState<ReaderSelection | null>(null);
+  const applyMarkup = (selection: ReaderSelection, tool: Exclude<MarkupTool, 'eraser'> = 'highlight') => {
+    const endOffset = selection.endOffset ?? selection.offset + selection.text.length;
+    onHighlight?.({ id: crypto.randomUUID(), startOffset: selection.offset, endOffset, color: activeMarkupColor, style: tool, createdAt: Date.now() });
+    setPending(null); window.getSelection()?.removeAllRanges();
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -183,7 +189,8 @@ export function PdfPage({ pdf, pageNumber, scale, active, documentText, pageOffs
     <div ref={overlayRef} class="context-overlay" aria-hidden="true" />
     {pending && createPortal(<div class="selection-actions pdf-original-actions" role="toolbar" aria-label="Selected text actions" onPointerDown={event => event.preventDefault()}>
       <button class="selection-lookup" onClick={() => onLookup(pending)}>Explain</button>
-      {onHighlight && <button onClick={() => { onHighlight({ id: crypto.randomUUID(), startOffset: pending.offset, endOffset: pending.endOffset ?? pending.offset + pending.text.length, color: 'yellow', createdAt: Date.now() }); setPending(null); window.getSelection()?.removeAllRanges(); }}>Highlight</button>}
+      {onHighlight && activeMarkupTool !== 'eraser' && <button class="selection-markup" onClick={() => applyMarkup(pending, activeMarkupTool ?? 'highlight')}>{activeMarkupTool === 'underline' ? 'Underline' : 'Highlight'}</button>}
+      {activeMarkupTool === 'eraser' && onErase && <button class="selection-markup" onClick={() => { onErase(pending.offset, pending.endOffset ?? pending.offset + pending.text.length); setPending(null); window.getSelection()?.removeAllRanges(); }}>Erase</button>}
       {onAddNote && <button onClick={() => onAddNote(pending)}>Note</button>}
       <button onClick={() => void navigator.clipboard?.writeText(pending.text)}>Copy</button>
       <button aria-label="Close selection actions" onClick={() => { setPending(null); window.getSelection()?.removeAllRanges(); }}>?</button>

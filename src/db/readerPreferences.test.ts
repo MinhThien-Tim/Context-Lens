@@ -22,6 +22,6 @@ it('upgrades version 9 without replacing legacy notes or documents', async () =>
     expect((await current.notes.get('old'))?.text).toBe('Keep me');
     expect((await current.notes.get('old'))?.structuredLocation).toBeUndefined();
     expect((await current.documents.get('book'))?.content).toBe('Keep this too');
-    expect(current.verno).toBe(12);
+    expect(current.verno).toBe(13);
   } finally { await current.delete(); }
 });
