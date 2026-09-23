@@ -4,6 +4,8 @@ import type { PdfStructuredPage } from '../pdf/types';
 
 export interface ImportedDocument {
   toc?: DocumentRecord['toc'];
+  tocSource?: DocumentRecord['tocSource'];
+  tocVersion?: number;
   title: string;
   kind: DocumentRecord['kind'];
   content: string;

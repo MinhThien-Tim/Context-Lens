@@ -7,6 +7,7 @@ export interface DocumentSection {
   chapter?: number;
   offset?: number;
   href?: string;
+  pageLabel?: string;
 }
 
 /** Offsets use the rendered textContent coordinate system. */
@@ -23,12 +24,26 @@ export function htmlSections(html: string): { content: string; toc: DocumentSect
     const section = { id: `heading-${toc.length}`, title: heading.textContent?.trim() || 'Untitled section', level, parentId: parents.at(-1)?.id, offset: range.toString().length };
     toc.push(section); parents.push(section);
   }
+  if (!toc.length) {
+    const candidates: DocumentSection[] = [];
+    for (const paragraph of body.querySelectorAll('p')) {
+      const title = paragraph.textContent?.trim() ?? '';
+      if (!sectionTitlePattern.test(title) || title.length > 100) continue;
+      const range = document.createRange();
+      range.selectNodeContents(body);
+      range.setEndBefore(paragraph);
+      candidates.push({ id: `paragraph-${candidates.length}`, title, level: 1, offset: range.toString().length });
+    }
+    if (candidates.length >= 2) toc.push(...candidates);
+  }
   return { content: body.textContent ?? '', toc };
 }
 
+const sectionTitlePattern = /^(?:chapter|part|book|section|volume|capítulo|capitulo|livro|parte|chapitre|livre|teil|kapitel|chương|phần|quyển)\s+(?:\d+|[IVXLCDM]+)(?:\s*[:.\-–—]\s*[^\n]{1,80})?\s*$/i;
+
 export function textSections(content: string): DocumentSection[] {
   const toc: DocumentSection[] = [];
-  const pattern = /^(?:chapter|part|book|section)\s+(?:\d+|[IVXLCDM]+)(?:\s*[:.\-–—]\s*[^\n]{1,100})?\s*$/gim;
+  const pattern = new RegExp(sectionTitlePattern.source, 'gim');
   for (const match of content.matchAll(pattern)) toc.push({ id: `text-${match.index}`, title: match[0].trim(), level: 1, offset: match.index });
   return toc;
 }
@@ -63,5 +78,20 @@ export function epubSections(items: EpubNavItem[], chapters: Array<{ href: strin
     }
   }
   visit(items, 1);
+  return toc;
+}
+
+/** Used only when an EPUB has no usable nav/NCX. Offsets match spine textContent. */
+export function epubHeadingSections(chapters: Array<{ href: string; offset: number; anchors: Record<string, number>; headings: Array<{ title: string; level: number; offset: number }> }>): DocumentSection[] {
+  const toc: DocumentSection[] = [];
+  const parents: DocumentSection[] = [];
+  chapters.forEach((chapter, index) => {
+    for (const heading of chapter.headings) {
+      while (parents.length && parents[parents.length - 1].level >= heading.level) parents.pop();
+      const section: DocumentSection = { id: `epub-heading-${toc.length}`, title: heading.title, level: heading.level, parentId: parents.at(-1)?.id, chapter: index + 1, offset: chapter.offset + heading.offset, href: chapter.href };
+      toc.push(section);
+      parents.push(section);
+    }
+  });
   return toc;
 }

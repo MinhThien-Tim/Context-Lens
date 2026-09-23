@@ -1,8 +1,9 @@
-import { htmlSections, textSections, pdfSections, epubSections } from '../sections';
+import { htmlSections, textSections, pdfSections, epubSections, epubHeadingSections } from '../sections';
 import { initialTextLocation } from '../location';
 import { ImportError, type ImportedDocument, type ImportOptions } from './types';
 import { extractStructuredPage, shiftStructuredPage } from '../pdf/extractStructuredPages';
 import type { PdfSourceTextItem, PdfStructuredPage } from '../pdf/types';
+import { detectPdfContents, inferPdfHeadings } from '../pdf/detectContents';
 
 const MAX_TEXT_BYTES = 5 * 1024 * 1024;
 const MAX_BOOK_BYTES = 50 * 1024 * 1024;
@@ -43,6 +44,8 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
     const pages: string[] = [];
     const pdfPages: PdfStructuredPage[] = [];
     const pageOffsets: number[] = [];
+    const sourcePages: Array<{ number: number; width: number; height: number; items: PdfSourceTextItem[] }> = [];
+    const outline = await pdf.getOutline().catch(() => null) ?? [];
     let offset = 0;
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
       throwIfAborted(options.signal);
@@ -50,7 +53,9 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
       const page = await pdf.getPage(pageNumber);
       const text = await page.getTextContent();
       const viewport = page.getViewport?.({ scale: 1 }) ?? { width: 612, height: 792 };
-      const structured = extractStructuredPage(pageNumber, text.items.filter((item): item is Extract<typeof item, { str: string }> => 'str' in item).map((item, index) => ({ str: item.str, transform: item.transform ?? [12, 0, 0, 12, 36, viewport.height - 36 - index * 16], width: item.width ?? item.str.length * 6, height: item.height ?? 12, hasEOL: item.hasEOL, fontName: item.fontName })) as PdfSourceTextItem[], viewport.width, viewport.height);
+      const sourceItems = text.items.filter((item): item is Extract<typeof item, { str: string }> => 'str' in item).map((item, index) => ({ str: item.str, transform: item.transform ?? [12, 0, 0, 12, 36, viewport.height - 36 - index * 16], width: item.width ?? item.str.length * 6, height: item.height ?? 12, hasEOL: item.hasEOL, fontName: item.fontName })) as PdfSourceTextItem[];
+      if (!outline.length && pageNumber <= Math.min(40, Math.max(12, Math.ceil(pdf.numPages * .15)))) sourcePages.push({ number: pageNumber, width: viewport.width, height: viewport.height, items: sourceItems });
+      const structured = extractStructuredPage(pageNumber, sourceItems, viewport.width, viewport.height);
       const pageText = structured.plainText;
       pageOffsets.push(offset);
       pages.push(pageText);
@@ -58,19 +63,27 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
       offset += pageText.length + 2;
       page.cleanup();
     }
-    const toc = await pdfSections(await pdf.getOutline().catch(() => null) ?? [], async destination => {
+    const resolveDestination = async (destination: string | unknown[]) => {
       const dest = typeof destination === 'string' ? await pdf.getDestination(destination) : destination;
       if (!dest?.length) return undefined;
       const target = dest[0];
       const index = typeof target === 'number' ? target : await pdf.getPageIndex(target as { num: number; gen: number });
       return index >= 0 && index < pdf.numPages ? index + 1 : undefined;
-    }, pageOffsets);
+    };
+    const outlineToc = await pdfSections(outline, resolveDestination, pageOffsets);
+    const pageLabels = !outlineToc.length ? await pdf.getPageLabels?.().catch(() => null) ?? null : null;
+    const printedToc = outlineToc.length ? [] : await detectPdfContents(sourcePages, pdfPages, pageOffsets, pageLabels, async pageNumber => {
+      const page = await pdf.getPage(pageNumber);
+      try { return await page.getAnnotations({ intent: 'display' }); }
+      finally { page.cleanup(); }
+    }, resolveDestination);
+    const toc = outlineToc.length ? outlineToc : printedToc.length ? printedToc : inferPdfHeadings(pdfPages, pageOffsets);
     await loadingTask.destroy();
     const content = pages.join('\n\n');
     const info = metadata?.info as { Title?: string } | undefined;
     return {
       title: info?.Title?.trim() || baseName(file.name), kind: 'pdf', content, data: file,
-      pageOffsets, pdfPages, toc, location: { kind: 'pdf', page: 1, pageOffset: 0, textOffset: 0, scrollY: 0, progress: 0, updatedAt: Date.now() }
+      pageOffsets, pdfPages, toc, tocSource: outlineToc.length ? 'pdf-outline' : printedToc.length ? 'pdf-printed' : toc.length ? 'pdf-headings' : 'none', tocVersion: 2, location: { kind: 'pdf', page: 1, pageOffset: 0, textOffset: 0, scrollY: 0, progress: 0, updatedAt: Date.now() }
     };
   } catch (error) {
     if (error instanceof ImportError) throw error;
@@ -89,7 +102,7 @@ async function importEpub(file: File, options: ImportOptions): Promise<ImportedD
     const spineItems: import('epubjs/types/section').default[] = [];
     book.spine.each((section: import('epubjs/types/section').default) => spineItems.push(section));
     const chapters: string[] = [];
-    const chapterMap: Array<{ href: string; offset: number; anchors: Record<string, number> }> = [];
+    const chapterMap: Array<{ href: string; offset: number; anchors: Record<string, number>; headings: Array<{ title: string; level: number; offset: number }> }> = [];
     const chapterOffsets: number[] = [];
     let offset = 0;
     for (let itemIndex = 0; itemIndex < spineItems.length; itemIndex++) {
@@ -101,12 +114,24 @@ async function importEpub(file: File, options: ImportOptions): Promise<ImportedD
       const body = chapterDocument.querySelector('body');
       const text = body?.textContent ?? '';
       const anchors: Record<string, number> = {};
+      const headings: Array<{ title: string; level: number; offset: number }> = [];
       for (const element of body?.querySelectorAll('[id]') ?? []) {
         const range = chapterDocument.createRange(); range.selectNodeContents(body!); range.setEndBefore(element);
         anchors[element.id] = range.toString().length;
       }
+      for (const heading of body?.querySelectorAll('h1,h2,h3,h4,h5,h6') ?? []) {
+        const range = chapterDocument.createRange(); range.selectNodeContents(body!); range.setEndBefore(heading);
+        const title = heading.textContent?.trim();
+        if (title) headings.push({ title, level: Number(heading.tagName[1]), offset: range.toString().length });
+      }
+      if (!headings.length) for (const paragraph of body?.querySelectorAll('p') ?? []) {
+        const title = paragraph.textContent?.trim() ?? '';
+        if (!textSections(title).length) continue;
+        const range = chapterDocument.createRange(); range.selectNodeContents(body!); range.setEndBefore(paragraph);
+        headings.push({ title, level: 1, offset: range.toString().length });
+      }
       {
-        chapterMap.push({ href: section.href, offset, anchors });
+        chapterMap.push({ href: section.href, offset, anchors, headings });
         chapterOffsets.push(offset);
         chapters.push(text);
         offset += text.length + 2;
@@ -115,9 +140,11 @@ async function importEpub(file: File, options: ImportOptions): Promise<ImportedD
     }
     const content = chapters.join('\n\n');
     if (!content) throw new ImportError('No readable text was found in this EPUB.', 'extraction');
+    const navigation = await book.loaded.navigation;
+    const navigationToc = epubSections(navigation.toc ?? [], chapterMap);
     return {
       title: metadata.title?.trim() || baseName(file.name), kind: 'epub', content, data: file,
-      chapterOffsets, toc: epubSections((await book.loaded.navigation).toc, chapterMap), source: { author: metadata.creator },
+      chapterOffsets, toc: navigationToc.length ? navigationToc : epubHeadingSections(chapterMap), tocSource: navigationToc.length ? 'epub-nav' : 'epub-headings', tocVersion: 2, source: { author: metadata.creator },
       location: { kind: 'epub', chapter: 1, cfi: null, scrollY: 0, progress: 0, updatedAt: Date.now() }
     };
   } catch (error) {
@@ -135,7 +162,15 @@ async function importDocx(file: File, options: ImportOptions): Promise<ImportedD
     throwIfAborted(options.signal);
     const module = await import('mammoth');
     const mammoth = module.default;
-    const result = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+    const result = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() }, { styleMap: [
+      "p[style-name='Chapter Title'] => h1:fresh",
+      "p[style-name='Part Title'] => h1:fresh",
+      "p[style-name='Book Title'] => h1:fresh",
+      "p[style-name='Section Title'] => h2:fresh",
+      "p[style-name='Subsection Title'] => h3:fresh",
+      "p[style-name='Título 1'] => h1:fresh",
+      "p[style-name='Título 2'] => h2:fresh"
+    ] });
     throwIfAborted(options.signal);
     const { sanitizeReaderHtml } = await import('./sanitize');
     const safeHtml = sanitizeReaderHtml(result.value);

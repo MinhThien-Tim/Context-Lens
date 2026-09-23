@@ -215,7 +215,20 @@ export function App() {
     '--reader-font': preferences.fontFamily === 'serif' ? 'Georgia, Cambria, serif' : 'system-ui, sans-serif'
   }), [preferences]);
 
-  const openDocument = async (doc: DocumentRecord) => { setDocumentRecord(await db.documents.get(doc.id) ?? doc); };
+  const openDocument = async (doc: DocumentRecord) => {
+    const current = await db.documents.get(doc.id) ?? doc;
+    setDocumentRecord(current);
+    if (current.toc?.length || (current.tocVersion ?? 0) >= 2 || !current.data || !['pdf', 'epub'].includes(current.kind)) return;
+    try {
+      const file = new File([current.data], `${current.title}.${current.kind}`, { type: current.data.type });
+      const indexed = await importLocalFile(file);
+      const oldOffsets = current.kind === 'pdf' ? current.pageOffsets : current.chapterOffsets;
+      const newOffsets = current.kind === 'pdf' ? indexed.pageOffsets : indexed.chapterOffsets;
+      if (JSON.stringify(oldOffsets) !== JSON.stringify(newOffsets) || current.content !== indexed.content) return;
+      await db.documents.update(current.id, { toc: indexed.toc, tocSource: indexed.tocSource, tocVersion: indexed.tocVersion });
+      setDocumentRecord(open => open?.id === current.id ? { ...open, toc: indexed.toc, tocSource: indexed.tocSource, tocVersion: indexed.tocVersion } : open);
+    } catch { /* Keep the original document usable if re-indexing fails. */ }
+  };
   const importTextFile = async (file: File | undefined) => {
     if (!file) return;
     setImportError(null); setImporting(true);

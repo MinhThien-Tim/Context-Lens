@@ -13,6 +13,8 @@ import type { LexicalEntry } from '../core/language/types';
 
 export interface DocumentRecord {
   toc?: DocumentSection[];
+  tocSource?: 'pdf-outline' | 'pdf-printed' | 'pdf-headings' | 'epub-nav' | 'epub-headings' | 'html-headings' | 'text-pattern' | 'none';
+  tocVersion?: number;
   id: string;
   title: string;
   content: string;
