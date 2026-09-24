@@ -819,7 +819,7 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
 .home-theme-toggle button { min-height:44px; min-width:50px; padding:0 9px; border:0; border-radius:6px; background:transparent; color:var(--muted); font-size:11px; font-weight:750; cursor:pointer; }
 .home-theme-toggle button[aria-pressed="true"] { background:var(--accent); color:#fff; }
 .home-theme-toggle button:not([aria-pressed="true"]):hover { background:var(--accent-soft); color:var(--accent); }
-.home-shell[data-home-theme="bright"] { --bg:#f1f8f7; --surface:#fff; --text:#163431; --muted:#4e6965; --border:#bfd9d4; --line:#bfd9d4; --accent:#007f72; --accent-soft:#d5f3ed; --error:#ad343f; color-scheme:light; background:var(--bg); }
+.home-shell[data-home-theme="bright"] { --bg:#f1f8f7; --surface:#fff; --text:#163431; --muted:#4e6965; --border:#bfd9d4; --line:#bfd9d4; --accent:#007f72; --accent-soft:#d5f3ed; --error:#ad343f; color-scheme:light; color:var(--text); background:var(--bg); }
 .home-shell[data-home-theme="bright"] .brand-mark { background:#008f80; }
 .home-shell[data-home-theme="bright"] .home-intro .eyebrow { color:#007f72; }
 .home-shell[data-home-theme="bright"] .home-intro h2 { color:#124940; }
