@@ -1,44 +1,32 @@
 import type { DictionarySenseResult } from '../lookup/types';
 
-/** Pair legacy aggregate Vietnamese meanings with English senses for approachable bilingual display. */
+/** Deduplicate only source-linked meanings. Never invent bilingual sense pairs. */
 export function pairDictionarySenses(senses: DictionarySenseResult[]): DictionarySenseResult[] {
-  const pool = senses.flatMap(sense => sense.meaningsVi).filter((meaning, index, all) =>
-    all.findIndex(item => normalize(item) === normalize(meaning)) === index);
-  const used = new Set<string>();
-  const definitions = senses.filter(sense => sense.definitionEn).map(sense => {
-    const own = sense.meaningsVi.filter(meaning => !used.has(normalize(meaning)));
-    const meaningsVi = own.length ? own : pool.find(meaning => !used.has(normalize(meaning))) ? [pool.find(meaning => !used.has(normalize(meaning)))!] : [];
-    meaningsVi.forEach(meaning => used.add(normalize(meaning)));
-    return { ...sense, meaningsVi };
-  });
-  const remaining = pool.filter(meaning => !used.has(normalize(meaning)));
-  if (remaining.length) {
-    const template = senses.find(sense => !sense.definitionEn) ?? senses.at(-1);
-    if (template) definitions.push({ ...template, id: `${template.id}.remaining`, definitionEn: '', meaningsVi: remaining });
-  }
-  return definitions.length ? definitions : senses;
+  return senses.map(sense => ({ ...sense, meaningsVi: sense.meaningsVi.filter((meaning, index, all) =>
+    all.findIndex(item => normalize(item) === normalize(meaning)) === index) }));
 }
 
-export function prioritizeDictionarySenses(senses: DictionarySenseResult[]): DictionarySenseResult[] {
+export function prioritizeDictionarySenses(senses: DictionarySenseResult[], contextPos?: string): DictionarySenseResult[] {
   return senses.map((sense, index) => ({ sense, index })).sort((a, b) =>
     Number(b.sense.contextMatch) - Number(a.sense.contextMatch)
-    || Number(Boolean(b.sense.definitionEn && b.sense.meaningsVi.length)) - Number(Boolean(a.sense.definitionEn && a.sense.meaningsVi.length))
+    || Number(b.sense.pos === contextPos) - Number(a.sense.pos === contextPos)
     || a.index - b.index).map(item => item.sense);
 }
 
-export function compactDictionarySenses(senses: DictionarySenseResult[]): DictionarySenseResult[] {
-  const prioritized = prioritizeDictionarySenses(senses);
+export function compactDictionarySenses(senses: DictionarySenseResult[], contextPos?: string): DictionarySenseResult[] {
+  const prioritized = prioritizeDictionarySenses(senses, contextPos);
   if (prioritized.length <= 4) return prioritized;
+  if (contextPos) {
+    const matching = prioritized.filter(sense => sense.pos === contextPos);
+    if (matching.length >= 3) return matching.slice(0, 3);
+  }
   const matched = prioritized.find(sense => sense.contextMatch);
   if (matched) {
     const contextual = prioritized.filter(sense => sense.pos === matched.pos).slice(0, 4);
     if (contextual.length >= 2) return contextual;
     return [...contextual, ...prioritized.filter(sense => sense.pos !== matched.pos).slice(0, 2 - contextual.length)];
   }
-  const visible = prioritized.slice(0, 3);
-  const alternativePos = prioritized.find(sense => !visible.some(item => item.pos === sense.pos));
-  if (alternativePos && visible.every(sense => sense.pos === visible[0].pos)) visible[2] = alternativePos;
-  return visible;
+  return prioritized.slice(0, 3);
 }
 
 function normalize(value: string): string { return value.normalize('NFC').toLocaleLowerCase('vi').replace(/\s+/g, ' ').trim(); }

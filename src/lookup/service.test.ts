@@ -28,6 +28,18 @@ describe('lookup service offline cache', () => {
     const quick = await service.quick(sentenceRequest);
     expect(quick.deep.sentence_analysis.translation_vi).toBe('Đào tạo là điều kiện tiên quyết.');
   });
+  it('uses a previously requested sentence translation to support a linked meaning', async () => {
+    const translate = vi.fn().mockResolvedValue('Họ điều hành nó.');
+    vi.stubGlobal('Translator', { availability: vi.fn().mockResolvedValue('available'), create: vi.fn().mockResolvedValue({ translate, destroy: vi.fn() }) });
+    const service = new LookupService();
+    const sentenceRequest = { ...request, selection: 'run', sentence: 'They run it.', selection_start: 5 };
+    await service.translateSentence(sentenceRequest);
+    const quick = await service.quick(sentenceRequest, { ...defaultEngineSettings, quickEngine: 'offline' });
+    expect(quick.lens?.sense?.id).toBe('run.manage');
+    expect(quick.dictionary?.senses.find(sense => sense.contextMatch)?.meaningsVi).toContain('điều hành');
+    expect(quick.lens?.sense?.reasons.join(' ')).toContain('saved sentence translation');
+    expect(translate).toHaveBeenCalledOnce();
+  });
   it('honors the sentence-analysis cache opt-out', async () => {
     const put = vi.spyOn(db.sentenceAnalyses, 'put');
     await new LookupService().quick(request, { ...defaultEngineSettings, cacheSentenceAnalysis: false, quickEngine: 'offline' });
@@ -59,7 +71,7 @@ describe('lookup service offline cache', () => {
     vi.spyOn(db.contexts, 'get').mockRejectedValue(new Error('Storage unavailable'));
     vi.spyOn(db.contexts, 'put').mockRejectedValue(new Error('Storage full'));
     vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({
-      candidates: [{ content: { parts: [{ text: JSON.stringify({ meaning: 'duy trì trong ngữ cảnh', confidence: 0.9 }) }] } }]
+      candidates: [{ content: { parts: [{ text: JSON.stringify({ grammar: { explanation: 'This verb uses a direct object.' }, confidence: 0.9 }) }] } }]
     })))));
     const result = await new LookupService().contextual({ ...request, context_mode: 'grammar' }, { ...defaultAiSettings, provider: 'gemini', apiKey: 'test' });
     expect(result).toMatchObject({ source: 'ai', engine: { provider: 'user-api' } });

@@ -16,21 +16,31 @@ export const phrases: PhraseEntry[] = [
   { lemma: 'institutional constraints', pos: ['noun'], type: 'collocation', senses: [{ id: 'institutional-constraints.limits', definitionEn: 'limits imposed by institutions, rules, or established practices', meaningVi: 'những hạn chế về thể chế', domains: ['policy', 'economics'] }] },
   { lemma: 'asset prices', pos: ['noun'], type: 'collocation', senses: [{ id: 'asset-prices.value', definitionEn: 'the prices of assets such as property or financial investments', meaningVi: 'giá tài sản', domains: ['finance'] }] },
   { lemma: 'economic growth', pos: ['noun'], type: 'collocation', senses: [{ id: 'economic-growth.output', definitionEn: 'an increase in the production of goods and services', meaningVi: 'tăng trưởng kinh tế', domains: ['economics'] }] },
-  { lemma: 'maintain public confidence', pos: ['verb'], type: 'collocation', senses: [{ id: 'maintain-confidence.trust', definitionEn: 'to keep public trust from weakening', meaningVi: 'duy trì lòng tin của công chúng' }] }
+  { lemma: 'maintain public confidence', pos: ['verb'], type: 'collocation', senses: [{ id: 'maintain-confidence.trust', definitionEn: 'to keep public trust from weakening', meaningVi: 'duy trì lòng tin của công chúng' }] },
+  { lemma: 'rhetorical moves', pos: ['noun'], type: 'collocation', senses: [{
+    id: 'rhetorical-moves.techniques', definitionEn: 'rhetorical techniques or choices used to influence an audience',
+    meaningVi: 'thủ pháp tu từ / chiêu thức tu từ', collocations: ['rhetorical moves'], keywords: ['argument', 'persuade', 'audience', 'writing']
+  }] }
 ];
 const words: LexicalEntry[] = [
   { lemma: 'constrain', pos: ['verb'], senses: [{ id: 'constrain.limit', definitionEn: 'to limit what someone or something can do', meaningVi: 'hạn chế / giới hạn', synonyms: ['restrict', 'limit'], collocations: ['constrain investment'] }] },
   { lemma: 'constraint', pos: ['noun'], senses: [{ id: 'constraint.limit', definitionEn: 'something that limits what can happen', meaningVi: 'sự hạn chế / ràng buộc' }] },
   { lemma: 'run', pos: ['verb'], senses: [{ id: 'run.move', definitionEn: 'to move on foot faster than walking', meaningVi: 'chạy', keywords: ['race', 'road', 'fast'] }, { id: 'run.manage', definitionEn: 'to manage or operate something', meaningVi: 'điều hành', keywords: ['company', 'business', 'organization'] }] },
   { lemma: 'good', pos: ['adjective'], senses: [{ id: 'good.quality', definitionEn: 'of a high or satisfactory quality', meaningVi: 'tốt' }] },
-  { lemma: 'notwithstanding', pos: ['preposition'], senses: [{ id: 'notwithstanding.despite', definitionEn: 'despite', meaningVi: 'mặc dù' }] }
+  { lemma: 'notwithstanding', pos: ['preposition'], senses: [{ id: 'notwithstanding.despite', definitionEn: 'despite', meaningVi: 'mặc dù' }] },
+  { lemma: 'still', pos: ['adverb'], senses: [
+    { id: 'still.continuing', definitionEn: 'continuing up to this time or without a change or interruption', meaningVi: 'vẫn', keywords: ['continue', 'remain', 'yet'], frequency: 1 },
+    { id: 'still.contrast', definitionEn: 'despite that; nevertheless', meaningVi: 'tuy nhiên / dẫu vậy', keywords: ['although', 'despite', 'nevertheless'] },
+    { id: 'still.degree', definitionEn: 'to an even greater degree, especially with a comparison', meaningVi: 'còn / hơn nữa', keywords: ['more', 'less', 'another', 'comparison'] },
+    { id: 'still.motionless', definitionEn: 'without moving or making a sound', meaningVi: 'yên / bất động', keywords: ['sit', 'stand', 'hold', 'motionless'] }
+  ] }
 ];
 const irregular: Record<string, string> = { made: 'make', makes: 'make', making: 'make', ran: 'run', running: 'run', better: 'good', best: 'good', was: 'be', were: 'be', is: 'be', are: 'be', had: 'have' };
 export function normalizeLexical(text: string): string { return normalizeSelection(text).normalized; }
 export class LexicalEngine {
   private learned = new Map<string, LexicalEntry>();
   constructor(private entries: LexicalEntry[] = words) {}
-  get version(): string { return JSON.stringify(['local-lexicon-4', this.entries.map(entry => entry.lemma), dictionaryRegistry.versions(), wordNetVersion()]); }
+  get version(): string { return JSON.stringify(['local-lexicon-6', this.entries.map(entry => entry.lemma), dictionaryRegistry.versions(), wordNetVersion()]); }
   async prime(surface: string): Promise<void> {
     const normalized = normalizeLexical(surface);
     if (this.learned.has(normalized)) return;

@@ -179,3 +179,41 @@ it('expands all remaining meanings inside the popup without opening panel detail
     expect(host.textContent).not.toContain('Meaning 7');
   } finally { act(() => render(null, host)); host.remove(); }
 });
+
+it('shows a short confirmed summary and keeps aggregate Vietnamese meanings explicitly unpaired', () => {
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn();
+  const result = { ...validLookup, selection: { ...validLookup.selection, surface: 'still', part_of_speech: 'adverb' },
+    lens: { selection: { surface: 'still', normalized: 'still', lemma: 'still' }, context: { sentence: 'But if you still question it.' },
+      confidence: .9, posConfidence: .6, providers: {}, cached: false, offline: true },
+    dictionary: { word: 'still', surfaceForm: 'still', lemma: 'still', pronunciation: null, contextPos: 'adverb', contextConfidence: .9,
+      senses: [{ id: 'still.continuing', pos: 'adverb', definitionEn: 'continuing without interruption', meaningsVi: ['vẫn'],
+        source: 'local' as const, contextScore: .9, contextMatch: true }], unpairedMeaningsVi: ['Hơn nữa.'] } };
+  try {
+    act(() => render(<LookupBottomSheet open result={result} loading={false} error={null} mode="bilingual"
+      onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    expect(host.querySelector('.context-summary')?.textContent).toContain('still→vẫn');
+    expect(host.querySelector('.context-hint')?.textContent).toContain('Nghĩa trong câu');
+    expect(host.querySelector('.context-confidence')?.textContent).toBe('90%');
+    expect(host.querySelector('.bilingual-sense-layout.has-unpaired')).not.toBeNull();
+    expect(host.querySelector('.unpaired-meanings')?.textContent).toContain('Hơn nữa');
+    expect(host.querySelector('.sense-row')?.textContent).not.toContain('Hơn nữa');
+  } finally { act(() => render(null, host)); host.remove(); }
+});
+
+it('labels materially different same-POS meanings as multiple readings', () => {
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn();
+  const result = { ...validLookup, dictionary: { word: 'zorp', surfaceForm: 'zorp', lemma: 'zorp', pronunciation: null,
+    contextPos: 'verb', contextConfidence: .4, senses: [
+      { id: 'one', pos: 'verb', definitionEn: 'first possible meaning', meaningsVi: ['nghĩa một'], source: 'local' as const, contextScore: .4, contextMatch: false },
+      { id: 'two', pos: 'verb', definitionEn: 'second possible meaning', meaningsVi: ['nghĩa hai'], source: 'local' as const, contextScore: 0, contextMatch: false }
+    ] } };
+  try {
+    act(() => render(<LookupBottomSheet open result={result} loading={false} error={null} mode="bilingual"
+      onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    expect(host.querySelector('.context-hint')?.textContent).toContain('Có nhiều cách hiểu');
+    expect(host.querySelector('.context-confidence')).toBeNull();
+    expect(host.querySelector('.context-summary')).toBeNull();
+  } finally { act(() => render(null, host)); host.remove(); }
+});

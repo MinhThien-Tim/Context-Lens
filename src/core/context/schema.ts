@@ -18,6 +18,50 @@ export const contextExplanationSchema = z.object({
   confidence: z.number().min(0).max(1).optional()
 }).strict().refine(value => Object.keys(value).some(key => key !== 'confidence'), 'At least one explanation field is required');
 
+const fieldSchemas = {
+  definitionEn: z.string().max(800), meaningVi: z.string().max(800), meaning: z.string().max(800),
+  naturalTranslation: z.string().max(1200), sense: z.string().max(400),
+  grammar: z.object({ pattern: z.string().max(400).optional(), explanation: z.string().max(1200) }).strict(),
+  whyHere: z.string().max(1200), notThisMeaning: z.string().max(800), pattern: z.string().max(400),
+  example: z.string().max(800), simplified: z.string().max(1200), sentenceTranslation: z.string().max(2000),
+  chunks: z.array(z.object({ text: z.string().max(800), role: z.string().max(200), meaning: z.string().max(800).optional() }).strict()).max(12),
+  confidence: z.number().min(0).max(1)
+} as const;
+
+const taskFields = {
+  'meaning-in-context': ['meaning'],
+  grammar: ['grammar'],
+  phrase: ['meaning', 'meaningVi', 'sense', 'pattern', 'example'],
+  idiom: ['meaning', 'meaningVi', 'whyHere', 'example'],
+  simplify: ['simplified', 'sentenceTranslation'],
+  nuance: ['meaning', 'meaningVi', 'sense', 'notThisMeaning'],
+  'word-sense': ['meaning', 'meaningVi', 'sense', 'whyHere', 'notThisMeaning'],
+  'sentence-structure': ['chunks']
+} as const;
+export type ContextSchemaTask = keyof typeof taskFields;
+const optionalTaskFields: Partial<Record<ContextSchemaTask, readonly (keyof typeof fieldSchemas)[]>> = {
+  'meaning-in-context': ['sense', 'whyHere', 'meaningVi', 'naturalTranslation'],
+  grammar: ['pattern']
+};
+export function explanationSchemaForTask(task: ContextSchemaTask) {
+  const required = taskFields[task];
+  const optional = optionalTaskFields[task] ?? [];
+  const fields = [...required, ...optional, 'confidence' as const];
+  return z.object(Object.fromEntries(fields.map(key => [key, fieldSchemas[key]]))).partial(Object.fromEntries([...optional, 'confidence'].map(key => [key, true])) as never).passthrough()
+    .refine(value => Object.keys(value).some(key => key !== 'confidence'), 'At least one explanation field is required');
+}
+
+export function explanationJsonSchemaForTask(task: ContextSchemaTask) {
+  const required = taskFields[task];
+  const optional = optionalTaskFields[task] ?? [];
+  const fields = [...required, ...optional, 'confidence' as const];
+  const properties = Object.fromEntries(fields.map(key => {
+    const type = key === 'confidence' ? 'number' : key === 'grammar' || key === 'chunks' ? (key === 'chunks' ? 'array' : 'object') : 'string';
+    return [key, { type, ...(type === 'array' ? { maxItems: 12, items: { type: 'object', additionalProperties: false, required: ['text', 'role'], properties: { text: { type: 'string' }, role: { type: 'string' }, meaning: { type: 'string' } } } } : {}), ...(type === 'object' ? { additionalProperties: false, required: ['explanation'], properties: { pattern: { type: 'string' }, explanation: { type: 'string' } } } : {}) }];
+  }));
+  return { type: 'object', additionalProperties: false, required: [...required], properties } as const;
+}
+
 const nullableProviderExplanationSchema = z.object({
   definitionEn: z.string().max(800).nullable().optional(),
   meaningVi: z.string().max(800).nullable().optional(),

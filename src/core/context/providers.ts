@@ -28,7 +28,7 @@ export class HostedLiteProvider implements ContextProvider {
       if (count >= this.dailyLimit) throw new EngineError('QUOTA');
       await db.settings.put({ key, value: count + 1 });
     });
-    const result = contextProviderResponseSchema.safeParse(await postJson(this.endpoint, { selectedText: input.request.selection, sentence: input.request.sentence, previousSentence: input.request.previous_sentence, nextSentence: input.request.next_sentence, mode: input.mode, sourceLang: input.sourceLang, targetLang: input.targetLang }, input.signal));
+    const result = contextProviderResponseSchema.safeParse(await postJson(this.endpoint, { selectedText: input.request.selection, sentence: input.request.paragraph ? undefined : input.request.sentence, paragraph: input.request.paragraph, previousSentence: input.request.previous_sentence, nextSentence: input.request.next_sentence, mode: input.mode, sourceLang: input.sourceLang, targetLang: input.targetLang }, input.signal));
     if (!result.success) throw new EngineError('INVALID_RESPONSE');
     return result.data;
   }

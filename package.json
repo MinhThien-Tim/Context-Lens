@@ -30,6 +30,7 @@
     "marked": "^18.0.13",
     "pdfjs-dist": "^6.3.289",
     "preact": "^10.26.4",
+    "tesseract.js": "^7.0.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {

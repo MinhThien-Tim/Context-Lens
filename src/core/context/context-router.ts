@@ -13,6 +13,7 @@ import { LocalLanguageEngine } from '../language/local-language-engine';
 import { selectionInput } from '../language/adapter';
 import { applyLocalResult } from '../language/adapter';
 import { localLookup } from '../../lookup/localDictionary';
+import { recordAiUsage } from '../../ai/usage';
 export const CONTEXT_VERSION = 'context-v5';
 export function contextKey(input: ContextInput, family: string): string {
   return cacheKey([CONTEXT_VERSION, normalizeText(input.request.selection), normalizeText(input.request.sentence), input.request.previous_sentence, input.request.next_sentence, input.request.paragraph,
@@ -35,7 +36,10 @@ export class ContextRouter {
       for (const key of keys) {
         const cached = await this.cache.get(key);
         checkAbort(signal);
-        if (cached) return { ...cached, cached: true };
+        if (cached) {
+          await recordAiUsage({ provider: cached.provider, model: cached.model ?? 'unknown', task: input.mode, latencyMs: 0, cacheHit: true });
+          return { ...cached, cached: true };
+        }
       }
       if (this.legacyCache && (!this.online() || !this.providers.length) && input.mode === 'meaning-in-context' && input.sourceLang === 'en' && input.targetLang === 'vi') {
         for (const promptVersion of [CONTEXT_VERSION, 'context-v4', 'context-v2']) {
@@ -76,8 +80,12 @@ export class ContextRouter {
           return response;
         } catch (error) {
           checkAbort(signal);
-          if (error && typeof error === 'object' && 'code' in error && ['QUOTA', 'quota', 'rate_limit'].includes(String(error.code))) status = 'quota';
+          const rawCode = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
+          const code = rawCode.toLowerCase();
+          const externalStop = ['auth', 'quota', 'rate_limit'].includes(code) && !(code === 'quota' && error instanceof Error && error.name === 'EngineError');
+          if (['quota', 'rate_limit'].includes(code)) status = 'quota';
           this.health.failure(provider.id, pair);
+          if (externalStop) break;
           if (!this.fallback) break;
         }
       }

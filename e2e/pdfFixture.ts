@@ -1,14 +1,14 @@
 /** Deterministic, original test content; no copyrighted book is bundled. */
-export function pdfFixture(count = 64) {
+export function pdfFixture(count = 64, blankPage = 0, rotatePage = 0) {
   const objects = ['<< /Type /Catalog /Pages 2 0 R >>', '', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
   const pages: number[] = [];
   for (let n = 1; n <= count; n++) {
     const pageId = objects.length + 1;
     const height = n % 7 === 0 ? 900 : 792;
     pages.push(pageId);
-    const lines = [n === 1 ? 'Preface' : `Chapter ${n}: Reading carefully`, 'The decision had surprised many voters.', 'The government struggled to maintain public confidence.', 'We study inter-', 'national examples and repeated words.', 'A word appears here. Another word appears there.', ...Array.from({ length: 20 }, (_, i) => `Paragraph ${i + 1} on page ${n} explains a useful reading example.`)];
+    const lines = n === blankPage ? [] : [n === 1 ? 'Preface' : `Chapter ${n}: Reading carefully`, 'The decision had surprised many voters.', 'The government struggled to maintain public confidence.', 'We study inter-', 'national examples and repeated words.', 'A word appears here. Another word appears there.', ...Array.from({ length: 20 }, (_, i) => `Paragraph ${i + 1} on page ${n} explains a useful reading example.`)];
     const stream = `BT /F1 14 Tf 50 ${height - 60} Td 22 TL\n${lines.map((line, i) => `${i ? 'T* ' : ''}(${line}) Tj`).join('\n')}\nET`;
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 ${height}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${pageId + 1} 0 R /Annots [${pageId + 2} 0 R] >>`);
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 ${height}] ${n === rotatePage ? '/Rotate 90' : ''} /Resources << /Font << /F1 3 0 R >> >> /Contents ${pageId + 1} 0 R /Annots [${pageId + 2} 0 R] >>`);
     objects.push(`<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`);
     objects.push(`<< /Type /Annot /Subtype /Link /Rect [50 40 220 60] /A << /S /URI /URI (https://example.com/) >> >>`);
   }

@@ -13,7 +13,12 @@ export function reserve(previous: Ledger | undefined, client: string, characters
   const legacy = previous as (Ledger & { cooldown?: number; failures?: number }) | undefined;
   const providerHealth = previous?.providers ?? (legacy ? { 'google-web': { cooldown: legacy.cooldown ?? 0, failures: legacy.failures ?? 0 } } : {});
   const ledger: Ledger = previous?.day === day ? structuredClone(previous) : {
-    day, requests: 0, characters: 0, clients: {}, leases: previous?.leases ?? {}, providers: providerHealth
+    day, requests: 0, characters: 0,
+    clients: Object.fromEntries(Object.entries(previous?.clients ?? {}).flatMap(([hash, bucket]) => {
+      const recent = bucket.recent.filter(time => time > now - 60_000);
+      return recent.length ? [[hash, { requests: 0, characters: 0, recent }]] : [];
+    })),
+    leases: previous?.leases ?? {}, providers: providerHealth
   };
   ledger.providers ??= providerHealth;
   const providerState = ledger.providers[provider] ?? { cooldown: 0, failures: 0 };

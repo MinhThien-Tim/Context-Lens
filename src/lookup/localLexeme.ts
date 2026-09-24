@@ -29,21 +29,16 @@ export function lookupLocalLexeme(candidate: string, surface = candidate, curate
   const lemma = curated?.lemma ?? dictionaryLemma ?? candidate;
   const wordnet = lookupWordNet(lemma);
   const dictionaryEnglish = bestDictionaryMatches.find(match => match.entry.definitionEn.trim())?.entry.definitionEn.trim();
-  const dictionarySenses = bestDictionaryMatches.flatMap(match => match.entry.senses ?? []).map(sense => ({
+  const dictionarySenses = bestDictionaryMatches.flatMap(match => (match.entry.senses ?? []).map(sense => ({
     id: sense.id, definitionEn: sense.definitionEn, meaningVi: sense.meaningsVi.join(' / '),
-    pos: sense.partOfSpeech ? normalizePos([sense.partOfSpeech])[0] : undefined
-  }));
-  const wordNetSenses = (wordnet?.senses ?? []).map(sense => {
-    const candidates = dictionarySenses.filter(candidate => !candidate.pos || !sense.pos || candidate.pos === sense.pos);
-    if (!candidates.length || sense.meaningVi) return sense;
-    const samePosWordNet = (wordnet?.senses ?? []).filter(candidate => !candidate.pos || !sense.pos || candidate.pos === sense.pos);
-    const ranked = candidates.map(candidate => ({ candidate, overlap: definitionOverlap(candidate.definitionEn, sense.definitionEn) }))
-      .sort((a, b) => b.overlap - a.overlap);
-    const aligned = ranked[0] && (ranked[0].overlap >= 2 || (candidates.length === 1 && samePosWordNet.length === 1)) ? ranked[0].candidate : undefined;
-    return aligned ? { ...sense, meaningVi: aligned.meaningVi } : sense;
-  });
+    pos: normalizePos([sense.partOfSpeech ?? match.entry.partOfSpeech])[0]
+  })));
+  // WordNet and entry-level bilingual dictionaries do not share sense IDs.
+  // Keep them independent instead of manufacturing a bilingual pair from
+  // definition similarity or source order.
+  const wordNetSenses = wordnet?.senses ?? [];
   const senses = [
-    ...(curated?.senses ?? []),
+    ...(curated?.senses.map(sense => ({ ...sense, pos: sense.pos ?? (curated.pos.length === 1 ? curated.pos[0] : undefined) })) ?? []),
     ...dictionarySenses,
     ...wordNetSenses,
     ...(dictionaryEnglish && !curated?.senses.some(sense => sense.definitionEn === dictionaryEnglish) && !wordnet?.senses.some(sense => sense.definitionEn === dictionaryEnglish)
@@ -65,11 +60,4 @@ export function lookupLocalLexeme(candidate: string, surface = candidate, curate
       morphology: morphologyMatch ? preferred.find(match => match.morphology)?.providerId : morphology ? 'rules' : undefined
     }
   };
-}
-
-function definitionOverlap(left: string, right: string): number {
-  const ignored = new Set(['a', 'an', 'the', 'to', 'of', 'or', 'and', 'in', 'on', 'is', 'that', 'something', 'another']);
-  const words = (value: string) => new Set(value.toLowerCase().match(/[a-z]+/g)?.filter(word => !ignored.has(word)) ?? []);
-  const leftWords = words(left);
-  return [...words(right)].filter(word => leftWords.has(word)).length;
 }

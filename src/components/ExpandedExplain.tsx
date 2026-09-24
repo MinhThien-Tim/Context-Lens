@@ -34,6 +34,8 @@ export function ExpandedExplain({ result, deep, mode, loading, contextResult }: 
     {showVi && deep.deep.sentence_analysis.translation_vi && <div class="compact-block priority-detail"><small>Vietnamese</small><p class="meaning-vi">{deep.deep.sentence_analysis.translation_vi}</p></div>}
     {showEn && deep.deep.context_explanation_en && <div class="compact-block priority-detail"><p>{deep.deep.context_explanation_en}</p></div>}
     {showVi && deep.deep.context_explanation_vi && <div class="compact-block priority-detail"><p>{deep.deep.context_explanation_vi}</p></div>}
+    {showVi && Boolean(deep.dictionary?.unpairedMeaningsVi?.length) && <div class="compact-block unpaired-meanings">
+      <small>Nghĩa Việt chưa ghép với định nghĩa Anh</small><p>{deep.dictionary!.unpairedMeaningsVi!.join(' · ')}</p></div>}
 
     {level >= 1 && hasNotes && <section class="explain-level" aria-label="Lưu ý và cách dùng">
       <h3>Lưu ý & cách dùng</h3>
@@ -58,7 +60,7 @@ export function ExpandedExplain({ result, deep, mode, loading, contextResult }: 
 
     {level >= 3 && hasExtras && <section class="explain-level" aria-label="Ngoại lệ và chi tiết">
       <h3>Ngoại lệ & chi tiết</h3>
-      {result.lens && <div class="compact-block compact-meta"><p class="confidence-line">Local confidence: {Math.round(result.lens.confidence * 100)}%</p></div>}
+      {result.lens && <div class="compact-block compact-meta"><p class="confidence-line">Sense confidence: {Math.round(result.lens.confidence * 100)}% · Part-of-speech confidence: {Math.round((result.lens.posConfidence ?? 0) * 100)}%</p></div>}
       {showEn && result.lens?.english?.synonyms?.length ? <div class="compact-block"><small>Related words</small><p>{result.lens.english.synonyms.join(', ')}</p></div> : null}
       {showEn && result.lens?.english?.examples?.[0] && <div class="compact-block"><small>Example</small><p>{result.lens.english.examples[0]}</p></div>}
       {deep.deep.sentence_analysis.chunks.length > 0 && <div class="compact-block"><small>Structure</small><dl class="structure-list">{deep.deep.sentence_analysis.chunks.map(chunk => <div key={`${chunk.text}:${chunk.role}`}><dt>{chunk.text}</dt><dd>{showVi ? chunk.meaning_vi : chunk.role}</dd></div>)}</dl></div>}

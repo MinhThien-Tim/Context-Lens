@@ -53,6 +53,18 @@ it('enforces rolling rate, daily per-IP cap and leases after reconstruction', ()
   expect(() => reserve(structuredClone(ledger), 'c', 1, now, 'c')).toThrow('BUSY');
   expect(reserve(ledger, 'c', 1, now + 31000, 'c').requests).toBe(3);
 });
+it('keeps the rolling per-IP limit across UTC midnight while resetting daily counters', () => {
+  const beforeMidnight = Date.UTC(2026, 8, 20, 23, 59, 59);
+  let ledger: Ledger | undefined;
+  for (let i = 0; i < 6; i++) {
+    ledger = reserve(ledger, 'same', 1, beforeMidnight, String(i));
+    ledger.leases = {};
+  }
+  expect(() => reserve(ledger, 'same', 1, beforeMidnight + 2_000, 'next')).toThrow('RATE_LIMIT');
+  const next = reserve(ledger, 'same', 1, beforeMidnight + 60_001, 'later');
+  expect(next.requests).toBe(1);
+  expect(next.clients.same.requests).toBe(1);
+});
 it('keeps cooldown health isolated by provider and restores it after a healthy call', () => {
   const now = Date.now();
   let ledger = reserve(undefined, 'client', 1, now, 'g1', 'google-web');

@@ -6,8 +6,10 @@ import { PdfReadingPage } from './PdfReadingPage';
 import { readingPagesForDocument } from './structuredPages';
 import type { ReaderSelection } from '../TextReader';
 import { readingSelectionFromDom, readingWordAtPoint } from './readingSelectionAdapter';
+import type { PdfOcrRecord } from '../../db/database';
+import { PdfOcrReadingPage } from './PdfOcrReadingPage';
 
-export function PdfReadingView({ documentRecord, location, style, activeMarkupTool, activeMarkupColor, onLocation, onLookup, onAddNote, onHighlight, onErase, navigationToken = 0 }: { navigationToken?: number; documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; activeMarkupTool?: 'highlight' | 'underline' | 'eraser' | null; activeMarkupColor: ReaderHighlight['color']; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onHighlight: (highlight: ReaderHighlight) => void; onErase: (startOffset: number, endOffset: number) => void }) {
+export function PdfReadingView({ documentRecord, location, style, activeMarkupTool, activeMarkupColor, onLocation, onLookup, onAddNote, onHighlight, onErase, navigationToken = 0, ocrPages = [], onOpenOriginal }: { navigationToken?: number; documentRecord: DocumentRecord; location: PdfDocumentLocation; style: Record<string, string | number>; activeMarkupTool?: 'highlight' | 'underline' | 'eraser' | null; activeMarkupColor: ReaderHighlight['color']; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onHighlight: (highlight: ReaderHighlight) => void; onErase: (startOffset: number, endOffset: number) => void; ocrPages?: PdfOcrRecord[]; onOpenOriginal?: () => void }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const ignoreClick = useRef(false);
   const highlightTimer = useRef<number | undefined>(undefined);
@@ -26,6 +28,7 @@ export function PdfReadingView({ documentRecord, location, style, activeMarkupTo
   });
   const captureSelection = (commitHighlight = false) => {
     if (!rootRef.current) return null;
+    if (window.getSelection()?.anchorNode?.parentElement?.closest('[data-ocr-page]')) return null;
     const next = readingSelectionFromDom(rootRef.current, documentRecord.content);
     if (next) {
       setPending(next);
@@ -56,9 +59,13 @@ export function PdfReadingView({ documentRecord, location, style, activeMarkupTo
       if (ignoreClick.current) { ignoreClick.current = false; return; }
       const nativeSelection = window.getSelection();
       if (nativeSelection && !nativeSelection.isCollapsed) return;
+      if (event.target instanceof Element && event.target.closest('[data-ocr-page]')) return;
       const next = rootRef.current && readingWordAtPoint(rootRef.current, documentRecord.content, event.clientX, event.clientY);
       if (next) onLookup(next);
-    }}>{pages.map(page => <PdfReadingPage key={page.pageNumber} page={page} highlights={documentRecord.highlights} />)}</div>
+    }}>{pages.map(page => {
+      const ocr = page.plainText.trim().length < 40 ? ocrPages.find(record => record.page === page.pageNumber) : undefined;
+      return ocr ? <PdfOcrReadingPage key={page.pageNumber} page={page.pageNumber} text={ocr.text} onLookup={onLookup} onAddNote={onAddNote} onOpenOriginal={() => onOpenOriginal?.()} /> : <PdfReadingPage key={page.pageNumber} page={page} highlights={documentRecord.highlights} />;
+    })}</div>
     {pending && <div class="pdf-reading-selection-wrap"><div class="pdf-reading-selection-actions" role="toolbar" aria-label="Selected text actions"><button onPointerDown={event => event.preventDefault()} onClick={() => onLookup(pending)}>Explain</button><button aria-pressed={highlightOpen} class={highlightOpen ? 'active' : ''} onPointerDown={event => event.preventDefault()} onClick={() => setHighlightOpen(value => !value)}>Highlight</button><button onPointerDown={event => event.preventDefault()} onClick={() => onAddNote(pending)}>Note</button><button onPointerDown={event => event.preventDefault()} onClick={() => void navigator.clipboard?.writeText(pending.text)}>Copy</button><button aria-label="Close selection actions" onClick={() => { setPending(null); setHighlightOpen(false); window.getSelection()?.removeAllRanges(); }}>×</button></div>{highlightOpen && <div class="pdf-highlight-colors" role="group" aria-label="Highlight color">{(['yellow', 'pink', 'blue'] as const).map(color => <button key={color} class={`highlight-color highlight-color-${color}`} aria-label={`${color} highlight`} onPointerDown={event => event.preventDefault()} onClick={() => { onHighlight({ id: crypto.randomUUID(), startOffset: pending.offset, endOffset: pending.endOffset ?? pending.offset + pending.text.length, color, createdAt: Date.now() }); setHighlightOpen(false); setPending(null); window.getSelection()?.removeAllRanges(); }} />)}</div>}</div>}
   </div>;
 }

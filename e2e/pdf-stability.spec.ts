@@ -10,6 +10,24 @@ async function openPdf(page: Page, count = 64) {
   await expect(page.locator('.pdf-text-layer').first().locator('span').first()).toBeVisible();
 }
 
+test('blank and rotated pages keep their page number across both views', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('input[type=file]').setInputFiles({ name: 'mixed-pages.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3, 2, 3) });
+  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Next page' }).click();
+  await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
+  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
+  await expect(page.locator('.pdf-reading-page[data-pdf-reading-page="2"]')).toContainText('no extractable text');
+  await page.getByRole('button', { name: 'Original', exact: true }).click();
+  await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
+  await page.getByRole('button', { name: 'Next page' }).click();
+  await expect(page.getByLabel('Current PDF page')).toContainText('3 / 3');
+  const size = await page.locator('.pdf-page-slot[data-pdf-page="3"]').evaluate(element => ({ width: element.clientWidth, height: element.clientHeight }));
+  expect(size.width).toBeGreaterThan(size.height);
+  expect(await page.locator('.pdf-canvas').count()).toBeLessThanOrEqual(2);
+});
+
 async function selectPhrase(page: Page, reverse = false) {
   const span = page.locator('.pdf-page-slot[data-pdf-page="1"] .pdf-text-layer span').filter({ hasText: 'The decision had surprised many voters.' });
   const box = await span.boundingBox();

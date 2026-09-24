@@ -8,6 +8,8 @@ export interface ReaderSelection {
   anchor?: { left: number; top: number; right: number; bottom: number };
   type: 'word' | 'phrase' | 'sentence';
   context: ReturnType<typeof sentenceContextAt>;
+  pdfPage?: number;
+  ocr?: boolean;
 }
 
 function rangeFromPoint(x: number, y: number): Range | null {

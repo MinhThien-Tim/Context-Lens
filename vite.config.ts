@@ -9,6 +9,7 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes('/src/core/language/') || id.includes('/src/lookup/normalization/') || /\/src\/lookup\/(?:localAssets|localLexeme|learnedLexicon)\./.test(id)) return 'local-language';
           if (id.includes('node_modules/pdfjs-dist')) return 'pdf-reader';
+          if (id.includes('node_modules/tesseract.js')) return 'ocr-reader';
           if (id.includes('node_modules/jszip') || id.includes('node_modules/@xmldom')) return 'archive-runtime';
           if (id.includes('node_modules/epubjs')) return 'epub-reader';
           if (id.includes('node_modules/mammoth')) return 'docx-reader';
@@ -47,7 +48,7 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/index.html',
         globPatterns: ['**/*.{js,css,html,svg,woff2}', 'assets/context-lens-en-vi-*.json', 'assets/wordnet-*.json', 'assets/WORDNET-LICENSE-*.md', 'assets/ATTRIBUTION-*.md'],
-        globIgnores: ['**/pdf-reader-*.js', '**/epub-reader-*.js', '**/docx-reader-*.js', '**/archive-runtime-*.js'],
+        globIgnores: ['**/pdf-reader-*.js', '**/ocr-reader-*.js', '**/epub-reader-*.js', '**/docx-reader-*.js', '**/archive-runtime-*.js'],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
         runtimeCaching: [
           {

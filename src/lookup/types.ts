@@ -17,8 +17,13 @@ export interface DictionaryResult {
   lemma: string;
   pronunciation: string | null;
   contextPos?: string;
+  senseStatus?: 'context' | 'common' | 'ambiguous';
+  partOfSpeechConfidence?: number;
+  senseConfidence?: number;
   contextConfidence: number;
   senses: DictionarySenseResult[];
+  /** Vietnamese glosses supplied only at entry level, without a source sense link. */
+  unpairedMeaningsVi?: string[];
 }
 
 export interface LookupRequest {

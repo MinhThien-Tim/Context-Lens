@@ -50,7 +50,7 @@ export class LocalLanguageEngine {
     if (entry) this.lexical.remember(lookupText, entry);
     const resolved = this.resolver.resolve({ selection: lookupText, lemma: entry?.lemma ?? normalized,
       canonicalPhrase: phraseEntry?.lemma, sentence: analysis.normalizedText, sentenceAnalysis: analysis,
-      pos: occurrence?.pos,
+      selectionStart: occurrence?.start, pos: occurrence?.pos, sentenceTranslationVi: analysis.translationVi,
       candidateSenses: entry?.senses ?? [] });
     const sense = resolved.selectedSense;
     const hasEnglish = Boolean(sense?.definitionEn);
@@ -62,32 +62,31 @@ export class LocalLanguageEngine {
     const matchType = phraseEntry ? 'phrase' : directEntry ? (directEntry.morphology ? 'lemma' : 'exact')
       : matchedText?.includes(' ') ? (matchedText === canonical ? 'phrase' : 'subphrase') : entry ? 'head' : undefined;
     const orderedSenses = entry ? [sense, ...resolved.alternatives].filter((item, index, all): item is NonNullable<typeof item> => Boolean(item) && all.findIndex(other => other?.id === item!.id) === index) : [];
-    const rulePos = inferContextPos(lookupText, analysis.normalizedText, entry?.pos);
+    const rulePos = inferContextPos(lookupText, analysis.normalizedText, entry?.pos, occurrence?.start);
     const contextPos = rulePos ?? sense?.pos ?? occurrence?.pos;
-    const strongContext = Boolean(rulePos) || (resolved.confidence >= 0.6 && resolved.reasons.some(reason => !reason.startsWith('Dictionary sense')));
     const contextOrderedSenses = rulePos ? [...orderedSenses].sort((left, right) => Number(right.pos === rulePos) - Number(left.pos === rulePos)) : orderedSenses;
-    const senseResults = contextOrderedSenses.map((item, index) => ({ id: item.id, pos: item.pos ?? entry?.pos[0] ?? 'other', definitionEn: item.definitionEn,
+    const senseResults = contextOrderedSenses.map(item => ({ id: item.id, pos: item.pos ?? entry?.pos[0] ?? 'other', definitionEn: item.definitionEn,
       meaningsVi: item.meaningVi ? splitMeanings(item.meaningVi) : [], source: 'local' as const,
-      contextScore: index === 0 ? resolved.confidence : 0, contextMatch: index === 0 && strongContext }));
-    if (entry?.meaningsVi?.length && !senseResults.some(item => item.meaningsVi.length)) senseResults.push({
-      id: `${entry.lemma}.vi`, pos: entry.pos[0] ?? 'other', definitionEn: '', meaningsVi: entry.meaningsVi,
-      source: 'local', contextScore: 0, contextMatch: false
-    });
+      contextScore: item.id === sense?.id ? resolved.senseConfidence : 0, contextMatch: item.id === sense?.id && resolved.contextMatch }));
+    const linkedMeanings = new Set(contextOrderedSenses.flatMap(item => item.meaningVi ? [item.meaningVi, ...splitMeanings(item.meaningVi)] : []).map(normalizeMeaning));
+    const unpairedMeaningsVi = (entry?.meaningsVi ?? []).filter(meaning => !linkedMeanings.has(normalizeMeaning(meaning)));
     const dictionary = entry ? {
       word: entry.lemma, surfaceForm: input.selectedText, lemma: entry.lemma,
-      pronunciation: dictionaryPronunciation(entry.lemma), contextPos, contextConfidence: resolved.confidence,
-      senses: senseResults
+      pronunciation: dictionaryPronunciation(entry.lemma), contextPos, senseStatus: resolved.status, partOfSpeechConfidence: resolved.posConfidence,
+      senseConfidence: resolved.senseConfidence, contextConfidence: resolved.senseConfidence,
+      senses: senseResults, unpairedMeaningsVi
     } : undefined;
     return { ...result, dictionary, selection: { ...result.selection, lemma: entry?.lemma ?? normalized, pos: contextPos ?? entry?.pos.join(' / '), status, matchedText, matchType },
       phrase: resolvedPhrase ? { canonical: resolvedPhrase.lemma, type: resolvedPhrase.type } : undefined,
-      english: sense?.definitionEn ? { definition: sense.definitionEn, contextualDefinition: sense.definitionEn, synonyms: sense.synonyms, examples: sense.examples } : undefined,
-      vietnamese: sense?.meaningVi ? { meaning: sense.meaningVi, contextualMeaning: sense.meaningVi, senseAligned: true }
+      english: sense?.definitionEn ? { definition: sense.definitionEn, contextualDefinition: resolved.contextMatch ? sense.definitionEn : undefined, synonyms: sense.synonyms, examples: sense.examples } : undefined,
+      vietnamese: sense?.meaningVi ? { meaning: sense.meaningVi, contextualMeaning: resolved.contextMatch ? sense.meaningVi : undefined, senseAligned: true }
         : entry?.meaningsVi?.length ? { meaning: entry.meaningsVi.join(' / '), senseAligned: false } : undefined,
       grammar: entry ? { role: sense?.pos ?? entry.pos.join(' / '), pattern: phraseEntry?.lemma,
         form: entry.morphology ? `${entry.morphology.inflection} of ${entry.morphology.baseLemma}` : undefined } : undefined,
       sense: sense ? { id: sense.id, alternatives: resolved.alternatives.map(s => s.id), reasons: resolved.reasons } : undefined,
       context: { ...result.context, sentenceTranslation: analysis.translationVi, simpleEnglish: analysis.simpleEnglish },
-      confidence: resolved.confidence, providers: { lexical: 'local-dictionary', sentence: 'local', context: 'local-sense-resolver' }, cached
+      confidence: resolved.senseConfidence, posConfidence: resolved.posConfidence,
+      providers: { lexical: 'local-dictionary', sentence: 'local', context: 'local-sense-resolver' }, cached
     };
   }
   async rememberSentenceTranslation(sentence: string, translatedText: string): Promise<void> {
@@ -99,12 +98,14 @@ function splitMeanings(value: string): string[] {
   return [...new Set(value.split(/\s*(?:\/|;|·)\s*/).map(item => item.trim()).filter(Boolean))];
 }
 
+function normalizeMeaning(value: string): string { return value.normalize('NFC').toLocaleLowerCase('vi').replace(/\s+/g, ' ').trim(); }
+
 function dictionaryPronunciation(lemma: string): string | null {
   return dictionaryRegistry.lookup(lemma)?.entry.ipa ?? null;
 }
 
-function inferContextPos(selection: string, sentence: string, availablePos: string[] = []): string | undefined {
-  const index = sentence.toLocaleLowerCase().indexOf(selection.toLocaleLowerCase());
+function inferContextPos(selection: string, sentence: string, availablePos: string[] = [], selectionStart?: number): string | undefined {
+  const index = selectionStart ?? sentence.toLocaleLowerCase().indexOf(selection.toLocaleLowerCase());
   if (index < 0) return undefined;
   const prefix = sentence.slice(0, index);
   const suffix = sentence.slice(index + selection.length);

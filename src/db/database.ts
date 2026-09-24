@@ -102,6 +102,29 @@ export interface NoteRecord {
   updatedAt: number;
 }
 
+export interface AiUsageRecord {
+  id?: number;
+  provider: string;
+  model: string;
+  task: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedTokens?: number;
+  latencyMs: number;
+  cacheHit: boolean;
+  createdAt: number;
+}
+
+export interface PdfOcrRecord {
+  key: string;
+  documentId: string;
+  page: number;
+  language: 'eng';
+  configVersion: number;
+  text: string;
+  createdAt: number;
+}
+
 export class ContextLensDatabase extends Dexie {
   documents!: EntityTable<DocumentRecord, 'id'>;
   lookups!: EntityTable<CachedLookupRecord, 'key'>;
@@ -114,6 +137,8 @@ export class ContextLensDatabase extends Dexie {
   notes!: EntityTable<NoteRecord, 'id'>;
   sentenceAnalyses!: Table<EngineCacheRecord<SentenceAnalysis>, string>;
   learnedLexicon!: EntityTable<LearnedLexiconRecord, 'key'>;
+  aiUsage!: Table<AiUsageRecord, number>;
+  pdfOcr!: EntityTable<PdfOcrRecord, 'key'>;
 
   constructor(name = 'context-lens') {
     super(name);
@@ -187,6 +212,8 @@ export class ContextLensDatabase extends Dexie {
     });
     this.version(12).stores({ learnedLexicon: 'key, normalizedKey, lemma, updatedAt' });
     this.version(13).stores({ documents: 'id, kind, title, updatedAt, [kind+updatedAt]' });
+    this.version(14).stores({ aiUsage: '++id, createdAt, provider, task' });
+    this.version(15).stores({ pdfOcr: 'key, documentId, [documentId+page]' });
   }
 }
 

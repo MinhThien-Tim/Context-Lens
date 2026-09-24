@@ -1,0 +1,3 @@
+release/**/*.json
+docs/PDF_STABILITY_*.json
+package-lock.json

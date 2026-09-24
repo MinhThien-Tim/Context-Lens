@@ -98,6 +98,28 @@ describe('local language foundation', () => {
     expect(result.context.simpleEnglish).toBe('Despite the constraints, they continued.');
     expect(result.context.sentenceTranslation).toBeUndefined();
   });
+  it('keeps an English-only dictionary sense usable without inventing Vietnamese meaning', async () => {
+    const database = new ContextLensDatabase(`english-only-${crypto.randomUUID()}`); databases.push(database);
+    const lexical = new LexicalEngine([{ lemma: 'untranslatedword', pos: ['noun'], senses: [
+      { id: 'untranslatedword.one', pos: 'noun', definitionEn: 'an item without a Vietnamese gloss' }
+    ] }]);
+    const phrases = new PhraseDetector(undefined, lexical);
+    const engine = new LocalLanguageEngine(lexical, phrases, new SentenceEngine(lexical, phrases, new SentenceAnalysisCache(database)));
+    const result = await engine.analyzeSelection(input('untranslatedword', 'An untranslatedword appears here.'));
+    expect(result.english?.definition).toContain('without a Vietnamese gloss');
+    expect(result.dictionary?.senses[0].meaningsVi).toEqual([]);
+    expect(result.vietnamese).toBeUndefined();
+  });
+  it('uses an infinitive construction to resolve an inflected effort verb while keeping entry glosses separate', async () => {
+    const { engine } = setup();
+    const sentence = 'The agency struggled to maintain public confidence.';
+    const result = await engine.analyzeSelection({ ...input('struggled', sentence), selectionStart: sentence.indexOf('struggled') });
+    expect(result.dictionary?.contextPos).toBe('verb');
+    expect(result.dictionary?.senseStatus).toBe('context');
+    expect(result.dictionary?.senses[0].pos).toBe('verb');
+    expect(result.dictionary?.unpairedMeaningsVi).toContain('chật vật');
+    expect(result.dictionary?.senses.every(sense => sense.meaningsVi.length === 0)).toBe(true);
+  });
   it('invalidates sentence analyses when installed dictionary versions change', async () => {
     const { sentences } = setup();
     await sentences.analyze('A customword.');
@@ -132,6 +154,6 @@ describe('local language foundation', () => {
     const upgraded = new ContextLensDatabase(name); databases.push(upgraded);
     expect(await upgraded.settings.get('retained')).toEqual({ key: 'retained', value: true });
     expect(await upgraded.sentenceAnalyses.count()).toBe(0);
-    expect(upgraded.verno).toBe(13);
+    expect(upgraded.verno).toBe(15);
   });
 });

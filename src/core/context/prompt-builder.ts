@@ -5,15 +5,18 @@ import { selectionInput } from '../language/adapter';
 export function boundedContext(input: ContextInput): ContextInput {
   const deep = ['simplify', 'sentence-structure'].includes(input.mode);
   const request = input.request;
+  const needsParagraph = ['simplify', 'sentence-structure'].includes(input.mode);
   const window = new ContextWindowBuilder().build(selectionInput(request, input.sourceLang, input.targetLang));
-  const selection = request.selection.slice(0, 2000);
+  const selection = request.selection.slice(0, 400);
   const offset = Math.max(0, request.sentence.indexOf(selection));
-  const start = Math.max(0, offset - 600);
+  const sentenceLimit = deep ? 3200 : 1200;
+  const start = Math.max(0, offset - Math.floor(sentenceLimit / 2));
+  const sentence = request.sentence.slice(start, start + sentenceLimit);
   return { ...input, request: { ...request, selection,
-    sentence: request.sentence.slice(start, start + 3200),
-    previous_sentence: deep || window.needsPreviousSentence ? request.previous_sentence?.slice(-500) ?? null : null,
-    next_sentence: deep ? request.next_sentence?.slice(0, 500) ?? null : null,
-    paragraph: deep ? request.paragraph?.slice(0, 4000) : undefined,
+    sentence,
+    previous_sentence: needsParagraph || (window.needsPreviousSentence && !request.paragraph) ? request.previous_sentence?.slice(-300) ?? null : null,
+    next_sentence: needsParagraph && !request.paragraph ? request.next_sentence?.slice(0, 300) ?? null : null,
+    paragraph: needsParagraph && request.paragraph ? request.paragraph.slice(0, 4000) : undefined,
     context_mode: input.mode, source_language: input.sourceLang, target_language: input.targetLang,
     options: { ...request.options, include_grammar: ['grammar', 'sentence-structure'].includes(input.mode), include_sentence_translation: input.mode === 'simplify' }
   } };

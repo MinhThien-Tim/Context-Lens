@@ -43,6 +43,7 @@ export interface LensResult {
   context: { sentence: string; sentenceTranslation?: string; simpleEnglish?: string; previousSentence?: string; nextSentence?: string; needsPreviousSentence?: boolean };
   sense?: { id: string; alternatives: string[]; reasons: string[] };
   dictionary?: import('../../lookup/types').DictionaryResult;
-  confidence: number; providers: { lexical?: string; sentence?: string; context?: string };
+  /** Confidence in the selected meaning; deliberately separate from POS confidence. */
+  confidence: number; posConfidence?: number; providers: { lexical?: string; sentence?: string; context?: string };
   cached: boolean; offline: boolean;
 }

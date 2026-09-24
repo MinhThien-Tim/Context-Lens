@@ -45,19 +45,37 @@ it('delivers English definitions and Vietnamese meanings through the actual serv
   }
   expect(fetch).not.toHaveBeenCalled();
 });
-it('keeps every POS while prioritizing the modal-driven verb sense', async () => {
+it('keeps every POS while using syntax only to prioritize, not confirm, a sense', async () => {
   const result = await new LookupService().quick(request('guarantee', 'No teaching tool can guarantee that students learn.'), { ...defaultEngineSettings, quickEngine: 'offline' });
   expect(result.selection.lemma).toBe('guarantee');
   expect(result.dictionary?.contextPos).toBe('verb');
-  expect(result.dictionary?.senses[0]).toMatchObject({ pos: 'verb', contextMatch: true });
+  expect(result.dictionary?.senses[0]).toMatchObject({ pos: 'verb', contextMatch: false });
   expect(result.dictionary?.senses.some(sense => sense.pos === 'noun')).toBe(true);
 });
 it('treats particular as an adjective before a following noun and keeps its important meanings visible', async () => {
   const result = await new LookupService().quick(request('particular', 'What this particular template helps students do is question beliefs.'), { ...defaultEngineSettings, quickEngine: 'offline' });
   expect(result.dictionary?.contextPos).toBe('adjective');
-  expect(result.dictionary?.senses[0]).toMatchObject({ pos: 'adjective', contextMatch: true });
-  expect(result.dictionary?.senses.flatMap(sense => sense.meaningsVi).join(' ')).toMatch(/đặc biệt|đặc thù|riêng biệt/i);
-  expect(compactDictionarySenses(pairDictionarySenses(result.dictionary?.senses ?? [])).flatMap(sense => sense.meaningsVi).join(' ')).toMatch(/đặc biệt|đặc thù|riêng biệt/i);
+  expect(result.dictionary?.senses[0]).toMatchObject({ pos: 'adjective', contextMatch: false });
+  expect(result.dictionary?.unpairedMeaningsVi?.join(' ')).toMatch(/đặc biệt|đặc thù|riêng biệt/i);
+  expect(compactDictionarySenses(pairDictionarySenses(result.dictionary?.senses ?? [])).every(sense => sense.meaningsVi.length === 0)).toBe(true);
+});
+
+it('resolves continuing still from sentence structure without pairing aggregate glosses by order', async () => {
+  const result = await new LookupService().quick(request('still', 'But if you still question these beliefs, keep reading.'),
+    { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(result.lens?.sense?.id).toBe('still.continuing');
+  expect(result.dictionary?.senses.find(sense => sense.contextMatch)?.meaningsVi).toEqual(['vẫn']);
+  expect(result.dictionary?.unpairedMeaningsVi?.[0]).toMatch(/Hơn nữa/i);
+  expect(result.dictionary?.senses.find(sense => sense.definitionEn.includes('continuing'))?.meaningsVi).not.toContain('Hơn nữa.');
+});
+
+it('expands a selected word to the supported rhetorical moves collocation', async () => {
+  const sentence = 'Writers use rhetorical moves, tricks of the trade, to persuade readers.';
+  const result = await new LookupService().quick({ ...request('rhetorical', sentence), selection_start: sentence.indexOf('rhetorical') },
+    { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(result.lens?.phrase?.canonical).toBe('rhetorical moves');
+  expect(result.lens?.sense?.id).toBe('rhetorical-moves.techniques');
+  expect(result.dictionary?.senses[0]).toMatchObject({ contextMatch: true, meaningsVi: ['thủ pháp tu từ', 'chiêu thức tu từ'] });
 });
 it.each([
   ['delivered', 'deliver'], ['indicated', 'indicate'], ['guaranteed', 'guarantee'], ['children', 'child'], ['better', 'good']

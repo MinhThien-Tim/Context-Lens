@@ -74,7 +74,7 @@ export class LookupService {
     catch (error) { checkAbort(signal); if (base.difficulty.worth_learning) return base; throw error; }
     const translatedDefinition = settings.sourceLang === 'en' && settings.targetLang === 'en' ? translated.text : '';
     const translatedMeanings = settings.targetLang === 'vi' ? translated.dictionary?.meanings ?? [translated.text] : [];
-    const dictionary = translatedMeanings.length ? attachTranslationToPrimarySense(base.dictionary, translatedMeanings) : base.dictionary;
+    const dictionary = translatedMeanings.length ? addUnpairedTranslations(base.dictionary, translatedMeanings) : base.dictionary;
     return { ...base, dictionary, source: translated.cached ? 'cache' : translated.provider === 'browser' ? 'browser' : translated.offline ? 'offline' : 'translation',
       engine: { provider: translated.provider, cached: translated.cached, latencyMs: translated.latencyMs },
       quick: base.quick.lexical_unit ? base.quick : { definition_en: (base.difficulty.worth_learning ? base.quick.definition_en : '') || translated.dictionary?.definition || translatedDefinition,
@@ -112,22 +112,24 @@ export const lookupService = new LookupService();
 
 function mergeDictionaryResult(base: LookupResponse, web: NonNullable<LookupResponse['dictionary']>): LookupResponse {
   const local = base.dictionary;
-  const seen = new Set<string>();
-  const senses = [...(local?.senses ?? []), ...web.senses].map(sense => ({ ...sense, meaningsVi: sense.meaningsVi.filter(meaning => {
-    const key = meaning.normalize('NFC').toLocaleLowerCase('vi').replace(/\s+/g, ' ').trim();
-    if (!key || seen.has(key)) return false; seen.add(key); return true;
-  })})).filter(sense => sense.definitionEn || sense.meaningsVi.length);
-  const dictionary = { ...web, ...local, surfaceForm: base.selection.surface, senses };
+  const senses = [...(local?.senses ?? []), ...web.senses].map(sense => ({ ...sense,
+    meaningsVi: uniqueMeanings(sense.meaningsVi) })).filter(sense => sense.definitionEn || sense.meaningsVi.length);
+  const unpairedMeaningsVi = uniqueMeanings([...(local?.unpairedMeaningsVi ?? []), ...(web.unpairedMeaningsVi ?? [])]);
+  const dictionary = { ...web, ...local, surfaceForm: base.selection.surface, senses, unpairedMeaningsVi };
   const first = senses[0];
-  const meanings = senses.flatMap(sense => sense.meaningsVi);
+  const meanings = [...senses.flatMap(sense => sense.meaningsVi), ...unpairedMeaningsVi];
   return { ...base, dictionary, source: 'translation', engine: { provider: 'wiktionary-web', cached: false },
     quick: { ...base.quick, definition_en: base.quick.definition_en || first?.definitionEn || '', meaning_vi: base.quick.meaning_vi.length ? base.quick.meaning_vi : meanings.slice(0, 4) },
     difficulty: { ...base.difficulty, worth_learning: Boolean(first?.definitionEn || meanings.length) } };
 }
 
-function attachTranslationToPrimarySense(dictionary: LookupResponse['dictionary'], meaningsVi: string[]): LookupResponse['dictionary'] {
-  if (!dictionary?.senses.length) return dictionary;
-  const primaryIndex = Math.max(0, dictionary.senses.findIndex(sense => sense.contextMatch));
-  if (dictionary.senses[primaryIndex].meaningsVi.length) return dictionary;
-  return { ...dictionary, senses: dictionary.senses.map((sense, index) => index === primaryIndex ? { ...sense, meaningsVi } : sense) };
+function addUnpairedTranslations(dictionary: LookupResponse['dictionary'], meaningsVi: string[]): LookupResponse['dictionary'] {
+  if (!dictionary) return dictionary;
+  return { ...dictionary, unpairedMeaningsVi: uniqueMeanings([...(dictionary.unpairedMeaningsVi ?? []), ...meaningsVi]) };
+}
+
+function uniqueMeanings(meanings: string[]): string[] {
+  const seen = new Set<string>();
+  return meanings.filter(meaning => { const key = meaning.normalize('NFC').toLocaleLowerCase('vi').replace(/\s+/g, ' ').trim();
+    if (!key || seen.has(key)) return false; seen.add(key); return true; });
 }

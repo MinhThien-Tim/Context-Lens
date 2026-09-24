@@ -59,7 +59,7 @@ export default {
       if (!ip) throw new GatewayError('UNAVAILABLE');
       const input = validate(await boundedJson(request, 8192));
       const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.IP_HASH_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-      const hash = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${new Date().toISOString().slice(0, 10)}:${ip}`));
+      const hash = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(ip));
       const client = Array.from(new Uint8Array(hash), byte => byte.toString(16).padStart(2, '0')).join('');
       return await env.QUOTA.get(env.QUOTA.idFromName('global-pilot-v1')).fetch(new Request('https://internal/translate', {
         method: 'POST', headers: { 'X-Client-Hash': client }, body: JSON.stringify(input), signal: request.signal
