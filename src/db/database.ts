@@ -20,9 +20,12 @@ export interface DocumentRecord {
   content: string;
   kind: 'text' | 'markdown' | 'article' | 'pdf' | 'epub' | 'docx';
   data?: Blob;
+  pdfHash?: string;
   safeHtml?: string;
   pageOffsets?: number[];
   pdfPages?: PdfStructuredPage[];
+  pdfOcrLanguage?: 'eng' | 'eng+vie';
+  pdfTextSources?: Record<number, 'pdf' | 'ocr'>;
   highlights?: ReaderHighlight[];
   chapterOffsets?: number[];
   source?: { url?: string; author?: string; siteName?: string };
@@ -119,9 +122,12 @@ export interface PdfOcrRecord {
   key: string;
   documentId: string;
   page: number;
-  language: 'eng';
+  language: 'eng' | 'eng+vie';
   configVersion: number;
   text: string;
+  documentHash?: string;
+  renderParameters?: string;
+  blocks?: Array<{ text: string; startOffset: number; endOffset: number }>;
   createdAt: number;
 }
 

@@ -3,14 +3,14 @@ import { db, type DocumentRecord, type NoteRecord, type VocabularyRecord } from 
 
 const locationSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('text'), sectionId: z.string().optional(), absoluteOffset: z.number().int().nonnegative().optional(), scrollY: z.number(), progress: z.number(), updatedAt: z.number() }),
-  z.object({ kind: z.literal('pdf'), page: z.number(), absoluteOffset: z.number().int().nonnegative().optional(), scrollY: z.number(), progress: z.number(), updatedAt: z.number() }),
+  z.object({ kind: z.literal('pdf'), page: z.number(), absoluteOffset: z.number().int().nonnegative().optional(), pageOffset: z.number().optional(), textOffset: z.number().int().nonnegative().optional(), textSource: z.enum(['pdf', 'ocr']).optional(), viewMode: z.enum(['original', 'reading']).optional(), scrollY: z.number(), progress: z.number(), updatedAt: z.number() }),
   z.object({ kind: z.literal('epub'), chapter: z.number(), cfi: z.string().nullable(), absoluteOffset: z.number().int().nonnegative().optional(), scrollY: z.number(), progress: z.number(), updatedAt: z.number() })
 ]);
 
 const backupDocumentSchema = z.object({
   id: z.string(), title: z.string(), content: z.string(), kind: z.enum(['text', 'markdown', 'article', 'pdf', 'epub', 'docx']),
   toc: z.array(z.object({ id: z.string(), title: z.string(), level: z.number().int().min(1), parentId: z.string().optional(), page: z.number().int().positive().optional(), chapter: z.number().int().positive().optional(), offset: z.number().int().nonnegative().optional(), href: z.string().optional() })).optional(),
-  safeHtml: z.string().optional(), pageOffsets: z.array(z.number()).optional(), chapterOffsets: z.array(z.number()).optional(),
+  safeHtml: z.string().optional(), pageOffsets: z.array(z.number()).optional(), pdfHash: z.string().optional(), chapterOffsets: z.array(z.number()).optional(),
   source: z.object({ url: z.string().optional(), author: z.string().optional(), siteName: z.string().optional() }).optional(),
   createdAt: z.number(), updatedAt: z.number(), location: locationSchema
 }).strict();

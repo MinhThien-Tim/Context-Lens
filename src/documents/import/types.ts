@@ -12,6 +12,7 @@ export interface ImportedDocument {
   data?: Blob;
   safeHtml?: string;
   pageOffsets?: number[];
+  pdfHash?: string;
   pdfPages?: PdfStructuredPage[];
   chapterOffsets?: number[];
   source?: DocumentRecord['source'];

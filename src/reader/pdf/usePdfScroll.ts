@@ -4,9 +4,13 @@ import type { PdfDocumentLocation } from '../../documents/location';
 
 export function pageAtPosition(slots: HTMLElement[], root: HTMLElement, previous: number): number {
   const top = root.getBoundingClientRect().top + root.clientTop;
-  const probe = top + Math.min(80, root.clientHeight * .2);
+  const bottom = top + root.clientHeight;
+  const probe = top + root.clientHeight * .5;
   const current = slots[previous - 1]?.getBoundingClientRect();
-  if (current && current.top <= probe + 12 && current.bottom > probe - 12) return previous;
+  if (current) {
+    const visible = Math.max(0, Math.min(current.bottom, bottom) - Math.max(current.top, top));
+    if (root.clientHeight > 0 && visible >= Math.min(current.height, root.clientHeight) * .45) return previous;
+  }
   const index = slots.findIndex(slot => slot.getBoundingClientRect().bottom > probe);
   return index < 0 ? slots.length : index + 1;
 }

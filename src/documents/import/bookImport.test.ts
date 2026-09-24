@@ -2,9 +2,10 @@ import { expect, it, vi } from 'vitest';
 import { importLocalFile } from './fileImport';
 vi.mock('pdfjs-dist', () => ({
   GlobalWorkerOptions: {},
+  OPS: { paintImageXObject: 1, paintInlineImageXObject: 2, paintImageMaskXObject: 3 },
   getDocument: () => ({ destroy: vi.fn(), promise: Promise.resolve({
     numPages: 3, getMetadata: async () => ({ info: { Title: 'PDF book' } }),
-    getPage: async (page: number) => ({ getTextContent: async () => ({ items: [{ str: ['One', '', 'Three'][page - 1] }] }), cleanup: vi.fn() }),
+    getPage: async (page: number) => ({ getTextContent: async () => ({ items: [{ str: ['One', '', 'Three'][page - 1] }] }), getOperatorList: async () => ({ fnArray: [] }), cleanup: vi.fn() }),
     getOutline: async () => [{ title: 'Final', dest: 'final', items: [] }],
     getDestination: async () => [{ num: 9, gen: 0 }], getPageIndex: async () => 2
   }) })

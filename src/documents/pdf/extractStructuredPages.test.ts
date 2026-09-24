@@ -32,4 +32,19 @@ describe('structured PDF extraction', () => {
   it('marks blank and scan-only pages as poor without crashing', () => {
     expect(extractStructuredPage(3, [], 600, 800)).toEqual(expect.objectContaining({ plainText: '', blocks: [], extractionQuality: 'poor' }));
   });
+
+  it('keeps centered title lines together and flags tracked lettering for review', () => {
+    const page = extractStructuredPage(5, [
+      item('T H I R D', 205, 502, 8, 29), item(' ', 234, 502, 8, 6), item('E D I T I O N', 239, 502, 8, 39),
+      item('“THEY SAY', 130, 461, 24, 131), item(' ', 261, 461, 24, 18), item('I SAY”', 279, 461, 24, 75),
+      item('T h e M o v e s T h a t M a t t e r', 154, 431, 15, 177),
+      item('H', 223, 358, 23, 37), item('GERALD GRAFF', 184, 316, 14, 116),
+      item('CATHY BIRKENSTEIN', 163, 292, 14, 157), item('both of the University of Illinois at Chicago', 154, 271, 10, 177)
+    ], 403, 556);
+    expect(page.plainText).toContain('THIRD EDITION');
+    expect(page.plainText).toContain('“THEY SAY I SAY”');
+    expect(page.plainText).not.toMatch(/\n\nH\n\n/);
+    expect(page.extractionQuality).toBe('partial');
+    expect(page.plainText.indexOf('THIRD')).toBeLessThan(page.plainText.indexOf('GERALD'));
+  });
 });

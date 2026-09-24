@@ -48,9 +48,14 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/index.html',
         globPatterns: ['**/*.{js,css,html,svg,woff2}', 'assets/context-lens-en-vi-*.json', 'assets/wordnet-*.json', 'assets/WORDNET-LICENSE-*.md', 'assets/ATTRIBUTION-*.md'],
-        globIgnores: ['**/pdf-reader-*.js', '**/ocr-reader-*.js', '**/epub-reader-*.js', '**/docx-reader-*.js', '**/archive-runtime-*.js'],
+        globIgnores: ['**/pdf-reader-*.js', '**/ocr-reader-*.js', '**/ocr/**', '**/epub-reader-*.js', '**/docx-reader-*.js', '**/archive-runtime-*.js'],
         maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
         runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.startsWith('/ocr/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'context-lens-ocr-assets', expiration: { maxEntries: 12, maxAgeSeconds: 60 * 60 * 24 * 30 } }
+          },
           {
             urlPattern: ({ url }) => url.origin === self.location.origin && /\/assets\/.*\.(?:js|mjs)$/.test(url.pathname),
             handler: 'CacheFirst',

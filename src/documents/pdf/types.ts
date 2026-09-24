@@ -19,6 +19,8 @@ export interface PdfStructuredPage {
   plainText: string;
   blocks: PdfTextBlock[];
   extractionQuality: PdfExtractionQuality;
+  /** True when PDF operators contain a painted image; absent for older imports. */
+  hasImage?: boolean;
 }
 
 export interface PdfSourceTextItem {

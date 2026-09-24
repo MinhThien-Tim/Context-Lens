@@ -38,6 +38,7 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
     const pdfjs = await import('pdfjs-dist');
     pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
     const bytes = new Uint8Array(await file.arrayBuffer());
+    const pdfHash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), byte => byte.toString(16).padStart(2, '0')).join('');
     const loadingTask = pdfjs.getDocument({ data: bytes });
     const pdf = await loadingTask.promise;
     const metadata = await pdf.getMetadata().catch(() => null);
@@ -56,6 +57,10 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
       const sourceItems = text.items.filter((item): item is Extract<typeof item, { str: string }> => 'str' in item).map((item, index) => ({ str: item.str, transform: item.transform ?? [12, 0, 0, 12, 36, viewport.height - 36 - index * 16], width: item.width ?? item.str.length * 6, height: item.height ?? 12, hasEOL: item.hasEOL, fontName: item.fontName })) as PdfSourceTextItem[];
       if (!outline.length && pageNumber <= Math.min(40, Math.max(12, Math.ceil(pdf.numPages * .15)))) sourcePages.push({ number: pageNumber, width: viewport.width, height: viewport.height, items: sourceItems });
       const structured = extractStructuredPage(pageNumber, sourceItems, viewport.width, viewport.height);
+      if (structured.extractionQuality === 'poor') {
+        const operators = await page.getOperatorList();
+        structured.hasImage = operators.fnArray.some(operator => operator === pdfjs.OPS.paintImageXObject || operator === pdfjs.OPS.paintInlineImageXObject || operator === pdfjs.OPS.paintImageMaskXObject || operator === pdfjs.OPS.stroke || operator === pdfjs.OPS.fill || operator === pdfjs.OPS.eoFill);
+      }
       const pageText = structured.plainText;
       pageOffsets.push(offset);
       pages.push(pageText);
@@ -82,7 +87,7 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
     const content = pages.join('\n\n');
     const info = metadata?.info as { Title?: string } | undefined;
     return {
-      title: info?.Title?.trim() || baseName(file.name), kind: 'pdf', content, data: file,
+      title: info?.Title?.trim() || baseName(file.name), kind: 'pdf', content, data: file, pdfHash,
       pageOffsets, pdfPages, toc, tocSource: outlineToc.length ? 'pdf-outline' : printedToc.length ? 'pdf-printed' : toc.length ? 'pdf-headings' : 'none', tocVersion: 2, location: { kind: 'pdf', page: 1, pageOffset: 0, textOffset: 0, scrollY: 0, progress: 0, updatedAt: Date.now() }
     };
   } catch (error) {

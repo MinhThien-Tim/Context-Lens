@@ -2,7 +2,7 @@ import { useRef, useState } from 'preact/hooks';
 import type { ReaderSelection } from '../TextReader';
 import { readingSelectionFromDom, readingWordAtPoint } from './readingSelectionAdapter';
 
-export function PdfOcrReadingPage({ page, text, onLookup, onAddNote, onOpenOriginal }: { page: number; text: string; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onOpenOriginal: () => void }) {
+export function PdfOcrReadingPage({ page, text, hasPdfText = false, onSource, onLookup, onAddNote, onOpenOriginal }: { page: number; text: string; hasPdfText?: boolean; onSource?: (source: 'pdf' | 'ocr') => void; onLookup: (selection: ReaderSelection) => void; onAddNote: (selection: ReaderSelection) => void; onOpenOriginal: () => void }) {
   const root = useRef<HTMLElement>(null);
   const [pending, setPending] = useState<ReaderSelection | null>(null);
   const decorate = (selection: ReaderSelection | null) => selection ? { ...selection, pdfPage: page, ocr: true } : null;
@@ -12,7 +12,7 @@ export function PdfOcrReadingPage({ page, text, onLookup, onAddNote, onOpenOrigi
     if (selection) setPending(selection);
   };
   return <section ref={root} class="pdf-reading-page pdf-ocr-page" data-pdf-reading-page={page} data-ocr-page={page} data-reader-text aria-label={`Page ${page}, recognized text`}>
-    <header>Page {page} · OCR</header>
+    <header>Page {page} · OCR{hasPdfText && <label> Nguồn chữ <select aria-label={`Nguồn chữ trang ${page}`} value="ocr" onChange={event => onSource?.(event.currentTarget.value as 'pdf' | 'ocr')}><option value="pdf">Chữ PDF</option><option value="ocr">Chữ OCR</option></select></label>}</header>
     <p class="pdf-ocr-warning">Chữ nhận dạng có thể sai. <button onClick={onOpenOriginal}>Xem Trang gốc</button></p>
     <div class="pdf-reading-content" onPointerUp={() => window.setTimeout(capture, 0)} onKeyUp={event => { if (event.shiftKey) capture(); }} onClick={event => {
       if (window.getSelection() && !window.getSelection()!.isCollapsed) return;

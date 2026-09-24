@@ -16,6 +16,7 @@ export interface PdfDocumentLocation {
   viewMode?: 'original' | 'reading';
   pageOffset?: number;
   textOffset?: number;
+  textSource?: 'pdf' | 'ocr';
   scrollY: number;
   progress: number;
   updatedAt: number;

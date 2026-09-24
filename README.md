@@ -82,7 +82,7 @@ API keys are session-only by default. Persistent keys are stored in this browser
 - Offline/update status UI and versioned IndexedDB migrations
 - Client-first article URL import with Readability, sanitization, metadata, important images, and configurable proxy fallback
 - Lazy PDF.js and epub.js import; original files and extracted selectable text are stored for offline reading
-- PDF.js original-page rendering and an optional reading view; scanned pages can be recognized individually with browser-local Tesseract.js after an explicit click
+- PDF.js original-page rendering and an optional reading view; browser-local Tesseract.js can recognize one page or the next 3/6 pages after an explicit click
 - Web Speech pronunciation, contextual vocabulary library/search, CSV and versioned English101 JSON export, and explicit Context/Grammar panels
 - Private offline document/selection notes with edit/delete and versioned backup/restore
 - Reorderable provider priority, configuration/cooldown status, and opt-in non-sensitive engine diagnostics
@@ -96,14 +96,15 @@ API keys are session-only by default. Persistent keys are stored in this browser
 
 ## Deferred intentionally
 
-- Multi-page OCR queues, selectable OCR overlays on original pages, and bilingual OCR
 - Vocabulary review scheduling and richer phrase reconstruction
 - Hosted article proxy implementation; the client fallback contract uses `VITE_ARTICLE_PROXY_URL`
+
+When a PDF is imported or reopened, scanned pages among its first 12 pages are recognized in a sequential background queue; readable PDF text, white pages, and cached results are skipped. The reader progress bar shows OCR progress while the queue runs. Later pages remain available through the manual current-page or next 3/6-page commands. Whole-book OCR, selectable overlays on original PDF pages, and vision API fallback are excluded.
 
 ## Production readiness
 
 - The licensed English-Vietnamese distribution pack and reproducible build pipeline are complete; see `docs/DICTIONARY_PACK.md` and `release/dictionary/manifest.json`.
-- PDF original-page rendering and single-page English OCR are implemented; see `docs/PDF_OCR_STAGE2_REPORT.md` for verification and limits. `docs/PDF_RENDERING_DECISION.md` records the earlier release decision.
+- PDF original-page rendering, per-page OCR, optional English + Vietnamese OCR, and bounded OCR queues are implemented; see `docs/PDF_OCR_STAGE4_REPORT.md` for verification and limits. `docs/PDF_RENDERING_DECISION.md` records the earlier release decision.
 - Real Android/iOS QA remains a deployment gate and requires connected physical devices or a device farm; see `docs/DEVICE_QA.md` and `docs/RELEASE_READINESS.md`.
 - English101 synchronization remains deliberately postponed.
 

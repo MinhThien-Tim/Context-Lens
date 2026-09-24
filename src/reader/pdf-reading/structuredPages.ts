@@ -14,3 +14,9 @@ export function readingPagesForDocument(documentRecord: DocumentRecord): PdfStru
 export function pdfHasReadableText(documentRecord: DocumentRecord): boolean {
   return readingPagesForDocument(documentRecord).some(page => page.extractionQuality !== 'poor' && page.plainText.trim().length >= 20);
 }
+
+export function pdfPageNeedsOcr(documentRecord: DocumentRecord, pageNumber: number): boolean {
+  const page = readingPagesForDocument(documentRecord)[pageNumber - 1];
+  if (!page) return true;
+  return page.extractionQuality !== 'good' || page.plainText.trim().length < 40;
+}

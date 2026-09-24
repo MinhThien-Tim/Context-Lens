@@ -626,3 +626,61 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
 @media (max-width:767px) {
   .reader-highlight-palette { top:64px; left:50%; right:auto; transform:translateX(-50%); }
 }
+
+/* PDF controls sit above the document instead of floating over its page. */
+.pdf-viewer-wrap { position:relative; }
+.pdf-toolbar {
+  position:relative; inset:auto; z-index:2; flex:0 0 auto; min-height:40px;
+  justify-content:flex-end; gap:4px; padding:3px 12px;
+  border:0; border-bottom:1px solid var(--border); border-radius:0;
+  background:var(--surface); color:var(--text); box-shadow:none;
+}
+.pdf-toolbar button,.pdf-toolbar select {
+  min-width:36px; min-height:34px; padding:0 9px; border:1px solid var(--border);
+  border-radius:7px; background:var(--elevated-surface); color:var(--text); font-size:12px;
+}
+.pdf-toolbar select { min-width:130px; }
+.pdf-toolbar span { min-width:0; margin-right:6px; font-size:12px; }
+.pdf-viewer-wrap > .pdf-ocr-error {
+  position:static; z-index:auto; flex:0 0 auto; max-width:none; margin:0;
+  padding:7px 14px; border-radius:0; background:var(--surface);
+  color:var(--danger); box-shadow:none;
+}
+.pdf-reading-options-toggle { padding-inline:6px!important; min-width:28px!important; }
+.pdf-mode-switch { position:relative; }
+.pdf-reading-options {
+  position:absolute; z-index:40; top:calc(100% + 8px); right:0;
+  width:min(292px,calc(100vw - 20px)); padding:8px;
+  border:1px solid var(--border); border-radius:12px;
+  background:var(--elevated-surface); color:var(--text); box-shadow:var(--shadow);
+}
+.pdf-reading-options button {
+  width:100%; min-height:40px; padding:0 10px; border:0; border-radius:8px;
+  background:transparent; color:var(--text); text-align:left; font-size:13px;
+}
+.pdf-reading-options button:hover:not(:disabled),.pdf-reading-options button:focus-visible { background:var(--accent-soft); color:var(--accent); }
+.pdf-reading-options button:disabled { opacity:.48; }
+.pdf-reading-options-divider { height:1px; margin:6px 2px; background:var(--border); }
+.pdf-reading-options label { display:grid; gap:5px; padding:7px 10px; color:var(--muted); font-size:12px; }
+.pdf-reading-options select { width:100%; min-height:36px; padding:0 8px; border:1px solid var(--border); border-radius:7px; background:var(--surface); color:var(--text); }
+.pdf-reading-options p { margin:5px 10px 4px; color:var(--muted); font-size:11px; line-height:1.4; }
+.pdf-queue-status { display:flex; align-items:center; gap:7px; min-height:36px; padding:4px 12px; border-bottom:1px solid var(--border); background:var(--surface); color:var(--text); font-size:12px; }
+.pdf-queue-status span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pdf-queue-status button { flex:none; min-height:28px; padding:2px 8px; border:1px solid var(--border); border-radius:7px; background:var(--elevated-surface); color:var(--text); cursor:pointer; }
+.reader-viewport:has(.pdf-queue-status) { display:flex; flex-direction:column; height:calc(100dvh - 62px); }
+.reader-viewport:has(.pdf-queue-status) > .pdf-viewer-wrap,.reader-viewport:has(.pdf-queue-status) > .pdf-reading-view { flex:1; min-height:0; height:auto; }
+@media (max-width:767px) {
+  .pdf-toolbar { justify-content:flex-end; padding-inline:10px; }
+  .pdf-reading-options { left:0; right:auto; }
+  .reader-header:has(.pdf-mode-switch) {
+    display:grid; grid-template-columns:1fr auto; grid-template-rows:48px 42px;
+    height:90px; padding:0 8px;
+  }
+  .reader-header:has(.pdf-mode-switch) .reader-header-leading { grid-column:1; grid-row:1; min-width:0; }
+  .reader-header:has(.pdf-mode-switch) .reader-header-actions { grid-column:2; grid-row:1; min-width:0; }
+  .reader-header:has(.pdf-mode-switch) .reader-document { grid-column:1 / -1; grid-row:2; justify-content:center; width:100%; }
+  .reader-header:has(.pdf-mode-switch) .reader-header-position { justify-content:center; width:100%; }
+  .reader-shell:has(.pdf-mode-switch) .progress-line { top:90px; }
+  .pdf-viewer-wrap,.pdf-reading-view { height:calc(100dvh - 92px); }
+  .reader-viewport:has(.pdf-queue-status) { height:calc(100dvh - 92px); }
+}

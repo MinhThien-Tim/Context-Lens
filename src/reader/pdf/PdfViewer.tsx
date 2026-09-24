@@ -8,13 +8,10 @@ import { usePdfDocument } from './usePdfDocument';
 import { usePdfScroll } from './usePdfScroll';
 import { useDesktop } from '../../components/useDesktop';
 import type { MarkupTool } from '../MarkupPalette';
-import type { PdfOcrRecord } from '../../db/database';
-import { recognizePdfPage } from '../../documents/pdf/ocrWorker';
-import { saveOcrPage } from '../../documents/pdf/ocrStore';
 
 const DEFAULT_SIZE = { width: 612, height: 792 };
 
-export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, activeMarkupTool, activeMarkupColor = 'yellow', onLocation, onLookup, onAddNote, navigationToken = 0, onHighlight, onErase, ocrPages = [], onOcrResult, onOpenReading }: { navigationToken?: number; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: import('../../db/database').ReaderHighlight['color']; onHighlight?: (highlight: import('../../db/database').ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; documentRecord: DocumentRecord; location: PdfDocumentLocation; zoomMode: PdfZoomMode; onZoomMode: (mode: PdfZoomMode) => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void; ocrPages?: PdfOcrRecord[]; onOcrResult?: (record: PdfOcrRecord) => void; onOpenReading?: () => void }) {
+export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, activeMarkupTool, activeMarkupColor = 'yellow', onLocation, onLookup, onAddNote, navigationToken = 0, onHighlight, onErase, ocrBusy = false }: { navigationToken?: number; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: import('../../db/database').ReaderHighlight['color']; onHighlight?: (highlight: import('../../db/database').ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; documentRecord: DocumentRecord; location: PdfDocumentLocation; zoomMode: PdfZoomMode; onZoomMode: (mode: PdfZoomMode) => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void; ocrBusy?: boolean }) {
   const desktop = useDesktop();
   const [mobileZoom, setMobileZoom] = useState<PdfZoomMode>('fit-width');
   const effectiveZoom = desktop ? zoomMode : mobileZoom;
@@ -24,10 +21,6 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, acti
   const rootRef = useRef<HTMLDivElement>(null);
   const [sizes, setSizes] = useState<Record<number, PdfPageSize>>({});
   const [geometryError, setGeometryError] = useState<string | null>(null);
-  const [ocrStatus, setOcrStatus] = useState<string | null>(null);
-  const [ocrProgress, setOcrProgress] = useState(0);
-  const [ocrError, setOcrError] = useState<string | null>(null);
-  const ocrController = useRef<AbortController | null>(null);
   const [visible, setVisible] = useState(location.page);
   const [customScale, setCustomScale] = useState(1);
   const [bounds, setBounds] = useState({ width: window.innerWidth, height: window.innerHeight - 110 });
@@ -35,31 +28,6 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, acti
   const geometryKey = `${effectiveZoom}:${customScale}:${bounds.width}:${bounds.height}`;
   // Keep the current page and one page ahead (or behind at the end) mounted.
   const neighbor = visible < (pdf?.numPages ?? 1) ? visible + 1 : visible - 1;
-  const recognized = ocrPages.some(record => record.page === visible);
-  const extractedText = documentRecord.pdfPages?.[visible - 1]?.plainText ?? documentRecord.content.slice(pdfOffsetForPage(documentRecord.pageOffsets, visible), documentRecord.pageOffsets?.[visible] ?? documentRecord.content.length);
-  const needsOcr = extractedText.trim().length < 40;
-  useEffect(() => () => ocrController.current?.abort(), []);
-  const startOcr = async () => {
-    if (!pdf || ocrController.current || recognized || !needsOcr) return;
-    const controller = new AbortController(); ocrController.current = controller;
-    setOcrError(null); setOcrStatus('Đang chuẩn bị OCR'); setOcrProgress(0);
-    const pageNumber = visible;
-    try {
-      const text = await recognizePdfPage(pdf, pageNumber, controller.signal, (status, progress) => {
-        if (!controller.signal.aborted) { setOcrStatus(ocrStatusLabel(status)); setOcrProgress(Math.round(progress * 100)); }
-      });
-      if (controller.signal.aborted) return;
-      if (!text) throw new Error('Không nhận dạng được chữ trên trang này. Hãy thử bản scan rõ hơn.');
-      const record = await saveOcrPage(documentRecord.id, pageNumber, text);
-      onOcrResult?.(record);
-      setOcrStatus(null);
-    } catch (error) {
-      if (!controller.signal.aborted) setOcrError(error instanceof DOMException && error.name === 'QuotaExceededError' ? 'Thiết bị không đủ dung lượng để lưu chữ nhận dạng.' : 'Không thể nhận dạng trang này. Kiểm tra kết nối tải dữ liệu OCR rồi thử lại.');
-    } finally {
-      if (ocrController.current === controller) ocrController.current = null;
-      if (controller.signal.aborted) setOcrStatus(null);
-    }
-  };
 
   // Resolve geometry without allocating canvases before restoring the saved location.
   useEffect(() => {
@@ -101,28 +69,16 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, acti
   if (!pdf || !ready) return <div class="pdf-state" role="status">Opening PDF…</div>;
   return <div class="pdf-viewer-wrap">
     <div class="pdf-toolbar" aria-label="PDF controls">
-      {needsOcr && !recognized && <button disabled={Boolean(ocrStatus)} onClick={() => void startOcr()}>Nhận dạng chữ trang này</button>}
-      {recognized && <button onClick={onOpenReading}>Đọc chữ đã nhận dạng</button>}
-      {ocrStatus && <><span role="status">{ocrStatus} {ocrProgress}%</span><button onClick={() => ocrController.current?.abort()}>Hủy OCR</button></>}
-      {desktop ? <><button aria-label="Zoom out" onClick={() => { changeZoom('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>−</button><button aria-label="Zoom in" onClick={() => { changeZoom('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>+</button><button aria-pressed={effectiveZoom === 'fit-width'} onClick={() => changeZoom('fit-width')}>Fit width</button><button aria-pressed={effectiveZoom === 'fit-page'} onClick={() => changeZoom('fit-page')}>Fit page</button></> : <div class="pdf-more"><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>•••</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => { changeZoom('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>Zoom out</button><button onClick={() => { changeZoom('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>Zoom in</button><button onClick={() => changeZoom('fit-width')}>Fit width</button><button onClick={() => changeZoom('fit-page')}>Fit page</button></div>}</div>}
+      {desktop ? <><button aria-label="Zoom out" onClick={() => { changeZoom('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>−</button><button aria-label="Zoom in" onClick={() => { changeZoom('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>+</button><select aria-label="PDF zoom" value={effectiveZoom} onChange={event => changeZoom(event.currentTarget.value as PdfZoomMode)}><option value="fit-width">Vừa chiều ngang</option><option value="fit-page">Vừa trang</option><option value="custom">Tùy chỉnh</option></select></> : <div class="pdf-more"><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>•••</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => { changeZoom('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>Zoom out</button><button onClick={() => { changeZoom('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>Zoom in</button><button onClick={() => changeZoom('fit-width')}>Fit width</button><button onClick={() => changeZoom('fit-page')}>Fit page</button></div>}</div>}
     </div>
-    {needsOcr && !recognized && !ocrStatus && <p class="pdf-ocr-notice">OCR tiếng Anh chạy trên thiết bị. Lần đầu cần tải thư viện, WebAssembly và dữ liệu ngôn ngữ (ước tính 5–10 MB, tùy trình duyệt). Chữ nhận dạng có thể sai.</p>}
-    {ocrError && <p class="pdf-ocr-error" role="alert">{ocrError} <button onClick={() => void startOcr()}>Thử lại</button></p>}
     <div ref={rootRef} class="pdf-scroll" tabIndex={0}>
       {Array.from({ length: pdf.numPages }, (_, index) => index + 1).map(pageNumber => {
         const size = sizes[pageNumber] ?? DEFAULT_SIZE;
         const scale = scaleFor(size);
         return <div key={pageNumber} class="pdf-page-slot" data-pdf-page={pageNumber} style={{ width: `${size.width * scale}px`, height: `${size.height * scale}px` }}>
-          {(pageNumber === visible || (!ocrStatus && pageNumber === neighbor)) && <PdfPage pdf={pdf} pageNumber={pageNumber} scale={scale} active documentText={documentRecord.content} pageOffset={pdfOffsetForPage(documentRecord.pageOffsets, pageNumber)} onSize={() => {}} onNavigate={page => goTo(page)} pageEnd={documentRecord.pageOffsets?.[pageNumber] ?? documentRecord.content.length} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={onHighlight} onErase={onErase} onLookup={onLookup} onAddNote={onAddNote} />}
+          {(pageNumber === visible || (!ocrBusy && pageNumber === neighbor)) && <PdfPage pdf={pdf} pageNumber={pageNumber} scale={scale} active documentText={documentRecord.content} pageOffset={pdfOffsetForPage(documentRecord.pageOffsets, pageNumber)} onSize={() => {}} onNavigate={page => goTo(page)} pageEnd={documentRecord.pageOffsets?.[pageNumber] ?? documentRecord.content.length} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={onHighlight} onErase={onErase} onLookup={onLookup} onAddNote={onAddNote} />}
         </div>;
       })}
     </div>
   </div>;
-}
-
-function ocrStatusLabel(status: string): string {
-  if (/render/i.test(status)) return 'Đang tạo ảnh trang PDF';
-  if (/recogniz/i.test(status)) return 'Đang nhận dạng chữ';
-  if (/load|initializ/i.test(status)) return 'Đang tải dữ liệu OCR tiếng Anh';
-  return 'Đang xử lý OCR';
 }

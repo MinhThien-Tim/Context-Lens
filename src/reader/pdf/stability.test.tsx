@@ -6,10 +6,21 @@ import { PdfTextIndex } from './PdfTextIndex';
 import { pdfSelectionFromDom } from './selectionAdapter';
 import { canvasBackingSize, MAX_CANVAS_PIXELS } from './renderBudget';
 import { createLocationPersistence } from './locationPersistence';
-import { usePdfScroll } from './usePdfScroll';
+import { pageAtPosition, usePdfScroll } from './usePdfScroll';
 import type { PdfDocumentLocation } from '../../documents/location';
 
 afterEach(() => { document.body.replaceChildren(); window.getSelection()?.removeAllRanges(); vi.restoreAllMocks(); vi.useRealTimers(); });
+
+it('keeps the final PDF page active when the viewport cannot align it to the top', () => {
+  const root = document.createElement('div');
+  Object.defineProperty(root, 'clientHeight', { value: 600 });
+  root.getBoundingClientRect = () => ({ top: 0, bottom: 600, height: 600 }) as DOMRect;
+  const first = document.createElement('div');
+  first.getBoundingClientRect = () => ({ top: -400, bottom: 200, height: 600 }) as DOMRect;
+  const second = document.createElement('div');
+  second.getBoundingClientRect = () => ({ top: 200, bottom: 800, height: 600 }) as DOMRect;
+  expect(pageAtPosition([first, second], root, 2)).toBe(2);
+});
 
 function select(parts: string[], text: string, start: [number, number], end: [number, number], reverse = false) {
   const root = document.createElement('div');
