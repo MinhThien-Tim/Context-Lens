@@ -18,10 +18,10 @@ test('Bright homepage keeps readable text with dark reader preference on mobile'
       text: getComputedStyle(document.querySelector('.home-shell')!).getPropertyValue('--text').trim(),
     };
   });
-  expect(colors.heading).toBe('rgb(22, 52, 49)');
+  expect(colors.heading).toBe('rgb(23, 32, 51)');
   expect(colors.card).toBe(colors.heading);
   expect(colors.filter).toBe(colors.heading);
-  expect(colors.text).toBe('#163431');
+  expect(colors.text).toBe('#172033');
 });
 
 for (const width of [320, 360, 390, 430]) {
