@@ -172,7 +172,7 @@ export function PdfPage({ pdf, pageNumber, scale, active, documentText, pageOffs
     if (!overlay || !index) return;
     overlay.replaceChildren();
     const bounds = overlay.getBoundingClientRect();
-    for (const highlight of highlights.filter(item => item.endOffset > pageOffset && item.startOffset < (pageEnd ?? documentText.length))) for (const range of index.ranges(highlight.startOffset, highlight.endOffset)) {
+    for (const highlight of highlights.filter(item => item.ocrPage === undefined && item.endOffset > pageOffset && item.startOffset < (pageEnd ?? documentText.length))) for (const range of index.ranges(highlight.startOffset, highlight.endOffset)) {
       for (const rect of range.getClientRects()) {
         const mark = document.createElement('span');
         mark.className = `pdf-saved-highlight highlight-${highlight.color} ${highlight.style === 'underline' ? 'underline' : ''}`;

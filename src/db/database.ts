@@ -40,6 +40,9 @@ export interface ReaderHighlight {
   id: string;
   startOffset: number;
   endOffset: number;
+  /** OCR offsets are local to a recognized page and language. */
+  ocrPage?: number;
+  ocrLanguage?: 'eng' | 'eng+vie';
   color: 'yellow' | 'pink' | 'blue';
   style?: 'highlight' | 'underline';
   createdAt: number;

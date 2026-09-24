@@ -154,7 +154,9 @@ test('zoom, links, multiline selection and five mode switches preserve interacti
   await expect(page.locator('.pdf-annotation-layer a').first()).toHaveAttribute('href', 'https://example.com/');
   if (!info.project.use.isMobile) {
     for (const control of ['Zoom in', 'Zoom out', 'Fit width', 'Fit page']) {
-      await page.getByRole('button', { name: control, exact: true }).click();
+      if (control === 'Fit width' || control === 'Fit page')
+        await page.getByRole('combobox', { name: 'PDF zoom' }).selectOption(control === 'Fit width' ? 'fit-width' : 'fit-page');
+      else await page.getByRole('button', { name: control, exact: true }).click();
       await selectPhrase(page);
       await page.getByRole('button', { name: 'Close selection actions' }).click();
     }

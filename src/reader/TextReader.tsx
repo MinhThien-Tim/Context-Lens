@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { buildSentenceIndex, normalizeSelection, sentenceContextAt, sentenceContextForRange, wordAtPoint } from '../lookup/context';
+import type { ReaderHighlight } from '../db/database';
+import type { MarkupTool } from './MarkupPalette';
+import { highlightedText } from './pdf-reading/PdfReadingBlock';
+import { renderHtmlHighlights } from './htmlHighlights';
 
 export interface ReaderSelection {
   text: string;
@@ -26,11 +30,15 @@ function rangeFromPoint(x: number, y: number): Range | null {
   return range;
 }
 
-export function TextReader({ content, safeHtml, onLookup, style, offsets, onAddNote }: { content: string; safeHtml?: string; onLookup: (selection: ReaderSelection) => void; style: Record<string, string | number>; offsets?: number[]; onAddNote?: (selection: ReaderSelection) => void }) {
+export function TextReader({ content, safeHtml, onLookup, style, offsets, onAddNote, highlights = [], activeMarkupTool, activeMarkupColor = 'yellow', onHighlight, onErase }: { content: string; safeHtml?: string; onLookup: (selection: ReaderSelection) => void; style: Record<string, string | number>; offsets?: number[]; onAddNote?: (selection: ReaderSelection) => void; highlights?: ReaderHighlight[]; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: ReaderHighlight['color']; onHighlight?: (highlight: ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void }) {
   const rootRef = useRef<HTMLElement>(null);
   const ignoreClick = useRef(false);
   const [pendingSelection, setPendingSelection] = useState<ReaderSelection | null>(null);
   useEffect(() => { buildSentenceIndex(rootRef.current?.textContent ?? content); }, [content, safeHtml]);
+  useEffect(() => {
+    const richRoot = rootRef.current?.querySelector<HTMLElement>('.article-content');
+    if (richRoot) renderHtmlHighlights(richRoot, highlights);
+  }, [safeHtml, highlights]);
 
   const readSelectedPhrase = (): ReaderSelection | null => {
     const selection = window.getSelection();
@@ -45,25 +53,37 @@ export function TextReader({ content, safeHtml, onLookup, style, offsets, onAddN
     const offset = before.toString().length;
     const context = sentenceContextForRange(fullText, offset, offset + range.toString().length);
     const rect = range.getBoundingClientRect?.() ?? { left: 0, top: 0, right: 0, bottom: 0 };
-    return { text, offset, type: text.includes(' ') ? normalizeSelection(context.current) === text ? 'sentence' : 'phrase' : 'word', context,
+    return { text, offset, endOffset: offset + range.toString().length, type: text.includes(' ') ? normalizeSelection(context.current) === text ? 'sentence' : 'phrase' : 'word', context,
       anchor: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom } };
   };
 
-  const captureSelection = () => {
+  const captureSelection = (commitMarkup = false) => {
     const next = readSelectedPhrase();
-    if (next) { setPendingSelection(next); ignoreClick.current = true; }
+    if (next) {
+      ignoreClick.current = true;
+      if (commitMarkup && activeMarkupTool) applyMarkup(next, activeMarkupTool);
+      else setPendingSelection(next);
+    }
+  };
+  const applyMarkup = (selection: ReaderSelection, tool: MarkupTool) => {
+    const end = selection.endOffset ?? selection.offset + selection.text.length;
+    if (tool === 'eraser') onErase?.(selection.offset, end);
+    else onHighlight?.({ id: crypto.randomUUID(), startOffset: selection.offset, endOffset: end, color: activeMarkupColor, style: tool, createdAt: Date.now() });
+    setPendingSelection(null);
+    window.getSelection()?.removeAllRanges();
   };
   useEffect(() => {
     let selectionTimer: number | undefined;
     const onSelectionChange = () => {
       const selection = window.getSelection();
       if (!selection || selection.isCollapsed) { setPendingSelection(null); return; }
+      if (activeMarkupTool) return;
       clearTimeout(selectionTimer);
-      selectionTimer = window.setTimeout(captureSelection, 150);
+      selectionTimer = window.setTimeout(() => captureSelection(), 150);
     };
     document.addEventListener('selectionchange', onSelectionChange);
     return () => { clearTimeout(selectionTimer); document.removeEventListener('selectionchange', onSelectionChange); };
-  }, []);
+  }, [content, safeHtml, activeMarkupTool]);
 
   const starts = offsets?.length ? offsets : [0, ...Array.from(content.matchAll(/\n\s*\n/g), match => match.index + match[0].length).filter(offset => offset < content.length)];
   return (
@@ -71,11 +91,12 @@ export function TextReader({ content, safeHtml, onLookup, style, offsets, onAddN
     <article
       ref={rootRef}
       data-reader-text
-      class="reader-text"
+      class={`reader-text ${activeMarkupTool ? `highlight-mode-active markup-${activeMarkupTool}` : ''}`}
       tabIndex={0}
       aria-label="Document content. Select text and press Enter to look up a phrase."
       style={style}
-      onPointerUp={() => { window.setTimeout(captureSelection, 0); }}
+      onPointerUp={() => { window.setTimeout(() => captureSelection(Boolean(activeMarkupTool)), 0); }}
+      onKeyUp={event => { if (event.shiftKey) captureSelection(Boolean(activeMarkupTool)); }}
       onKeyDown={(event) => { if (event.key === 'Enter') { const selected = readSelectedPhrase(); if (selected) { onLookup(selected); event.preventDefault(); } } }}
       onClick={(event) => {
         if (ignoreClick.current) { ignoreClick.current = false; return; }
@@ -91,9 +112,9 @@ export function TextReader({ content, safeHtml, onLookup, style, offsets, onAddN
     >
       {safeHtml
         ? <div class="article-content" dangerouslySetInnerHTML={{ __html: safeHtml }} />
-        : starts.map((offset, index, starts) => <p class="text-segment" data-offset={offset} key={index}>{content.slice(offset, starts[index + 1] ?? content.length)}</p>)}
+        : starts.map((offset, index, starts) => <p class="text-segment" data-offset={offset} key={index}>{highlightedText(content.slice(offset, starts[index + 1] ?? content.length), offset, highlights.filter(item => item.ocrPage === undefined))}</p>)}
     </article>
-    {pendingSelection && <div class="selection-actions"><button class="selection-lookup" onPointerDown={(event) => event.preventDefault()} onClick={() => { onLookup(pendingSelection); setPendingSelection(null); window.getSelection()?.removeAllRanges(); }}>Look up selection</button>{onAddNote && <button class="secondary-button" onPointerDown={event => event.preventDefault()} onClick={() => { onAddNote(pendingSelection); setPendingSelection(null); window.getSelection()?.removeAllRanges(); }}>Note</button>}</div>}
+    {pendingSelection && <div class="selection-actions"><button class="selection-lookup" onPointerDown={(event) => event.preventDefault()} onClick={() => { onLookup(pendingSelection); setPendingSelection(null); window.getSelection()?.removeAllRanges(); }}>Look up selection</button>{activeMarkupTool && <button class="secondary-button" onPointerDown={event => event.preventDefault()} onClick={() => applyMarkup(pendingSelection, activeMarkupTool)}>{activeMarkupTool === 'eraser' ? 'Erase' : activeMarkupTool === 'underline' ? 'Underline' : 'Highlight'}</button>}{onAddNote && <button class="secondary-button" onPointerDown={event => event.preventDefault()} onClick={() => { onAddNote(pendingSelection); setPendingSelection(null); window.getSelection()?.removeAllRanges(); }}>Note</button>}</div>}
     </>
   );
 }

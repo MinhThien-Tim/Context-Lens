@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { eraseHighlights, upsertHighlight } from './highlights';
 
 describe('reading highlights', () => {
+  it('keeps OCR annotations separate from PDF text and other OCR pages', () => {
+    const pdf = { id: 'pdf', startOffset: 0, endOffset: 5, color: 'yellow' as const, createdAt: 1 };
+    const ocr = { ...pdf, id: 'ocr', ocrPage: 2, ocrLanguage: 'eng' as const };
+    const saved = upsertHighlight([pdf], ocr);
+    expect(saved).toHaveLength(2);
+    expect(eraseHighlights(saved, 0, 5, 2, 'eng')).toEqual([pdf]);
+    expect(eraseHighlights(saved, 0, 5, 3, 'eng')).toEqual(saved);
+  });
   it('keeps every distinct highlight when selections are saved in sequence', () => {
     const first = { id: 'one', startOffset: 1, endOffset: 4, color: 'yellow' as const, createdAt: 1 };
     const second = { id: 'two', startOffset: 8, endOffset: 12, color: 'blue' as const, createdAt: 2 };

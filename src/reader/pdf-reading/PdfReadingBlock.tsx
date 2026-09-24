@@ -23,7 +23,7 @@ export function PdfReadingBlock({ block, highlights = [] }: { block: PdfTextBloc
   return <p {...props}>{content}</p>;
 }
 
-function highlightedText(text: string, blockOffset: number, highlights: ReaderHighlight[]) {
+export function highlightedText(text: string, blockOffset: number, highlights: ReaderHighlight[]) {
   const relevant = highlights.filter(item => item.endOffset > blockOffset && item.startOffset < blockOffset + text.length).sort((a, b) => a.startOffset - b.startOffset);
   if (!relevant.length) return text;
   const parts = [];
