@@ -2,6 +2,7 @@ import { cacheKey, normalizeText, type ResultCache } from '../cache';
 import { checkAbort, EngineError, withDeadline } from '../errors';
 import { SharedRequests } from '../requests';
 import { ProviderHealthManager } from './provider-health';
+import { evaluatePublicTranslationQuality } from './public-quality';
 import type { TranslationInput, TranslationProvider, TranslationResult } from './types';
 export const TRANSLATION_VERSION = 'translation-v1';
 export function translationKey(input: TranslationInput): string {
@@ -19,6 +20,7 @@ export class TranslationRouter {
       if (cached) return { ...cached, sourceText: input.text, cached: true };
       const pair = `${input.sourceLang ?? 'auto'}>${input.targetLang}`;
       let lastError = new EngineError(this.online() ? 'UNSUPPORTED_LANGUAGE' : 'OFFLINE');
+      let deferred: TranslationResult | undefined;
       for (const provider of [...this.providers].sort((a, b) => a.priority - b.priority)) {
         checkAbort(signal);
         if ((provider.network && !this.online()) || !provider.supports(input.sourceLang ?? 'auto', input.targetLang) || !this.health.available(provider.id, pair)) continue;
@@ -33,6 +35,11 @@ export class TranslationRouter {
           checkAbort(signal);
           this.health.success(provider.id, pair);
           const normalized = { ...result, provider: provider.id, latencyMs: performance.now() - start };
+          if (provider.id === 'mymemory') {
+            const quality = evaluatePublicTranslationQuality(input, normalized, input.localContext);
+            if (quality === 'reject') { lastError = new EngineError('INVALID_RESPONSE'); continue; }
+            if (quality === 'uncertain' && this.fallback) { deferred = normalized; continue; }
+          }
           await this.cache.put(key, normalized, provider.id, pair);
           return normalized;
         } catch (error) {
@@ -41,6 +48,11 @@ export class TranslationRouter {
           if (lastError.code !== 'UNSUPPORTED_LANGUAGE') this.health.failure(provider.id, pair);
           if (!this.fallback) break;
         }
+      }
+      if (deferred) {
+        checkAbort(signal);
+        await this.cache.put(key, deferred, deferred.provider, pair);
+        return deferred;
       }
       throw lastError;
     }, input.signal);

@@ -70,7 +70,9 @@ export class LookupService {
     }
     if (!optionalTranslationEnabled(settings)) return base;
     let translated: TranslationResult;
-    try { translated = await this.translation!.translate({ text: request.selection, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: request.selection_type, signal }); }
+    try { translated = await this.translation!.translate({ text: request.selection, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: request.selection_type, signal,
+      localContext: base.dictionary ? { lemma: base.dictionary.lemma, pos: base.dictionary.contextPos, meaningsVi: [...base.dictionary.senses.flatMap(s => s.meaningsVi), ...(base.dictionary.unpairedMeaningsVi ?? [])],
+        contextConfidence: base.dictionary.contextConfidence, senseConfidence: base.dictionary.senseConfidence } : undefined }); }
     catch (error) { checkAbort(signal); if (base.difficulty.worth_learning) return base; throw error; }
     const translatedDefinition = settings.sourceLang === 'en' && settings.targetLang === 'en' ? translated.text : '';
     const translatedMeanings = settings.targetLang === 'vi' ? translated.dictionary?.meanings ?? [translated.text] : [];

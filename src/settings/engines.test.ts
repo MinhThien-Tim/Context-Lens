@@ -16,7 +16,9 @@ describe('engine settings', () => {
     const providers = translationProviders(defaultEngineSettings).sort((a, b) => a.priority - b.priority);
     const managedIndex = providers.findIndex(provider => provider.id === 'online-auto');
     expect(managedIndex).toBeGreaterThan(providers.findIndex(provider => provider.id === 'vocabulary'));
-    expect(managedIndex).toBeLessThan(providers.findIndex(provider => provider.id === 'mymemory'));
+    expect(managedIndex).toBeGreaterThan(providers.findIndex(provider => provider.id === 'mymemory'));
+    const withGateway = translationProviders({ ...defaultEngineSettings, googleProvider: true }).sort((a, b) => a.priority - b.priority);
+    expect(withGateway.findIndex(provider => provider.id === 'online-auto')).toBeLessThan(withGateway.findIndex(provider => provider.id === 'google'));
     expect(translationProviders({ ...defaultEngineSettings, managedTranslation: false }).some(p => p.id === 'online-auto')).toBe(false);
     expect(translationProviders({ ...defaultEngineSettings, onlineTranslationProvider: 'bing-web' }).some(p => p.id === 'bing-web')).toBe(true);
     expect(translationProviders({ ...defaultEngineSettings, quickEngine: 'offline' }).every(p => !p.network)).toBe(true);

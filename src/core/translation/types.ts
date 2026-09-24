@@ -6,6 +6,7 @@ export interface TranslationInput {
   targetLang: string;
   mode?: TranslationMode;
   signal?: AbortSignal;
+  localContext?: import('./public-quality').PublicTranslationContext;
 }
 export interface TranslationResult {
   text: string;

@@ -10,6 +10,43 @@ function provider(id: string, priority: number, translate = vi.fn().mockResolved
   return { id, priority, translate, tier: 'stable', network: false, timeoutMs: 15, isAvailable: () => true, supports: () => true };
 }
 describe('TranslationRouter', () => {
+  it.each([['prerequisite', 'điều kiện tiên quyết'], ['lush', 'tươi tốt']])('accepts MyMemory for %s without calling Google', async (text, translated) => {
+    const publicProvider = provider('mymemory', 1, vi.fn().mockResolvedValue({ ...result, text: translated }));
+    const google = provider('online-auto', 2);
+    const store = cache();
+    expect((await new TranslationRouter([publicProvider, google], store).translate({ ...input, text })).provider).toBe('mymemory');
+    expect(google.translate).not.toHaveBeenCalled();
+    expect(store.put).toHaveBeenCalledTimes(1);
+  });
+  it('defers an ambiguous POS mismatch to Google', async () => {
+    const publicProvider = provider('mymemory', 1, vi.fn().mockResolvedValue({ ...result, text: 'phí' }));
+    const google = provider('online-auto', 2);
+    const routed = await new TranslationRouter([publicProvider, google], cache()).translate({ ...input, text: 'charge', localContext: { pos: 'verb' } });
+    expect(routed.provider).toBe('online-auto');
+    expect(google.translate).toHaveBeenCalledTimes(1);
+  });
+  it('rejects unchanged MyMemory text and calls Google', async () => {
+    const publicProvider = provider('mymemory', 1, vi.fn().mockResolvedValue({ ...result, text: input.text }));
+    const google = provider('online-auto', 2);
+    const store = cache();
+    expect((await new TranslationRouter([publicProvider, google], store).translate(input)).provider).toBe('online-auto');
+    expect(store.put).toHaveBeenCalledTimes(1);
+  });
+  it('returns and caches an uncertain candidate after Google times out', async () => {
+    const publicProvider = provider('mymemory', 1, vi.fn().mockResolvedValue({ ...result, text: 'phí' }));
+    const google = provider('online-auto', 2, vi.fn(() => new Promise(() => {})));
+    const store = cache();
+    expect((await new TranslationRouter([publicProvider, google], store).translate({ ...input, text: 'charge', localContext: { pos: 'verb' } })).provider).toBe('mymemory');
+    expect(store.put).toHaveBeenCalledTimes(1);
+  });
+  it('uses a cached translation before either network provider', async () => {
+    const store = cache(); store.get.mockResolvedValue(result);
+    const publicProvider = provider('mymemory', 1);
+    const google = provider('online-auto', 2);
+    await new TranslationRouter([publicProvider, google], store).translate(input);
+    expect(publicProvider.translate).not.toHaveBeenCalled();
+    expect(google.translate).not.toHaveBeenCalled();
+  });
   it('checks cache before providers', async () => {
     const store = cache(); store.get.mockResolvedValue(result);
     const browser = provider('browser', 1);

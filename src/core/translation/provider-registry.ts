@@ -25,7 +25,9 @@ export function translationProviders(settings: EngineSettings): TranslationProvi
     const selection = settings.onlineTranslationProvider === 'auto' && !settings.automaticFallback ? 'google-web' : settings.onlineTranslationProvider;
     providers.push(new ManagedTranslationProvider('/api/translate', selection));
     const managed = providers.at(-1)!;
-    managed.priority = Math.max(0, ...providers.filter(p => !p.network).map(p => p.priority)) + 1;
+    managed.priority = settings.quickEngine === 'auto'
+      ? Math.max(0, ...providers.filter(p => ['dictionary', 'vocabulary', 'browser', 'mymemory'].includes(p.id)).map(p => p.priority)) + 1
+      : Math.max(0, ...providers.filter(p => !p.network).map(p => p.priority)) + 1;
   }
   if (settings.quickEngine === 'offline') return providers.filter(provider => ['dictionary', 'vocabulary'].includes(provider.id));
   if (settings.quickEngine !== 'auto') {
