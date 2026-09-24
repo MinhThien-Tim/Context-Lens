@@ -21,7 +21,7 @@ describe('TranslationRouter', () => {
   it('defers an ambiguous POS mismatch to Google', async () => {
     const publicProvider = provider('mymemory', 1, vi.fn().mockResolvedValue({ ...result, text: 'phí' }));
     const google = provider('online-auto', 2);
-    const routed = await new TranslationRouter([publicProvider, google], cache()).translate({ ...input, text: 'charge', localContext: { pos: 'verb' } });
+    const routed = await new TranslationRouter([publicProvider, google], cache()).translate({ ...input, text: 'charge', localContext: { pos: 'verb', meaningsVi: ['buộc tội', 'sạc', 'lao tới'], senseConfidence: 0.3 } });
     expect(routed.provider).toBe('online-auto');
     expect(google.translate).toHaveBeenCalledTimes(1);
   });
@@ -36,7 +36,7 @@ describe('TranslationRouter', () => {
     const publicProvider = provider('mymemory', 1, vi.fn().mockResolvedValue({ ...result, text: 'phí' }));
     const google = provider('online-auto', 2, vi.fn(() => new Promise(() => {})));
     const store = cache();
-    expect((await new TranslationRouter([publicProvider, google], store).translate({ ...input, text: 'charge', localContext: { pos: 'verb' } })).provider).toBe('mymemory');
+    expect((await new TranslationRouter([publicProvider, google], store).translate({ ...input, text: 'charge', localContext: { pos: 'verb', meaningsVi: ['buộc tội', 'sạc', 'lao tới'], senseConfidence: 0.3 } })).provider).toBe('mymemory');
     expect(store.put).toHaveBeenCalledTimes(1);
   });
   it('uses a cached translation before either network provider', async () => {

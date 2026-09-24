@@ -74,6 +74,7 @@ export function App() {
   const [libraryLoading, setLibraryLoading] = useState(false);
   const [preferences, setPreferences] = useState<AppPreferences>(defaultPreferences);
   const [aiSettings, setAiSettings] = useState<AiSettings>(defaultAiSettings);
+  const [geminiVerified, setGeminiVerified] = useState(false);
   const [engineSettings, setEngineSettings] = useState<EngineSettings>(defaultEngineSettings);
   const [contextResult, setContextResult] = useState<LookupResponse | null>(null);
   const [showReaderSettings, setShowReaderSettings] = useState(false);
@@ -326,6 +327,7 @@ export function App() {
     void lookupService.explain(makeRequest(activeSelection, preferences.languageMode), aiSettings, engineSettings, mode, controller.signal).then(response => {
       if (controller.signal.aborted) return;
       setContextResult(response.result);
+      if (aiSettings.provider === 'gemini' && response.provider === 'user-api' && !response.cached && !response.status) setGeminiVerified(true);
       if (response.status) setError(response.status === 'quota' ? 'Context quota reached. Your quick result is still available.' : response.status === 'offline' ? 'Offline result. A deeper explanation is not cached yet.' : 'No deeper explanation is available from the enabled engines.');
     }).catch(() => {
       if (!controller.signal.aborted) setError('Context is unavailable. Your quick result is still available.');
@@ -350,11 +352,12 @@ export function App() {
     }).catch(() => { if (!controller.signal.aborted) setError('Sentence translation is unavailable. Local word meanings remain available.'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
   };
-  const saveSetup = async (settings: AiSettings, engines = engineSettings) => {
+  const saveSetup = async (settings: AiSettings, engines = engineSettings, keepOpen = false, verified = false) => {
     await saveAiSettings(settings);
     await saveEngineSettings(engines); setEngineSettings(engines);
     setAiSettings(settings);
-    setShowApiSettings(false);
+    setGeminiVerified(verified);
+    if (!keepOpen) setShowApiSettings(false);
     if (lookupOpen && activeSelection) runLookup(activeSelection, preferences.languageMode, engines);
   };
   const toggleVocabulary = async () => {
@@ -489,7 +492,7 @@ export function App() {
       {showOnboardingCard && <OnboardingCard language={guideLanguage} onOpen={openOnboarding} onDismiss={dismissOnboarding} />}
       <p class="home-note">Documents stay on this device. Offline reading remains available after the first visit.</p>
       {showOnboarding && <ContextLensOnboarding language={guideLanguage} onLanguageChange={changeGuideLanguage} onClose={() => setShowOnboarding(false)} />}
-      {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
+      {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} initialVerified={geminiVerified} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
       {showVocabulary && <VocabularyLibrary records={vocabulary} onClose={() => setShowVocabulary(false)} onDelete={(id) => { void db.vocabulary.delete(id); setVocabulary((items) => items.filter((item) => item.id !== id)); }} />}
       {showDataManagement && <DataManagement onClose={() => setShowDataManagement(false)} onRestored={() => { void queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, limit: 18 }).then(result => { setLibraryDocs(result.items); setLibraryHasMore(result.hasMore); }); void db.documents.orderBy('updatedAt').reverse().limit(16).toArray().then(documents => setContinueDocs(documents.filter(document => document.location.progress > 0).slice(0, 4))); void db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray().then(setVocabulary); }} />}
     </main>
@@ -523,8 +526,8 @@ export function App() {
         ? <PdfReadingView key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} style={readerStyle} ocrPages={ocrPages} ocrLanguage={ocrLanguage} onTextSource={(page, source) => { const pdfTextSources = { ...documentRecord.pdfTextSources, [page]: source }; setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfTextSources } : current); void db.documents.update(documentRecord.id, { pdfTextSources }); }} onOpenOriginal={() => changePdfViewMode('original')} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset, ocrPage, ocrLanguage) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset, ocrPage, ocrLanguage); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
         : <TextReader offsets={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets : documentRecord.chapterOffsets} onAddNote={selection => openNotes(selection)} content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />}
       </div>
-      <LookupBottomSheet displayMode={lookupDisplay} onDisplayModeChange={setLookupDisplay} anchor={activeSelection?.anchor} selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} selectionText={activeSelection?.text} debug={engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={() => { requestRef.current?.abort(); contextRequestRef.current?.abort(); setLookupOpen(false); }} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary().catch(() => setError("Unable to save vocabulary. Please try again."))} onAddNote={() => openNotes(activeSelection)} saved={saved} collectionTitle={collectionTitle(documentRecord ?? {})} />
-      {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
+      <LookupBottomSheet displayMode={lookupDisplay} onDisplayModeChange={setLookupDisplay} anchor={activeSelection?.anchor} selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} selectionText={activeSelection?.text} debug={engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} geminiConnected={geminiVerified && aiSettings.provider === 'gemini'} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={() => { requestRef.current?.abort(); contextRequestRef.current?.abort(); setLookupOpen(false); }} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary().catch(() => setError("Unable to save vocabulary. Please try again."))} onAddNote={() => openNotes(activeSelection)} saved={saved} collectionTitle={collectionTitle(documentRecord ?? {})} />
+      {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} initialVerified={geminiVerified} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
       {showNotes && <NotesPanel document={documentRecord} selection={noteSelection} location={noteLocation} onJump={location => { if (location.kind === 'pdf') { if (location.textSource) { const pdfTextSources = { ...documentRecord.pdfTextSources, [location.page]: location.textSource }; setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfTextSources } : current); void db.documents.update(documentRecord.id, { pdfTextSources }); } pdfPersistence.flush(); setPdfNavigationToken(value => value + 1); setCurrentLocation(location); setProgress(location.progress); setPreferences(current => desktop ? { ...current, pdfViewMode: location.viewMode ?? 'reading' } : { ...current, pdfMobileViewMode: location.viewMode ?? 'reading' }); return; } const offset = location.absoluteOffset ?? (location.kind === 'epub' ? documentRecord.chapterOffsets?.[location.chapter - 1] : undefined); if (offset !== undefined) jump(offset); else window.scrollTo({ top: location.scrollY, behavior: 'auto' }); }} onClose={() => setShowNotes(false)} />}
     </ReaderShell>
   );

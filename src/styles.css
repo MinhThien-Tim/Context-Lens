@@ -849,3 +849,37 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
   .home-shell .home-nav .guide-language { grid-column:5; justify-self:end; }
   .home-shell .home-nav .home-theme-toggle { grid-column:1 / -1; justify-self:end; }
 }
+.language-settings-modal { width:min(100%,720px); }
+.settings-card { border:1px solid var(--line); border-radius:14px; padding:16px; margin:14px 0; background:var(--surface); }
+.settings-card-heading { display:flex; align-items:flex-start; gap:11px; margin-bottom:13px; }
+.settings-card-heading h3 { margin:0 0 3px; font-size:16px; }
+.settings-card-heading p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; }
+.settings-icon { flex:0 0 30px; height:30px; display:grid; place-items:center; border-radius:9px; font-size:16px; }
+.quick-card .settings-icon { background:#e5f4f8; color:#21718b; }
+.ai-card .settings-icon { background:#f0ebfa; color:#7253a4; }
+.settings-fields { display:grid; gap:11px; }
+.settings-fields label, .engine-settings label:not(.checkbox) { display:grid; gap:5px; font-size:12px; color:var(--muted); }
+.settings-fields input:not([type=checkbox]),.settings-fields select,.engine-settings input:not([type=checkbox]),.engine-settings select { width:100%; min-height:44px; padding:0 10px; border:1px solid var(--line); background:var(--bg); border-radius:8px; }
+.settings-card .checkbox { display:flex; align-items:center; gap:9px; min-height:44px; font-size:13px; color:var(--text); }
+.settings-card .checkbox input { width:18px; height:18px; min-height:18px; }
+.engine-toggles { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 12px; }
+.provider-path { margin:0; color:#21718b; font-size:12px; font-weight:650; line-height:1.4; }
+.engine-settings details,.gemini-advanced { border-top:1px solid var(--line); padding-top:7px; margin-top:12px; }
+.engine-settings details>*,.gemini-advanced>* { margin-bottom:10px; }
+.settings-card summary { min-height:44px; display:flex; align-items:center; cursor:pointer; font-weight:650; font-size:13px; }
+.engine-settings details>label,.engine-settings details>fieldset,.engine-settings details>.privacy-note { display:block; margin:10px 0; }
+.ai-card .setup-choice.selected { border-color:#9d87c7; background:#f4f0fb; }
+.ai-card .selected .radio { border-color:#7656a9; }
+.connected-panel { padding:10px 12px; border-radius:9px; background:var(--accent-soft); }
+.connected-panel p { margin:0 0 7px; font-size:12px; }
+.connection-ready { color:var(--accent); font-weight:700; }
+.connection-error { color:var(--error); font-weight:650; font-size:12px; }
+.gemini-form .secondary-button { justify-content:center; text-decoration:none; }
+.gemini-actions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:8px 0; }
+.gemini-actions .compact-action { border-color:#b9a7d4; color:#7253a4; }
+.gemini-actions small { width:100%; color:var(--muted); font-size:11px; }
+.ai-card .storage-choice { margin-top:12px; }
+.other-providers .settings-fields { padding-top:8px; }
+@media (min-width:700px) { .language-settings-modal { width:min(94vw,720px); } }
+@media (max-width:520px) { .engine-toggles { grid-template-columns:1fr; } .language-settings-modal .settings-card { padding:13px; } }
+:root[data-theme="dark"] .ai-card .setup-choice.selected,:root[data-theme="system"] .ai-card .setup-choice.selected { background:color-mix(in srgb,#7253a4 15%,var(--surface)); }

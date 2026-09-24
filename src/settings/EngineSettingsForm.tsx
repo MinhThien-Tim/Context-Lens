@@ -8,27 +8,32 @@ export function EngineSettingsForm({ value, onChange, health = [] }: { value: En
   const [englishStatus, setEnglishStatus] = useState(wordNetStatus());
   const set = <K extends keyof EngineSettings>(key: K, next: EngineSettings[K]) => onChange({ ...value, [key]: next });
   const checkbox = (key: keyof EngineSettings, label: string) => <label class="checkbox"><input type="checkbox" checked={Boolean(value[key])} onChange={event => onChange({ ...value, [key]: event.currentTarget.checked })} />{label}</label>;
-  return <div class="api-form engine-settings">
-    <h3>Language engines</h3>
-    <p>Offline English definitions: {englishStatus}. <a href={wordNetLicenseUrl} target="_blank" rel="noreferrer">WordNet license</a></p>
-    {englishStatus !== 'ready' && <button class="secondary-button" onClick={() => { setEnglishStatus('loading'); void loadWordNet().then(() => setEnglishStatus(wordNetStatus())).catch(() => setEnglishStatus('unavailable')); }}>Load English dictionary</button>}
-    <label>Translation direction<select value={value.sourceLang} onChange={event => onChange({ ...value, sourceLang: event.currentTarget.value as 'en' | 'vi', targetLang: event.currentTarget.value === 'en' ? 'vi' : 'en' })}><option value="en">English → Vietnamese</option><option value="vi">Vietnamese → English</option></select></label>
-    <label>Quick translation<select value={value.quickEngine} onChange={event => set('quickEngine', event.currentTarget.value as EngineSettings['quickEngine'])}><option value="auto">Auto (recommended)</option><option value="browser">Browser</option><option value="offline">Offline</option><option value="google">Google (configured gateway)</option><option value="bing">Bing (configured gateway)</option></select></label>
-    <label>Context engine<select value={value.contextEngine} onChange={event => set('contextEngine', event.currentTarget.value as EngineSettings['contextEngine'])}><option value="auto">Auto (recommended)</option><option value="user-api">User API</option><option value="hosted-lite">Hosted Lite</option><option value="local">Local</option></select></label>
-    <p class="privacy-note">Quick lookup uses cache and local engines first. Context and Grammar run only when you request them.</p>
-    {checkbox('automaticFallback', 'Automatic fallback')}
-    {checkbox('cacheTranslations', 'Cache translations')}{checkbox('cacheContext', 'Cache context')}
-    {checkbox('cacheSentenceAnalysis', 'Reuse sentence analyses offline')}
-    {checkbox('offlineDictionary', 'Offline dictionary')}{checkbox('browserTranslation', 'Browser translation (ready models)')}
-    {value.browserTranslation && <><button class="secondary-button" disabled={browserStatus === 'Preparing…'} onClick={() => { setBrowserStatus('Preparing…'); void prepareBrowserTranslation(value.sourceLang, value.targetLang).then(() => setBrowserStatus('Ready')).catch(() => setBrowserStatus('Unavailable on this browser or language pair')); }}>Prepare browser language model</button><small role="status">{browserStatus}</small></>}
-    {checkbox('publicTranslation', 'Optional web lookup (Wiktionary + MyMemory)')}
-    {import.meta.env.VITE_MANAGED_TRANSLATION === 'true' && <fieldset><legend>Online translation</legend>
-      {checkbox('managedTranslation', 'Enable online translation')}
-      <label>Provider<select disabled={!value.managedTranslation} value={value.onlineTranslationProvider} onChange={event => set('onlineTranslationProvider', event.currentTarget.value as EngineSettings['onlineTranslationProvider'])}><option value="auto">Auto</option><option value="google-web">Google</option><option value="bing-web">Bing</option></select></label>
-      <p class="privacy-note">Selected text is sent only after cache and local engines cannot complete the lookup. Google and Bing web providers are experimental; availability may vary.</p>
-    </fieldset>}
-    {value.publicTranslation && <p class="privacy-note">When local dictionaries are incomplete, the selected word may be sent to Wiktionary for an English definition and to MyMemory for translation. Results and misses are cached to limit repeat requests; provider limits apply.</p>}
+  return <section class="engine-settings settings-card quick-card" aria-labelledby="quick-title">
+    <div class="settings-card-heading"><span class="settings-icon" aria-hidden="true">↗</span><div><h3 id="quick-title">Quick Translation</h3><p>Fast meanings while reading</p></div></div>
+    <div class="settings-fields">
+      <label>Translation direction<select value={value.sourceLang} onChange={event => onChange({ ...value, sourceLang: event.currentTarget.value as 'en' | 'vi', targetLang: event.currentTarget.value === 'en' ? 'vi' : 'en' })}><option value="en">English → Vietnamese</option><option value="vi">Vietnamese → English</option></select></label>
+      <label>Quick translation<select value={value.quickEngine} onChange={event => set('quickEngine', event.currentTarget.value as EngineSettings['quickEngine'])}><option value="auto">Auto (recommended)</option><option value="browser">Browser</option><option value="offline">Offline</option><option value="google">Google gateway</option><option value="bing">Bing gateway</option></select></label>
+      {value.quickEngine === 'auto' && <p class="provider-path">Local → Browser → MyMemory → Google fallback</p>}
+      <p class="privacy-note">Wiktionary enriches definitions before translation fallback.</p>
+      <div class="engine-toggles">
+        {checkbox('offlineDictionary', 'Offline dictionary')}
+        {checkbox('browserTranslation', 'Browser translation')}
+        {checkbox('publicTranslation', 'Web lookup: Wiktionary + MyMemory')}
+        {import.meta.env.VITE_MANAGED_TRANSLATION === 'true' && checkbox('managedTranslation', 'Online fallback')}
+      </div>
+      <p class="privacy-note">Offline English definitions: {englishStatus}. <a href={wordNetLicenseUrl} target="_blank" rel="noreferrer">WordNet license</a></p>
+      {englishStatus !== 'ready' && <button class="secondary-button" onClick={() => { setEnglishStatus('loading'); void loadWordNet().then(() => setEnglishStatus(wordNetStatus())).catch(() => setEnglishStatus('unavailable')); }}>Load English dictionary</button>}
+      {value.browserTranslation && <><button class="secondary-button" disabled={browserStatus === 'Preparing...'} onClick={() => { setBrowserStatus('Preparing...'); void prepareBrowserTranslation(value.sourceLang, value.targetLang).then(() => setBrowserStatus('Ready')).catch(() => setBrowserStatus('Unavailable on this browser or language pair')); }}>Prepare browser language model</button><small role="status">{browserStatus}</small></>}
+    </div>
     <details><summary>Advanced engines</summary>
+      <label>Context engine<select value={value.contextEngine} onChange={event => set('contextEngine', event.currentTarget.value as EngineSettings['contextEngine'])}><option value="auto">Auto (recommended)</option><option value="user-api">User API</option><option value="hosted-lite">Hosted Lite</option><option value="local">Local</option></select></label>
+      {checkbox('automaticFallback', 'Automatic fallback')}
+      {checkbox('cacheTranslations', 'Cache translations')}{checkbox('cacheContext', 'Cache context')}
+      {checkbox('cacheSentenceAnalysis', 'Reuse sentence analyses offline')}
+      {import.meta.env.VITE_MANAGED_TRANSLATION === 'true' && <fieldset><legend>Online translation</legend>
+        <label>Provider<select disabled={!value.managedTranslation} value={value.onlineTranslationProvider} onChange={event => set('onlineTranslationProvider', event.currentTarget.value as EngineSettings['onlineTranslationProvider'])}><option value="auto">Auto</option><option value="google-web">Google</option><option value="bing-web">Bing</option></select></label>
+        <p class="privacy-note">Google and Bing web providers are experimental; availability may vary.</p>
+      </fieldset>}
       {checkbox('debugMode', 'Show provider diagnostics')}
       {checkbox('userApi', 'Enable user API for context')}
       <label>Translation gateway URL<input type="url" value={value.translationEndpoint} onInput={event => set('translationEndpoint', event.currentTarget.value)} placeholder="https://your-server/translate" /></label>
@@ -55,7 +60,7 @@ export function EngineSettingsForm({ value, onChange, health = [] }: { value: En
         {health.map(item => <span key={`${item.provider}:${item.pair ?? '*'}`}>{item.provider}{item.pair ? ` ${item.pair}` : ''}: cooling down until {new Date(item.cooldownUntil).toLocaleTimeString()}</span>)}
       </div>
     </details>
-  </div>;
+  </section>;
 }
 
 const translationLabels: Record<string, string> = { browser: 'Browser', dictionary: 'Dictionary', vocabulary: 'Saved vocabulary', mymemory: 'MyMemory', google: 'Google gateway', bing: 'Bing gateway' };

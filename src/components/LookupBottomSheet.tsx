@@ -15,6 +15,7 @@ interface Props {
   selectionText?: string;
   contextResult?: LookupResponse | null;
   onExplain?: (mode: ContextMode) => void;
+  geminiConnected?: boolean;
   onTranslateSentence?: () => void;
   open: boolean;
   result: LookupResponse | null;
@@ -98,6 +99,10 @@ export function LookupBottomSheet(props: Props) {
               <select class="compact-select" aria-label="AI explanation type" value="" onChange={event => { if (event.currentTarget.value) { setDeepOpen(true); props.onExplain?.(event.currentTarget.value as ContextMode); } }}><option value="">AI task…</option><option value="grammar">Grammar</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>
             </div></details>
           </div>
+          {props.geminiConnected && <div class="gemini-actions" role="group" aria-label="Gemini Context actions">
+            {([['Context', 'meaning-in-context'], ['Grammar', 'grammar'], ['Simplify', 'simplify'], ['Structure', 'sentence-structure']] as const).map(([label, task]) => <button class="secondary-button compact-action" title="Uses Gemini when you request this action." onClick={() => props.onExplain?.(task)}><span aria-hidden="true">✧</span> {label}</button>)}
+            <small>Uses Gemini when you request this action.</small>
+          </div>}
           {deep && <ExpandedExplain result={result} deep={deep} mode={props.mode} loading={props.loading} contextResult={props.contextResult} />}
         </>}
         <p class="ai-caution" role="note">AI có thể mắc lỗi. Hãy kiểm tra lại thông tin quan trọng.</p>
