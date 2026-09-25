@@ -7,6 +7,7 @@ import { LookupService } from './service';
 import type { LookupRequest } from './types';
 import { validLookup } from '../test/fixtures';
 import { defaultEngineSettings } from '../settings/engines';
+import { getDiagnostics } from '../core/diagnostics';
 
 const request: LookupRequest = {
   selection: 'maintain', selection_type: 'word', sentence: validLookup.context.sentence,
@@ -68,6 +69,7 @@ describe('lookup service offline cache', () => {
     expect(result.quick.definition_en).toContain('move on foot');
   });
   it('returns a successful AI response even when cache reads and writes fail', async () => {
+    const before = getDiagnostics().counters;
     vi.spyOn(db.contexts, 'get').mockRejectedValue(new Error('Storage unavailable'));
     vi.spyOn(db.contexts, 'put').mockRejectedValue(new Error('Storage full'));
     vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({
@@ -75,6 +77,8 @@ describe('lookup service offline cache', () => {
     })))));
     const result = await new LookupService().contextual({ ...request, context_mode: 'grammar' }, { ...defaultAiSettings, provider: 'gemini', apiKey: 'test' });
     expect(result).toMatchObject({ source: 'ai', engine: { provider: 'user-api' } });
+    expect(getDiagnostics().counters.geminiAction - before.geminiAction).toBe(1);
+    expect(getDiagnostics().counters.geminiRequest - before.geminiRequest).toBe(1);
   });
   it('keeps a recognized contextual phrase when a generic translation arrives', async () => {
     const result = await new LookupService().quick({ ...request, selection: 'accounts', sentence: 'The sector accounts for 40% of total output.' });

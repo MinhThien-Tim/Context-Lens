@@ -14,6 +14,7 @@ import { selectionInput } from '../language/adapter';
 import { applyLocalResult } from '../language/adapter';
 import { localLookup } from '../../lookup/localDictionary';
 import { recordAiUsage } from '../../ai/usage';
+import { recordDiagnostic } from '../diagnostics';
 export const CONTEXT_VERSION = 'context-v5';
 export function contextKey(input: ContextInput, family: string): string {
   return cacheKey([CONTEXT_VERSION, normalizeText(input.request.selection), normalizeText(input.request.sentence), input.request.previous_sentence, input.request.next_sentence, input.request.paragraph,
@@ -22,7 +23,7 @@ export function contextKey(input: ContextInput, family: string): string {
 export class ContextRouter {
   private requests = new SharedRequests<ContextResult>();
   readonly health = new ProviderHealthManager();
-  constructor(private providers: ContextProvider[], private cache: ResultCache<ContextResult>, private fallback = true, private online = () => navigator.onLine, private legacyCache = false, private local = new LocalLanguageEngine()) {}
+  constructor(private providers: ContextProvider[], private cache: ResultCache<ContextResult>, private fallback = true, private online = () => navigator.onLine, private legacyCache = false, private local = new LocalLanguageEngine(), private gemini = false) {}
   explain(raw: ContextInput): Promise<ContextResult> {
     const input = boundedContext(raw);
     const families = this.providers.map(provider => `${provider.family}:${provider.model}`);
@@ -37,6 +38,7 @@ export class ContextRouter {
         const cached = await this.cache.get(key);
         checkAbort(signal);
         if (cached) {
+          recordDiagnostic('contextCacheHit', { provider: cached.provider });
           await recordAiUsage({ provider: cached.provider, model: cached.model ?? 'unknown', task: input.mode, latencyMs: 0, cacheHit: true });
           return { ...cached, cached: true };
         }
@@ -71,6 +73,7 @@ export class ContextRouter {
         checkAbort(signal);
         if ((provider.network && !this.online()) || !this.health.available(provider.id, pair)) continue;
         try {
+          if (this.gemini && provider.id === 'user-api' && provider.network) recordDiagnostic('geminiRequest', { provider: 'gemini', status: input.mode });
           const explanation = await withDeadline(providerSignal => provider.explain({ ...input, signal: providerSignal }), 20_000, signal);
           checkAbort(signal);
           this.health.success(provider.id, pair);

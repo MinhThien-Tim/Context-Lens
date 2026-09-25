@@ -3,6 +3,7 @@ import { ContextRouter, contextKey } from './context-router';
 import { boundedContext } from './prompt-builder';
 import type { ContextInput, ContextProvider, ContextResult } from './types';
 import { EngineError } from '../errors';
+import { getDiagnostics } from '../diagnostics';
 const input: ContextInput = { sourceLang: 'en', targetLang: 'vi', mode: 'meaning-in-context', request: {
   selection: 'take off', selection_type: 'phrase', sentence: 'The project began to take off.', previous_sentence: null, next_sentence: null, language_mode: 'bilingual',
   learner: { native_language: 'vi', english_level: 'B2' }, options: { include_ipa: true, include_contrast: true, include_grammar: true, include_sentence_translation: true }
@@ -11,9 +12,19 @@ function cache() { const values = new Map<string, ContextResult>(); return { get
 function provider(id = 'user-api'): ContextProvider { return { id, model: 'test', family: id, network: true, explain: vi.fn().mockResolvedValue({ meaning: 'nghĩa theo ngữ cảnh', confidence: 0.9 }) }; }
 describe('ContextRouter', () => {
   it('uses cached context without repeating AI', async () => {
+    const before = getDiagnostics().counters;
     const ai = provider(); const router = new ContextRouter([ai], cache());
     await router.explain(input); expect((await router.explain(input)).cached).toBe(true);
     expect(ai.explain).toHaveBeenCalledTimes(1);
+    expect(getDiagnostics().counters.contextCacheHit - before.contextCacheHit).toBe(1);
+  });
+  it('counts Gemini requests only when its provider starts, not on cache hits', async () => {
+    const before = getDiagnostics().counters;
+    const ai = provider(); const router = new ContextRouter([ai], cache(), true, () => true, false, undefined, true);
+    await router.explain(input);
+    await router.explain(input);
+    expect(getDiagnostics().counters.geminiRequest - before.geminiRequest).toBe(1);
+    expect(getDiagnostics().counters.contextCacheHit - before.contextCacheHit).toBe(1);
   });
   it('resolves percentage account for without AI and keeps ambiguous uses eligible', async () => {
     const ai = provider(); const router = new ContextRouter([ai], cache());

@@ -27,11 +27,11 @@ export class TranslationRouter {
         checkAbort(signal);
         if ((provider.network && !this.online()) || !provider.supports(input.sourceLang ?? 'auto', input.targetLang) || !this.health.available(provider.id, pair)) continue;
         const googleManaged = provider.id === 'online-auto' || provider.id === 'google-web' || provider.id === 'google';
-        if (googleManaged && deferred && !googleFallbackAttempted) { googleFallbackAttempted = true; recordDiagnostic('googleFallback', { provider: provider.id }); }
         const start = performance.now();
         try {
           const result = await withDeadline(async providerSignal => {
             if (!await provider.isAvailable()) return null;
+            if (googleManaged && !googleFallbackAttempted) { googleFallbackAttempted = true; recordDiagnostic('googleFallback', { provider: provider.id }); }
             return provider.translate({ ...input, signal: providerSignal });
           }, provider.timeoutMs, signal);
           if (!result) continue;
@@ -62,13 +62,15 @@ export class TranslationRouter {
           if (google) {
             const start = performance.now();
             try {
-              const result = await withDeadline(async providerSignal => await google.isAvailable()
-                ? google.translate({ ...input, signal: providerSignal }) : null, google.timeoutMs, signal);
+              const result = await withDeadline(async providerSignal => {
+                if (!await google.isAvailable()) return null;
+                if (!googleFallbackAttempted) { googleFallbackAttempted = true; recordDiagnostic('googleFallback', { provider: google.id }); }
+                return google.translate({ ...input, signal: providerSignal });
+              }, google.timeoutMs, signal);
               checkAbort(signal);
               if (result?.text?.trim() && result.targetLang === input.targetLang) {
                 this.health.success(google.id, pair);
                 const normalized = { ...result, provider: google.id, latencyMs: performance.now() - start };
-                recordDiagnostic('googleFallback', { provider: google.id, latencyMs: normalized.latencyMs, status: 'success' });
                 await this.cache.put(key, normalized, google.id, pair);
                 return normalized;
               }

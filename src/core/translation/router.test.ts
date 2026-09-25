@@ -3,6 +3,7 @@ import { TranslationRouter } from './router';
 import { ProviderHealthManager } from './provider-health';
 import type { TranslationInput, TranslationProvider, TranslationResult } from './types';
 import { SharedRequests } from '../requests';
+import { getDiagnostics } from '../diagnostics';
 const input: TranslationInput = { text: 'prerequisite', sourceLang: 'en', targetLang: 'vi' };
 const result: TranslationResult = { text: 'điều kiện tiên quyết', sourceText: input.text, targetLang: 'vi', provider: 'browser' };
 const cache = () => ({ get: vi.fn().mockResolvedValue(null), put: vi.fn().mockResolvedValue(undefined) });
@@ -31,6 +32,14 @@ describe('TranslationRouter', () => {
     const store = cache();
     expect((await new TranslationRouter([publicProvider, google], store).translate(input)).provider).toBe('online-auto');
     expect(store.put).toHaveBeenCalledTimes(1);
+  });
+  it('counts a Google attempt after MyMemory rejects', async () => {
+    const before = getDiagnostics().counters.googleFallback;
+    const publicProvider = provider('mymemory', 1, vi.fn().mockResolvedValue({ ...result, text: input.text }));
+    const google = { ...provider('online-auto', 2), network: true };
+    await new TranslationRouter([publicProvider, google], cache(), undefined, true, () => true).translate(input);
+    expect(google.translate).toHaveBeenCalledTimes(1);
+    expect(getDiagnostics().counters.googleFallback - before).toBe(1);
   });
   it('returns and caches an uncertain candidate only after Google fails', async () => {
     const publicProvider = provider('mymemory', 1, vi.fn().mockResolvedValue({ ...result, text: 'phí' }));

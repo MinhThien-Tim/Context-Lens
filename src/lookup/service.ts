@@ -42,7 +42,7 @@ export class LookupService {
     }
     if (ai && (!this.context || !this.ai || Object.keys(ai).some(key => ai[key as keyof AiSettings] !== this.ai![key as keyof AiSettings]))) {
       this.ai = { ...ai };
-      this.context = new ContextRouter(contextProviders(settings, ai), new EngineCache<ContextResult>(db.contexts, CONTEXT_VERSION, settings.contextCacheLimit, settings.cacheContext), settings.automaticFallback, undefined, settings.cacheContext, this.local);
+      this.context = new ContextRouter(contextProviders(settings, ai), new EngineCache<ContextResult>(db.contexts, CONTEXT_VERSION, settings.contextCacheLimit, settings.cacheContext), settings.automaticFallback, undefined, settings.cacheContext, this.local, ai.provider === 'gemini' && Boolean(ai.apiKey));
     }
   }
   immediate(request: LookupRequest, settings = defaultEngineSettings): LookupResponse { return localLookup(request, settings.offlineDictionary && settings.sourceLang === 'en'); }
@@ -86,7 +86,7 @@ export class LookupService {
         meaning_vi: translatedMeanings, lexical_unit: null } };
   }
   async explain(request: LookupRequest, ai: AiSettings, settings = defaultEngineSettings, mode: ContextMode = 'meaning-in-context', signal?: AbortSignal): Promise<ContextResult & { result: LookupResponse }> {
-    if (ai.provider === 'gemini' && ai.apiKey) recordDiagnostic('geminiContext', { provider: 'gemini', status: mode });
+    if (ai.provider === 'gemini' && ai.apiKey) recordDiagnostic('geminiAction', { provider: 'gemini', status: mode });
     this.configure(settings, ai);
     if (settings.offlineDictionary && settings.sourceLang === 'en') await ensureLocalDictionaryAssets().catch(() => {});
     const local = settings.offlineDictionary && settings.sourceLang === 'en'
