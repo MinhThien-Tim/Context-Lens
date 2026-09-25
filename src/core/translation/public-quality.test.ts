@@ -29,6 +29,11 @@ describe('public translation quality', () => {
     expect(evaluate('buoc toi', { meaningsVi: ['buộc tội', 'sạc', 'lao tới'], senseConfidence: 0.2 }, 'charge')).toBe('accept');
   });
 
+  it('uses whole tokens and phrases rather than substring overlap', () => {
+    expect(evaluate('buoc toi', { meaningsVi: ['buộc tội'] }, 'charge')).toBe('accept');
+    expect(evaluate('đi', { meaningsVi: ['điều kiện'] }, 'charge')).toBe('accept');
+  });
+
   it('defers disagreement with strong local evidence but accepts sparse weak evidence', () => {
     expect(evaluate('mức giá', { meaningsVi: ['buộc tội'], senseConfidence: 0.9 }, 'charge')).toBe('uncertain');
     expect(evaluate('mức giá', { meaningsVi: ['buộc tội'], senseConfidence: 0.2 }, 'charge')).toBe('accept');

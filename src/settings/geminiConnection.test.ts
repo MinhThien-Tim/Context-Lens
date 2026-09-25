@@ -34,4 +34,23 @@ describe('Gemini connection test', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
     expect(await testGeminiConnection('key', 'model')).toBe('network');
   });
+
+  it('maps its deadline to a friendly timeout status and passes an abort signal', async () => {
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await testGeminiConnection('key', 'model', undefined, 5)).toBe('timeout');
+    expect(fetchMock.mock.calls[0][1].signal).toBeDefined();
+  });
+
+  it('does not convert user cancellation into a timeout', async () => {
+    const controller = new AbortController();
+    vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) => new Promise<Response>((_resolve, reject) => {
+      init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+    })));
+    const pending = testGeminiConnection('key', 'model', controller.signal, 1000);
+    controller.abort();
+    expect(await pending).toBe('cancelled');
+  });
 });

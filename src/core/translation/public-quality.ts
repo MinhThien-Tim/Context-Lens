@@ -30,10 +30,25 @@ function isTargetLanguageImplausible(input: TranslationInput, output: string): b
 }
 
 function hasLocalSemanticSupport(output: string, meanings: string[]): boolean {
-  const candidate = normalizeVietnamese(output);
+  const candidate = words(lexicalText(normalizeVietnamese(output)));
+  if (!candidate.length) return false;
+  const candidatePhrase = candidate.join(' ');
   return meanings.some(meaning => {
-    const local = normalizeVietnamese(meaning);
-    return local === candidate || local.includes(candidate) || candidate.includes(local);
+    const local = words(lexicalText(normalizeVietnamese(meaning)));
+    if (!local.length) return false;
+    const localPhrase = local.join(' ');
+    if (localPhrase === candidatePhrase) return true;
+    const containsPhrase = (haystack: string[], needle: string[]) => {
+      if (needle.length < 2 || needle.length > haystack.length) return false;
+      outer: for (let start = 0; start <= haystack.length - needle.length; start++) {
+        for (let i = 0; i < needle.length; i++) if (haystack[start + i] !== needle[i]) continue outer;
+        return true;
+      }
+      return false;
+    };
+    if (containsPhrase(local, candidate) || containsPhrase(candidate, local)) return true;
+    const localTokens = new Set(local);
+    return candidate.some(token => token.length >= 3 && localTokens.has(token));
   });
 }
 

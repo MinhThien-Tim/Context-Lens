@@ -6,6 +6,7 @@ import { ExpandedExplain } from './ExpandedExplain';
 import { useDesktop } from './useDesktop';
 import { useDialog } from './useDialog';
 import type { ContextMode } from '../core/context/types';
+import { getDiagnostics } from '../core/diagnostics';
 
 interface Props {
   displayMode?: 'popup' | 'panel';
@@ -88,15 +89,15 @@ export function LookupBottomSheet(props: Props) {
         {!popup && <button class="explain-toggle explain-button" disabled={!result} aria-expanded={deepOpen} onClick={() => setDeepOpen(!deepOpen)}><span aria-hidden="true">{deepOpen ? '▾' : '▸'}</span> {deepOpen ? 'Thu gọn nội dung' : 'Mở giải thích đầy đủ'}</button>}
         {!popup && deepOpen && <>
           <LanguageTabs value={props.mode} onChange={props.onModeChange} />
-          {props.debug && result.engine && <dl class="engine-debug"><div><dt>Provider</dt><dd>{result.engine.provider}</dd></div><div><dt>Cache</dt><dd>{result.engine.cached ? 'hit' : 'miss'}</dd></div>{result.engine.latencyMs !== undefined && <div><dt>Latency</dt><dd>{Math.round(result.engine.latencyMs)} ms</dd></div>}</dl>}
+          {props.debug && <>{result.engine && <dl class="engine-debug"><div><dt>Provider</dt><dd>{result.engine.provider}</dd></div><div><dt>Cache</dt><dd>{result.engine.cached ? 'hit' : 'miss'}</dd></div>{result.engine.latencyMs !== undefined && <div><dt>Latency</dt><dd>{Math.round(result.engine.latencyMs)} ms</dd></div>}</dl>}<dl class="engine-debug">{Object.entries(getDiagnostics().counters).map(([name, count]) => <div><dt>{name}</dt><dd>{count}</dd></div>)}</dl></>}
           <div class="explain-toolstrip">
             <button class="secondary-button compact-action" onClick={() => props.onSpeak(result.selection.lemma)}>Pronounce</button>
             {props.onAddNote && <button class="secondary-button compact-action" onClick={props.onAddNote}>Add note</button>}
-            <button class="ai-explain-button secondary-button compact-action" onClick={() => { setDeepOpen(true); props.onExplain?.('meaning-in-context'); }}>AI Explain</button>
+            {!props.geminiConnected && <button class="ai-explain-button secondary-button compact-action" onClick={() => { setDeepOpen(true); props.onExplain?.('meaning-in-context'); }}>AI Explain</button>}
             <details class="explain-more-actions"><summary>More</summary><div>
               {props.onTranslateSentence && <button class="secondary-button compact-action" onClick={() => { setDeepOpen(true); props.onTranslateSentence?.(); }}>Translate sentence</button>}
               <button class="secondary-button compact-action" onClick={props.onOpenSettings}>Settings</button>
-              <select class="compact-select" aria-label="AI explanation type" value="" onChange={event => { if (event.currentTarget.value) { setDeepOpen(true); props.onExplain?.(event.currentTarget.value as ContextMode); } }}><option value="">AI task…</option><option value="grammar">Grammar</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>
+              {!props.geminiConnected && <select class="compact-select" aria-label="AI explanation type" value="" onChange={event => { if (event.currentTarget.value) { setDeepOpen(true); props.onExplain?.(event.currentTarget.value as ContextMode); } }}><option value="">AI task…</option><option value="grammar">Grammar</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>}
             </div></details>
           </div>
           {props.geminiConnected && <div class="gemini-actions" role="group" aria-label="Gemini Context actions">

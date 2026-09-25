@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { defaultAiSettings, type AiSettings, type ProviderKind } from './types';
 import { useDialog } from '../components/useDialog';
 import { defaultEngineSettings, type EngineSettings } from './engines';
@@ -21,18 +21,21 @@ export function ApiSettings({ initial, initialVerified = false, initialEngines =
   const [engines, setEngines] = useState(initialEngines);
   const [connection, setConnection] = useState<GeminiConnectionStatus | null>(null);
   const [testing, setTesting] = useState(false);
+  const testController = useRef<AbortController | null>(null);
   const [connected, setConnected] = useState(initialVerified && initial.provider === 'gemini' && Boolean(initial.apiKey));
+  useEffect(() => () => testController.current?.abort(), []);
   useEffect(() => setSaved(false), [value, engines]);
   const choose = (provider: ProviderKind) => {
     if (provider === value.provider) return;
+    testController.current?.abort(); testController.current = null; setTesting(false);
     setConnection(null); setConnected(false);
     setValue({ ...value, provider, ...defaults[provider], apiKey: '' });
   };
   return (
     <div class="modal-layer">
-      <button class="modal-backdrop" aria-label="Close settings" onClick={onClose} />
+      <button class="modal-backdrop" aria-label="Close settings" onClick={() => { testController.current?.abort(); onClose(); }} />
       <section ref={dialogRef} tabIndex={-1} class="settings-modal language-settings-modal" role="dialog" aria-modal="true" aria-labelledby="ai-title">
-        <header><div><p class="eyebrow">Reading setup</p><h2 id="ai-title">Language engines</h2></div><button class="icon-button close-button" onClick={onClose} aria-label="Close settings">×</button></header>
+        <header><div><p class="eyebrow">Reading setup</p><h2 id="ai-title">Language engines</h2></div><button class="icon-button close-button" onClick={() => { testController.current?.abort(); onClose(); }} aria-label="Close settings">×</button></header>
         <EngineSettingsForm value={engines} onChange={setEngines} health={health} />
         <section class="settings-card ai-card" aria-labelledby="context-title">
           <div class="settings-card-heading"><span class="settings-icon" aria-hidden="true">✦</span><div><h3 id="context-title">AI Context</h3><p>Deep explanations only when you request Context, Grammar, Simplify or Structure.</p></div></div>
@@ -48,15 +51,15 @@ export function ApiSettings({ initial, initialVerified = false, initialEngines =
             <p class="privacy-note">Open Google AI Studio → Create a Gemini API key → Paste key → Test &amp; Connect</p>
             <p class="privacy-note">Recommended model: Gemini 3.6 Flash</p>
             {value.apiKey.trim() && !connection && <p class="privacy-note" role="status">{initial.apiKey === value.apiKey && initial.model === value.model ? 'Configured · Not verified' : 'Not verified'}</p>}
-            <label>API key<input type="password" autocomplete="off" value={value.apiKey} onInput={event => { setValue({ ...value, apiKey: event.currentTarget.value }); setConnection(null); }} placeholder="Paste your Gemini API key" /></label>
-            <button class="primary-button" disabled={testing || !value.apiKey.trim()} onClick={async () => { setTesting(true); setConnection(null); const result = await testGeminiConnection(value.apiKey, value.model); setConnection(result); setTesting(false); if (result === 'ready') { await onSave(value, engines, true, true); setConnected(true); setSaved(true); } }}>{testing ? 'Testing...' : 'Test & Connect'}</button>
-            {connection && connection !== 'ready' && <p class="connection-error" role="status">{{ 'invalid-key': 'Invalid Gemini API key', 'model-unavailable': 'Selected Gemini model is unavailable', quota: 'Gemini rate limit or quota reached', network: 'Could not reach Gemini', 'structured-unavailable': 'Gemini connected, but structured output is unavailable for this model', unknown: 'Could not connect to Gemini' }[connection]}</p>}
+            <label>API key<input type="password" autocomplete="off" value={value.apiKey} onInput={event => { testController.current?.abort(); testController.current = null; setTesting(false); setValue({ ...value, apiKey: event.currentTarget.value }); setConnection(null); setConnected(false); }} placeholder="Paste your Gemini API key" /></label>
+            <button class="primary-button" disabled={testing || !value.apiKey.trim()} onClick={async () => { const snapshot = { ...value }; const controller = new AbortController(); testController.current = controller; setTesting(true); setConnection(null); const result = await testGeminiConnection(snapshot.apiKey, snapshot.model, controller.signal); if (testController.current !== controller || controller.signal.aborted) return; testController.current = null; setTesting(false); setConnection(result); if (result === 'ready') { await onSave(snapshot, engines, true, true); setConnected(true); setSaved(true); } }}>{testing ? 'Testing...' : 'Test & Connect'}</button>
+            {connection && connection !== 'ready' && connection !== 'cancelled' && <p class="connection-error" role="status">{{ 'invalid-key': 'Invalid Gemini API key', 'model-unavailable': 'Selected Gemini model is unavailable', quota: 'Gemini rate limit or quota reached', network: 'Could not reach Gemini', timeout: 'Gemini connection timed out', 'structured-unavailable': 'Gemini connected, but structured output is unavailable for this model', unknown: 'Could not connect to Gemini' }[connection]}</p>}
           </div>)}
           {value.provider === 'gemini' && <>
             <label class="checkbox storage-choice"><input type="checkbox" checked={value.keyStorage === 'persistent'} onChange={event => setValue({ ...value, keyStorage: event.currentTarget.checked ? 'persistent' : 'session' })} />Remember key on this device</label>
             <p class="privacy-note">{value.keyStorage === 'persistent' ? 'Stored in this browser until you remove it.' : 'Removed when this browser session ends.'}</p>
             <p class="privacy-note">Gemini requests are sent directly from this browser to Google only when you use an AI Context action.</p>
-            <details class="gemini-advanced"><summary>Advanced Gemini settings</summary><div class="settings-fields"><label>Model ID<input value={value.model} onInput={event => { setValue({ ...value, model: event.currentTarget.value }); setConnected(false); setConnection(null); }} /></label><button class="secondary-button" onClick={() => { setValue({ ...value, model: defaultAiSettings.model }); setConnected(false); setConnection(null); }}>Reset to recommended</button></div></details>
+            <details class="gemini-advanced"><summary>Advanced Gemini settings</summary><div class="settings-fields"><label>Model ID<input value={value.model} onInput={event => { testController.current?.abort(); testController.current = null; setTesting(false); setValue({ ...value, model: event.currentTarget.value }); setConnected(false); setConnection(null); }} /></label><button class="secondary-button" onClick={() => { testController.current?.abort(); testController.current = null; setTesting(false); setValue({ ...value, model: defaultAiSettings.model }); setConnected(false); setConnection(null); }}>Reset to recommended</button></div></details>
           </>}
           <button class={`setup-choice ${value.provider === 'none' ? 'selected' : ''}`} aria-pressed={value.provider === 'none'} onClick={() => choose('none')}><span class="radio" aria-hidden="true"/><span><strong>No AI</strong><small>Use quick meanings without AI explanations.</small></span></button>
         </section>
