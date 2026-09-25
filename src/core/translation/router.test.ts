@@ -40,6 +40,7 @@ describe('TranslationRouter', () => {
     await new TranslationRouter([publicProvider, google], cache(), undefined, true, () => true).translate(input);
     expect(google.translate).toHaveBeenCalledTimes(1);
     expect(getDiagnostics().counters.googleFallback - before).toBe(1);
+    expect(getDiagnostics().details.filter(detail => detail.event === 'googleFallback').at(-1)).toMatchObject({ text: 'prerequisite', provider: 'online-auto', status: 'request' });
   });
   it('returns and caches an uncertain candidate only after Google fails', async () => {
     const publicProvider = provider('mymemory', 1, vi.fn().mockResolvedValue({ ...result, text: 'phí' }));

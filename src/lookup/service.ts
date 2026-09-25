@@ -48,7 +48,7 @@ export class LookupService {
   immediate(request: LookupRequest, settings = defaultEngineSettings): LookupResponse { return localLookup(request, settings.offlineDictionary && settings.sourceLang === 'en'); }
   async quick(request: LookupRequest, settings = defaultEngineSettings, signal?: AbortSignal, onLocal?: (result: LookupResponse) => void): Promise<LookupResponse> {
     checkAbort(signal);
-    recordDiagnostic('quickLookup');
+    recordDiagnostic('quickLookup', { text: request.selection_type === 'sentence' ? undefined : request.selection, mode: request.selection_type });
     this.configure(settings);
     let base = this.immediate(request, settings);
     if (settings.offlineDictionary && settings.sourceLang === 'en') {
@@ -61,11 +61,11 @@ export class LookupService {
       // Let the surface progressively enrich the synchronous result instead of
       // holding useful local content behind a network fallback.
       onLocal?.(base);
-      if (settings.quickEngine === 'offline' || (complete && lens.confidence >= 0.6 && settings.quickEngine === 'auto')) { recordDiagnostic('localStop', { provider: 'dictionary' }); return base; }
+      if (settings.quickEngine === 'offline' || (complete && lens.confidence >= 0.6 && settings.quickEngine === 'auto')) { recordDiagnostic('localStop', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'dictionary', mode: request.selection_type }); return base; }
       if (settings.automaticFallback && settings.publicTranslation && settings.targetLang === 'vi') {
         const web = await lookupWebDictionary(lens.selection.lemma, request.selection, settings.networkTimeoutMs, signal);
         if (web) {
-          recordDiagnostic('wiktionary', { provider: 'wiktionary', status: 'used' });
+          recordDiagnostic('wiktionary', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'wiktionary', mode: request.selection_type, status: 'used' });
           base = mergeDictionaryResult(base, web);
           if (base.quick.definition_en && base.quick.meaning_vi.length) return base;
         }
@@ -86,7 +86,7 @@ export class LookupService {
         meaning_vi: translatedMeanings, lexical_unit: null } };
   }
   async explain(request: LookupRequest, ai: AiSettings, settings = defaultEngineSettings, mode: ContextMode = 'meaning-in-context', signal?: AbortSignal): Promise<ContextResult & { result: LookupResponse }> {
-    if (ai.provider === 'gemini' && ai.apiKey) recordDiagnostic('geminiAction', { provider: 'gemini', status: mode });
+    if (ai.provider === 'gemini' && ai.apiKey) recordDiagnostic('geminiAction', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'gemini', mode, status: mode });
     this.configure(settings, ai);
     if (settings.offlineDictionary && settings.sourceLang === 'en') await ensureLocalDictionaryAssets().catch(() => {});
     const local = settings.offlineDictionary && settings.sourceLang === 'en'

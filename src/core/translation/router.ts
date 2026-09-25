@@ -18,7 +18,7 @@ export class TranslationRouter {
       checkAbort(signal);
       const cached = await this.cache.get(key);
       checkAbort(signal);
-      if (cached) { recordDiagnostic('cacheHit', { provider: cached.provider }); return { ...cached, sourceText: input.text, cached: true }; }
+      if (cached) { recordDiagnostic('cacheHit', { text: input.mode === 'sentence' ? undefined : input.text, provider: cached.provider, mode: input.mode ?? 'word' }); return { ...cached, sourceText: input.text, cached: true }; }
       const pair = `${input.sourceLang ?? 'auto'}>${input.targetLang}`;
       let lastError = new EngineError(this.online() ? 'UNSUPPORTED_LANGUAGE' : 'OFFLINE');
       let deferred: TranslationResult | undefined;
@@ -31,7 +31,7 @@ export class TranslationRouter {
         try {
           const result = await withDeadline(async providerSignal => {
             if (!await provider.isAvailable()) return null;
-            if (googleManaged && !googleFallbackAttempted) { googleFallbackAttempted = true; recordDiagnostic('googleFallback', { provider: provider.id }); }
+            if (googleManaged && !googleFallbackAttempted) { googleFallbackAttempted = true; recordDiagnostic('googleFallback', { text: input.mode === 'sentence' ? undefined : input.text, provider: provider.id, mode: input.mode ?? 'word', status: 'request' }); }
             return provider.translate({ ...input, signal: providerSignal });
           }, provider.timeoutMs, signal);
           if (!result) continue;
@@ -41,7 +41,7 @@ export class TranslationRouter {
           const normalized = { ...result, provider: provider.id, latencyMs: performance.now() - start };
           if (provider.id === 'mymemory') {
             const quality = evaluatePublicTranslationQuality(input, normalized, input.localContext);
-            recordDiagnostic(quality === 'accept' ? 'mymemoryAccept' : quality === 'uncertain' ? 'mymemoryUncertain' : 'mymemoryReject', { latencyMs: normalized.latencyMs, status: quality });
+            recordDiagnostic(quality === 'accept' ? 'mymemoryAccept' : quality === 'uncertain' ? 'mymemoryUncertain' : 'mymemoryReject', { text: input.mode === 'sentence' ? undefined : input.text, provider: 'mymemory', mode: input.mode ?? 'word', latencyMs: normalized.latencyMs, status: quality });
             if (quality === 'reject') { lastError = new EngineError('INVALID_RESPONSE'); continue; }
             if (quality === 'uncertain' && this.fallback) { deferred = normalized; continue; }
           }
@@ -64,7 +64,7 @@ export class TranslationRouter {
             try {
               const result = await withDeadline(async providerSignal => {
                 if (!await google.isAvailable()) return null;
-                if (!googleFallbackAttempted) { googleFallbackAttempted = true; recordDiagnostic('googleFallback', { provider: google.id }); }
+                if (!googleFallbackAttempted) { googleFallbackAttempted = true; recordDiagnostic('googleFallback', { text: input.mode === 'sentence' ? undefined : input.text, provider: google.id, mode: input.mode ?? 'word', status: 'request' }); }
                 return google.translate({ ...input, signal: providerSignal });
               }, google.timeoutMs, signal);
               checkAbort(signal);

@@ -38,7 +38,9 @@ export class ContextRouter {
         const cached = await this.cache.get(key);
         checkAbort(signal);
         if (cached) {
-          recordDiagnostic('contextCacheHit', { provider: cached.provider });
+          const diagnostic = { text: input.request.selection_type === 'sentence' ? undefined : input.request.selection, provider: cached.provider, mode: input.mode };
+          recordDiagnostic('contextCacheHit', diagnostic);
+          if (this.gemini && cached.provider === 'user-api') recordDiagnostic('geminiCacheHit', { ...diagnostic, provider: 'gemini' });
           await recordAiUsage({ provider: cached.provider, model: cached.model ?? 'unknown', task: input.mode, latencyMs: 0, cacheHit: true });
           return { ...cached, cached: true };
         }
@@ -73,7 +75,7 @@ export class ContextRouter {
         checkAbort(signal);
         if ((provider.network && !this.online()) || !this.health.available(provider.id, pair)) continue;
         try {
-          if (this.gemini && provider.id === 'user-api' && provider.network) recordDiagnostic('geminiRequest', { provider: 'gemini', status: input.mode });
+          if (this.gemini && provider.id === 'user-api' && provider.network) recordDiagnostic('geminiRequest', { text: input.request.selection_type === 'sentence' ? undefined : input.request.selection, provider: 'gemini', mode: input.mode, status: 'request' });
           const explanation = await withDeadline(providerSignal => provider.explain({ ...input, signal: providerSignal }), 20_000, signal);
           checkAbort(signal);
           this.health.success(provider.id, pair);

@@ -20,11 +20,23 @@ describe('ContextRouter', () => {
   });
   it('counts Gemini requests only when its provider starts, not on cache hits', async () => {
     const before = getDiagnostics().counters;
+    const beforeDetails = getDiagnostics().details.length;
     const ai = provider(); const router = new ContextRouter([ai], cache(), true, () => true, false, undefined, true);
     await router.explain(input);
     await router.explain(input);
     expect(getDiagnostics().counters.geminiRequest - before.geminiRequest).toBe(1);
     expect(getDiagnostics().counters.contextCacheHit - before.contextCacheHit).toBe(1);
+    const details = getDiagnostics().details.slice(beforeDetails);
+    expect(details.filter(detail => detail.event === 'geminiRequest')).toHaveLength(1);
+    expect(details.find(detail => detail.event === 'geminiRequest')).toMatchObject({ text: 'take off', mode: 'meaning-in-context', status: 'request' });
+    expect(details.filter(detail => detail.event === 'geminiCacheHit')).toHaveLength(1);
+    expect(details.filter(detail => detail.event === 'geminiRequest')).toHaveLength(1);
+  });
+  it('records the selected phrase and exact Gemini mode', async () => {
+    const before = getDiagnostics().details.length;
+    const ai = provider();
+    await new ContextRouter([ai], cache(), true, () => true, false, undefined, true).explain({ ...input, mode: 'grammar' });
+    expect(getDiagnostics().details.slice(before).find(detail => detail.event === 'geminiRequest')).toMatchObject({ text: 'take off', mode: 'grammar' });
   });
   it('resolves percentage account for without AI and keeps ambiguous uses eligible', async () => {
     const ai = provider(); const router = new ContextRouter([ai], cache());
