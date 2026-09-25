@@ -64,7 +64,8 @@ export class LocalLanguageEngine {
     const orderedSenses = entry ? [sense, ...resolved.alternatives].filter((item, index, all): item is NonNullable<typeof item> => Boolean(item) && all.findIndex(other => other?.id === item!.id) === index) : [];
     const rulePos = inferContextPos(lookupText, analysis.normalizedText, entry?.pos, occurrence?.start);
     const contextPos = rulePos ?? sense?.pos ?? occurrence?.pos;
-    const contextOrderedSenses = rulePos ? [...orderedSenses].sort((left, right) => Number(right.pos === rulePos) - Number(left.pos === rulePos)) : orderedSenses;
+    const preferredSensePos = rulePos === 'adjective' && entry?.morphology?.inflection === 'past-participle' ? 'verb' : rulePos;
+    const contextOrderedSenses = preferredSensePos ? [...orderedSenses].sort((left, right) => Number(right.pos === preferredSensePos) - Number(left.pos === preferredSensePos)) : orderedSenses;
     const senseResults = contextOrderedSenses.map(item => ({ id: item.id, pos: item.pos ?? entry?.pos[0] ?? 'other', definitionEn: item.definitionEn,
       meaningsVi: item.meaningVi ? splitMeanings(item.meaningVi) : [], source: 'local' as const,
       contextScore: item.id === sense?.id ? resolved.senseConfidence : 0, contextMatch: item.id === sense?.id && resolved.contextMatch }));
@@ -81,7 +82,7 @@ export class LocalLanguageEngine {
       english: sense?.definitionEn ? { definition: sense.definitionEn, contextualDefinition: resolved.contextMatch ? sense.definitionEn : undefined, synonyms: sense.synonyms, examples: sense.examples } : undefined,
       vietnamese: sense?.meaningVi ? { meaning: sense.meaningVi, contextualMeaning: resolved.contextMatch ? sense.meaningVi : undefined, senseAligned: true }
         : entry?.meaningsVi?.length ? { meaning: entry.meaningsVi.join(' / '), senseAligned: false } : undefined,
-      grammar: entry ? { role: sense?.pos ?? entry.pos.join(' / '), pattern: phraseEntry?.lemma,
+      grammar: entry ? { role: contextPos ?? entry.pos.join(' / '), pattern: phraseEntry?.lemma,
         form: entry.morphology ? `${entry.morphology.inflection} of ${entry.morphology.baseLemma}` : undefined } : undefined,
       sense: sense ? { id: sense.id, alternatives: resolved.alternatives.map(s => s.id), reasons: resolved.reasons } : undefined,
       context: { ...result.context, sentenceTranslation: analysis.translationVi, simpleEnglish: analysis.simpleEnglish },
@@ -109,6 +110,11 @@ function inferContextPos(selection: string, sentence: string, availablePos: stri
   if (index < 0) return undefined;
   const prefix = sentence.slice(0, index);
   const suffix = sentence.slice(index + selection.length);
+  if (/ed$/i.test(selection) && availablePos.includes('verb')) {
+    if (/\b(?:get|gets|got|getting|be|is|am|are|was|were|been|being|have|has|had)\s+$/i.test(prefix)) return 'verb';
+    if (/\b(?:the|a|an|this|that|these|those)\s+$/i.test(prefix) && /^\s+[\p{L}\p{M}]+/u.test(suffix)) return 'adjective';
+    if (/\b(?:i|you|he|she|it|we|they|[\p{L}\p{M}]+)\s+$/iu.test(prefix) && /^(?:\s|[.,;!?]|$)/.test(suffix)) return 'verb';
+  }
   if (/(?:\b(?:can|could|may|might|must|shall|should|will|would|do|does|did)|\bto)\s+$/i.test(prefix)) return 'verb';
   if (/\b(?:a|an|the|this|that|my|our|their|his|her|its)\s+$/i.test(prefix)) {
     if (/^\s+[\p{L}\p{M}]/u.test(suffix) && availablePos.includes('adjective')) return 'adjective';

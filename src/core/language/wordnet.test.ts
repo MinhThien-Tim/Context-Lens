@@ -87,6 +87,29 @@ it.each([
   expect(result.quick.meaning_vi.join(' ')).not.toMatch(/^(Quá khứ|Dạng phân từ)/i);
 });
 it.each([
+  ['changed', 'change'], ['managed', 'manage'], ['created', 'create'], ['required', 'require'],
+  ['reduced', 'reduce'], ['increased', 'increase'], ['provided', 'provide'], ['used', 'use'],
+  ['based', 'base'], ['caused', 'cause'], ['studied', 'study'], ['carried', 'carry'],
+  ['tried', 'try'], ['stopped', 'stop'], ['planned', 'plan'], ['preferred', 'prefer'],
+  ['walked', 'walk'], ['worked', 'work'], ['played', 'play'], ['moving', 'move'],
+  ['studies', 'study'], ['watches', 'watch'], ['changes', 'change']
+])('validates inflection %s as %s', async (surface, lemma) => {
+  const result = await new LookupService().quick(request(surface, `They ${surface} the plan.`), { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(result.selection.surface).toBe(surface);
+  expect(result.selection.lemma).toBe(lemma);
+});
+it.each([
+  ['The frame of reference itself gets changed.', 'verb'],
+  ['The situation changed rapidly.', 'verb'],
+  ['The changed conditions required a new approach.', 'adjective'],
+  ['She has changed her mind.', 'verb']
+])('uses sentence syntax for changed in %s', async (sentence, pos) => {
+  const result = await new LookupService().quick(request('changed', sentence), { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(result.selection.lemma).toBe('change');
+  expect(result.dictionary?.contextPos).toBe(pos);
+  expect(result.dictionary?.senses[0]?.pos).not.toBe('noun');
+});
+it.each([
   ['indicated', 'indicate', 'The arrow indicated the correct route.'],
   ['delivered', 'deliver', 'The courier delivered the parcel yesterday.'],
   ['written', 'write', 'She had written a short note.'],
