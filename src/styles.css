@@ -928,6 +928,9 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
 .pdf-mode-switch { flex:none; align-items:center; white-space:nowrap; }
 .pdf-mode-switch > button { flex:none; font-size:12px; font-weight:600; white-space:nowrap; }
 .pdf-mode-switch > button[aria-pressed="true"] { font-weight:750; }
+.pdf-mode-switch > .pdf-ocr-next { display:inline-flex; align-items:center; gap:4px; min-height:30px; margin-left:3px; padding:0 7px; border:1px solid var(--accent); border-radius:7px; color:var(--accent); font-size:11px; font-weight:700; }
+.pdf-mode-switch > .pdf-ocr-next:disabled { opacity:.58; }
+.pdf-ocr-next svg { width:15px; height:15px; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .pdf-mode-switch > .pdf-reading-options-toggle { display:grid; place-items:center; width:40px; min-width:40px!important; padding:0!important; }
 .pdf-reading-options-toggle svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:2.7; stroke-linecap:round; stroke-linejoin:round; }
 .page-navigation { flex:none; white-space:nowrap; }
@@ -937,6 +940,7 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
   .reader-header:has(.pdf-mode-switch) .reader-header-position { flex-wrap:nowrap; justify-content:space-between; gap:4px; }
   .reader-shell:has(.pdf-mode-switch) .progress-line { top:96px; }
   .pdf-mode-switch > button { padding-inline:5px; font-size:11px; }
+  .pdf-mode-switch > .pdf-ocr-next { padding-inline:5px; font-size:10px; }
   .page-navigation .icon-button { min-width:36px; width:36px; min-height:44px; }
   .page-navigation .page-count { min-width:46px; min-height:44px; padding-inline:2px; }
   .pdf-reading-options { left:0; right:auto; }
@@ -949,6 +953,9 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
   .page-navigation .icon-button { min-width:36px; width:36px; }
 }
 .reader-header:has(.pdf-reading-options) { z-index:12; }
+/* Keep the PDF title readable while reserving room for mode, OCR, and page controls. */
+.reader-header:has(.pdf-mode-switch) .reader-document { flex:0 1 auto; gap:8px; }
+.reader-header:has(.pdf-mode-switch) .reader-document h1 { max-width:clamp(132px,20vw,250px); color:color-mix(in srgb,var(--accent) 55%,var(--text)); font-weight:600; }
 @media (min-width:768px) and (max-width:850px) {
   .reader-header:has(.pdf-mode-switch) { display:grid; grid-template-columns:1fr auto; grid-template-rows:60px 48px; height:108px; }
   .reader-header:has(.pdf-mode-switch) .reader-header-leading { grid-column:1; grid-row:1; min-width:0; }

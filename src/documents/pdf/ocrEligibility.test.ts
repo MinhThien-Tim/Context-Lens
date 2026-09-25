@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DocumentRecord, PdfOcrRecord } from '../../db/database';
 import { ocrCandidate } from './ocrEligibility';
+import { findNextOcrCandidates } from '../../reader/pdf/usePdfOcrQueue';
 
 const document = {
   id: 'mixed', kind: 'pdf', title: 'Mixed', content: '', createdAt: 1, updatedAt: 1,
@@ -23,5 +24,15 @@ describe('OCR queue eligibility', () => {
     expect(ocrCandidate(document, 2, 'eng', cached, 'one')).toBe(false);
     expect(ocrCandidate(document, 2, 'eng', cached, 'two')).toBe(true);
     expect(ocrCandidate(document, 2, 'eng+vie', cached, 'one')).toBe(true);
+  });
+  it('selects the next six unprocessed candidates in document order regardless of the reading page', async () => {
+    const pages = Array.from({ length: 36 }, (_, index) => ({
+      pageNumber: index + 1, startOffset: 0, endOffset: 0, plainText: '', blocks: [],
+      extractionQuality: [6, 7, 9, 12, 13, 17].includes(index + 1) ? 'poor' : 'good', hasImage: true,
+    }));
+    const doc = { ...document, pageOffsets: Array.from({ length: 36 }, () => 0), pdfPages: pages, location: { ...document.location, page: 30 } } as DocumentRecord;
+    const cached = [1, 2, 3, 4, 5].map(page => ({ page, language: 'eng', documentHash: 'hash' })) as PdfOcrRecord[];
+    const selected = await findNextOcrCandidates(doc, 'eng', cached, 'hash', 6, async () => true);
+    expect(selected).toEqual([6, 7, 9, 12, 13, 17]);
   });
 });
