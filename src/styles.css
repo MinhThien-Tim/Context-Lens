@@ -922,3 +922,40 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
 @media (min-width:700px) { .language-settings-modal { width:min(94vw,720px); } }
 @media (max-width:520px) { .engine-toggles { grid-template-columns:1fr; } .language-settings-modal .settings-card { padding:13px; } }
 :root[data-theme="dark"] .ai-card .setup-choice.selected,:root[data-theme="system"] .ai-card .setup-choice.selected { background:color-mix(in srgb,#7253a4 15%,var(--surface)); }
+
+/* Keep PDF controls in a measured row so the sticky progress line follows the toolbar. */
+.reader-header-position { display:flex; align-items:center; flex-wrap:nowrap; min-width:0; }
+.pdf-mode-switch { flex:none; align-items:center; white-space:nowrap; }
+.pdf-mode-switch > button { flex:none; font-size:12px; font-weight:600; white-space:nowrap; }
+.pdf-mode-switch > button[aria-pressed="true"] { font-weight:750; }
+.pdf-mode-switch > .pdf-reading-options-toggle { display:grid; place-items:center; width:40px; min-width:40px!important; padding:0!important; }
+.pdf-reading-options-toggle svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:2.7; stroke-linecap:round; stroke-linejoin:round; }
+.page-navigation { flex:none; white-space:nowrap; }
+@media (max-width:767px) {
+  .reader-header:has(.pdf-mode-switch) { grid-template-rows:48px 48px; height:96px; min-height:96px; }
+  .reader-header:has(.pdf-mode-switch) .reader-document { min-height:48px; }
+  .reader-header:has(.pdf-mode-switch) .reader-header-position { flex-wrap:nowrap; justify-content:space-between; gap:4px; }
+  .reader-shell:has(.pdf-mode-switch) .progress-line { top:96px; }
+  .pdf-mode-switch > button { padding-inline:5px; font-size:11px; }
+  .page-navigation .icon-button { min-width:36px; width:36px; min-height:44px; }
+  .page-navigation .page-count { min-width:46px; min-height:44px; padding-inline:2px; }
+  .pdf-reading-options { left:0; right:auto; }
+  .pdf-viewer-wrap,.pdf-reading-view { height:calc(100dvh - 98px); }
+  .reader-viewport:has(.pdf-queue-status) { height:calc(100dvh - 98px); }
+}
+@media (max-width:390px) {
+  .reader-header:has(.pdf-mode-switch) { grid-template-rows:48px 48px; height:96px; }
+  .reader-header:has(.pdf-mode-switch) .reader-header-position { flex-wrap:nowrap; }
+  .page-navigation .icon-button { min-width:36px; width:36px; }
+}
+.reader-header:has(.pdf-reading-options) { z-index:12; }
+@media (min-width:768px) and (max-width:850px) {
+  .reader-header:has(.pdf-mode-switch) { display:grid; grid-template-columns:1fr auto; grid-template-rows:60px 48px; height:108px; }
+  .reader-header:has(.pdf-mode-switch) .reader-header-leading { grid-column:1; grid-row:1; min-width:0; }
+  .reader-header:has(.pdf-mode-switch) .reader-header-actions { grid-column:2; grid-row:1; min-width:0; }
+  .reader-header:has(.pdf-mode-switch) .reader-document { grid-column:1 / -1; grid-row:2; justify-content:center; min-width:0; }
+  .reader-header:has(.pdf-mode-switch) .reader-document h1 { display:none; }
+  .reader-shell:has(.pdf-mode-switch) .progress-line { top:108px; }
+  .pdf-viewer-wrap,.pdf-reading-view { height:calc(100dvh - 110px); }
+  .reader-viewport:has(.pdf-queue-status) { height:calc(100dvh - 110px); }
+}

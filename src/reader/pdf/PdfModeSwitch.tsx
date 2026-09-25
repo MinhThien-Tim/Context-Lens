@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { OcrLanguage } from '../../documents/pdf/ocrStore';
 import type { OcrQueueStatus } from './usePdfOcrQueue';
+import type { GuideLanguage } from '../../onboarding/store';
 
 interface Props {
   mode: 'original' | 'reading';
+  uiLanguage: GuideLanguage;
   canRead: boolean;
   hasPdfText: boolean;
   hasOcr: boolean;
@@ -22,7 +24,7 @@ interface Props {
   onClear: () => void;
 }
 
-export function PdfModeSwitch({ mode, canRead, hasPdfText, hasOcr, language, onOriginal, onReading, onSource, onLanguage, onRecognize, nextPageCount, queueStatus, onPause, onContinue, onCancel, hasAnyOcr, onClear }: Props) {
+export function PdfModeSwitch({ mode, uiLanguage, canRead, hasPdfText, hasOcr, language, onOriginal, onReading, onSource, onLanguage, onRecognize, nextPageCount, queueStatus, onPause, onContinue, onCancel, hasAnyOcr, onClear }: Props) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -35,9 +37,9 @@ export function PdfModeSwitch({ mode, canRead, hasPdfText, hasOcr, language, onO
   }, [open]);
   const choose = (source: 'pdf' | 'ocr') => { onSource(source); setOpen(false); };
   return <div class="pdf-mode-switch" role="group" aria-label="PDF view mode" ref={root}>
-    <button aria-label="Original" aria-pressed={mode === 'original'} onClick={onOriginal}>Trang gốc</button>
-    <button aria-label="Reading" aria-pressed={mode === 'reading'} disabled={!canRead} onClick={onReading}>Đọc chữ</button>
-    <button class="pdf-reading-options-toggle" aria-label="Tùy chọn Đọc chữ" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(value => !value)}>▾</button>
+    <button aria-pressed={mode === 'original'} onClick={onOriginal}>{uiLanguage === 'vi' ? 'Trang gốc' : 'Original'}</button>
+    <button aria-pressed={mode === 'reading'} disabled={!canRead} onClick={onReading}>{uiLanguage === 'vi' ? 'Đọc chữ' : 'Reading'}</button>
+    <button class="pdf-reading-options-toggle" aria-label={uiLanguage === 'vi' ? 'Tùy chọn Đọc chữ' : 'Reading options'} aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(value => !value)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 9 7 7 7-7" /></svg></button>
     {open && <div class="pdf-reading-options" role="menu" aria-label="Tùy chọn Đọc chữ">
       <button role="menuitem" disabled={!hasPdfText} onClick={() => choose('pdf')}>Chữ PDF</button>
       <button role="menuitem" disabled={!hasOcr} onClick={() => choose('ocr')}>Chữ OCR{hasOcr ? '' : ' · chưa có'}</button>
