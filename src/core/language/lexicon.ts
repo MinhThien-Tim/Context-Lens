@@ -23,6 +23,10 @@ export const phrases: PhraseEntry[] = [
   }] }
 ];
 const words: LexicalEntry[] = [
+  { lemma: 'capital', pos: ['noun'], senses: [
+    { id: 'capital.finance', definitionEn: 'money or financial assets available for investment', meaningVi: 'vốn' },
+    { id: 'capital.city', definitionEn: 'the city where a government is based', meaningVi: 'thủ đô' }
+  ] },
   { lemma: 'constrain', pos: ['verb'], senses: [{ id: 'constrain.limit', definitionEn: 'to limit what someone or something can do', meaningVi: 'hạn chế / giới hạn', synonyms: ['restrict', 'limit'], collocations: ['constrain investment'] }] },
   { lemma: 'constraint', pos: ['noun'], senses: [{ id: 'constraint.limit', definitionEn: 'something that limits what can happen', meaningVi: 'sự hạn chế / ràng buộc' }] },
   { lemma: 'run', pos: ['verb'], senses: [{ id: 'run.move', definitionEn: 'to move on foot faster than walking', meaningVi: 'chạy', keywords: ['race', 'road', 'fast'] }, { id: 'run.manage', definitionEn: 'to manage or operate something', meaningVi: 'điều hành', keywords: ['company', 'business', 'organization'] }] },

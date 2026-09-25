@@ -23,6 +23,7 @@ export interface TranslationResult {
   latencyMs?: number;
 }
 export interface TranslationProvider {
+  countsOwnRequests?: boolean;
   id: string;
   priority: number;
   tier: 'stable' | 'optional' | 'experimental';

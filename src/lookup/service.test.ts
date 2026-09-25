@@ -85,6 +85,35 @@ describe('lookup service offline cache', () => {
     expect(result.quick.meaning_vi.join()).toContain('chiếm');
     expect(result.quick.lexical_unit?.text).toBe('account for');
   });
+  it('translates an ambiguous sentence once for repeated selections', async () => {
+    const sentence = 'The sanctions severely constrained access to foreign capital.';
+    const fetch = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ text: 'Các lệnh trừng phạt hạn chế nghiêm trọng khả năng tiếp cận vốn nước ngoài.' }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetch);
+    const service = new LookupService();
+    const settings = { ...defaultEngineSettings, browserTranslation: false, publicTranslation: false, googleProvider: true,
+      managedTranslation: false, translationEndpoint: 'https://example.test/translate' };
+    const before = getDiagnostics().counters;
+    const capital = await service.quick({ ...request, sentence, selection: 'capital', selection_start: sentence.indexOf('capital') }, settings);
+    for (const selection of ['sanctions', 'constrained', 'access', 'severely']) {
+      await service.quick({ ...request, sentence, selection, selection_start: sentence.indexOf(selection) }, settings);
+    }
+    const gatewayCalls = fetch.mock.calls.filter(([url]) => String(url) === 'https://example.test/translate');
+    expect(gatewayCalls).toHaveLength(1);
+    expect(JSON.parse(String(gatewayCalls[0][1].body)).text).toBe(sentence);
+    expect(getDiagnostics().counters.googleFallback - before.googleFallback).toBe(1);
+    expect(getDiagnostics().counters.translationCacheHit - before.translationCacheHit).toBe(4);
+    expect(capital.quick.meaning_vi).toContain('vốn');
+  });
+  it('stops at a high-confidence local phrase without calling Google', async () => {
+    const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+    const sentence = 'This accounts for nearly half of the decline.';
+    const result = await new LookupService().quick({ ...request, sentence, selection: 'accounts', selection_start: sentence.indexOf('accounts') }, {
+      ...defaultEngineSettings, browserTranslation: false, publicTranslation: false, googleProvider: true,
+      managedTranslation: false, translationEndpoint: 'https://example.test/translate'
+    });
+    expect(result.quick.lexical_unit?.text).toBe('account for');
+    expect(fetch.mock.calls.filter(([url]) => String(url) === 'https://example.test/translate')).toHaveLength(0);
+  });
   it('returns a provider-independent cached result when AI is disabled', async () => {
     const contextKey = await createContextCacheKey({ selection: request.selection, sentence: request.sentence, languageMode: request.language_mode, promptVersion: PROMPT_VERSION });
     await db.lookups.put({ key: `${contextKey}:gemini:flash`, contextKey, result: validLookup, createdAt: 1, accessedAt: 1 });

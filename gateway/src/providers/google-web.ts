@@ -7,7 +7,7 @@ export class GoogleWebProvider implements GatewayTranslationProvider {
   constructor(private transport: typeof fetch = fetch, private timeoutMs = 2000) {}
   isAvailable() { return true; }
   supports(input: GatewayTranslationRequest) { return input.sourceLang !== input.targetLang; }
-  async translate(input: GatewayTranslationRequest, signal: AbortSignal): Promise<GatewayTranslationResult> {
+  async translate(input: GatewayTranslationRequest, signal: AbortSignal, onRequest: () => void = () => {}): Promise<GatewayTranslationResult> {
     const url = new URL('https://translate.googleapis.com/translate_a/single');
     url.search = new URLSearchParams({ client: 'gtx', sl: input.sourceLang, tl: input.targetLang, dt: 't', q: input.text }).toString();
     const controller = new AbortController();
@@ -15,8 +15,21 @@ export class GoogleWebProvider implements GatewayTranslationProvider {
     signal.addEventListener('abort', abort, { once: true });
     const timer = setTimeout(() => controller.abort(new DOMException('Timed out', 'TimeoutError')), this.timeoutMs);
     try {
-      const response = await this.transport(url, { signal: controller.signal, redirect: 'manual', credentials: 'omit', referrerPolicy: 'no-referrer' });
-      if ([403, 429].includes(response.status)) throw new GatewayError('UPSTREAM_BLOCKED');
+      const request = () => { onRequest(); return this.transport(url, { signal: controller.signal, redirect: 'manual', credentials: 'omit', referrerPolicy: 'no-referrer' }); };
+      let response: Response;
+      try {
+        response = await request();
+      } catch (error) {
+        if (controller.signal.aborted) throw error;
+        await backoff(controller.signal);
+        response = await request();
+      }
+      if (response.status >= 500) {
+        await backoff(controller.signal);
+        response = await request();
+      }
+      if (response.status === 429) throw new GatewayError('UPSTREAM_BLOCKED', 429, 60);
+      if (response.status === 403) throw new GatewayError('UPSTREAM_BLOCKED', 503, 60);
       if (!response.ok) throw new GatewayError('PROVIDER_DOWN', 502);
       if (!response.headers.get('content-type')?.includes('json')) throw new GatewayError('INVALID_RESPONSE', 502);
       const raw = await boundedJson(response, 32_768);
@@ -38,4 +51,13 @@ export class GoogleWebProvider implements GatewayTranslationProvider {
       signal.removeEventListener('abort', abort);
     }
   }
+}
+
+function backoff(signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) { reject(signal.reason); return; }
+    const timer = setTimeout(() => { signal.removeEventListener('abort', abort); resolve(); }, 100 + Math.random() * 100);
+    const abort = () => { clearTimeout(timer); reject(signal.reason); };
+    signal.addEventListener('abort', abort, { once: true });
+  });
 }

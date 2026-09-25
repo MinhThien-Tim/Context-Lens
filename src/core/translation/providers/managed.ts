@@ -1,8 +1,10 @@
 import { EngineError } from '../../errors';
 import type { TranslationInput, TranslationProvider } from '../types';
 import type { OnlineTranslationProvider } from '../../../settings/engines';
+import { recordDiagnostic } from '../../diagnostics';
 export class ManagedTranslationProvider implements TranslationProvider {
   priority = 25; tier = 'experimental' as const; network = true; timeoutMs = 2800;
+  readonly countsOwnRequests = true;
   readonly id: string;
   constructor(private endpoint: string, private selection: OnlineTranslationProvider = 'auto') {
     this.id = selection === 'auto' ? 'online-auto' : selection;
@@ -17,6 +19,9 @@ export class ManagedTranslationProvider implements TranslationProvider {
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         version: 1, provider: this.selection, text: input.text, sourceLang: input.sourceLang, targetLang: input.targetLang, mode: input.mode ?? 'word'
       }) });
+    const attempts = Math.min(2, Math.max(0, Number(response.headers.get('X-Google-Attempts')) || 0));
+    for (let index = 0; index < attempts; index++) recordDiagnostic('googleFallback', { provider: 'google-web', mode: input.mode, status: 'request' });
+    if (attempts && !response.ok) recordDiagnostic(response.status === 429 ? 'google429' : 'googleError', { provider: 'google-web', mode: input.mode, status: String(response.status) });
     if (response.status === 429) throw new EngineError('QUOTA');
     if (response.status === 504) throw new EngineError('TIMEOUT');
     if (!response.ok) throw new EngineError('PROVIDER_DOWN');

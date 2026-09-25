@@ -14,24 +14,26 @@ export class TranslationRouter {
   constructor(private providers: TranslationProvider[], private cache: ResultCache<TranslationResult>, readonly health = new ProviderHealthManager(), private fallback = true, private online = () => navigator.onLine) {}
   translate(input: TranslationInput): Promise<TranslationResult> {
     const key = translationKey(input);
+    if (this.requests.has(key)) recordDiagnostic('pendingDedupeHit', { provider: 'translation', mode: input.mode });
     return this.requests.run(key, async signal => {
       checkAbort(signal);
       const cached = await this.cache.get(key);
       checkAbort(signal);
-      if (cached) { recordDiagnostic('cacheHit', { text: input.mode === 'sentence' ? undefined : input.text, provider: cached.provider, mode: input.mode ?? 'word' }); return { ...cached, sourceText: input.text, cached: true }; }
+      if (cached) { recordDiagnostic('cacheHit', { text: input.mode === 'sentence' ? undefined : input.text, provider: cached.provider, mode: input.mode ?? 'word' }); if (input.mode === 'sentence') recordDiagnostic('translationCacheHit', { provider: cached.provider, mode: 'sentence' }); return { ...cached, sourceText: input.text, cached: true }; }
       const pair = `${input.sourceLang ?? 'auto'}>${input.targetLang}`;
       let lastError = new EngineError(this.online() ? 'UNSUPPORTED_LANGUAGE' : 'OFFLINE');
       let deferred: TranslationResult | undefined;
       let googleFallbackAttempted = false;
       for (const provider of [...this.providers].sort((a, b) => a.priority - b.priority)) {
         checkAbort(signal);
-        if ((provider.network && !this.online()) || !provider.supports(input.sourceLang ?? 'auto', input.targetLang) || !this.health.available(provider.id, pair)) continue;
+        if ((provider.network && !this.online()) || !provider.supports(input.sourceLang ?? 'auto', input.targetLang)) continue;
+        if (!this.health.available(provider.id, pair)) { if (['online-auto', 'google-web', 'google'].includes(provider.id)) recordDiagnostic('googleCircuitSkip', { provider: provider.id, mode: input.mode }); continue; }
         const googleManaged = provider.id === 'online-auto' || provider.id === 'google-web' || provider.id === 'google';
         const start = performance.now();
         try {
           const result = await withDeadline(async providerSignal => {
             if (!await provider.isAvailable()) return null;
-            if (googleManaged && !googleFallbackAttempted) { googleFallbackAttempted = true; recordDiagnostic('googleFallback', { text: input.mode === 'sentence' ? undefined : input.text, provider: provider.id, mode: input.mode ?? 'word', status: 'request' }); }
+            if (googleManaged && !googleFallbackAttempted) { googleFallbackAttempted = true; if (!provider.countsOwnRequests) recordDiagnostic('googleFallback', { text: input.mode === 'sentence' ? undefined : input.text, provider: provider.id, mode: input.mode ?? 'word', status: 'request' }); }
             return provider.translate({ ...input, signal: providerSignal });
           }, provider.timeoutMs, signal);
           if (!result) continue;
@@ -51,6 +53,7 @@ export class TranslationRouter {
           checkAbort(signal);
           lastError = error instanceof EngineError ? error : new EngineError('NETWORK');
           if (lastError.code !== 'UNSUPPORTED_LANGUAGE') this.health.failure(provider.id, pair);
+          if (googleManaged && !provider.countsOwnRequests) recordDiagnostic(lastError.code === 'QUOTA' ? 'google429' : 'googleError', { provider: provider.id, mode: input.mode, status: lastError.code });
           if (!this.fallback) break;
         }
       }
@@ -64,7 +67,7 @@ export class TranslationRouter {
             try {
               const result = await withDeadline(async providerSignal => {
                 if (!await google.isAvailable()) return null;
-                if (!googleFallbackAttempted) { googleFallbackAttempted = true; recordDiagnostic('googleFallback', { text: input.mode === 'sentence' ? undefined : input.text, provider: google.id, mode: input.mode ?? 'word', status: 'request' }); }
+                if (!googleFallbackAttempted) { googleFallbackAttempted = true; if (!google.countsOwnRequests) recordDiagnostic('googleFallback', { text: input.mode === 'sentence' ? undefined : input.text, provider: google.id, mode: input.mode ?? 'word', status: 'request' }); }
                 return google.translate({ ...input, signal: providerSignal });
               }, google.timeoutMs, signal);
               checkAbort(signal);

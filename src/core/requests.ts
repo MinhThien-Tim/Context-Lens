@@ -4,6 +4,7 @@ interface Flight<T> { controller: AbortController; promise: Promise<T>; users: n
 /** Each subscriber owns its cancellation; the work stops when the final subscriber leaves. */
 export class SharedRequests<T> {
   private flights = new Map<string, Flight<T>>();
+  has(key: string): boolean { return this.flights.has(key); }
   run(key: string, work: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
     checkAbort(signal);
     let flight = this.flights.get(key);

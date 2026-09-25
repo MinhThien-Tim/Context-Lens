@@ -2,7 +2,7 @@ import type { AiSettings } from '../settings/types';
 import { defaultEngineSettings, type EngineSettings } from '../settings/engines';
 import { db } from '../db/database';
 import { EngineCache } from '../core/cache';
-import { TranslationRouter, TRANSLATION_VERSION } from '../core/translation/router';
+import { TranslationRouter, TRANSLATION_VERSION, translationKey } from '../core/translation/router';
 import { optionalTranslationEnabled, translationProviders } from '../core/translation/provider-registry';
 import { ContextRouter, CONTEXT_VERSION } from '../core/context/context-router';
 import { contextProviders } from '../core/context/providers';
@@ -21,12 +21,15 @@ import { SentenceAnalysisCache, SentenceEngine } from '../core/language/sentence
 import { ensureLocalDictionaryAssets } from './localAssets';
 import { lookupWebDictionary } from './webDictionary';
 import { recordDiagnostic } from '../core/diagnostics';
+import { ManagedTranslationProvider } from '../core/translation/providers/managed';
 export { createProvider } from '../core/context/providers';
 
 /** Compatibility facade: UI consumes normalized reading results, never provider payloads. */
 export class LookupService {
   private local = new LocalLanguageEngine();
   private translation?: TranslationRouter;
+  private wordFallback?: TranslationRouter;
+  private googleContext?: TranslationRouter;
   private context?: ContextRouter;
   private signature = '';
   private ai?: AiSettings;
@@ -38,6 +41,13 @@ export class LookupService {
       const phrases = new PhraseDetector(undefined, lexical);
       this.local = new LocalLanguageEngine(lexical, phrases, new SentenceEngine(lexical, phrases, new SentenceAnalysisCache(db, 1000, settings.cacheSentenceAnalysis)));
       this.translation = new TranslationRouter(translationProviders(settings), new EngineCache<TranslationResult>(db.translations, TRANSLATION_VERSION, settings.translationCacheLimit, settings.cacheTranslations), undefined, settings.automaticFallback);
+      this.wordFallback = new TranslationRouter(translationProviders(settings).filter(provider => !['google', 'google-web', 'online-auto'].includes(provider.id)),
+        new EngineCache<TranslationResult>(db.translations, TRANSLATION_VERSION, settings.translationCacheLimit, settings.cacheTranslations), undefined, settings.automaticFallback);
+      this.googleContext = new TranslationRouter([
+        ...translationProviders(settings).filter(provider => ['google', 'google-web'].includes(provider.id)),
+        ...(settings.managedTranslation && import.meta.env.VITE_MANAGED_TRANSLATION === 'true' ? [new ManagedTranslationProvider('/api/translate', 'google-web')] : [])
+      ],
+        new EngineCache<TranslationResult>(db.translations, TRANSLATION_VERSION, settings.translationCacheLimit, settings.cacheTranslations), undefined, false);
       this.context = undefined;
     }
     if (ai && (!this.context || !this.ai || Object.keys(ai).some(key => ai[key as keyof AiSettings] !== this.ai![key as keyof AiSettings]))) {
@@ -51,9 +61,19 @@ export class LookupService {
     recordDiagnostic('quickLookup', { text: request.selection_type === 'sentence' ? undefined : request.selection, mode: request.selection_type });
     this.configure(settings);
     let base = this.immediate(request, settings);
+    let cachedSentence = false;
     if (settings.offlineDictionary && settings.sourceLang === 'en') {
       await ensureLocalDictionaryAssets().catch(() => { /* Curated and any successfully loaded source remain usable. */ });
       checkAbort(signal);
+      if (settings.cacheTranslations && request.selection_type !== 'sentence' && settings.sourceLang === 'en' && settings.targetLang === 'vi' && request.sentence.trim()) {
+        const key = translationKey({ text: request.sentence, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: 'sentence' });
+        const row = await db.translations.get(key).catch(() => undefined);
+        if (row?.version === TRANSLATION_VERSION && row.result.text) {
+          await this.local.rememberSentenceTranslation(request.sentence, row.result.text);
+          recordDiagnostic('translationCacheHit', { provider: row.provider, mode: 'sentence' });
+          cachedSentence = true;
+        }
+      }
       const lens = await this.local.analyzeSelection(selectionInput(request, settings.sourceLang, settings.targetLang));
       checkAbort(signal);
       base = applyLocalResult(base, lens);
@@ -61,7 +81,21 @@ export class LookupService {
       // Let the surface progressively enrich the synchronous result instead of
       // holding useful local content behind a network fallback.
       onLocal?.(base);
-      if (settings.quickEngine === 'offline' || (complete && lens.confidence >= 0.6 && settings.quickEngine === 'auto')) { recordDiagnostic('localStop', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'dictionary', mode: request.selection_type }); return base; }
+      if (settings.quickEngine === 'offline' || (complete && lens.confidence >= 0.8 && settings.quickEngine === 'auto')) { recordDiagnostic('localStop', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'dictionary', mode: request.selection_type }); return base; }
+      if (!cachedSentence && request.selection_type !== 'sentence' && settings.sourceLang === 'en' && settings.targetLang === 'vi' && this.googleContext && request.sentence.trim() && this.googleContextProviderAvailable(settings)) {
+        try {
+          const translated = await this.googleContext.translate({ text: request.sentence, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: 'sentence', signal });
+          checkAbort(signal);
+          await this.local.rememberSentenceTranslation(request.sentence, translated.text);
+          const reranked = await this.local.analyzeSelection(selectionInput(request, settings.sourceLang, settings.targetLang));
+          base = applyLocalResult(base, reranked);
+          if (reranked.dictionary?.senses.some(sense => sense.contextMatch && sense.meaningsVi.length)) {
+            recordDiagnostic('googleContextResolved', { provider: translated.provider, mode: request.selection_type });
+            return base;
+          }
+          recordDiagnostic('googleUnresolved', { provider: translated.provider, mode: request.selection_type });
+        } catch (error) { checkAbort(signal); recordDiagnostic('googleUnresolved', { provider: 'google', mode: request.selection_type }); }
+      }
       if (settings.automaticFallback && settings.publicTranslation && settings.targetLang === 'vi') {
         const web = await lookupWebDictionary(lens.selection.lemma, request.selection, settings.networkTimeoutMs, signal);
         if (web) {
@@ -72,11 +106,12 @@ export class LookupService {
       }
     }
     if (!optionalTranslationEnabled(settings)) return base;
+    if (request.selection_type !== 'sentence' && settings.quickEngine === 'auto' && base.quick.meaning_vi.length) return base;
     let translated: TranslationResult;
-    try { translated = await this.translation!.translate({ text: request.selection, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: request.selection_type, signal,
+    try { translated = await (request.selection_type !== 'sentence' && settings.quickEngine === 'auto' ? this.wordFallback! : this.translation!).translate({ text: request.selection, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: request.selection_type, signal,
       localContext: base.dictionary ? { lemma: base.dictionary.lemma, pos: base.dictionary.contextPos, meaningsVi: [...base.dictionary.senses.flatMap(s => s.meaningsVi), ...(base.dictionary.unpairedMeaningsVi ?? [])],
         contextConfidence: base.dictionary.contextConfidence, senseConfidence: base.dictionary.senseConfidence } : undefined }); }
-    catch (error) { checkAbort(signal); if (base.difficulty.worth_learning) return base; throw error; }
+    catch { checkAbort(signal); return base; }
     const translatedDefinition = settings.sourceLang === 'en' && settings.targetLang === 'en' ? translated.text : '';
     const translatedMeanings = settings.targetLang === 'vi' ? translated.dictionary?.meanings ?? [translated.text] : [];
     const dictionary = translatedMeanings.length ? addUnpairedTranslations(base.dictionary, translatedMeanings) : base.dictionary;
@@ -111,7 +146,10 @@ export class LookupService {
     return (await this.explain(request, ai, defaultEngineSettings, request.context_mode ?? 'meaning-in-context', signal)).result;
   }
   diagnostics(): ProviderHealthSnapshot[] {
-    return [...(this.translation?.health.snapshot() ?? []), ...(this.context?.health.snapshot() ?? [])];
+    return [...(this.translation?.health.snapshot() ?? []), ...(this.googleContext?.health.snapshot() ?? []), ...(this.context?.health.snapshot() ?? [])];
+  }
+  private googleContextProviderAvailable(settings: EngineSettings): boolean {
+    return settings.quickEngine === 'auto' && (settings.googleProvider || (settings.managedTranslation && import.meta.env.VITE_MANAGED_TRANSLATION === 'true'));
   }
 }
 export const lookupService = new LookupService();

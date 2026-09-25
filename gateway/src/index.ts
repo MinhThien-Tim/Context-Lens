@@ -12,12 +12,13 @@ interface Env {
 export class TranslationGate {
   constructor(private ctx: { storage: Store }, private providers: GatewayTranslationProvider[] = [new GoogleWebProvider(), new BingWebProvider()]) {}
   async fetch(request: Request): Promise<Response> {
+    let googleAttempts = 0;
     try {
       const input = validate(await boundedJson(request, 8192));
       const client = request.headers.get('X-Client-Hash');
       if (!client || !/^[a-f0-9]{64}$/.test(client)) throw new GatewayError('INVALID_REQUEST', 400);
       const router = new GatewayProviderRouter(this.providers);
-      return json(await router.translate(input, request.signal, async provider => {
+      const result = await router.translate(input, request.signal, async provider => {
         const reservation = crypto.randomUUID();
         let failure: GatewayError | undefined;
         try {
@@ -29,7 +30,11 @@ export class TranslationGate {
           if (error instanceof GatewayError) throw error;
           throw new GatewayError('UNAVAILABLE');
         }
-        try { return await provider.translate(input, request.signal); }
+        try {
+          if (provider instanceof GoogleWebProvider) return await provider.translate(input, request.signal, () => { googleAttempts++; });
+          if (provider.id === 'google-web') googleAttempts++;
+          return await provider.translate(input, request.signal);
+        }
         catch (error) { failure = error instanceof GatewayError ? error : new GatewayError('UNAVAILABLE'); throw failure; }
         finally {
           // Failed attempts are not refunded; only their concurrency lease is released.
@@ -38,10 +43,15 @@ export class TranslationGate {
             if (ledger) await tx.put('ledger', settle(ledger, reservation, provider.id, failure, Date.now()));
           }).catch(() => {});
         }
-      }));
+      });
+      const response = json(result);
+      response.headers.set('X-Google-Attempts', String(googleAttempts));
+      return response;
     } catch (error) {
       const failure = error instanceof GatewayError ? error : new GatewayError('UNAVAILABLE');
-      return json({ error: { code: failure.code } }, failure.status, failure.retryAfter);
+      const response = json({ error: { code: failure.code } }, failure.status, failure.retryAfter);
+      response.headers.set('X-Google-Attempts', String(googleAttempts));
+      return response;
     }
   }
 }

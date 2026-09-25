@@ -4,7 +4,10 @@ import { getDiagnostics, groupDiagnosticDetails, resetDiagnostics, type Diagnost
 const rows: Array<{ event: DiagnosticEvent; label: string }> = [
   { event: 'quickLookup', label: 'Total lookup' }, { event: 'localStop', label: 'Local stop' }, { event: 'wiktionary', label: 'Wiktionary stop' },
   { event: 'mymemoryAccept', label: 'MyMemory accept' }, { event: 'mymemoryUncertain', label: 'MyMemory uncertain' }, { event: 'mymemoryReject', label: 'MyMemory reject' },
-  { event: 'googleFallback', label: 'Actual Google requests' }, { event: 'cacheHit', label: 'Translation cache hits' },
+  { event: 'googleFallback', label: 'Actual Google requests' }, { event: 'translationCacheHit', label: 'Translation cache hits' },
+  { event: 'googleContextResolved', label: 'Google context resolved' }, { event: 'googleUnresolved', label: 'Google unresolved' },
+  { event: 'google429', label: 'Google 429' }, { event: 'googleError', label: 'Google network/error' },
+  { event: 'googleCircuitSkip', label: 'Google circuit-breaker skips' }, { event: 'pendingDedupeHit', label: 'Pending-request dedupe hits' },
   { event: 'geminiAction', label: 'Gemini actions' }, { event: 'geminiCacheHit', label: 'Gemini cache hits' }, { event: 'geminiRequest', label: 'Actual Gemini requests' }
 ];
 const modeLabels: Record<string, string> = { 'meaning-in-context': 'Context', grammar: 'Grammar', simplify: 'Simplify', 'sentence-structure': 'Structure' };

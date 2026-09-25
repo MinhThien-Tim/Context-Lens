@@ -1,9 +1,9 @@
-export type DiagnosticEvent = 'quickLookup' | 'localStop' | 'wiktionary' | 'mymemoryAccept' | 'mymemoryUncertain' | 'mymemoryReject' | 'googleFallback' | 'geminiAction' | 'geminiRequest' | 'contextCacheHit' | 'geminiCacheHit' | 'cacheHit';
+export type DiagnosticEvent = 'quickLookup' | 'localStop' | 'wiktionary' | 'mymemoryAccept' | 'mymemoryUncertain' | 'mymemoryReject' | 'googleFallback' | 'googleContextResolved' | 'googleUnresolved' | 'google429' | 'googleError' | 'googleCircuitSkip' | 'pendingDedupeHit' | 'translationCacheHit' | 'geminiAction' | 'geminiRequest' | 'contextCacheHit' | 'geminiCacheHit' | 'cacheHit';
 export interface DiagnosticDetail { event: DiagnosticEvent; text?: string; normalizedText?: string; provider?: string; mode?: string; latencyMs?: number; status?: string; timestamp: number }
 export interface DiagnosticSnapshot { counters: Record<DiagnosticEvent, number>; recent: Array<{ event: DiagnosticEvent; provider?: string; latencyMs?: number; status?: string }>; details: DiagnosticDetail[] }
 export interface DiagnosticGroup { detail: DiagnosticDetail; count: number; items: DiagnosticDetail[] }
 
-const names: DiagnosticEvent[] = ['quickLookup', 'localStop', 'wiktionary', 'mymemoryAccept', 'mymemoryUncertain', 'mymemoryReject', 'googleFallback', 'geminiAction', 'geminiRequest', 'contextCacheHit', 'geminiCacheHit', 'cacheHit'];
+const names: DiagnosticEvent[] = ['quickLookup', 'localStop', 'wiktionary', 'mymemoryAccept', 'mymemoryUncertain', 'mymemoryReject', 'googleFallback', 'googleContextResolved', 'googleUnresolved', 'google429', 'googleError', 'googleCircuitSkip', 'pendingDedupeHit', 'translationCacheHit', 'geminiAction', 'geminiRequest', 'contextCacheHit', 'geminiCacheHit', 'cacheHit'];
 const counters = Object.fromEntries(names.map(name => [name, 0])) as Record<DiagnosticEvent, number>;
 const recent: DiagnosticSnapshot['recent'] = [];
 const details: DiagnosticDetail[] = [];

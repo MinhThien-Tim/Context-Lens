@@ -18,6 +18,20 @@ it('aborts a stalled upstream once at the deadline without retry', async () => {
   await vi.advanceTimersByTimeAsync(2001); await assertion;
   expect(transport).toHaveBeenCalledTimes(1);
 });
+it('reports upstream Google 429 without retrying', async () => {
+  const transport = vi.fn(async () => new Response(null, { status: 429 }));
+  await expect(new GoogleWebProvider(transport).translate(validate(input), new AbortController().signal)).rejects.toMatchObject({ code: 'UPSTREAM_BLOCKED', status: 429 });
+  expect(transport).toHaveBeenCalledTimes(1);
+});
+it('retries one transient Google 5xx with bounded backoff', async () => {
+  const transport = vi.fn()
+    .mockResolvedValueOnce(new Response(null, { status: 503 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify([[['Xin chào', 'Hello']]]), { headers: { 'content-type': 'application/json' } }));
+  const attempts = vi.fn();
+  await expect(new GoogleWebProvider(transport).translate(validate(input), new AbortController().signal, attempts)).resolves.toMatchObject({ text: 'Xin chào' });
+  expect(transport).toHaveBeenCalledTimes(2);
+  expect(attempts).toHaveBeenCalledTimes(2);
+});
 const input = { version: 1 as const, provider: 'auto' as const, text: 'Hello', sourceLang: 'en' as const, targetLang: 'vi' as const, mode: 'word' as const };
 function storage(): Store {
   let value: unknown; let tail = Promise.resolve();

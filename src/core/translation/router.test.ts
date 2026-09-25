@@ -4,6 +4,7 @@ import { ProviderHealthManager } from './provider-health';
 import type { TranslationInput, TranslationProvider, TranslationResult } from './types';
 import { SharedRequests } from '../requests';
 import { getDiagnostics } from '../diagnostics';
+import { EngineError } from '../errors';
 const input: TranslationInput = { text: 'prerequisite', sourceLang: 'en', targetLang: 'vi' };
 const result: TranslationResult = { text: 'điều kiện tiên quyết', sourceText: input.text, targetLang: 'vi', provider: 'browser' };
 const cache = () => ({ get: vi.fn().mockResolvedValue(null), put: vi.fn().mockResolvedValue(undefined) });
@@ -76,6 +77,25 @@ describe('TranslationRouter', () => {
     await Promise.all([router.translate(input), router.translate(input)]);
     expect(browser.translate).toHaveBeenCalledTimes(1);
     expect(store.put).toHaveBeenCalledTimes(1);
+  });
+  it('shares an in-flight sentence request and counts only the network attempt', async () => {
+    const before = getDiagnostics().counters;
+    const google = { ...provider('google-web', 1, vi.fn().mockResolvedValue({ ...result, provider: 'google-web' })), network: true };
+    const router = new TranslationRouter([google], cache(), undefined, false, () => true);
+    await Promise.all([router.translate({ ...input, text: 'A whole sentence.', mode: 'sentence' }), router.translate({ ...input, text: 'A whole sentence.', mode: 'sentence' })]);
+    expect(google.translate).toHaveBeenCalledTimes(1);
+    expect(getDiagnostics().counters.googleFallback - before.googleFallback).toBe(1);
+    expect(getDiagnostics().counters.pendingDedupeHit - before.pendingDedupeHit).toBe(1);
+  });
+  it('skips Google after 429 without retrying the blocked pair', async () => {
+    const before = getDiagnostics().counters;
+    const google = { ...provider('google-web', 1, vi.fn().mockRejectedValue(new EngineError('QUOTA'))), network: true };
+    const router = new TranslationRouter([google], cache(), undefined, false, () => true);
+    await expect(router.translate({ ...input, text: 'First sentence.', mode: 'sentence' })).rejects.toMatchObject({ code: 'QUOTA' });
+    await expect(router.translate({ ...input, text: 'Second sentence.', mode: 'sentence' })).rejects.toBeTruthy();
+    expect(google.translate).toHaveBeenCalledTimes(1);
+    expect(getDiagnostics().counters.google429 - before.google429).toBe(1);
+    expect(getDiagnostics().counters.googleCircuitSkip - before.googleCircuitSkip).toBe(1);
   });
   it('times out a hung provider and falls back in priority order', async () => {
     const hung = provider('browser', 1, vi.fn(() => new Promise(() => {})));
