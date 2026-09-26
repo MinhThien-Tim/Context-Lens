@@ -7,7 +7,7 @@ import { defaultEngineSettings } from '../settings/engines';
 import type { LookupRequest } from './types';
 import { dictionaryRegistry } from './dictionary/registry';
 
-interface AuditCase { surface: string; lemma: string; meaningVi?: string; definitionEn?: string; sentence?: string; expected: 'usable' | 'fragment' }
+interface AuditCase { surface: string; lemma: string; meaningVi?: string; definitionEn?: string; sentence?: string; expected: 'usable' | 'fragment' | 'unknown' }
 interface PackEntry { lemma: string; meaningsVi: string[]; definitionEn: string }
 const required: AuditCase[] = [
   { surface: 'counterargument', lemma: 'counterargument', definitionEn: 'argument', meaningVi: 'lập luận phản biện', expected: 'usable' },
@@ -22,7 +22,8 @@ const required: AuditCase[] = [
   { surface: 'institutional constraints', lemma: 'institutional constraints', meaningVi: 'hạn chế', expected: 'usable' },
   { surface: 'account for', lemma: 'account for', meaningVi: 'nguyên nhân', sentence: 'Several factors account for the decline.', expected: 'usable' },
   { surface: "make up one's mind", lemma: "make up one's mind", definitionEn: 'decision', expected: 'usable' },
-  { surface: 'marizing', lemma: 'marizing', expected: 'fragment' }
+  { surface: 'marizing', lemma: 'marizing', sentence: 'We are summarizing and resummarizing the same paragraph.', expected: 'fragment' },
+  { surface: 'marizing', lemma: 'marizing', expected: 'unknown' }
 ];
 const makeRequest = (item: AuditCase): LookupRequest => ({ selection: item.surface, selection_type: item.surface.includes(' ') ? 'phrase' : 'word',
   sentence: item.sentence ?? `The selected expression is ${item.surface}.`, previous_sentence: null, next_sentence: null, language_mode: 'bilingual',
@@ -43,18 +44,29 @@ const enabled = process.env.RUN_DICTIONARY_AUDIT === '1';
   }));
   const corpus = [...required, ...external, ...sampled].slice(0, 1000);
   const service = new LookupService();
-  const rows = [];
+  const rows: Array<{
+    input: string;
+    lemma: string;
+    expectedLemma: string;
+    correctLemma: boolean;
+    correctMeaning: boolean;
+    fragment: boolean;
+    usable: boolean;
+  }> = [];
   for (const item of corpus) {
     const result = await service.quick(makeRequest(item), { ...defaultEngineSettings, quickEngine: 'offline' });
     const textEn = result.quick.definition_en.toLocaleLowerCase();
     const textVi = result.quick.meaning_vi.join(' ').toLocaleLowerCase();
     const correctLemma = result.selection.lemma === item.lemma;
     const correctMeaning = (!item.definitionEn || textEn.includes(item.definitionEn.toLocaleLowerCase())) && (!item.meaningVi || textVi.includes(item.meaningVi.toLocaleLowerCase()));
-    const fragment = result.lens?.selection.status === 'fragment-or-unknown';
+    const fragment = result.lens?.selection.status === 'fragment';
     rows.push({ input: item.surface, lemma: result.selection.lemma, expectedLemma: item.lemma, correctLemma, correctMeaning, fragment, usable: Boolean(result.quick.definition_en || result.quick.meaning_vi.length) });
   }
-  const passed = rows.filter((row, index) => corpus[index].expected === 'fragment' ? row.fragment : row.usable && row.correctLemma && row.correctMeaning).length;
-  const failures = rows.filter((row, index) => corpus[index].expected === 'fragment' ? !row.fragment : !(row.usable && row.correctLemma && row.correctMeaning));
+  const expected = (item: AuditCase, row: typeof rows[number]) => item.expected === 'fragment' ? row.fragment
+    : item.expected === 'unknown' ? !row.fragment && !row.usable
+    : row.usable && row.correctLemma && row.correctMeaning;
+  const passed = rows.filter((row, index) => expected(corpus[index], row)).length;
+  const failures = rows.filter((row, index) => !expected(corpus[index], row));
   const report = { total: rows.length, passed, accuracy: passed / rows.length, failures: failures.slice(0, 50) };
   process.stdout.write(`DICTIONARY_AUDIT_JSON ${JSON.stringify(report)}\n`);
   expect(report.total).toBeGreaterThanOrEqual(500);

@@ -15,7 +15,7 @@ const pack = {
 describe('installable dictionary packs', () => {
   afterEach(async () => {
     await db.dictionaryPacks.clear();
-    for (const id of [pack.id, 'legacy-morphology', 'reviewed-test', 'imported-test', 'context-lens.wiktionary.en-vi.reviewed']) dictionaryRegistry.unregister(id);
+    for (const id of [pack.id, 'legacy-morphology', 'weak-inflection', 'reviewed-test', 'imported-test', 'context-lens.wiktionary.en-vi.reviewed']) dictionaryRegistry.unregister(id);
   });
   it('validates, persists, loads, and removes a licensed pack', async () => {
     await installDictionaryPack(pack);
@@ -71,5 +71,45 @@ describe('installable dictionary packs', () => {
     expect(dictionaryRegistry.lookup('sing')?.entry.lemma).toBe('sing');
     dictionaryRegistry.unregister(legacy.id);
     await db.dictionaryPacks.delete(legacy.id);
+  });
+  it('reconciles an exact entry with its lemma instead of hiding richer data', async () => {
+    const inflected = { ...pack, id: 'weak-inflection', entries: [
+      { lemma: 'represent', partOfSpeech: 'verb', ipa: null, definitionEn: 'to speak for someone', meaningsVi: ['đại diện'],
+        senses: [{ id: 'represent.agent', definitionEn: 'to speak for someone', meaningsVi: ['đại diện'] }] },
+      { lemma: 'represented', partOfSpeech: 'verb', ipa: null, definitionEn: '', meaningsVi: ['Quá khứ và phân từ quá khứ của represent'] },
+      { lemma: 'study', partOfSpeech: 'verb / noun', ipa: null, definitionEn: 'to learn about a subject', meaningsVi: ['nghiên cứu'] },
+      { lemma: 'studies', partOfSpeech: 'verb', ipa: null, definitionEn: '', meaningsVi: ['ngôi thứ ba số ít'] },
+      { lemma: 'strong', partOfSpeech: 'adjective', ipa: null, definitionEn: 'having great power', meaningsVi: ['mạnh'] },
+      { lemma: 'stronger', partOfSpeech: 'adjective', ipa: null, definitionEn: '', meaningsVi: ['mạnh hơn'] },
+      { lemma: 'smart', partOfSpeech: 'adjective', ipa: null, definitionEn: 'quick-witted', meaningsVi: ['thông minh'] },
+      { lemma: 'smarter', partOfSpeech: 'adjective', ipa: null, definitionEn: 'quicker-witted than', meaningsVi: ['thông minh hơn'] }
+    ] };
+    await installDictionaryPack(inflected);
+    // A morphology redirect answers with the lemma and keeps the exact form attached.
+    expect(dictionaryRegistry.lookup('represented')).toMatchObject({
+      entry: { lemma: 'represent' }, surfaceEntry: { lemma: 'represented' }, morphology: { baseLemma: 'represent' }
+    });
+    // A weak derived entry inherits the richer lemma instead of answering on its own.
+    expect(dictionaryRegistry.lookup('studies')).toMatchObject({
+      entry: { lemma: 'study' }, surfaceEntry: { lemma: 'studies' }, morphology: { baseLemma: 'study' }
+    });
+    // A rich exact entry outranks any derived lemma candidate.
+    expect(dictionaryRegistry.lookup('smarter')?.entry.lemma).toBe('smarter');
+    expect(dictionaryRegistry.lookup('smarter')?.morphology).toBeUndefined();
+    const merged = lookupLocalLexeme('represented');
+    expect(merged?.lemma).toBe('represent');
+    expect(merged?.meaningsVi).toContain('đại diện');
+    expect(merged?.morphology).toMatchObject({ surface: 'represented', baseLemma: 'represent' });
+    expect(merged?.senses.map(sense => sense.definitionEn)).toEqual(['to speak for someone']);
+    // The pipeline keeps the surface form and shows the lemma meaning with its morphology.
+    const engine = new LocalLanguageEngine();
+    const comparative = await engine.analyzeSelection({ selectedText: 'stronger', sentence: 'This method is stronger.', sourceLang: 'en', targetLang: 'vi' });
+    expect(comparative.selection).toMatchObject({ lemma: 'strong', status: 'base-form' });
+    expect(comparative.dictionary?.surfaceForm).toBe('stronger');
+    expect(comparative.english?.definition).toBe('having great power');
+    const participle = await engine.analyzeSelection({ selectedText: 'represented', sentence: 'The chart represented every region.', sourceLang: 'en', targetLang: 'vi' });
+    expect(participle.selection).toMatchObject({ lemma: 'represent', status: 'base-form' });
+    expect(participle.dictionary?.surfaceForm).toBe('represented');
+    expect(participle.vietnamese?.meaning).toContain('đại diện');
   });
 });

@@ -1,5 +1,9 @@
 # Local-first language engine: Phases 1–15
 
+> **Historical.** Completed Phases 1–15 delivery log, kept for history. The current lookup, sense-selection
+> and routing contract lives in [translation-pipeline.md](translation-pipeline.md); read that instead unless
+> a task explicitly asks for the phase history.
+
 The engine is now connected to normal reader selections through `LookupService`.
 EN/VI mode switches only change presentation. They do not repeat analysis or API calls.
 

@@ -35,7 +35,7 @@ export interface SelectionInput {
   selectionStart?: number;
 }
 export interface LensResult {
-  selection: { surface: string; normalized: string; lemma: string; pos?: string; status?: 'complete' | 'partial' | 'base-form' | 'reconstructed' | 'fragment-or-unknown'; reconstructedFrom?: string; reconstructedToken?: string; matchedText?: string; matchType?: 'exact' | 'lemma' | 'phrase' | 'subphrase' | 'head' };
+  selection: { surface: string; normalized: string; lemma: string; pos?: string; status?: 'complete' | 'partial' | 'base-form' | 'reconstructed' | 'fragment' | 'unknown'; reconstructedFrom?: string; reconstructedToken?: string; matchedText?: string; matchType?: 'exact' | 'lemma' | 'phrase' | 'subphrase' | 'head' };
   phrase?: { canonical: string; type: string };
   english?: { definition?: string; contextualDefinition?: string; synonyms?: string[]; examples?: string[] };
   vietnamese?: { meaning?: string; contextualMeaning?: string; senseAligned?: boolean };

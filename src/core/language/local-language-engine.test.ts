@@ -38,7 +38,15 @@ describe('local language foundation', () => {
     const { engine } = setup();
     const repaired = await engine.analyzeSelection({ ...input('marizing', 'We are summarizing the result.'), selectionStart: 10 });
     expect(repaired.selection.reconstructedFrom).toBe('marizing');
-    expect((await engine.analyzeSelection(input('marizing'))).selection.status).toBe('fragment-or-unknown');
+    expect((await engine.analyzeSelection(input('marizing'))).selection.status).toBe('unknown');
+    // Boundary evidence that cannot be resolved to a single token stays a fragment.
+    expect((await engine.analyzeSelection(input('marizing', 'We are summarizing and resummarizing the same paragraph.'))).selection.status).toBe('fragment');
+  });
+  it('never strips a real word that merely ends in -er or -est', async () => {
+    const { engine } = setup();
+    for (const word of ['computer', 'career', 'water', 'paper', 'brother']) {
+      expect((await engine.analyzeSelection(input(word))).selection.lemma).toBe(word);
+    }
   });
   it.each([
     ['accounts for', 'The sector accounts for 45% of total employment.', 'account-for.proportion', 'chiếm'],

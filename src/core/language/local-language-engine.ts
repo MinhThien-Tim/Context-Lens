@@ -4,7 +4,7 @@ import { PhraseDetector } from './phrases';
 import { ContextWindowBuilder, SentenceEngine } from './sentence-engine';
 import { SenseResolver } from './sense-resolver';
 import type { LensResult, SelectionInput } from './types';
-import { compoundCandidates, normalizeSelection, phraseCandidates, reconstructToken } from '../../lookup/normalization';
+import { compoundCandidates, isPartialSelection, normalizeSelection, phraseCandidates, reconstructToken } from '../../lookup/normalization';
 import { dictionaryRegistry } from '../../lookup/dictionary/registry';
 
 /** Local semantic foundation. No fetch, translation provider, or AI dependency. */
@@ -55,7 +55,9 @@ export class LocalLanguageEngine {
     const sense = resolved.selectedSense;
     const hasEnglish = Boolean(sense?.definitionEn);
     const hasVietnamese = Boolean(sense?.meaningVi || entry?.meaningsVi?.length);
-    const status = repair && entry ? 'reconstructed' : !entry ? 'fragment-or-unknown'
+    // A complete token that no source knows is an unknown word, not a partial selection.
+    const partial = !repair && isPartialSelection(initial, input.sentence, input.selectionStart);
+    const status = repair && entry ? 'reconstructed' : !entry ? (partial ? 'fragment' : 'unknown')
       : entry.morphology ? 'base-form' : hasEnglish && hasVietnamese ? 'complete' : 'partial';
     const resolvedPhrase = phraseEntry ?? (entry?.lemma.includes(' ') ? { ...entry, type: 'fixed expression' as const } : undefined);
     const matchedText = phraseEntry?.lemma ?? (directEntry ? lookupText : candidateMatch?.candidate);

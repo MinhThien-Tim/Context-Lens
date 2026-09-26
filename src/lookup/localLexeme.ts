@@ -28,10 +28,17 @@ export function lookupLocalLexeme(candidate: string, surface = candidate, curate
   const dictionaryLemma = preferred[0]?.entry.lemma;
   const lemma = curated?.lemma ?? dictionaryLemma ?? candidate;
   const wordnet = lookupWordNet(lemma);
-  const dictionaryEnglish = bestDictionaryMatches.find(match => match.entry.definitionEn.trim())?.entry.definitionEn.trim();
-  const dictionarySenses = bestDictionaryMatches.flatMap(match => (match.entry.senses ?? []).map(sense => ({
+  // A weak inflected form answers with its lemma. The exact entry is kept, not dropped, so it
+  // can still supply what the lemma lacks. It never overrides the lemma: pack inflected forms
+  // usually repeat the lemma's meaning list, and merging both would duplicate it.
+  const lemmaEntries = bestDictionaryMatches.map(match => match.entry);
+  const exactEntries = bestDictionaryMatches.flatMap(match => match.surfaceEntry && match.surfaceEntry !== match.entry ? [match.surfaceEntry] : []);
+  const contentEntries = [...lemmaEntries, ...exactEntries];
+  const dictionaryEnglish = contentEntries.find(entry => entry.definitionEn.trim())?.definitionEn.trim();
+  const senseOwners = lemmaEntries.some(entry => entry.senses?.length) ? lemmaEntries : exactEntries;
+  const dictionarySenses = senseOwners.flatMap(entry => (entry.senses ?? []).map(sense => ({
     id: sense.id, definitionEn: sense.definitionEn, meaningVi: sense.meaningsVi.join(' / '),
-    pos: normalizePos([sense.partOfSpeech ?? match.entry.partOfSpeech])[0]
+    pos: normalizePos([sense.partOfSpeech ?? entry.partOfSpeech])[0]
   })));
   // WordNet and entry-level bilingual dictionaries do not share sense IDs.
   // Keep them independent instead of manufacturing a bilingual pair from
@@ -43,8 +50,14 @@ export function lookupLocalLexeme(candidate: string, surface = candidate, curate
     ...wordNetSenses,
     ...(dictionaryEnglish && !curated?.senses.some(sense => sense.definitionEn === dictionaryEnglish) && !wordnet?.senses.some(sense => sense.definitionEn === dictionaryEnglish)
       ? [{ id: `${lemma}.dictionary`, definitionEn: dictionaryEnglish }] : [])
-  ].filter((sense, index, all) => all.findIndex(other => other.id === sense.id) === index);
-  const meaningsVi = [...new Set([...bestDictionaryMatches.flatMap(match => match.entry.meaningsVi), ...(curated?.senses.flatMap(sense => sense.meaningVi ? [sense.meaningVi] : []) ?? [])].filter(Boolean))];
+  // Inheriting lemma data must not repeat a sense the exact form already contributed.
+  ].filter((sense, index, all) => {
+    const earlier = all.findIndex(other => other.id === sense.id
+      || (sense.definitionEn && other.definitionEn?.toLocaleLowerCase() === sense.definitionEn.toLocaleLowerCase()));
+    return earlier === index;
+  });
+  const meaningOwners = lemmaEntries.some(entry => entry.meaningsVi.length) ? lemmaEntries : exactEntries;
+  const meaningsVi = [...new Set([...meaningOwners.flatMap(entry => entry.meaningsVi), ...(curated?.senses.flatMap(sense => sense.meaningVi ? [sense.meaningVi] : []) ?? [])].filter(Boolean))];
   if (!senses.length && !meaningsVi.length) return undefined;
   const pos = normalizePos([...(curated?.pos ?? []), ...(wordnet?.pos ?? []), ...preferred.map(match => match.entry.partOfSpeech)]);
   const morphologyMatch = preferred.find(match => match.morphology)?.morphology;

@@ -110,13 +110,15 @@ class InstalledDictionaryPack implements DictionaryProvider {
       const base = this.entries.get(exact.baseLemma);
       if (base) return { entry: base, surface, surfaceEntry: exact, morphology: { baseLemma: base.lemma, inflection: exact.inflection ?? 'past-participle' } };
     }
+    // A rich exact entry is the best answer it can give, and it must not be looked past.
+    if (exact && !isWeakInflectedEntry(exact)) return { entry: exact, surface };
     for (const candidate of rankedLemmaCandidates(normalized)) {
+      if (candidate === normalized) continue;
       const entry = this.entries.get(candidate);
       if (!entry) continue;
-      if (candidate === normalized) return { entry, surface };
       return { entry, surface, surfaceEntry: exact, morphology: { baseLemma: entry.lemma, inflection: inferInflection(normalized, exact?.partOfSpeech) } };
     }
-    return null;
+    return exact ? { entry: exact, surface } : null;
   }
 
   lookupReverse(surface: string): DictionaryMatch | null {
@@ -135,8 +137,18 @@ function isVerbEntry(entry: DictionaryEntry): boolean {
   return /(?:^|[ /,])(?:v|verb)(?:$|[ /,])/i.test(entry.partOfSpeech);
 }
 
+function isAdjectiveEntry(entry: DictionaryEntry): boolean {
+  return /(?:^|[ /,])(?:a|adj|adjective|adv|adverb)(?:$|[ /,])/i.test(entry.partOfSpeech);
+}
+
+/**
+ * An inflected form whose own entry carries almost nothing, so the lemma can supply the
+ * content. A rich exact entry never matches and therefore stops the lookup.
+ */
 function isWeakInflectedEntry(entry: DictionaryEntry): boolean {
-  return isVerbEntry(entry) && !entry.definitionEn.trim() && entry.meaningsVi.length === 1 && /(?:ed|ing|s)$/i.test(entry.lemma);
+  if (entry.definitionEn.trim() || entry.meaningsVi.length > 1 || !/^[a-z'-]+$/.test(entry.lemma)) return false;
+  if (isVerbEntry(entry) || isAdjectiveEntry(entry)) return true;
+  return /(?:ed|ing|er|est|ier|iest|s)$/i.test(entry.lemma);
 }
 
 function inferInflection(surface: string, partOfSpeech?: string): import('./types').InflectionType {

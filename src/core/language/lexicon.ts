@@ -1,4 +1,4 @@
-import { rankedLemmaCandidates } from '../../lookup/dictionary/seedDictionary';
+import { irregularLemmaCandidates, rankedLemmaCandidates, strictIrregularLemmaCandidates } from '../../lookup/dictionary/seedDictionary';
 import type { LexicalEntry, PhraseEntry, TokenInfo } from './types';
 import { wordNetVersion } from './wordnet';
 import { normalizeSelection } from '../../lookup/normalization/normalizeSelection';
@@ -39,7 +39,6 @@ const words: LexicalEntry[] = [
     { id: 'still.motionless', definitionEn: 'without moving or making a sound', meaningVi: 'yên / bất động', keywords: ['sit', 'stand', 'hold', 'motionless'] }
   ] }
 ];
-const irregular: Record<string, string> = { made: 'make', makes: 'make', making: 'make', ran: 'run', running: 'run', better: 'good', best: 'good', was: 'be', were: 'be', is: 'be', are: 'be', had: 'have' };
 export function normalizeLexical(text: string): string { return normalizeSelection(text).normalized; }
 export class LexicalEngine {
   private learned = new Map<string, LexicalEntry>();
@@ -61,7 +60,7 @@ export class LexicalEngine {
     const normalized = normalizeLexical(surface);
     const learned = this.learned.get(normalized);
     if (learned) return learned;
-    const candidates = [...new Set([irregular[normalized], normalized, ...rankedLemmaCandidates(normalized)].filter((v): v is string => Boolean(v)))];
+    const candidates = [...new Set([...strictIrregularLemmaCandidates(normalized), normalized, ...rankedLemmaCandidates(normalized)])];
     for (const candidate of candidates) {
       const curated = this.entries.find(item => item.lemma === candidate || item.forms?.includes(candidate));
       const merged = lookupLocalLexeme(candidate, normalized, curated);
@@ -69,7 +68,9 @@ export class LexicalEngine {
     }
     return undefined;
   }
-  lemma(surface: string): string { return this.lookup(surface)?.lemma ?? irregular[normalizeLexical(surface)] ?? normalizeLexical(surface); }
+  lemma(surface: string): string {
+    return this.lookup(surface)?.lemma ?? irregularLemmaCandidates(normalizeLexical(surface))[0] ?? normalizeLexical(surface);
+  }
   tokenize(text: string): TokenInfo[] {
     return Array.from(text.matchAll(/[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*|\d+(?:\.\d+)?%?/gu), match => {
       const entry = this.lookup(match[0]);

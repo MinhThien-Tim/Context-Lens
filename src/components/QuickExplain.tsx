@@ -21,7 +21,8 @@ export function QuickExplain({ result, mode, expanded = false }: { result: Looku
       {result.selection.ipa_uk && <p class="ipa-line">{result.selection.ipa_uk}</p>}</div></header>
     {result.lens?.selection.status === 'base-form' && <p class="lookup-note">Base form: <strong>{result.selection.lemma}</strong></p>}
     {result.lens?.selection.status === 'reconstructed' && <p class="lookup-note">Detected as part of: <strong>{result.lens.selection.reconstructedToken}</strong></p>}
-    {result.lens?.selection.status === 'fragment-or-unknown' && <p class="lookup-note">This selection may be part of another word.</p>}
+    {result.lens?.selection.status === 'fragment' && <p class="lookup-note">This selection is only part of a longer word.</p>}
+    {result.lens?.selection.status === 'unknown' && <p class="lookup-note">No local dictionary entry for this word.</p>}
     {['subphrase', 'head'].includes(result.lens?.selection.matchType ?? '') && <p class="lookup-note">Meaning shown for: <strong>{result.lens?.selection.matchedText}</strong></p>}
     {matched?.meaningsVi.length && showVi && <p class="context-summary"><strong>{summaryText}</strong><span>→</span><strong>{matched.meaningsVi[0]}</strong></p>}
     {result.dictionary?.contextPos && <p class={`context-hint${matched ? ' matched' : ''}`}>

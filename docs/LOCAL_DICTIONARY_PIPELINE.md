@@ -1,12 +1,16 @@
 # Local dictionary pipeline
 
+> **Historical.** Early description of the local lookup pipeline. The current contract lives in
+> [translation-pipeline.md](translation-pipeline.md), which already owns the lemma, morphology and
+> dictionary-source rules; read that instead unless a task explicitly asks for this history.
+
 Context Lens resolves reading selections without an API or network translation:
 
 `Selection → normalization → evidence-based reconstruction → lemma/phrase candidates → WordNet + EN–VI + phrase merge → local caches → UI`
 
-Normalization preserves the displayed surface form while applying NFC, apostrophe and dash normalization, whitespace collapse, and lower-casing to the lookup key. Candidate generation is bounded. It checks the exact form first, then morphology, hyphen/space variants, dictionary-backed glued-token splits, longest phrase suffixes, and the lexical head.
+Normalization preserves the displayed surface form while applying NFC, apostrophe and dash normalization, whitespace collapse, and lower-casing to the lookup key. Candidate generation is bounded. It checks the exact form first, then morphology, hyphen/space variants, dictionary-backed glued-token splits, longest phrase suffixes, and the lexical head. A rich exact entry stops the search; a weak inflected entry inherits its lemma and keeps the surface form.
 
-PDF fragments are expanded only when adjacent sentence text proves the selection belongs to a larger token. An unproved selection remains `fragment-or-unknown`; no definition is invented.
+PDF fragments are expanded only when adjacent sentence text proves the selection belongs to a larger token. A selection without that boundary evidence is `unknown`, never a fragment, and no definition is invented. Lemma and morphology rules live in `src/lookup/dictionary/seedDictionary.ts` and are documented in [translation-pipeline.md](translation-pipeline.md).
 
 English and Vietnamese fields are merged independently. Curated exact phrase senses take priority for English, followed by WordNet and seed data. Vietnamese prefers the bundled/installed EN–VI pack, then phrase and seed data. A missing field produces a partial result rather than discarding the other field.
 

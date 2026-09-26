@@ -25,11 +25,16 @@ The service worker is active in production builds. Browser AI requests require H
 
 The production app downloads and precaches the included 104,738-entry English–Vietnamese dictionary (17.5 MB uncompressed). Open it online once and let the service worker finish installing before going offline. `npm run dev` does not install an offline app shell; use the production build and preview to test offline reloads. Entries without English glosses show their Vietnamese meanings in the EN tab too. Context explanations use cached results and local rules first; optional AI runs only after an explicit Context or Grammar action.
 
-Basic reading requires no API key. In Settings, **Auto** uses memory/Dexie cache, a ready browser model, and offline dictionaries. Optional MyMemory web translation and configured Google/Bing gateways can extend quick translation. Context providers (user API, Hosted Lite gateway, local model) are configured separately. See [language-engine architecture and gateway contracts](docs/LANGUAGE_ENGINES.md).
+Basic reading requires no API key. In Settings, **Auto** uses memory/Dexie cache, a ready browser model, and offline dictionaries. Optional MyMemory web translation and configured Google/Bing gateways can extend quick translation. Context providers (user API, Hosted Lite gateway, local model) are configured separately. See [lookup and translation architecture](docs/translation-pipeline.md) for the current provider and routing contract.
 
 For Gemini, choose **Gemini context** and enter your own API key and an available model ID. Saving setup updates the engines; it does not send a context request until you press Context or Grammar.
 
 ## Current architecture
+
+The full map lives in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), with per-subsystem detail in
+[`docs/reader.md`](docs/reader.md), [`docs/translation-pipeline.md`](docs/translation-pipeline.md),
+[`docs/ui-system.md`](docs/ui-system.md), [`docs/data-storage.md`](docs/data-storage.md), and
+[`docs/testing.md`](docs/testing.md). Start there before changing code.
 
 ```text
 src/
