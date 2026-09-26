@@ -14,9 +14,14 @@ Code and config are always the final authority for behavior and facts.
 2. The one domain doc that routing table selects.
 3. Only the source files that domain doc names.
 
-Do not scan the repository. `docs/` also contains historical reports and handoffs that are not current
-architecture; the documentation tiers in `docs/ARCHITECTURE.md` say which is which, and any file in `docs/`
-not listed there as canonical or specialized is historical.
+Do not scan the repository. The routing table in `docs/ARCHITECTURE.md` selects exactly one document
+for the task at hand; do not read all domain docs unless the task genuinely crosses subsystem
+boundaries.
+
+`docs/archive/` is historical material — completed reports, decisions and raw measurements. Never
+browse it by default, and read a file there only when the task explicitly needs historical rationale,
+regression investigation or an older measurement. Archive content is never current architecture truth;
+code, config and the active docs override it.
 
 ## 2. Scope discipline
 
@@ -43,9 +48,13 @@ Browser E2E is conditional, never mandatory. Never watch mode.
 
 ## 6. Stop instead of looping
 
-Allow 2–3 meaningful attempts per verification problem, each backed by a concrete change. On
-execution-policy, permission, sandbox, launcher, or tool blocks: stop immediately, do not weaken
-settings or swap runners, report the gap.
+Classify failures before retrying. Follow the canonical [Execution / Test Retry Policy](docs/agent-execution-rules.md#7-execution--test-retry-policy): maximum two launcher/environment execution attempts and one direct result check per problem.
+On Windows PowerShell, prefer `npm.cmd` / `npx.cmd` for documented npm/npx commands. A `.ps1`
+Execution Policy error alone does not establish that the equivalent `.cmd` launcher is blocked;
+use the one safe fallback when available within session permissions. Full access is not required.
+For a sandbox execution denial, use the tool's official approval mechanism for one narrowly scoped
+retry when permitted, within the same attempt budget. Stop if approval is denied or unavailable.
+Never weaken security, request Windows administrator elevation, or poll repeatedly.
 
 Label every check exactly `PASS`, `FAIL`, `BLOCKED`, `UNRESOLVED`, or `NOT RUN`. Never report a
 non-pass as a pass, and never change code because a check was `BLOCKED`, `UNRESOLVED`, or `NOT RUN`.

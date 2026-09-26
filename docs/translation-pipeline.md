@@ -39,7 +39,7 @@ Related: [ARCHITECTURE.md](ARCHITECTURE.md), [reader.md](reader.md), [data-stora
    reconstruction → lemma/morphology → phrase detection → sentence analysis → `SenseResolver`),
    merged over the base result with `applyLocalResult`.
 5. **Stop conditions.** If `quickEngine === 'offline'`, or the result is complete
-   (English definition + Vietnamese meaning) with `confidence >= 0.8` under `quickEngine === 'auto'`,
+   (English definition + useful Vietnamese meaning) under `quickEngine === 'auto'` without a selected missing sense,
    the local result is returned. `onLocal` is always called first so the surface can enrich
    progressively rather than block on network.
 6. **Google sentence pass (optional).** When a Google/`google-web` provider is available, the
@@ -90,6 +90,39 @@ result keeps the surface form, the lemma, and the morphology metadata.
 `LensResult.selection.status` reports `fragment` only when token-boundary evidence
 (`isPartialSelection`) shows the selection covers part of a larger token. A complete token that no
 source knows is `unknown`; a dictionary miss is never a fragment.
+
+## Dictionary sense contract
+
+English senses remain independent of entry-level Vietnamese meanings: only explicit source
+sense links (including curated pairs) attach VI to an EN sense. `pairingState` distinguishes
+paired senses from senses missing VI; `unpairedMeaningsVi` retains aggregate glosses without
+implying array-order alignment. WordNet senses carry `source: 'wordnet'`, and all senses survive
+context ranking, even when the quick view initially compacts them.
+
+Installed packs resolve the observed `Xem <lemma>` Vietnamese redirects within the same pack,
+without network access or changing the English lemma/senses. Resolution uses a per-path visited
+set and at most two hops. `vietnameseReferences` records resolved targets or unresolved
+missing/cycle/depth states; failed reference text remains available and the quick card marks it.
+Sense-linked meaning arrays are retained without flattening away their source boundaries.
+
+## Conservative context ordering
+
+`SenseResolver` prioritizes lightweight sentence POS evidence before semantic scoring.
+POS checks consult the shared lexicon for following nouns and predicates, including words
+with multiple parts of speech; an adverb between a subject and predicate is not forced into a verb.
+Collocations, lexical overlap, constructions and aligned cached sentence translations remain
+local evidence. A Context label requires semantic score >= 3 and margin >= 2; close candidates
+retain dictionary order within the likely POS. POS alone never confirms a sense.
+Exact identical English glosses with matching POS may reuse an existing, unique explicit local
+VI pair; aggregate Vietnamese glosses remain unpaired. Comparative output adds `hơn` only
+for the bounded intelligence/judgment adjective glosses; morphology metadata stays intact.
+
+Auto stops on useful local EN/VI without requiring a Context label. When a confident selected
+sense (or the only sense) lacks useful VI and no usable aggregate VI exists, the existing
+word-fallback router translates just its English gloss in sentence mode, using the existing
+translation cache and provider gates. Unresolved reference text does not count as useful VI;
+usable aggregate VI beside an unresolved reference still prevents this fallback.
+No provider, cache or phrase detector is added. Offline mode never enters this fallback.
 
 ## Explicit Context / Grammar
 
@@ -144,6 +177,58 @@ Google-family provider later succeeds, `accept` is used and cached.
 `google` / `google-web` / `online-auto` and is used for single words under `quickEngine === 'auto'`;
 `googleContext` is restricted to `google` / `google-web` / managed and is used only for the sentence
 re-ranking step and explicit sentence translation.
+
+## Provider defaults, flags and hosted behavior
+
+`defaultEngineSettings` (`src/settings/engines.ts`) is the shipped baseline. Code and this table win
+over any older report:
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `quickEngine` / `contextEngine` | `auto` | Auto means local-first; see the gates above |
+| `automaticFallback` | `true` | `false` pins one provider and disables managed Auto selection |
+| `publicTranslation` | `true` | Wiktionary + MyMemory web lookup. A one-time `webLookupDefaultsVersion` migration flips legacy stored `false` to `true` |
+| `managedTranslation` | `true` | Only takes effect with the `VITE_MANAGED_TRANSLATION=true` build flag |
+| `userApi` | `true` | BYOK context provider is offered for explicit actions |
+| `hostedAiLite`, `localLlm`, `googleProvider`, `bingProvider` | `false` | Off until the user configures them |
+| `hostedDailyQuota` | `20` | Clamped to 0–1000 when the provider is built |
+| `networkTimeoutMs` | `2500` | Clamped to 200–4000 ms in `provider-registry.ts` |
+| `translationCacheLimit` / `contextCacheLimit` | `5000` / `1000` | Dexie rows; memory is 128 entries per engine |
+
+**Context providers.** `contextProviders(settings, ai)` builds at most three, ordered by
+`contextProviderOrder` (default `['user-api', 'hosted-lite', 'local']`):
+
+- `user-api` — requires `settings.userApi`; family is `${provider}:${baseUrl}`.
+- `hosted-lite` — requires `settings.hostedAiLite && settings.hostedEndpoint`; daily quota is
+  `hostedDailyQuota` clamped to 0–1000.
+- `local` — requires `localLlm && localEndpoint && localModel`; an OpenAI-compatible loopback
+  endpoint, no `Authorization` header when the key is empty.
+
+`aiRequested` is derived in `src/lookup/service.ts` as
+`(userApi || hostedAiLite || localLlm) && ai.provider !== 'none' && ai.provider !== 'demo'`.
+Selecting `contextEngine: 'local'` excludes every network context provider regardless of that flag.
+
+**Hosted Lite contract.** The endpoint receives a bounded
+`{ selectedText, sentence, previousSentence, nextSentence, mode, sourceLang, targetLang }` and returns
+the compact `ContextExplanation` schema (`src/core/context/schema.ts`), where irrelevant fields may
+be omitted. The client reserves quota atomically in Dexie per UTC day and endpoint, so parallel tabs
+share one counter; a failed attempt still consumes its reservation. The server must enforce quota
+independently — a browser counter is not abuse protection. No hosted endpoint is provisioned by this
+repository.
+
+**Deadlines and backoff.** The context router wraps each provider call in a 20 s outer deadline
+including body parsing (`context-router.ts`). `ProviderHealthManager` uses
+`BACKOFF = [30s, 2m, 10m, 1h]`, tracked per provider/pair; missing dictionary entries and
+unsupported browser pairs are not outages. The frontend pipeline never retries a request by itself.
+
+**Managed selection detail.** With `onlineTranslationProvider === 'auto'` and
+`automaticFallback === false`, `provider-registry.ts` sends `google-web` explicitly rather than
+Auto, because Auto already depends on fallback.
+
+**Browser provider.** Feature-detected `Translator` API; a selection lookup only uses it when
+`availability() === 'available'`, and the model download requires the explicit
+*Prepare browser language model* settings action. Selecting text never downloads a model or sends a
+document.
 
 ## Caching
 

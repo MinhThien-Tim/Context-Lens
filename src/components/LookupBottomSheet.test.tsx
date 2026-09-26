@@ -1,3 +1,4 @@
+import { QuickExplain } from './QuickExplain';
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { expect, it, vi } from 'vitest';
@@ -194,7 +195,7 @@ it('shows a short confirmed summary and keeps aggregate Vietnamese meanings expl
       onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
     expect(host.querySelector('.context-summary')?.textContent).toContain('still→vẫn');
     expect(host.querySelector('.context-hint')?.textContent).toContain('Nghĩa trong câu');
-    expect(host.querySelector('.context-confidence')?.textContent).toBe('90%');
+    expect(host.querySelector('.context-confidence')).toBeNull();
     expect(host.querySelector('.bilingual-sense-layout.has-unpaired')).not.toBeNull();
     expect(host.querySelector('.unpaired-meanings')?.textContent).toContain('Hơn nữa');
     expect(host.querySelector('.sense-row')?.textContent).not.toContain('Hơn nữa');
@@ -216,4 +217,20 @@ it('labels materially different same-POS meanings as multiple readings', () => {
     expect(host.querySelector('.context-confidence')).toBeNull();
     expect(host.querySelector('.context-summary')).toBeNull();
   } finally { act(() => render(null, host)); host.remove(); }
+});
+
+it('retains English without a Vietnamese column and labels unresolved references separately', () => {
+  const host = document.createElement('div');
+  const result = { ...validLookup, dictionary: { word: 'fixture', surfaceForm: 'fixture', lemma: 'fixture', pronunciation: null, contextConfidence: 0,
+    senses: [{ id: 'en:1', pos: 'verb', definitionEn: 'English stays visible', meaningsVi: [], source: 'wordnet' as const,
+      pairingState: 'missing' as const, contextScore: 0, contextMatch: false }], unpairedMeaningsVi: ['Xem absentfixture'],
+    vietnameseReferences: [{ text: 'Xem absentfixture', target: 'absentfixture', status: 'unresolved' as const, reason: 'missing' as const }] } };
+  try {
+    act(() => render(<QuickExplain result={result} mode="bilingual" />, host));
+    expect(host.querySelector('.sense-definition')?.textContent).toBe('English stays visible');
+    expect(host.querySelector('.sense-vi')).toBeNull();
+    expect(host.querySelector('.web-badge')).toBeNull();
+    expect(host.querySelector('.unpaired-meanings')?.textContent).toContain('Xem absentfixture');
+    expect(host.textContent).toContain('Tham chiếu từ điển tiếng Việt chưa giải quyết được.');
+  } finally { act(() => render(null, host)); }
 });

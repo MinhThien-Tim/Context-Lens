@@ -103,22 +103,45 @@ class InstalledDictionaryPack implements DictionaryProvider {
     }
   }
 
+  private resolveVietnamese(entry: DictionaryEntry): DictionaryEntry {
+    const references: NonNullable<DictionaryEntry['vietnameseReferences']> = [];
+    const resolve = (meaning: string, visited: Set<string>, depth: number): string[] => {
+      const hit = /^Xem ([a-z][a-z' -]*)\.?$/i.exec(meaning.trim());
+      if (!hit) return [meaning];
+      const target = hit[1].trim().toLowerCase();
+      const next = this.entries.get(target);
+      const reason = visited.has(target) ? 'cycle' : depth >= 2 ? 'depth' : !next ? 'missing' : undefined;
+      if (reason) {
+        references.push({ text: meaning, target, status: 'unresolved', reason });
+        return [meaning];
+      }
+      const start = references.length;
+      const meanings = next!.meaningsVi.flatMap(value => resolve(value, new Set([...visited, target]), depth + 1));
+      references.push({ text: meaning, target, status: references.slice(start).some(ref => ref.status === 'unresolved') ? 'unresolved' : 'resolved' });
+      return meanings;
+    };
+    const meaningsVi = entry.meaningsVi.flatMap(value => resolve(value, new Set([entry.lemma.toLowerCase()]), 0));
+    const senses = entry.senses?.map(sense => ({ ...sense,
+      meaningsVi: sense.meaningsVi.flatMap(value => resolve(value, new Set([entry.lemma.toLowerCase()]), 0)) }));
+    return { ...entry, meaningsVi, senses, vietnameseReferences: references };
+  }
+
   lookup(surface: string): DictionaryMatch | null {
     const normalized = surface.toLocaleLowerCase().trim().replace(/[^a-z' -]/g, '').replace(/\s+/g, ' ');
     const exact = this.entries.get(normalized);
     if (exact?.baseLemma) {
       const base = this.entries.get(exact.baseLemma);
-      if (base) return { entry: base, surface, surfaceEntry: exact, morphology: { baseLemma: base.lemma, inflection: exact.inflection ?? 'past-participle' } };
+      if (base) return { entry: this.resolveVietnamese(base), surface, surfaceEntry: this.resolveVietnamese(exact), morphology: { baseLemma: base.lemma, inflection: exact.inflection ?? 'past-participle' } };
     }
     // A rich exact entry is the best answer it can give, and it must not be looked past.
-    if (exact && !isWeakInflectedEntry(exact)) return { entry: exact, surface };
+    if (exact && !isWeakInflectedEntry(exact)) return { entry: this.resolveVietnamese(exact), surface };
     for (const candidate of rankedLemmaCandidates(normalized)) {
       if (candidate === normalized) continue;
       const entry = this.entries.get(candidate);
       if (!entry) continue;
-      return { entry, surface, surfaceEntry: exact, morphology: { baseLemma: entry.lemma, inflection: inferInflection(normalized, exact?.partOfSpeech) } };
+      return { entry: this.resolveVietnamese(entry), surface, surfaceEntry: exact && this.resolveVietnamese(exact), morphology: { baseLemma: entry.lemma, inflection: inferInflection(normalized, exact?.partOfSpeech) } };
     }
-    return exact ? { entry: exact, surface } : null;
+    return exact ? { entry: this.resolveVietnamese(exact), surface } : null;
   }
 
   lookupReverse(surface: string): DictionaryMatch | null {

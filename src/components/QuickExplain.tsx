@@ -14,7 +14,6 @@ export function QuickExplain({ result, mode, expanded = false }: { result: Looku
   const summaryText = result.lens?.phrase?.canonical ?? result.selection.surface;
   const unpaired = result.dictionary?.unpairedMeaningsVi ?? [];
   const senseStatus = result.dictionary?.senseStatus ?? (matched ? 'context' : 'ambiguous');
-  const senseConfidence = result.dictionary?.senseConfidence ?? matched?.contextScore;
   return <div class={`quick-explanation${expanded ? ' is-expanded' : ''}`}>
     <header class="lookup-heading"><div><div class="word-line"><strong>{result.selection.surface}</strong>
       {result.selection.part_of_speech && <span class="pos-chip">{result.selection.part_of_speech}</span>}</div>
@@ -26,12 +25,11 @@ export function QuickExplain({ result, mode, expanded = false }: { result: Looku
     {['subphrase', 'head'].includes(result.lens?.selection.matchType ?? '') && <p class="lookup-note">Meaning shown for: <strong>{result.lens?.selection.matchedText}</strong></p>}
     {matched?.meaningsVi.length && showVi && <p class="context-summary"><strong>{summaryText}</strong><span>→</span><strong>{matched.meaningsVi[0]}</strong></p>}
     {result.dictionary?.contextPos && <p class={`context-hint${matched ? ' matched' : ''}`}>
-      {senseStatus === 'context' ? <><span>✓</span>{senseConfidence !== undefined && Number.isFinite(senseConfidence) &&
-        <span class="context-confidence" title="Độ tin cậy về nghĩa">{Math.round(Math.max(0, Math.min(1, senseConfidence)) * 100)}%</span>} Nghĩa trong câu</>
+      {matched && senseStatus === 'context' ? <><span>✓</span> Nghĩa trong câu</>
         : senseStatus === 'common' ? 'Nghĩa thường dùng' : 'Có nhiều cách hiểu'} · {shortPos(result.dictionary.contextPos)}</p>}
     {visible.length ? <div class={`bilingual-sense-layout${showEn && showVi && unpaired.length ? ' has-unpaired' : ''}`}>
       <div class="sense-list">{visible.map(sense => <div class={`sense-row${sense.contextMatch ? ' context-match' : ''}`} key={sense.id}>
-        <span class="sense-pos">{shortPos(sense.pos)}</span>{sense.source !== 'local' && <span class="web-badge">.web</span>}
+        <span class="sense-pos">{shortPos(sense.pos)}</span>{['web', 'wiktionary'].includes(sense.source) && <span class="web-badge">.web</span>}
         <div class="sense-bilingual">
           {showEn && sense.definitionEn && <span class="sense-definition">{sense.definitionEn}</span>}
           {showVi && sense.meaningsVi.length > 0 && <span class="sense-vi">{sense.meaningsVi.join('; ')}</span>}
@@ -43,6 +41,8 @@ export function QuickExplain({ result, mode, expanded = false }: { result: Looku
         {!showAllMeanings && !expanded && unpaired.length > 4 && <span class="unpaired-more">+{unpaired.length - 4} nghĩa Việt</span>}
       </section>}
     </div> : <LegacyMeanings result={result} showEn={showEn} showVi={showVi} />}
+    {showVi && result.dictionary?.vietnameseReferences?.some(ref => ref.status === 'unresolved') &&
+      <p class="lookup-note">Tham chiếu từ điển tiếng Việt chưa giải quyết được.</p>}
     {!expanded && senses.length > compact.length && <button class="more-meanings" aria-expanded={showAllMeanings} onClick={() => setMeaningExpansion({ key: selectionKey, open: !showAllMeanings })}>
       {showAllMeanings ? 'Thu gọn nghĩa' : `Mở thêm ${senses.length - compact.length} nghĩa`}
     </button>}

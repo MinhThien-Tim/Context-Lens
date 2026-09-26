@@ -14,16 +14,16 @@ export function localLookup(request: LookupRequest, useDictionary = true): Looku
   const lemma = entry?.lemma ?? key;
   const lexical = useDictionary ? lexicalUnit(request.selection, request.sentence) : null;
   const senses = entry ? (entry.senses?.map((sense, index) => ({ id: sense.id, pos: sense.partOfSpeech ?? entry.partOfSpeech,
-    definitionEn: sense.definitionEn, meaningsVi: sense.meaningsVi, source: 'local' as const, contextScore: 0, contextMatch: false }))
+    definitionEn: sense.definitionEn, meaningsVi: sense.meaningsVi, source: 'local' as const, pairingState: 'paired' as const, contextScore: 0, contextMatch: false }))
     ?? [{ id: `${entry.lemma}.local`, pos: entry.partOfSpeech, definitionEn: entry.definitionEn, meaningsVi: [],
-      source: 'local' as const, contextScore: 0, contextMatch: false }]) : [];
+      source: 'local' as const, pairingState: 'missing' as const, contextScore: 0, contextMatch: false }]) : [];
   const linkedMeanings = new Set((entry?.senses ?? []).flatMap(sense => sense.meaningsVi).map(normalizeMeaning));
   const unpairedMeaningsVi = (entry?.meaningsVi ?? []).filter(meaning => !linkedMeanings.has(normalizeMeaning(meaning)));
   return {
     request_id: `local_${Date.now()}`,
     language_mode: request.language_mode,
     dictionary: { word: lemma, surfaceForm: request.selection, lemma, pronunciation: entry?.ipa ?? null, contextConfidence: 0,
-      senseConfidence: 0, partOfSpeechConfidence: 0, senses, unpairedMeaningsVi },
+      senseConfidence: 0, partOfSpeechConfidence: 0, senses, unpairedMeaningsVi, vietnameseReferences: entry?.vietnameseReferences },
     selection: {
       surface: request.selection, lemma, normalized: key,
       selection_type: request.selection_type,

@@ -81,7 +81,8 @@ export class LookupService {
       // Let the surface progressively enrich the synchronous result instead of
       // holding useful local content behind a network fallback.
       onLocal?.(base);
-      if (settings.quickEngine === 'offline' || (complete && lens.confidence >= 0.8 && settings.quickEngine === 'auto')) { recordDiagnostic('localStop', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'dictionary', mode: request.selection_type }); return base; }
+      if (settings.quickEngine === 'offline' || (complete && settings.quickEngine === 'auto' && !selectedMissingSense(base))) { recordDiagnostic('localStop', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'dictionary', mode: request.selection_type }); return base; }
+      if (settings.sourceLang === 'en' && settings.targetLang === 'vi' && selectedMissingSense(base) && optionalTranslationEnabled(settings)) return this.fillSelectedSense(base, settings, signal);
       if (!cachedSentence && request.selection_type !== 'sentence' && settings.sourceLang === 'en' && settings.targetLang === 'vi' && this.googleContext && request.sentence.trim() && this.googleContextProviderAvailable(settings)) {
         try {
           const translated = await this.googleContext.translate({ text: request.sentence, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: 'sentence', signal });
@@ -119,6 +120,20 @@ export class LookupService {
       engine: { provider: translated.provider, cached: translated.cached, latencyMs: translated.latencyMs },
       quick: base.quick.lexical_unit ? base.quick : { definition_en: (base.difficulty.worth_learning ? base.quick.definition_en : '') || translated.dictionary?.definition || translatedDefinition,
         meaning_vi: translatedMeanings, lexical_unit: null } };
+  }
+  private async fillSelectedSense(base: LookupResponse, settings: EngineSettings, signal?: AbortSignal): Promise<LookupResponse> {
+    const sense = selectedMissingSense(base);
+    if (!sense) return base;
+    try {
+      const translated = await this.wordFallback!.translate({ text: sense.definitionEn, sourceLang: 'en', targetLang: 'vi', mode: 'sentence', signal });
+      checkAbort(signal);
+      if (!translated.text.trim() || translated.text.trim().toLowerCase() === sense.definitionEn.trim().toLowerCase()) return base;
+      const dictionary = { ...base.dictionary!, senses: base.dictionary!.senses.map(item => item.id === sense.id ? { ...item, meaningsVi: [translated.text], pairingState: 'paired' as const } : item) };
+      return { ...base, dictionary,
+        lens: base.lens ? { ...base.lens, dictionary, vietnamese: { meaning: translated.text, contextualMeaning: sense.contextMatch ? translated.text : undefined, senseAligned: true } } : undefined,
+        quick: { ...base.quick, meaning_vi: [translated.text] }, source: translated.cached ? 'cache' : translated.offline ? 'offline' : 'translation',
+        engine: { provider: translated.provider, cached: translated.cached, latencyMs: translated.latencyMs } };
+    } catch { checkAbort(signal); return base; }
   }
   async explain(request: LookupRequest, ai: AiSettings, settings = defaultEngineSettings, mode: ContextMode = 'meaning-in-context', signal?: AbortSignal): Promise<ContextResult & { result: LookupResponse }> {
     if (ai.provider === 'gemini' && ai.apiKey) recordDiagnostic('geminiAction', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'gemini', mode, status: mode });
@@ -176,4 +191,13 @@ function uniqueMeanings(meanings: string[]): string[] {
   const seen = new Set<string>();
   return meanings.filter(meaning => { const key = meaning.normalize('NFC').toLocaleLowerCase('vi').replace(/\s+/g, ' ').trim();
     if (!key || seen.has(key)) return false; seen.add(key); return true; });
+}
+
+function selectedMissingSense(base: LookupResponse) {
+  if (base.selection.selection_type === 'sentence') return undefined;
+  const senses = base.dictionary?.senses ?? [];
+  const selected = senses.find(sense => sense.contextMatch) ?? (senses.length === 1 ? senses[0] : undefined);
+  return selected?.definitionEn && !selected.meaningsVi.length &&
+    !(base.dictionary?.unpairedMeaningsVi ?? []).some(meaning => meaning.trim() &&
+      !base.dictionary?.vietnameseReferences?.some(ref => ref.status === 'unresolved' && ref.text.trim() === meaning.trim())) ? selected : undefined;
 }

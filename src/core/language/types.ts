@@ -4,6 +4,8 @@ export interface LexicalSense {
   id: string;
   definitionEn: string;
   meaningVi?: string;
+  meaningsVi?: string[];
+  source?: import('../../lookup/types').DictionarySenseSource;
   pos?: string;
   synonyms?: string[];
   antonyms?: string[];
@@ -17,6 +19,7 @@ export interface LexicalSense {
 export interface LexicalEntry {
   lemma: string; pos: string[]; forms?: string[]; senses: LexicalSense[]; meaningsVi?: string[];
   morphology?: { surface: string; baseLemma: string; inflection: import('../../lookup/dictionary/types').InflectionType };
+  vietnameseReferences?: import('../../lookup/dictionary/types').VietnameseReference[];
   sources?: { english?: string[]; vietnamese?: string[]; morphology?: string };
 }
 export interface PhraseEntry extends LexicalEntry { type: 'idiom' | 'phrasal verb' | 'collocation' | 'fixed expression' }

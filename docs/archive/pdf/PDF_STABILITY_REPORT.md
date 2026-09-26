@@ -50,7 +50,7 @@ The same 64-page fixture and scripted forward/reverse wheel sequence were used i
 | Long tasks added during scrolling | 3 | 0 | 4 | 0 |
 | Maximum allowed backing pixels per canvas | No area cap | 2,000,000 | No area cap | 2,000,000 |
 
-The initial two/three fixed scroll writes include initial restore and layout adjustment, not passive navigation. The baseline snapped back and ended on pages 3/4; the fix reached page 54 and returned to page 1. Raw measurements are in `PDF_STABILITY_BASELINE.json` and `PDF_STABILITY_AFTER.json`.
+The initial two/three fixed scroll writes include initial restore and layout adjustment, not passive navigation. The baseline snapped back and ended on pages 3/4; the fix reached page 54 and returned to page 1. Raw measurements are in `../measurements/pdf-stability/PDF_STABILITY_BASELINE.json` and `../measurements/pdf-stability/PDF_STABILITY_AFTER.json`.
 
 ## Reproduction
 
@@ -87,9 +87,9 @@ Production was measured separately with CDP `Runtime.getHeapUsage`, `Memory.getD
 | DOM nodes at first/second return | 722 / 722 | 615 / 615 |
 | Usual JS listeners | 93 | 86 |
 
-Resources plateaued over these executed cycles. This is not a measurement of GPU/native RSS or an Android OS kill threshold. Raw release samples: `PDF_STABILITY_PRODUCTION.json`.
+Resources plateaued over these executed cycles. This is not a measurement of GPU/native RSS or an Android OS kill threshold. Raw release samples: `../measurements/pdf-stability/PDF_STABILITY_PRODUCTION.json`.
 
-The earlier development-server diagnostic grew from ~81 to ~104 MiB with increasing detached canvases. A local heap snapshot exposed retained debug-owner vnode links (`__o`) and canvas contexts; the same source's production build remained bounded. `PDF_STABILITY_HEAP.json` preserves that diagnostic, rather than incorrectly presenting it as a production pass. Use the production-preview workflow for release memory QA. The large heap snapshot and book data remain outside version control.
+The earlier development-server diagnostic grew from ~81 to ~104 MiB with increasing detached canvases. A local heap snapshot exposed retained debug-owner vnode links (`__o`) and canvas contexts; the same source's production build remained bounded. `../measurements/pdf-stability/PDF_STABILITY_HEAP.json` preserves that diagnostic, rather than incorrectly presenting it as a production pass. Use the production-preview workflow for release memory QA. The large heap snapshot and book data remain outside version control.
 
 ## Remaining acceptance limits
 

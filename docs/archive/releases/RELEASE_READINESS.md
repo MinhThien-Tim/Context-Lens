@@ -7,7 +7,7 @@
 - Source SQLite integrity check passed; pack schema, installer size, representative Vietnamese meanings, and checksum were verified.
 - Automated suite: 16 files and 30 tests passed.
 - Production TypeScript/Vite/PWA build passed.
-- PDF direction is recorded in `PDF_RENDERING_DECISION.md`.
+- PDF direction is recorded in `../pdf/PDF_RENDERING_DECISION.md`.
 
 ## Deployment blocker
 

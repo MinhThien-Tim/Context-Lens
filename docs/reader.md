@@ -119,17 +119,39 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 - Eligibility: `src/documents/pdf/ocrEligibility.ts` (`ocrCandidate`, `pageHasInk`) — skips pages
   with readable text, already-cached OCR, or no ink.
 - Cache: `src/documents/pdf/ocrStore.ts` → `db.pdfOcr`, key
-  `documentId:documentHash:page:language:configVersion:renderParameters`
-  (`OCR_CONFIG_VERSION`, `OCR_RENDER_PARAMETERS` derived from `OCR_RENDER_PIXELS`).
+  `documentId:documentHash:page:language:configVersion:renderParameters`.
+  `OCR_CONFIG_VERSION` is `2`. `OCR_RENDER_PIXELS` defaults to `3_000_000` and accepts only
+  `1_500_000`, `2_000_000` or `3_000_000` from `VITE_OCR_RASTER_PIXELS`;
+  `OCR_RENDER_PARAMETERS` is `scale<=2.5;pixels<=<n>;edge<=4096;rotation=pdf`, so the OCR raster
+  is fixed by the document and does not follow display zoom. Any change here changes the cache key.
+- Worker lifetime: `src/documents/pdf/ocrWorker.ts` terminates the worker on cancel, on document
+  close, and after 60 s idle. The queue also holds a monotonic generation counter so an aborted or
+  superseded run can never publish a stale status or result.
+- Storage guard: the queue reads `navigator.storage.estimate()` before processing and errors out when
+  less than 1,000,000 bytes are free. A `QuotaExceededError` while saving surfaces as an error; a
+  partially recognized page is never persisted.
 - Queue: `src/reader/pdf/usePdfOcrQueue.ts`. States `preparing | running | paused | done | error`,
-  one job at a time, abort on document change. `preloadFirstTwelve` scans the first 12 pages on
-  open; `startCurrent(page)` and `startNextUnprocessed(6)` are explicit user actions.
+  one job at a time, abort on document change. `preloadFirstTwelve` scans at most the first 12 pages
+  on open and skips pages that already carry PDF text; `App.tsx` only triggers it when a page in
+  that window has empty `plainText` and passes `ocrCandidate`. `startCurrent(page)` and
+  `startNextUnprocessed(limit)` are explicit user actions, and `limit` is clamped to 1–6.
 - Per-page text source choice: `DocumentRecord.pdfTextSources[page] = 'pdf' | 'ocr'`, toggled by
   `PdfModeSwitch.onSource` and honored by `PdfReadingView.selectedOcr`.
 - Progress is surfaced through the reader progress bar while the queue is active
   (`activeOcrProgress` in `App.tsx`).
 - Out of scope by design: whole-book OCR, selectable OCR overlays on the original PDF page, and
   vision-API fallback.
+- Delivery: worker, core and `eng` / `vie` trained data are served from the same origin and are
+  requested only when a queue run starts — a PDF with good text never downloads them. `vie` is
+  fetched only for the English + Vietnamese choice. `vite.config.ts` `globIgnores` keeps `**/ocr/**`
+  and the `ocr-reader` chunk out of precache, while `runtimeCaching` serves `/ocr/` with `CacheFirst`
+  (30 days, 12 entries). Tesseract.js / tesseract.js-core are Apache-2.0 and the trained data comes
+  from `@tesseract.js-data/eng` and `@tesseract.js-data/vie`, Apache-2.0, with the licence copy at
+  `public/ocr/LICENSE.txt`.
+- Accuracy limits: recognition can still be wrong for ligatures or disconnected type, faint scans,
+  two-column layouts and Vietnamese diacritics (for example `học` returning `hoc`). The Original
+  page always remains openable as the cross-check reference. Peak memory, thermal and battery cost on
+  physical phones is still unmeasured, which is why multi-page batches stay capped at 6.
 
 ## Invariants
 
@@ -140,6 +162,27 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 4. OCR is additive: separate table, separate key, per-page opt-in, original page retained.
 5. `PdfPage` mounting stays bounded (current page + neighbor, paused during OCR).
 6. Heavy PDF/OCR libraries stay behind dynamic `import()` and their own Rollup chunks.
+7. **No scroll-observer / navigation feedback loop.** Both PDF modes read position from the shared
+   `usePdfScroll` controller (passive, RAF-coalesced, complete slot geometry, boundary hysteresis)
+   and jump only through an explicit `pdfNavigationToken`. Never write `location.page` from a
+   visibility observer that a `scrollIntoView` effect then reacts to; only the intended scroll
+   container may move.
+8. **Canvas rendering stays bounded.** `renderBudget.ts` caps each canvas at `MAX_CANVAS_PIXELS =
+   2_000_000` backing pixels and `MAX_CANVAS_EDGE = 4096` on the longest edge, with device pixel
+   ratio capped at 2. At most three canvas pages stay mounted, and `pageLease` cancellation must
+   stop a stale render from cleaning up a page a newer render owns.
+9. **The text layer is per-render and generational.** Each `PdfPage` render owns its own PDF.js
+   text-layer DOM generation; a late completion must not publish a new `PdfTextIndex` or annotations
+   over a newer one. The stylesheet must supply the TextLayer font-height, scale-X, rotation,
+   minimum-font-size and scale-round custom properties so selectable spans stay aligned with the
+   canvas, including PDF rotation and user units.
+10. **Location writes are debounced and restore from the database.** `createLocationPersistence`
+    deduplicates by location signature, debounces 350 ms, and flushes on close, page hide, and
+    unmount. Closing a PDF persists the PDF location, never the text reader's window position, and
+    reopening reads the latest `DocumentRecord` from IndexedDB instead of the stale library entry.
+11. **Shift+arrow selection is not navigation.** `src/reader/pdf/navigation.ts` must not treat
+    modifier-based selection as a page jump. Notes record a canonical offset plus a within-page
+    fraction.
 
 ## Important files
 
@@ -147,6 +190,7 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 `src/reader/navigation.ts`, `src/reader/readingPosition.ts`, `src/reader/htmlHighlights.ts`,
 `src/reader/MarkupPalette.tsx`, `src/reader/pdf/PdfViewer.tsx`, `src/reader/pdf/PdfPage.tsx`,
 `src/reader/pdf/PdfTextIndex.ts`, `src/reader/pdf/selectionAdapter.ts`, `src/reader/pdf/navigation.ts`,
+`src/reader/pdf/renderBudget.ts`, `src/reader/pdf/pageLease.ts`, `src/utils/debounce.ts`,
 `src/reader/pdf/usePdfDocument.ts`, `src/reader/pdf/usePdfScroll.ts`, `src/reader/pdf/usePdfOcrQueue.ts`,
 `src/reader/pdf/PdfModeSwitch.tsx`, `src/reader/pdf/locationPersistence.ts`,
 `src/reader/pdf-reading/PdfReadingView.tsx`, `src/reader/pdf-reading/PdfReadingPage.tsx`,

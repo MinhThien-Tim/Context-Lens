@@ -1,13 +1,14 @@
 export type LanguageMode = 'en' | 'vi' | 'bilingual';
 export type SelectionType = 'word' | 'phrase' | 'sentence';
 
-export type DictionarySenseSource = 'local' | 'wiktionary' | 'web';
+export type DictionarySenseSource = 'local' | 'wordnet' | 'wiktionary' | 'web';
 export interface DictionarySenseResult {
   id: string;
   pos: string;
   definitionEn: string;
   meaningsVi: string[];
   source: DictionarySenseSource;
+  pairingState?: 'paired' | 'missing';
   contextScore: number;
   contextMatch: boolean;
 }
@@ -24,6 +25,7 @@ export interface DictionaryResult {
   senses: DictionarySenseResult[];
   /** Vietnamese glosses supplied only at entry level, without a source sense link. */
   unpairedMeaningsVi?: string[];
+  vietnameseReferences?: import('./dictionary/types').VietnameseReference[];
 }
 
 export interface LookupRequest {

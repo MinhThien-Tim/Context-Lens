@@ -20,15 +20,15 @@ export class SenseResolver {
     const selectedWords = new Set(this.lexical.tokenize(input.canonicalPhrase ?? input.lemma).map(token => token.lemma));
     const context = new Set(this.lexical.tokenize(input.sentence).map(token => token.lemma)
       .filter(word => !stop.has(word) && !selectedWords.has(word)));
-    const syntacticRole = inferSyntacticRole(input);
+    const syntacticRole = inferSyntacticRole(input, this.lexical);
     const translatedClause = alignedTranslationClause(input);
     const matchingTranslationSenses = translatedClause ? input.candidateSenses.filter(sense =>
       Boolean(sense.meaningVi && sense.meaningVi.split(/\s*(?:\/|;)\s*/).some(meaning => containsWords(translatedClause, meaning)))) : [];
     const ranked = input.candidateSenses.map(sense => {
       let score = 0, semanticScore = 0;
       const reasons: string[] = [];
-      if (input.pos && sense.pos === input.pos) score += 1.5;
-      if (syntacticRole && sense.pos === syntacticRole) score += 1;
+      if (!syntacticRole && input.pos && sense.pos === input.pos) score += 1.5;
+      if (syntacticRole) score += sense.pos === syntacticRole ? 8 : sense.pos ? -8 : 0;
       if (input.canonicalPhrase?.includes(' ')) { semanticScore += 5; reasons.push(`Recognized phrase: ${input.canonicalPhrase}`); }
       for (const collocation of sense.collocations ?? []) {
         if (containsWords(input.sentence, collocation)) { semanticScore += 4; reasons.push(`Collocation: ${collocation}`); }
@@ -48,24 +48,27 @@ export class SenseResolver {
       semanticScore += translation.score; if (translation.reason) reasons.push(translation.reason);
       score += semanticScore;
       return { sense, score, semanticScore, reasons };
-    }).sort((left, right) => right.score - left.score || right.semanticScore - left.semanticScore
-      || Number(Boolean(right.sense.meaningVi)) - Number(Boolean(left.sense.meaningVi))
-      || (right.sense.frequency ?? 0) - (left.sense.frequency ?? 0));
+    }).sort((left, right) => right.score - left.score);
     const best = ranked[0];
     if (!best) return { senseConfidence: 0, posConfidence: syntacticRole ? 0.9 : input.pos ? 0.65 : 0,
       contextMatch: false, status: 'ambiguous', alternatives: [], reasons: ['No local entry'] };
     const posConfidence = syntacticRole === best.sense.pos ? 0.9 : input.pos === best.sense.pos ? 0.65 : best.sense.pos ? 0.45 : 0;
-    const semanticRunnerUp = Math.max(0, ...ranked.slice(1).filter(item => !equivalentConstruction(best, item)).map(item => item.semanticScore));
+    const semanticRunnerUp = Math.max(0, ...ranked.slice(1).filter(item => (!syntacticRole || item.sense.pos === best.sense.pos) && !equivalentConstruction(best, item)).map(item => item.semanticScore));
     const semanticMargin = best.semanticScore - semanticRunnerUp;
-    const contextMatch = best.semanticScore >= 3 && (ranked.length === 1 || semanticMargin >= 1);
+    const contextMatch = best.semanticScore >= 3 && semanticMargin >= 2 && (!syntacticRole || !best.sense.pos || best.sense.pos === syntacticRole);
+    // Close semantic evidence is not a reason to reverse dictionary order.
+    if (!contextMatch) ranked.sort((left, right) =>
+      (syntacticRole ? Number(right.sense.pos === syntacticRole) - Number(left.sense.pos === syntacticRole) : 0)
+      || input.candidateSenses.indexOf(left.sense) - input.candidateSenses.indexOf(right.sense));
+    const selected = contextMatch ? best : ranked[0];
     const samePos = ranked.filter(item => item.sense.pos === (syntacticRole ?? input.pos ?? best.sense.pos));
     const materiallyDifferent = samePos.some(item => item !== best && !equivalentMeaning(best.sense, item.sense));
     const status = contextMatch ? 'context' : materiallyDifferent ? 'ambiguous' : 'common';
     const senseConfidence = contextMatch ? Math.min(0.97, 0.68 + Math.min(best.semanticScore, 8) * 0.035
       + Math.min(semanticMargin, 4) * 0.025) : ranked.length === 1 ? 0.62 : 0.4;
-    return { selectedSense: best.sense, senseConfidence, posConfidence, contextMatch, status,
+    return { selectedSense: selected.sense, senseConfidence, posConfidence, contextMatch, status,
       alternatives: ranked.slice(1).map(item => item.sense),
-      reasons: best.reasons.length ? best.reasons : ['No evidence distinguishing this meaning from the alternatives'] };
+      reasons: contextMatch ? best.reasons : ['No evidence distinguishing this meaning from the alternatives'] };
   }
 }
 
@@ -132,7 +135,7 @@ function translationScore(translation: string | undefined, meaning: string | und
   return new Set(overlap).size >= 2 ? { score: 2.5, reason: 'Saved sentence translation supports this linked meaning' } : { score: 0 };
 }
 
-function inferSyntacticRole(input: SenseInput): 'verb' | 'noun' | 'adjective' | undefined {
+function inferSyntacticRole(input: SenseInput, lexical: LexicalEngine): 'verb' | 'noun' | 'adjective' | 'adverb' | undefined {
   const tokens = input.sentenceAnalysis?.tokens ?? [], index = selectedTokenIndex(input);
   if (index < 0) return undefined;
   const previous = tokens[index - 1]?.normalized, next = tokens[index + 1]?.normalized, beforePrevious = tokens[index - 2]?.normalized;
@@ -140,10 +143,14 @@ function inferSyntacticRole(input: SenseInput): 'verb' | 'noun' | 'adjective' | 
   const auxiliaries = new Set(['did', 'do', 'does', 'have', 'has', 'had', 'would', 'could', 'will', 'shall', 'should', 'can', 'may', 'might', 'must']);
   const determiners = new Set(['a', 'an', 'the', 'this', 'that', 'my', 'our', 'their', 'his', 'her', 'its']);
   const linking = new Set(['be', 'is', 'am', 'are', 'was', 'were', 'seem', 'seems', 'seemed', 'feel', 'feels', 'felt', 'become', 'became']);
+  if ((subjects.has(previous) || auxiliaries.has(previous)) && input.candidateSenses.some(sense => sense.pos === 'adverb')
+    && next && lexical.lookup(next)?.pos.includes('verb')) return 'adverb';
   if (subjects.has(previous) || auxiliaries.has(previous) || previous === 'to') return 'verb';
-  if (determiners.has(previous)) return next && input.candidateSenses.some(sense => sense.pos === 'adjective') ? 'adjective' : 'noun';
+  if (determiners.has(previous)) return (tokens[index + 1]?.pos === 'noun' || (next && lexical.lookup(next)?.pos.includes('noun')))
+    && input.candidateSenses.some(sense => sense.pos === 'adjective') ? 'adjective' : 'noun';
   if (tokens[index + 1]?.pos === 'noun') return 'adjective';
   if (linking.has(previous) || (linking.has(beforePrevious) && /ly$|^(?:very|quite|rather|so|too)$/.test(previous ?? ''))) return 'adjective';
+  if (index === 0 && determiners.has(next) && input.candidateSenses.some(sense => sense.pos === 'verb')) return 'verb';
   return undefined;
 }
 

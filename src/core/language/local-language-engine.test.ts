@@ -22,6 +22,27 @@ function input(selectedText: string, sentence = selectedText): SelectionInput { 
 afterEach(async () => { await Promise.all(databases.splice(0).map(database => database.delete())); });
 
 describe('local language foundation', () => {
+  it('keeps vicariously missing and reuses only an identical explicit gloss pair', async () => {
+    const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
+    const lexical = new LexicalEngine([
+      { lemma: 'vicariously', pos: ['adverb'], senses: [{ id: 'vicariously.only', pos: 'adverb', definitionEn: 'indirectly, through another person or substitute' }] },
+      { lemma: 'testpair', pos: ['noun'], senses: [
+        { id: 'en', pos: 'noun', definitionEn: 'an explicitly linked item' },
+        { id: 'linked', pos: 'noun', definitionEn: 'an explicitly linked item', meaningVi: 'mục' },
+        { id: 'different', pos: 'noun', definitionEn: 'a different object' }
+      ], meaningsVi: ['nghĩa tổng hợp'] }
+    ]);
+    const phrases = new PhraseDetector(undefined, lexical);
+    const { cache } = setup();
+    const engine = new LocalLanguageEngine(lexical, phrases, new SentenceEngine(lexical, phrases, cache));
+    const missing = await engine.analyzeSelection(input('vicariously', 'They lived vicariously.'));
+    expect(missing.dictionary?.senses[0].meaningsVi).toEqual([]);
+    const paired = await engine.analyzeSelection(input('testpair'));
+    expect(paired.dictionary?.senses.find(sense => sense.id === 'en')?.meaningsVi).toEqual(['mục']);
+    expect(paired.dictionary?.senses.find(sense => sense.id === 'different')?.meaningsVi).toEqual([]);
+    expect(paired.dictionary?.unpairedMeaningsVi).toContain('nghĩa tổng hợp');
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it('returns shared EN/VI results offline, including inflection and unknown words', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
     const { engine } = setup();

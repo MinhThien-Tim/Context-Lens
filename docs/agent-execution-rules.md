@@ -47,9 +47,9 @@ TESTS REQUIRED
   source, verify the source and correct the doc.
 - Do not re-verify the whole documentation set. Check only the subsystem being changed.
 - Do not re-read a large unchanged file when only one unknown region is needed; read the range.
-- Any document in `docs/` that the `ARCHITECTURE.md` documentation tiers do not list as canonical or
-  specialized is historical background, not current architecture. Read it only when the task explicitly
-  asks about that history.
+- Anything under `docs/archive/` is historical background, not current architecture, and is never
+  part of the default reading path. Read a file there only when the task explicitly asks about that
+  history, a past regression, or an old measurement. Code, config and the active docs override it.
 
 ### Architecture doc maintenance
 
@@ -78,10 +78,12 @@ decides how many of them are justified.
 
 | Risk | Typical change | Justified verification |
 | --- | --- | --- |
-| **Low** | Copy, token rename, style value, isolated pure function, doc-only | The one colocated test if one exists, or `npx vitest run <path>`. Nothing else. |
+| **Low** | Copy, token rename, style value, isolated pure function | The one colocated test if one exists, or `npx vitest run <path>`. Nothing else. |
 | **Medium** | Pipeline stage, normalization, provider adapter, cache key, component logic, Dexie record shape | Targeted Vitest file(s) plus `npm run typecheck`. Add a colocated test next to the change. |
 | **High / shared contract** | Dexie schema version, `TRANSLATION_VERSION` / `CONTEXT_VERSION` / `OCR_CONFIG_VERSION`, cache keys, location shapes, backup schema, provider priority, cross-subsystem state | Targeted tests, then `npm test` as the escalation gate. `npm run build` when bundle or service-worker precache boundaries moved. |
 | **Browser-observable** | Selection/highlight, PDF canvas or OCR queue, layout/responsive, focus/scroll/panel, PWA install or offline | High-risk checks plus one narrow Playwright spec (§6). |
+
+Documentation-only tasks require document/link/diff checks, not application tests.
 
 Two hard exclusions:
 
@@ -134,40 +136,144 @@ npx playwright test e2e/pdf-mode-layout.spec.ts -g "reader chrome"
 `playwright.vocabulary.config.ts` plus the sibling English101 checkout; without it, that spec is
 `BLOCKED`, not a failure.
 
-## 7. Retry and failure discipline
+## 7. Execution / Test Retry Policy
 
-- Allow at most **2–3 meaningful attempts** for the same verification problem.
-- Every retry requires a concrete code change or a genuinely different valid execution method.
-  A typo, wrong path, or misnamed filter may be corrected once or twice — that is normal.
-- Never rerun an unchanged failing command, and never poll process or terminal state.
-- Stop earlier when the error is clearly environmental: Execution Policy, permissions, sandbox,
-  missing Chrome channel, launcher failure, or tool limits.
+This section is the canonical owner of retry, execution, environment, completion and token rules.
+Status meanings live in [testing.md](testing.md#verification-status-semantics).
+Use the **current session's actual capabilities**, never the model or agent name.
 
-## 8. Environment and execution blocks
+### Classify before retrying
 
-When verification is blocked by the environment, do **not**:
+- **Code failure:** the test ran and an assertion, compilation, runtime or product behavior failed.
+  This evidence may justify targeted implementation debugging.
+- **Launcher / shell failure:** the test did not run because a launcher or wrapper could not execute:
+  for example `npm.ps1` or `npx.ps1` blocked by PowerShell Execution Policy, or known wrapper
+  incompatibility. This is not evidence of a code defect.
+- **Environment / permission failure:** access denied, sandbox, security policy, permissions or an
+  unavailable runtime/browser/capability prevents execution. This is not evidence of a code defect.
+- **Completion unknown:** execution occurred or may have occurred, but the final result cannot be
+  reliably observed. This is neither `PASS` nor `FAIL`.
 
-- change Execution Policy, security settings, or machine configuration;
-- swap shells, runners, or launchers to route around the block;
-- install unrelated global tooling to force a test to run;
-- escalate to a heavier workflow (a full Playwright run) to bypass a restriction;
-- create helper scripts or retry loops to circumvent the block;
-- treat blocked execution as evidence that the product is broken.
+### Capability and security boundary
 
-Stop that path and report the exact gap so a human can close it.
+A session permitted to execute the equivalent command may use **one safe equivalent launcher** for a known launcher issue:
+`npm.ps1` to `npm.cmd`, `npx.ps1` to `npx.cmd`, or a known broken wrapper to an equivalent direct
+executable already available on the machine. Preserve the test target, arguments and scope.
+This is launcher substitution, not a security bypass: it is allowed only when security is unchanged
+and the session actually has permission to execute it. A restricted/sandboxed session must stop the
+denied execution path unless the official approval mechanism below authorizes a scoped retry;
+never escape or circumvent a restriction.
 
-## 9. Verification status vocabulary
+"Capable session" does not mean the Codex **Full access** permission mode. A sandboxed session may
+execute permitted local commands. A `.ps1` Execution Policy error alone is a launcher failure, not
+proof that the sandbox denies `.cmd`. On Windows PowerShell, prefer `npm.cmd` / `npx.cmd` from the
+first attempt; do not deliberately repeat a known `.ps1` failure. This counts as the normal attempt.
+If `.ps1` was already attempted, use the single `.cmd` fallback before declaring that launcher path
+blocked, unless a higher-priority instruction explicitly prohibits it or execution is already denied.
 
-| Status | Meaning |
-| --- | --- |
-| `PASS` | Ran and produced a confirmed passing result. |
-| `FAIL` | Ran and produced a confirmed failing result. |
-| `BLOCKED` | Could not run because of environment, policy, or tool restrictions. |
-| `UNRESOLVED` | May have run, but the result cannot be confirmed reliably. |
-| `NOT RUN` | Intentionally skipped as unnecessary or disproportionate. |
+If `.cmd` starts Vitest but Vite/esbuild then reports `spawn EPERM`, classify it as a startup
+permission failure; no test result was produced. Apply the official approval path below if available,
+otherwise report `BLOCKED`. Do not keep reporting `npx.ps1` as the cause or try further launchers.
+A launcher failure for one check does not automatically block
+independent required checks such as `npm.cmd run typecheck` within the existing task scope.
 
-Never convert `BLOCKED`, `UNRESOLVED`, or `NOT RUN` into `PASS`. If shell integration cannot confirm
-completion, report `UNRESOLVED` — do not assume either outcome.
+Never change PowerShell Execution Policy, use `ExecutionPolicy Bypass`, disable security controls,
+request Windows administrator/UAC elevation, change machine-wide security settings, install global tooling to bypass a
+restriction, create bypass/helper scripts, or repeatedly switch shells.
+
+### Official approval for a sandbox execution denial
+
+When a required local check is denied inside the sandbox (for example esbuild child-process
+`spawn EPERM`), and the current tool permits approval requests, request **one narrowly scoped retry**
+through that tool's official mechanism. For Codex `exec_command`, use
+`sandbox_permissions: "require_escalated"` with the exact test command and a justification identifying
+the failed operation. Preserve the runner, configuration, arguments and test scope. Prefer `.cmd`
+from the first Windows attempt so this authorized retry fits the two-attempt budget.
+
+This requests an approved execution boundary for that command; it does not authorize changing
+Windows security policy, running as administrator, or editing Codex permission configuration.
+Let the configured reviewer approve or deny the request. Repository instructions cannot grant tool
+permissions. Do not invent a blanket approval or require the user to enable Full access first.
+
+The approved execution counts as the second attempt, not an extra attempt. If approval is denied,
+unavailable, prohibited by higher-priority instructions, or the authorized execution is still blocked,
+stop and report `BLOCKED` with the actual reason. Do not resubmit or switch tools to evade a denial.
+If the budget is already exhausted, report the gap; resume only after an explicit user instruction
+authorizes a new scoped attempt. Do not reset the budget merely because a new turn begins.
+Once execution succeeds, classify its actual test results as `PASS` or `FAIL`.
+
+### Strict execution budget
+
+For **each launcher/environment problem**, maximum **2 execution attempts total**:
+
+1. Normal documented command.
+2. Use **one** of: a safe equivalent launcher for a known launcher issue; an officially approved
+   retry for a sandbox denial; or one direct confirmation of an ambiguous environment cause.
+   These alternatives share the same two-attempt budget; they are not cumulative. A confirmed
+   restriction permits no unapproved retry.
+
+After the budget is exhausted, stop and report `BLOCKED`. Do not chain `npm`, `npm.cmd`, `cmd /c npm`,
+PowerShell bypass, helper scripts, another terminal, background processes, process inspection,
+temporary-log inspection and further retries. Do not reset the budget by switching tools.
+Do not broadly diagnose the OS, inspect unrelated environment configuration, install tools, search
+temporary directories repeatedly, or escalate to heavier tests because execution was blocked.
+
+### Genuine code failures
+
+The launcher budget does not limit normal debugging of a confirmed `FAIL`: inspect the exact failure,
+make a targeted implementation/config fix, then rerun the affected test. Every rerun must follow a
+meaningful code/config change or a clearly identified reason why another execution is necessary.
+Never repeatedly rerun an unchanged failing test. Do not automatically escalate to the full suite.
+A `BLOCKED`, `UNRESOLVED` or `NOT RUN` result never justifies a product fix.
+
+### Completion unknown and long-running commands
+
+Allow at most **one direct result-status check per problem**. Use existing evidence before launching
+anything new, in this order: existing final test report, existing exit/result file, then final output
+already produced by that command. If one check cannot establish the final result, report `UNRESOLVED`
+and stop the verification path.
+
+A legitimately long-running test is not automatically a failure. Do not start another copy, restart
+it because shell integration is uncertain, or repeatedly poll it through model calls. Use its existing
+result once available; if the environment cannot reliably wait for or observe it, report `UNRESOLVED`.
+Do not repeatedly inspect process lists, terminal status, temporary directories, timestamps, logs or
+server state, or create a sequence of model calls just to determine whether a command finished.
+
+### Decision rule
+
+```text
+Test ran + confirmed passing result -> PASS -> stop.
+Test ran + confirmed code/test failure -> FAIL -> targeted diagnosis/fix -> justified affected-test rerun.
+Test did not run:
+  Known launcher issue + capable session -> one safe fallback -> evaluate normally if it runs;
+    still prevented -> BLOCKED -> stop.
+  Sandbox execution denial + approval available + budget remaining -> one scoped approval request:
+    approved -> execute the same check -> classify actual result;
+    denied / still blocked -> BLOCKED -> stop.
+  Other confirmed restriction / unavailable capability / exhausted budget -> BLOCKED -> stop.
+  Ambiguous environment cause -> at most one direct confirmation within execution budget -> stop if blocked.
+Completion unknown -> one direct result check -> confirmed PASS/FAIL, or UNRESOLVED -> stop.
+```
+
+### Reporting and context guardrail
+
+For blocked verification, report:
+
+```text
+STATUS: BLOCKED
+REASON: <confirmed restriction>
+ATTEMPTS: <commands/confirmation and count>
+LAST CONFIRMED SUCCESS: <last successful check, or none>
+UNVERIFIED SCOPE: <remaining verification gap>
+```
+
+Use the same fields for `UNRESOLVED`, naming the missing final-result evidence. Environment
+troubleshooting must remain cheaper than verification: maximum two execution attempts, maximum one
+direct result check, no repeated polling, broad environment diagnosis, repository rescan or repeated
+large-log reading. This applies especially when context is already large. If verification cannot be
+established within these limits, stop and report; do not consume a large context for a minor result.
+A blocked targeted E2E check does not justify full E2E, full unit tests, another server, process
+inspection or log-inspection loops. Record the gap and stop that path.
 
 ## 10. Code changes based on evidence
 

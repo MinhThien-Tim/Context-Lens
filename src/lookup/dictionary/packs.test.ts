@@ -1,10 +1,12 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { db } from '../../db/database';
 import { dictionaryRegistry } from './registry';
 import { dictionaryPackSchema, installDictionaryPack, loadDictionaryPacks, removeDictionaryPack } from './packs';
 import { lookupLocalLexeme } from '../localLexeme';
 import { LocalLanguageEngine } from '../../core/language/local-language-engine';
+
+import * as wordnet from '../../core/language/wordnet';
 
 const pack = {
   schema: 'context-lens.dictionary-pack', version: 1, id: 'vi-test-pack', name: 'Vietnamese Test Pack', packVersion: '2026.1',
@@ -15,7 +17,7 @@ const pack = {
 describe('installable dictionary packs', () => {
   afterEach(async () => {
     await db.dictionaryPacks.clear();
-    for (const id of [pack.id, 'legacy-morphology', 'weak-inflection', 'reviewed-test', 'imported-test', 'context-lens.wiktionary.en-vi.reviewed']) dictionaryRegistry.unregister(id);
+    for (const id of [pack.id, 'sense-foundation', 'legacy-morphology', 'weak-inflection', 'reviewed-test', 'imported-test', 'context-lens.wiktionary.en-vi.reviewed']) dictionaryRegistry.unregister(id);
   });
   it('validates, persists, loads, and removes a licensed pack', async () => {
     await installDictionaryPack(pack);
@@ -111,5 +113,58 @@ describe('installable dictionary packs', () => {
     expect(participle.selection).toMatchObject({ lemma: 'represent', status: 'base-form' });
     expect(participle.dictionary?.surfaceForm).toBe('represented');
     expect(participle.vietnamese?.meaning).toContain('đại diện');
+  });
+});
+
+ describe('sense foundation and local Vietnamese references', () => {
+  const entry = (lemma: string, meaningsVi: string[], definitionEn = '') => ({ lemma, meaningsVi, definitionEn, partOfSpeech: 'adverb', ipa: null });
+  afterEach(async () => { dictionaryRegistry.unregister('sense-foundation'); await db.dictionaryPacks.delete('sense-foundation'); });
+  async function install(entries: ReturnType<typeof entry>[]) {
+    await installDictionaryPack({ ...pack, id: 'sense-foundation', entries });
+  }
+  it('preserves every represent sense and inherited represented data without position pairing', async () => {
+    vi.spyOn(wordnet, 'lookupWordNet').mockImplementation(lemma => lemma === 'represent' ? {
+      lemma, pos: ['verb'], senses: Array.from({ length: 8 }, (_, i) => ({ id: `wn:${i}`, pos: 'verb',
+        definitionEn: i === 0 ? 'be representative or typical of' : `distinct English sense ${i}` }))
+    } : undefined);
+    await install([entry('represent', ['tiêu biểu cho', 'đại diện cho']),
+      entry('represented', ['Quá khứ và phân từ quá khứ của represent'])]);
+    for (const selectedText of ['represent', 'represented']) {
+      const result = await new LocalLanguageEngine().analyzeSelection({ selectedText, sentence: `They ${selectedText} the region.`, sourceLang: 'en', targetLang: 'vi' });
+      expect(result.dictionary?.senses).toHaveLength(8);
+      expect(result.dictionary?.senses.every(sense => sense.meaningsVi.length === 0 && sense.source === 'wordnet')).toBe(true);
+      expect(result.dictionary?.unpairedMeaningsVi).toEqual(['tiêu biểu cho', 'đại diện cho']);
+      expect(result.selection.lemma).toBe('represent');
+    }
+  });
+  it('keeps a reliable source pair and English with missing Vietnamese', async () => {
+    await installDictionaryPack({ ...pack, id: 'sense-foundation', entries: [{ ...entry('pairedfixture', ['nghĩa một', 'nghĩa hai'], 'source definition'),
+      senses: [{ id: 'pair:1', definitionEn: 'source definition', meaningsVi: ['nghĩa một', 'nghĩa hai'] }] }] });
+    const lexeme = lookupLocalLexeme('pairedfixture');
+    expect(lexeme?.senses[0].meaningsVi).toEqual(['nghĩa một', 'nghĩa hai']);
+    vi.spyOn(wordnet, 'lookupWordNet').mockReturnValue({ lemma: 'englishfixture', pos: ['noun'], senses: [{ id: 'en:1', definitionEn: 'English remains available' }] });
+    expect(lookupLocalLexeme('englishfixture')?.senses[0].definitionEn).toBe('English remains available');
+  });
+  it('resolves vicariously while retaining normal vicarious and all meanings', async () => {
+    await install([entry('vicarious', ['gián tiếp', 'thay cho người khác']), entry('vicariously', ['Xem vicarious'])]);
+    expect(dictionaryRegistry.lookup('vicarious')?.entry.meaningsVi).toEqual(['gián tiếp', 'thay cho người khác']);
+    expect(dictionaryRegistry.lookup('vicariously')?.entry).toMatchObject({ lemma: 'vicariously', meaningsVi: ['gián tiếp', 'thay cho người khác'],
+      vietnameseReferences: [{ target: 'vicarious', status: 'resolved' }] });
+    expect(lookupLocalLexeme('vicariously')?.vietnameseReferences?.[0].status).toBe('resolved');
+  });
+  it('retains a missing reference with an explicit unresolved state', async () => {
+    await install([entry('referencefixture', ['Xem absentfixture', 'nghĩa độc lập'])]);
+    expect(dictionaryRegistry.lookup('referencefixture')?.entry).toMatchObject({ meaningsVi: ['Xem absentfixture', 'nghĩa độc lập'],
+      vietnameseReferences: [{ status: 'unresolved', reason: 'missing' }] });
+  });
+  it('terminates cycles', async () => {
+    await install([entry('cyclealpha', ['Xem cyclebeta']), entry('cyclebeta', ['Xem cyclealpha'])]);
+    expect(dictionaryRegistry.lookup('cyclealpha')?.entry.vietnameseReferences).toContainEqual(expect.objectContaining({ status: 'unresolved', reason: 'cycle' }));
+  });
+  it('resolves two hops and stops before a third', async () => {
+    await install([entry('hopalpha', ['Xem hopbeta']), entry('hopbeta', ['Xem hopgamma']), entry('hopgamma', ['cuối'])]);
+    expect(dictionaryRegistry.lookup('hopalpha')?.entry.meaningsVi).toEqual(['cuối']);
+    await install([entry('hopalpha', ['Xem hopbeta']), entry('hopbeta', ['Xem hopgamma']), entry('hopgamma', ['Xem hopdelta']), entry('hopdelta', ['cuối'])]);
+    expect(dictionaryRegistry.lookup('hopalpha')?.entry.vietnameseReferences).toContainEqual(expect.objectContaining({ reason: 'depth', status: 'unresolved' }));
   });
 });

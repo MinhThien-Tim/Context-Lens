@@ -8,6 +8,11 @@ import type { LookupRequest } from './types';
 import { validLookup } from '../test/fixtures';
 import { defaultEngineSettings } from '../settings/engines';
 import { getDiagnostics } from '../core/diagnostics';
+import { LexicalEngine } from '../core/language/lexicon';
+import type { LexicalEntry } from '../core/language/types';
+import * as providerRegistry from '../core/translation/provider-registry';
+import type { TranslationInput } from '../core/translation/types';
+import { EngineError } from '../core/errors';
 
 const request: LookupRequest = {
   selection: 'maintain', selection_type: 'word', sentence: validLookup.context.sentence,
@@ -94,7 +99,9 @@ describe('lookup service offline cache', () => {
       managedTranslation: false, translationEndpoint: 'https://example.test/translate' };
     const before = getDiagnostics().counters;
     const capital = await service.quick({ ...request, sentence, selection: 'capital', selection_start: sentence.indexOf('capital') }, settings);
-    for (const selection of ['sanctions', 'constrained', 'access', 'severely']) {
+    expect(fetch.mock.calls.filter(([url]) => String(url) === 'https://example.test/translate')).toHaveLength(0);
+    await service.quick({ ...request, sentence, selection: 'sanctions', selection_start: sentence.indexOf('sanctions') }, settings);
+    for (const selection of ['capital', 'constrained', 'access', 'severely']) {
       await service.quick({ ...request, sentence, selection, selection_start: sentence.indexOf(selection) }, settings);
     }
     const gatewayCalls = fetch.mock.calls.filter(([url]) => String(url) === 'https://example.test/translate');
@@ -119,5 +126,81 @@ describe('lookup service offline cache', () => {
     await db.lookups.put({ key: `${contextKey}:gemini:flash`, contextKey, result: validLookup, createdAt: 1, accessedAt: 1 });
     const result = await new LookupService().contextual(request, defaultAiSettings);
     expect(result).toEqual(expect.objectContaining({ source: 'cache', engine: expect.objectContaining({ provider: 'legacy-cache' }) }));
+  });
+});
+
+describe('selected English sense fallback', () => {
+  const gloss = 'an item used to verify a translation';
+  const settings = { ...defaultEngineSettings, browserTranslation: true, publicTranslation: false,
+    googleProvider: false, bingProvider: false, managedTranslation: false };
+  const selection = { ...request, selection: 'fallbackfixture', sentence: 'A fallbackfixture.' };
+  function setup(extra: Partial<LexicalEntry> = {}, translate = vi.fn(async (input: TranslationInput) => ({
+    text: 'một mục dùng để kiểm tra bản dịch', sourceText: input.text, targetLang: 'vi', provider: 'fixture'
+  })), timeoutMs = 1000) {
+    const entry: LexicalEntry = { lemma: 'fallbackfixture', pos: ['noun'],
+      senses: [{ id: 'fixture.only', pos: 'noun', definitionEn: gloss }], ...extra };
+    vi.spyOn(LexicalEngine.prototype, 'lookup').mockImplementation(text => text === 'fallbackfixture' ? entry : undefined);
+    vi.spyOn(providerRegistry, 'translationProviders').mockReturnValue([{ id: 'fixture', network: true,
+      priority: 1, tier: 'optional', timeoutMs, supports: () => true, isAvailable: () => true, translate }]);
+    const fetch = vi.fn().mockRejectedValue(new Error('No network in tests'));
+    vi.stubGlobal('fetch', fetch);
+    return { service: new LookupService(), translate, fetch };
+  }
+  afterEach(async () => {
+    vi.restoreAllMocks(); vi.unstubAllGlobals();
+    await Promise.all([db.translations.clear(), db.sentenceAnalyses.clear()]);
+  });
+  it('translates only the selected gloss, publishes English first and reuses the cache', async () => {
+    const { service, translate, fetch } = setup();
+    const local = vi.fn();
+    const first = await service.quick(selection, settings, undefined, local);
+    expect(local.mock.calls[0][0].dictionary.senses[0].meaningsVi).toEqual([]);
+    expect(local.mock.calls[0][0].quick.definition_en).toBe(gloss);
+    expect(translate.mock.calls[0][0]).toMatchObject({ text: gloss, mode: 'sentence' });
+    expect(first.dictionary?.senses[0]).toMatchObject({ definitionEn: gloss, pairingState: 'paired', meaningsVi: ['một mục dùng để kiểm tra bản dịch'] });
+    const second = await service.quick(selection, settings);
+    expect(second.source).toBe('cache');
+    expect(translate).toHaveBeenCalledOnce();
+    expect(fetch.mock.calls.filter(([url]) => /^https?:/.test(String(url)))).toHaveLength(0);
+  });
+  it('does not translate when useful aggregate VI remains beside an unresolved reference', async () => {
+    const { service, translate } = setup({ meaningsVi: ['nghĩa hữu ích', 'Xem absentfixture'],
+      vietnameseReferences: [{ text: 'Xem absentfixture', target: 'absentfixture', status: 'unresolved', reason: 'missing' }] });
+    const result = await service.quick(selection, settings);
+    expect(result.dictionary?.unpairedMeaningsVi).toContain('nghĩa hữu ích');
+    expect(translate).not.toHaveBeenCalled();
+  });
+  it('fills a missing sense when the only aggregate VI is an unresolved reference', async () => {
+    const { service, translate } = setup({ meaningsVi: ['Xem absentfixture'],
+      vietnameseReferences: [{ text: 'Xem absentfixture', target: 'absentfixture', status: 'unresolved', reason: 'missing' }] });
+    const result = await service.quick(selection, settings);
+    expect(result.dictionary?.senses[0].meaningsVi).toEqual(['một mục dùng để kiểm tra bản dịch']);
+    expect(result.dictionary?.unpairedMeaningsVi).toEqual(['Xem absentfixture']);
+    expect(translate).toHaveBeenCalledOnce();
+  });
+  it.each(['offline-mode', 'offline-browser', 'disabled'] as const)('preserves English without provider calls: %s', async mode => {
+    const { service, translate } = setup();
+    if (mode === 'offline-browser') vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const result = await service.quick(selection, { ...settings,
+      quickEngine: mode === 'offline-mode' ? 'offline' : 'auto', browserTranslation: mode !== 'disabled' });
+    expect(result.dictionary?.senses[0].definitionEn).toBe(gloss);
+    expect(result.dictionary?.senses[0].meaningsVi).toEqual([]);
+    expect(translate).not.toHaveBeenCalled();
+  });
+  it.each(['network', 'timeout', 'unchanged'] as const)('preserves English after %s', async failure => {
+    const translate = vi.fn<(input: TranslationInput) => Promise<{ text: string; sourceText: string; targetLang: string; provider: string }>>();
+    if (failure === 'network') translate.mockRejectedValue(new EngineError('NETWORK'));
+    else if (failure === 'timeout') translate.mockImplementation(() => new Promise(() => {}));
+    else translate.mockImplementation(async input => ({ text: input.text, sourceText: input.text, targetLang: 'vi', provider: 'fixture' }));
+    const { service } = setup({}, translate, 10);
+    const result = await service.quick(selection, settings);
+    expect(result.dictionary?.senses[0]).toMatchObject({ definitionEn: gloss, meaningsVi: [], pairingState: 'missing' });
+  });
+  it('propagates cancellation while a gloss translation is pending', async () => {
+    const controller = new AbortController();
+    const translate = vi.fn(async () => { controller.abort(); throw new EngineError('ABORTED'); });
+    const { service } = setup({}, translate);
+    await expect(service.quick(selection, settings, controller.signal)).rejects.toMatchObject({ code: 'ABORTED' });
+    expect(translate).toHaveBeenCalledOnce();
   });
 });

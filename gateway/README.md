@@ -22,6 +22,17 @@ Quota is reserved immediately before each actual upstream attempt. Daily and per
 
 Gateway failures are normalized and never include raw upstream bodies. Cancellation stops fallback and does not count against provider health, although an attempt already admitted by the server remains charged. Global/daily quota, rate-limit and concurrency rejection do not fan out to another provider.
 
+Upstream calls use `redirect: 'manual'`, `credentials: 'omit'` and `referrerPolicy: 'no-referrer'`
+(`gateway/src/providers/google-web.ts`), so a 3xx is never followed and a challenge or login
+redirect cannot be replayed against the provider.
+
+An `IP_HASH_SECRET` shorter than 32 characters is rejected with `DISABLED` before any quota is
+reserved. A value used for local testing is a public test value and is never suitable for deployment.
+
+Historical verification runs — dated evidence, measurement limits and the "not deployed" status —
+live in [`../docs/archive/verification/VERIFICATION.md`](../docs/archive/verification/VERIFICATION.md).
+They are not current architecture; this file and `COST & QUOTA GUARDRAILS.md` are.
+
 ## Limits and privacy
 
 - SQLite-backed Durable Object on Workers Free; one stable object (`global-pilot-v1`) owns admission for the whole deployment. Do not shard this object or rename it to reset quota.

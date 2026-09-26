@@ -23,6 +23,13 @@ export interface DictionarySenseTranslation {
   provenance?: DictionaryProvenance;
 }
 
+export interface VietnameseReference {
+  text: string;
+  target: string;
+  status: 'resolved' | 'unresolved';
+  reason?: 'missing' | 'cycle' | 'depth';
+}
+
 export interface DictionaryEntry {
   lemma: string;
   partOfSpeech: string;
@@ -33,6 +40,7 @@ export interface DictionaryEntry {
   inflection?: InflectionType;
   provenance?: DictionaryProvenance;
   senses?: DictionarySenseTranslation[];
+  vietnameseReferences?: VietnameseReference[];
 }
 
 export type InflectionType = 'past' | 'past-participle' | 'present-participle' | 'third-person' | 'plural' | 'comparative' | 'superlative' | 'variant';

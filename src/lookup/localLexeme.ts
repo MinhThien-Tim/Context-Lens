@@ -1,6 +1,6 @@
 import { dictionaryRegistry } from './dictionary/registry';
 import type { InflectionType } from './dictionary/types';
-import type { LexicalEntry } from '../core/language/types';
+import type { LexicalEntry, LexicalSense } from '../core/language/types';
 import { lookupWordNet } from '../core/language/wordnet';
 
 const qualityRank = { reviewed: 0, curated: 1, imported: 2 } as const;
@@ -37,27 +37,28 @@ export function lookupLocalLexeme(candidate: string, surface = candidate, curate
   const dictionaryEnglish = contentEntries.find(entry => entry.definitionEn.trim())?.definitionEn.trim();
   const senseOwners = lemmaEntries.some(entry => entry.senses?.length) ? lemmaEntries : exactEntries;
   const dictionarySenses = senseOwners.flatMap(entry => (entry.senses ?? []).map(sense => ({
-    id: sense.id, definitionEn: sense.definitionEn, meaningVi: sense.meaningsVi.join(' / '),
+    id: sense.id, definitionEn: sense.definitionEn, meaningVi: sense.meaningsVi.join(' / '), meaningsVi: sense.meaningsVi, source: 'local' as const,
     pos: normalizePos([sense.partOfSpeech ?? entry.partOfSpeech])[0]
   })));
   // WordNet and entry-level bilingual dictionaries do not share sense IDs.
   // Keep them independent instead of manufacturing a bilingual pair from
   // definition similarity or source order.
-  const wordNetSenses = wordnet?.senses ?? [];
-  const senses = [
+  const wordNetSenses = (wordnet?.senses ?? []).map(sense => ({ ...sense, source: 'wordnet' as const }));
+  const senses: LexicalSense[] = [
     ...(curated?.senses.map(sense => ({ ...sense, pos: sense.pos ?? (curated.pos.length === 1 ? curated.pos[0] : undefined) })) ?? []),
     ...dictionarySenses,
     ...wordNetSenses,
-    ...(dictionaryEnglish && !curated?.senses.some(sense => sense.definitionEn === dictionaryEnglish) && !wordnet?.senses.some(sense => sense.definitionEn === dictionaryEnglish)
-      ? [{ id: `${lemma}.dictionary`, definitionEn: dictionaryEnglish }] : [])
+    ...(dictionaryEnglish && !dictionarySenses.some(sense => sense.definitionEn === dictionaryEnglish) && !curated?.senses.some(sense => sense.definitionEn === dictionaryEnglish) && !wordnet?.senses.some(sense => sense.definitionEn === dictionaryEnglish)
+      ? [{ id: `${lemma}.dictionary`, definitionEn: dictionaryEnglish, meaningVi: undefined }] : [])
   // Inheriting lemma data must not repeat a sense the exact form already contributed.
   ].filter((sense, index, all) => {
     const earlier = all.findIndex(other => other.id === sense.id
-      || (sense.definitionEn && other.definitionEn?.toLocaleLowerCase() === sense.definitionEn.toLocaleLowerCase()));
+      || (sense.definitionEn && other.definitionEn?.toLocaleLowerCase() === sense.definitionEn.toLocaleLowerCase()
+        && other.meaningVi === sense.meaningVi));
     return earlier === index;
   });
   const meaningOwners = lemmaEntries.some(entry => entry.meaningsVi.length) ? lemmaEntries : exactEntries;
-  const meaningsVi = [...new Set([...meaningOwners.flatMap(entry => entry.meaningsVi), ...(curated?.senses.flatMap(sense => sense.meaningVi ? [sense.meaningVi] : []) ?? [])].filter(Boolean))];
+  const meaningsVi = [...new Set([...meaningOwners.flatMap(entry => entry.meaningsVi), ...(curated?.meaningsVi ?? []), ...(curated?.senses.flatMap(sense => sense.meaningVi ? [sense.meaningVi] : []) ?? [])].filter(Boolean))];
   if (!senses.length && !meaningsVi.length) return undefined;
   const pos = normalizePos([...(curated?.pos ?? []), ...(wordnet?.pos ?? []), ...preferred.map(match => match.entry.partOfSpeech)]);
   const morphologyMatch = preferred.find(match => match.morphology)?.morphology;
@@ -67,6 +68,7 @@ export function lookupLocalLexeme(candidate: string, surface = candidate, curate
   return {
     lemma, pos, senses, meaningsVi,
     morphology,
+    vietnameseReferences: meaningOwners.flatMap(entry => entry.vietnameseReferences ?? []),
     sources: {
       english: [...new Set([...(curated?.senses.length ? ['curated'] : []), ...(wordnet?.senses.length ? ['wordnet-3.0'] : []), ...(dictionaryEnglish ? preferred.filter(match => match.entry.definitionEn.trim()).map(match => match.providerId) : [])])],
       vietnamese: [...new Set([...bestDictionaryMatches.filter(match => match.entry.meaningsVi.length).map(match => match.providerId), ...(curated?.senses.some(sense => sense.meaningVi) ? ['curated'] : [])])],

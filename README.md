@@ -109,8 +109,8 @@ When a PDF is imported or reopened, scanned pages among its first 12 pages are r
 ## Production readiness
 
 - The licensed English-Vietnamese distribution pack and reproducible build pipeline are complete; see `docs/DICTIONARY_PACK.md` and `release/dictionary/manifest.json`.
-- PDF original-page rendering, per-page OCR, optional English + Vietnamese OCR, and bounded OCR queues are implemented; see `docs/PDF_OCR_STAGE4_REPORT.md` for verification and limits. `docs/PDF_RENDERING_DECISION.md` records the earlier release decision.
-- Real Android/iOS QA remains a deployment gate and requires connected physical devices or a device farm; see `docs/DEVICE_QA.md` and `docs/RELEASE_READINESS.md`.
+- PDF original-page rendering, per-page OCR, optional English + Vietnamese OCR, and bounded OCR queues are implemented; see `docs/reader.md` for the current architecture, limits and invariants. The stage reports that verified them are historical, under `docs/archive/pdf/`.
+- Real Android/iOS QA remains a deployment gate and requires connected physical devices or a device farm; see `docs/DEVICE_QA.md` for the live procedure. The last release snapshot is archived at `docs/archive/releases/RELEASE_READINESS.md`.
 - English101 synchronization remains deliberately postponed.
 
 ## Stage 3 contracts already in place
@@ -156,7 +156,7 @@ sentence. **Go to location** returns to the stored text anchor. Older notes rema
 editable and show an unavailable-location message rather than inventing a target.
 Light/dark/system preferences remain local and persist across reloads.
 
-See [implementation and verification details](docs/READER_UI_UPGRADE.md).
+See [implementation and verification details](docs/archive/pdf/READER_UI_UPGRADE.md).
 
 
 ## English101 vocabulary handoff

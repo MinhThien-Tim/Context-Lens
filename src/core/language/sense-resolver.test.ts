@@ -68,3 +68,59 @@ describe('sense evidence is independent from part-of-speech evidence', () => {
     expect(repeatedResult.contextMatch).toBe(false);
   });
 });
+
+
+describe('context ranking remains conservative', () => {
+  it('recognizes an adverb between a subject and a predicate with multiple parts of speech', () => {
+    const lexical = new LexicalEngine([{ lemma: 'question', pos: ['noun', 'verb'],
+      senses: [{ id: 'question.verb', pos: 'verb', definitionEn: 'ask about something' }] }]);
+    const sentence = 'You still question these beliefs.';
+    const result = new SenseResolver(lexical).resolve({ selection: 'still', lemma: 'still', sentence,
+      sentenceAnalysis: analysis(sentence), candidateSenses: [
+        { id: 'verb', pos: 'verb', definitionEn: 'make quiet' },
+        { id: 'adverb', pos: 'adverb', definitionEn: 'continuing up to this time without interruption' }
+      ] });
+    expect(result.selectedSense?.id).toBe('adverb');
+    expect(result.contextMatch).toBe(true);
+  });
+  it.each([
+    ['record', 'They record every meeting.', 'verb'],
+    ['record', 'She broke the record.', 'noun'],
+    ['present', 'a present problem', 'adjective'],
+    ['present', 'present the results', 'verb'],
+    ['present', 'the present', 'noun'],
+    ['object', 'They object to it.', 'verb'],
+    ['close', 'They close the door.', 'verb'],
+    ['left', 'the left', 'noun'],
+    ['found', 'They found a company.', 'verb']
+  ])('narrows %s POS in %s without claiming a sense', (selection, sentence, pos) => {
+    const candidateSenses = ['noun', 'adjective', 'verb'].map(pos => ({ id: pos, pos, definitionEn: 'a meaning without distinguishing evidence' }));
+    const sentenceAnalysis = analysis(sentence);
+    if (sentence.endsWith('problem')) sentenceAnalysis.tokens.at(-1)!.pos = 'noun';
+    const result = new SenseResolver().resolve({ selection, lemma: selection, sentence, sentenceAnalysis, candidateSenses });
+    expect(result.selectedSense?.pos).toBe(pos);
+    expect(result.contextMatch).toBe(false);
+    expect(result.alternatives).toHaveLength(2);
+  });
+  it.each([
+    ['smart', 'We need smart decisions.', 'judgment'],
+    ['smarter', 'We need smarter decisions.', 'judgment'],
+    ['represent', 'They represent the company.', 'company'],
+    ['represented', 'They represented the company.', 'company']
+  ])('ranks a strong collocation for %s', (selection, sentence, keyword) => {
+    const pos = selection.startsWith('smart') ? 'adjective' : 'verb';
+    const candidateSenses = [
+      { id: 'default', pos, definitionEn: 'another dictionary meaning' },
+      { id: keyword, pos, definitionEn: 'the relevant dictionary meaning', collocations: [sentence] }
+    ];
+    const result = new SenseResolver().resolve({ selection, lemma: selection, sentence, sentenceAnalysis: analysis(sentence), candidateSenses });
+    expect(result.selectedSense?.id).toBe(keyword);
+    expect(result.contextMatch).toBe(true);
+  });
+  it('keeps default order when both senses share the strong evidence', () => {
+    const result = new SenseResolver().resolve({ selection: 'smart', lemma: 'smart', sentence: 'smart decisions',
+      candidateSenses: [{ id: 'first', definitionEn: 'one', collocations: ['smart decisions'] }, { id: 'second', definitionEn: 'two', collocations: ['smart decisions'] }] });
+    expect(result.selectedSense?.id).toBe('first');
+    expect(result.contextMatch).toBe(false);
+  });
+});

@@ -31,6 +31,9 @@ Notable colocated suites: `src/reader/TextReader.test.tsx`,
 
 ## Commands
 
+On Windows PowerShell, use `npm.cmd` and `npx.cmd` wherever the table says `npm` and `npx`.
+Keep the same arguments and test scope; see the [launcher policy](agent-execution-rules.md#capability-and-security-boundary).
+
 | Purpose | Command |
 | --- | --- |
 | Full unit/integration suite | `npm test` |
@@ -47,6 +50,10 @@ Notable colocated suites: `src/reader/TextReader.test.tsx`,
 
 ## Targeted verification strategy
 
+Documentation-only tasks use document/link/diff checks; application tests are unnecessary.
+Prefer targeted unit, relevant integration, then relevant E2E; full suite only when justified by scope
+or evidence below.
+
 1. Run the tests closest to the change first: one file, one `describe` block, or one `-t` filter.
 2. Add or update a colocated test next to the module you changed, following the existing
    `describe` / `it` style and the jsdom + `fake-indexeddb` environment.
@@ -57,28 +64,25 @@ Notable colocated suites: `src/reader/TextReader.test.tsx`,
    changed.
 6. Browser automation is a last resort; see the restrictions below.
 
-## Blocked-execution rule (mandatory)
+## Execution and retry policy
 
-If a test or command is blocked by any of the following:
+Follow the canonical [Execution / Test Retry Policy](agent-execution-rules.md#7-execution--test-retry-policy)
+for classification, safe launcher fallback, official sandbox approval, security boundaries, retry
+budgets and unknown completion.
+Do not escalate test scope because a targeted check is blocked.
 
-- Execution Policy
-- shell integration restrictions
-- environment or tool restrictions
-- permission restrictions
+## Verification status semantics
 
-then **stop attempting that blocked execution path**. Do not:
+| Status | Meaning |
+| --- | --- |
+| `PASS` | Test ran and a passing result was confirmed. |
+| `FAIL` | Test ran and a genuine code/test failure was confirmed: assertion, compilation, runtime or product behavior. |
+| `BLOCKED` | Environment, security, permission or unavailable capability prevented verification. |
+| `UNRESOLVED` | Execution occurred or may have occurred, but its final result cannot reliably be confirmed. |
+| `NOT RUN` | Intentionally unnecessary or disproportionate. |
 
-- repeatedly retry the same command
-- poll or sleep-wait on processes
-- create workaround or retry loops
-- change shell or security policy
-- launch a heavier alternative test workflow (for example a full Playwright browser run) merely to
-  bypass the restriction
-
-Report the affected verification as `BLOCKED` and state the exact remaining verification gap so a
-human can close it.
-
-Allowed verification statuses: `PASS`, `FAIL`, `BLOCKED`, `UNRESOLVED`, `NOT RUN`.
+Never convert `BLOCKED`, `UNRESOLVED` or `NOT RUN` into `PASS`, or report an environment problem as
+product `FAIL`. Report remaining unverified scope.
 
 ## Working rules
 

@@ -108,49 +108,74 @@ Verified against the current code. Preserve these when modifying.
 8. **AI context is explicit and opt-in.** Context/Grammar are user actions routed through `ContextRouter`; local heuristics and cached results run first. User keys are never logged and never sent to project infrastructure.
 9. **Versioned contracts.** Dexie schema versions, `TRANSLATION_VERSION`, `CONTEXT_VERSION`, `OCR_CONFIG_VERSION`, backup versions 1–4, and `english101.context-vocabulary` v1/v2 are explicit. A change in output shape requires a new version, never a silent overwrite.
 10. **Bundle discipline.** PDF.js, Tesseract.js, epub.js, and Mammoth are lazy dedicated chunks excluded from service-worker precache (`vite.config.ts`). Keep heavy reader code out of the initial bundle.
+11. **No silent reload on update.** The PWA uses `registerType: 'prompt'`; `src/main.tsx` only signals `context-lens:update-ready` and the app reloads through its explicit Reload control via `applyUpdate(true)`. A worker must never reload the reader on its own.
 
-## Documentation tiers
+## How to read the documentation
 
-Only **Canonical** documents are part of the normal reading path. **Specialized** documents are read only
-for the matching task. Every other file in `docs/` is **historical / reference**: it records decisions,
-stage reports and handoffs, not the system as built. If a document is not listed in either list below,
-treat it as historical and do not read it unless the task asks for that history.
+Default path: `AGENTS.md` → this file → **one** matching domain doc → the source files that doc names.
 
-### Canonical — current architecture
+> Do not read all domain docs. Read only the document selected for the current task unless the task
+> genuinely crosses subsystem boundaries.
 
-- [reader.md](reader.md) — reader surfaces, PDF loading, page model, selection, OCR integration
-- [translation-pipeline.md](translation-pipeline.md) — lookup order, morphology, sense selection, fallbacks
-- [ui-system.md](ui-system.md) — home vs reader layout, panels, theme, responsive behavior, state ownership
-- [data-storage.md](data-storage.md) — Dexie tables, caches, settings, backup/restore, vocabulary
-- [testing.md](testing.md) — test layout, commands, targeted verification, blocked-execution rule
-- [agent-execution-rules.md](agent-execution-rules.md) — agent scope, navigation, verification proportionality, stop and handoff rules
+### Core entry points — always read
 
-### Specialized — read only for the matching task
+- `AGENTS.md` (repository root) — working rules, instruction precedence, scope, verification, stop rules
+- `docs/ARCHITECTURE.md` (this file) — subsystem map, entry points, invariants, routing table
 
-- `COST & QUOTA GUARDRAILS.md` (repository root) — binding cost, quota and gateway rules
-- [DICTIONARY_PACK.md](DICTIONARY_PACK.md) — dictionary pack schema, versioning, license/attribution
-- [DEVICE_QA.md](DEVICE_QA.md) — real-device release gate matrix and smoke script
-- [../gateway/README.md](../gateway/README.md) — Worker gateway setup, quotas, staging checklist
+### Task-specific domain docs — read only when the task matches
 
-### Historical / reference — not current architecture
+- [reader.md](reader.md) — PDF, OCR, Original Reader, Reading Mode, selection, navigation
+- [translation-pipeline.md](translation-pipeline.md) — dictionary, morphology, sense selection, translation/context providers
+- [ui-system.md](ui-system.md) — UI, theme, layout, responsive behavior, panels
+- [data-storage.md](data-storage.md) — Dexie, persistence, notes, vocabulary, backup
 
-`LANGUAGE_ENGINES.md`, `local-language-engine.md`, `LOCAL_DICTIONARY_PIPELINE.md`, `PDF_MOBILE_READING.md`,
-`PDF_RENDERING_DECISION.md`, `PDF_OCR_STAGE2_REPORT.md`, `PDF_OCR_STAGE3_REPORT.md`, `PDF_OCR_STAGE4_REPORT.md`,
-`PDF_STABILITY_REPORT.md` with the `PDF_STABILITY_*.json` measurement captures, `QUALITY_PHASE_4_5.md`,
-`READER_UI_UPGRADE.md`, `RELEASE_READINESS.md`.
+### Supporting references — read only when needed
 
-These describe context, decisions and completed work. Where they disagree with a canonical document or
-with the code, the canonical document and the code win.
+- [testing.md](testing.md) — test layout, commands, selection strategy and verification status semantics
+- [agent-execution-rules.md](agent-execution-rules.md) — canonical Execution / Test Retry Policy, scope, verification and stop rules
+- `COST & QUOTA GUARDRAILS.md` (repository root) — network/API/quota/cost behavior
+- [DICTIONARY_PACK.md](DICTIONARY_PACK.md) — dictionary pack schema, build and license
+- [DEVICE_QA.md](DEVICE_QA.md) — real-device release verification
+- [../gateway/README.md](../gateway/README.md) — gateway/Worker contract
+
+These are not default reading. Each is opened only for a task that genuinely needs it.
 
 ## Task routing
 
-| If changing | Read first |
+| Task | Read |
 | --- | --- |
-| PDF rendering, reader modes, page mapping, selection, OCR | [reader.md](reader.md) |
-| Dictionary, morphology, sense ranking, translation providers, fallbacks, AI context | [translation-pipeline.md](translation-pipeline.md) |
-| Layout, panels, theme, responsive/mobile, component placement | [ui-system.md](ui-system.md) |
-| Dexie schema, IndexedDB, caches, settings, backup, library, vocabulary persistence | [data-storage.md](data-storage.md) |
-| Tests, verification, release checks | [testing.md](testing.md) |
-| Dictionary pack schema, versioning, license/attribution | [DICTIONARY_PACK.md](DICTIONARY_PACK.md) |
+| PDF/OCR/reader | [reader.md](reader.md) |
+| Dictionary/translation/context | [translation-pipeline.md](translation-pipeline.md) |
+| UI/theme/responsive | [ui-system.md](ui-system.md) |
+| Dexie/storage/backup | [data-storage.md](data-storage.md) |
+| Test commands | [testing.md](testing.md) |
+| Complex execution policy | [agent-execution-rules.md](agent-execution-rules.md) |
+| Cost/network/quota | `COST & QUOTA GUARDRAILS.md` |
+| Dictionary pack | [DICTIONARY_PACK.md](DICTIONARY_PACK.md) |
+| Physical-device QA | [DEVICE_QA.md](DEVICE_QA.md) |
+| Gateway/Worker | [../gateway/README.md](../gateway/README.md) |
 
 Then read only the specific source files listed in that document.
+
+## Archive — historical material, never current architecture
+
+`docs/archive/` holds completed reports, decisions, delivery logs and raw measurement captures:
+
+```text
+docs/archive/
+├─ pdf/           reader and OCR stage reports, the PDF rendering decision, the stability report
+├─ translation/   superseded language-engine and local-dictionary delivery logs
+├─ releases/      completed release-readiness and quality snapshots
+├─ verification/  dated gateway verification evidence
+└─ measurements/  raw PDF stability JSON captures
+```
+
+Rules:
+
+- Never browse `docs/archive/` by default, and never route a task into it.
+- Read an archived file only when the task explicitly needs historical rationale, regression
+  investigation, or an older measurement.
+- Archive content is **not** a source of current architecture truth. Code, config and the active docs
+  above always override it, whatever the archived file claims.
+- No active document may present an archived file as current authority. Keep the archive out of the
+  default reading path.
