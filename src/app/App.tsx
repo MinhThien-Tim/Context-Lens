@@ -464,7 +464,7 @@ export function App() {
           <button class="nav-button" aria-label="Saved words" onClick={() => setShowVocabulary(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12a2 2 0 0 1 2 2v14l-8-3.5L4 20V6a2 2 0 0 1 2-2Z"/></svg><span>Saved words</span></button>
           <button class="nav-button" aria-label="Storage" onClick={() => setShowDataManagement(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M6 3h12l2 4v13H4V7l2-4Zm3 8h6"/></svg><span>Storage</span></button>
           <button class="nav-button" aria-label="Settings" onClick={() => setShowApiSettings(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M4.9 4.9 7 7m10 10 2.1 2.1M2 12h3m14 0h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span>Settings</span></button>
-          <button class="nav-button" aria-label="Guide" onClick={openOnboarding}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.5 2.5 0 1 1 3.6 2.25c-.85.45-1.3.95-1.3 1.75m0 3h.01"/></svg><span>Guide</span></button>
+          <button class="nav-button nav-button-guide" aria-label="Guide" onClick={openOnboarding}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.5 2.5 0 1 1 3.6 2.25c-.85.45-1.3.95-1.3 1.75m0 3h.01"/></svg><span>Guide</span></button>
           <LookupStatistics />
           <LanguageToggle language={guideLanguage} onChange={changeGuideLanguage} />
           <div class="home-theme-toggle" role="group" aria-label={guideLanguage === 'vi' ? 'Màu trang chủ' : 'Homepage color theme'}>
