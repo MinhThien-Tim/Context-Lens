@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { ContextLensDatabase } from './database';
+import { db, defaultPreferences, loadPreferences, savePreferences, ContextLensDatabase } from './database';
 
 describe('document storage', () => {
   const database = new ContextLensDatabase(`test-${crypto.randomUUID()}`);
@@ -15,5 +15,32 @@ describe('document storage', () => {
     await database.pdfOcr.put({ key: 'scan:1:eng:1', documentId: 'scan', page: 1, language: 'eng', configVersion: 1, text: 'Recognized words', createdAt: 2 });
     expect((await database.documents.get('scan'))?.content).toBe('');
     expect((await database.pdfOcr.where('[documentId+page]').equals(['scan', 1]).first())?.text).toBe('Recognized words');
+  });
+});
+
+describe('reader interface preferences', () => {
+  afterEach(async () => { await db.settings.clear(); });
+  it('defaults to Simple and System without legacy settings', async () => {
+    await db.settings.clear();
+    expect(await loadPreferences()).toEqual(defaultPreferences);
+  });
+  it.each([['calm', 'simple'], ['bright', 'advanced']])('migrates %s without changing appearance', async (legacy, mode) => {
+    await db.settings.put({ key: 'homepage.theme', value: legacy });
+    const { interfaceMode: _, ...oldPreferences } = defaultPreferences;
+    await db.settings.put({ key: 'reader-preferences', value: { ...oldPreferences, theme: 'dark', fontSize: 23 } });
+    expect(await loadPreferences()).toMatchObject({ interfaceMode: mode, theme: 'dark', fontSize: 23 });
+    expect(await db.settings.get('homepage.theme')).toBeUndefined();
+    expect((await db.settings.get('reader-preferences'))?.value).toMatchObject({ interfaceMode: mode });
+  });
+  it('preserves explicit density over legacy and persists appearance independently', async () => {
+    await db.settings.put({ key: 'homepage.theme', value: 'bright' });
+    await savePreferences({ ...defaultPreferences, interfaceMode: 'simple', theme: 'light' });
+    expect(await loadPreferences()).toMatchObject({ interfaceMode: 'simple', theme: 'light' });
+    await savePreferences({ ...defaultPreferences, interfaceMode: 'advanced', theme: 'system' });
+    expect(await loadPreferences()).toMatchObject({ interfaceMode: 'advanced', theme: 'system' });
+  });
+  it('normalizes legacy density and invalid appearance in reader preferences', async () => {
+    await db.settings.put({ key: 'reader-preferences', value: { interfaceMode: 'bright', theme: 'unknown' } });
+    expect(await loadPreferences()).toMatchObject({ interfaceMode: 'advanced', theme: 'system' });
   });
 });

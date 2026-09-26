@@ -19,10 +19,9 @@ export function PdfOcrReadingPage({ page, text, language = 'eng', highlights = [
     }
   };
   const applyMarkup = (selection: ReaderSelection) => {
-    if (!activeMarkupTool) return;
     const end = selection.endOffset ?? selection.offset + selection.text.length;
     if (activeMarkupTool === 'eraser') onErase?.(selection.offset, end);
-    else onHighlight?.({ id: crypto.randomUUID(), startOffset: selection.offset, endOffset: end, ocrPage: page, ocrLanguage: language, color: activeMarkupColor, style: activeMarkupTool, createdAt: Date.now() });
+    else onHighlight?.({ id: crypto.randomUUID(), startOffset: selection.offset, endOffset: end, ocrPage: page, ocrLanguage: language, color: activeMarkupColor, style: activeMarkupTool ?? 'highlight', createdAt: Date.now() });
     setPending(null);
     window.getSelection()?.removeAllRanges();
   };
@@ -35,10 +34,10 @@ export function PdfOcrReadingPage({ page, text, language = 'eng', highlights = [
       if (selected) onLookup(selected);
     }}><p data-offset="0" class="pdf-ocr-text">{highlightedText(text, 0, highlights)}</p></div>
     {pending && <div class="pdf-reading-selection-actions" role="toolbar" aria-label="Selected OCR text actions">
-      <button onPointerDown={event => event.preventDefault()} onClick={() => onLookup(pending)}>Explain</button>
-      {activeMarkupTool && <button class="active" onPointerDown={event => event.preventDefault()} onClick={() => applyMarkup(pending)}>{activeMarkupTool === 'eraser' ? 'Erase' : activeMarkupTool === 'underline' ? 'Underline' : 'Highlight'}</button>}
+      <button onPointerDown={event => event.preventDefault()} onClick={() => onLookup(pending)}>Define</button>
+      {onHighlight && <button class="active" onPointerDown={event => event.preventDefault()} onClick={() => applyMarkup(pending)}>{activeMarkupTool === 'eraser' ? 'Erase' : activeMarkupTool === 'underline' ? 'Underline' : 'Highlight'}</button>}
       <button onPointerDown={event => event.preventDefault()} onClick={() => onAddNote(pending)}>Note</button>
-      <button onPointerDown={event => event.preventDefault()} onClick={() => void navigator.clipboard?.writeText(pending.text)}>Copy</button>
+      <details class="selection-more"><summary>More</summary><button onPointerDown={event => event.preventDefault()} onClick={() => void navigator.clipboard?.writeText(pending.text)}>Copy</button></details>
       <button aria-label="Close OCR selection actions" onClick={() => { setPending(null); window.getSelection()?.removeAllRanges(); }}>×</button>
     </div>}
   </section>;

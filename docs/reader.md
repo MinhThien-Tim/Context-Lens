@@ -31,7 +31,7 @@ It renders plain `content` or sanitized `safeHtml` (markdown/article), and reuse
 - Page navigation math from `src/reader/pdf/navigation.ts` (`pdfOffsetForPage`, `pdfPageForOffset`).
 - Markup: `MarkupPalette` (tool state) plus `upsertHighlight` / `eraseHighlights`
   from `src/reader/pdf-reading/highlights.ts`; `src/reader/htmlHighlights.ts` for HTML documents.
-- The same selection → `runLookup` → `LookupBottomSheet` flow.
+- The same selection → `runLookup` → `LookupBottomSheet` flow: Quick first, explicit Full expansion; presentation does not rerun lookup.
 - `useDesktop()` gating, `locationPersistence` (`src/reader/pdf/locationPersistence.ts`) for
   debounced writes, and `pdfNavigationToken` to force a re-scroll after a programmatic jump.
 
@@ -44,8 +44,12 @@ It renders plain `content` or sanitized `safeHtml` (markdown/article), and reuse
 | Selection mapping | `src/reader/pdf/selectionAdapter.ts` + `PdfTextIndex` (PDF.js DOM ↔ canonical offsets) | `src/reader/pdf-reading/readingSelectionAdapter.ts` (DOM ↔ `documentRecord.content`) |
 | Zoom | `calculatePdfScale` fit-width / fit-page / custom; desktop control bar, mobile overflow menu | Reader typography only (`--reader-size`, `--reader-leading`, `--reader-font`) |
 | OCR display | Never overlays OCR on the original page | Renders OCR text for pages that need it |
-| Extra chrome | `PdfModeSwitch`, `PageNavigation` | `PdfReadingNavigation` |
+| Extra chrome | Shared top mode switch + Document tools, quiet zoom controls | Shared top mode switch + Document tools, reading typography |
 | Page mounting | Current page + one neighbor kept mounted, skipped while OCR is busy (`neighbor` in `PdfViewer`) | All pages in one scroll container |
+
+Both PDF surfaces share the shell bottom `PageNavigation`; the header Original/Reading segment
+contains only the two view choices, with OCR/source controls in a separate Document tools popover.
+Shell height tokens reserve header and footer space without modifying scroll/navigation mapping.
 
 Mode choice: `pdfViewMode` (desktop) / `pdfMobileViewMode` (mobile) preferences, overridable by
 `DocumentRecord.location.viewMode`. Reading Mode is forced back to Original when there is neither
@@ -137,8 +141,8 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
   `startNextUnprocessed(limit)` are explicit user actions, and `limit` is clamped to 1–6.
 - Per-page text source choice: `DocumentRecord.pdfTextSources[page] = 'pdf' | 'ocr'`, toggled by
   `PdfModeSwitch.onSource` and honored by `PdfReadingView.selectedOcr`.
-- Progress is surfaced through the reader progress bar while the queue is active
-  (`activeOcrProgress` in `App.tsx`).
+- Active OCR progress is a secondary status in `ReaderProgress` (`activeOcrProgress` in `App.tsx`),
+  separate from reading percentage. Queue/source/OCR actions remain in the Document tools popover.
 - Out of scope by design: whole-book OCR, selectable OCR overlays on the original PDF page, and
   vision-API fallback.
 - Delivery: worker, core and `eng` / `vie` trained data are served from the same origin and are

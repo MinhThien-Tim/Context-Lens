@@ -247,6 +247,7 @@ export async function queryDocumentLibrary(options: { query?: string; kind?: Doc
 }
 
 export interface AppPreferences {
+  interfaceMode: 'simple' | 'advanced';
   languageMode: LanguageMode;
   fontSize: number;
   lineHeight: number;
@@ -258,6 +259,7 @@ export interface AppPreferences {
 }
 
 export const defaultPreferences: AppPreferences = {
+  interfaceMode: 'simple',
   languageMode: 'bilingual',
   fontSize: 19,
   lineHeight: 1.75,
@@ -270,7 +272,20 @@ export const defaultPreferences: AppPreferences = {
 
 export async function loadPreferences(): Promise<AppPreferences> {
   const record = await db.settings.get('reader-preferences');
-  return { ...defaultPreferences, ...(typeof record?.value === 'object' ? record.value : {}) };
+  const stored = (record?.value && typeof record.value === 'object' ? record.value : {}) as Partial<AppPreferences>;
+  const legacy = await db.settings.get('homepage.theme');
+  const rawMode = stored.interfaceMode as string | undefined;
+  const interfaceMode: AppPreferences['interfaceMode'] = rawMode === 'simple' || rawMode === 'advanced' ? rawMode
+    : (rawMode ?? legacy?.value) === 'bright' ? 'advanced' : 'simple';
+  const theme = ['system', 'light', 'dark'].includes(stored.theme ?? '') ? stored.theme! : 'system';
+  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme };
+  if (rawMode !== interfaceMode || stored.theme !== theme || legacy) {
+    await db.transaction('rw', db.settings, async () => {
+      await savePreferences(preferences);
+      await db.settings.delete('homepage.theme');
+    });
+  }
+  return preferences;
 }
 
 export async function savePreferences(value: AppPreferences): Promise<void> {

@@ -5,6 +5,46 @@ import { expect, it, vi } from 'vitest';
 import { LookupBottomSheet } from './LookupBottomSheet';
 import { validLookup } from '../test/fixtures';
 
+it.each(['en', 'vi', 'bilingual'] as const)('renders only available language rows and keeps header actions accessible (%s)', mode => {
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn(); const speak = vi.fn(); const save = vi.fn(); const close = vi.fn();
+  const result = { ...validLookup, selection: { ...validLookup.selection, surface: 'A very long selected phrase without pronunciation', lemma: 'phrase', ipa_uk: null, ipa_us: null },
+    quick: { ...validLookup.quick, lexical_unit: null }, lens: undefined };
+  const props = { open: true, result, loading: false, error: null, mode, onModeChange: noop, onClose: close, onOpenSettings: noop, onSpeak: speak, onToggleSave: save, saved: false };
+  try {
+    act(() => render(<LookupBottomSheet {...props} />, host));
+    expect(host.querySelector('.ipa-line')).toBeNull();
+    expect(host.querySelector('.inspector-example')).toBeNull();
+    expect(host.querySelector('.context-badge')).toBeNull();
+    expect(host.querySelector('.inspector-word-meta')?.textContent).toContain('Base: phrase');
+    expect(Boolean(host.querySelector('.meaning-en'))).toBe(mode !== 'vi');
+    expect(Boolean(host.querySelector('.meaning-vi'))).toBe(mode !== 'en');
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="Pronounce word"]')!.click());
+    expect(speak).toHaveBeenCalledWith(result.selection.surface);
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="Save word"]')!.click());
+    expect(save).toHaveBeenCalledOnce();
+    act(() => render(<LookupBottomSheet {...props} saved />, host));
+    expect(host.querySelector('[aria-label="Remove saved word"]')?.getAttribute('aria-pressed')).toBe('true');
+    act(() => host.querySelector<HTMLButtonElement>('.explain-close')!.click());
+    expect(close).toHaveBeenCalledOnce();
+  } finally { act(() => render(null, host)); host.remove(); }
+});
+
+it('discloses long sentence context without truncating it or hiding dictionary groups', () => {
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn();
+  const sentence = 'A long sentence with useful context. '.repeat(30);
+  const result = { ...validLookup, context: { ...validLookup.context, sentence } };
+  try {
+    act(() => render(<LookupBottomSheet open result={result} loading={false} error={null} mode="bilingual" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    act(() => host.querySelector<HTMLButtonElement>('.explain-button')!.click());
+    const disclosure = host.querySelector<HTMLDetailsElement>('.inspector-sentence details')!;
+    expect(disclosure.open).toBe(false);
+    expect(disclosure.querySelector('p')?.textContent).toBe(sentence);
+    expect(host.querySelector('.inspector-sources')).not.toBeNull();
+  } finally { act(() => render(null, host)); host.remove(); }
+});
+
 it('does not substitute a Vietnamese translation for a missing English definition', () => {
   const host = document.createElement('div');
   document.body.append(host);
@@ -14,7 +54,7 @@ it('does not substitute a Vietnamese translation for a missing English definitio
   try {
     act(() => render(<LookupBottomSheet open result={result} loading={false} error={null} mode="en"
       onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
-    expect(host.textContent).toContain('Not found in the local dictionary.');
+    expect(host.querySelector('.meaning-en')).toBeNull();
     expect(host.querySelector('.meaning-vi')).toBeNull();
   } finally { act(() => render(null, host)); host.remove(); }
 });
@@ -43,19 +83,27 @@ it('keeps Quick minimal, resets expansion on selection, and handles Escape in tw
   const props = { open: true, result: validLookup, loading: false, error: null, mode: 'bilingual' as const, onModeChange: noop, onClose: close, onOpenSettings: noop, onSpeak: noop, onToggleSave: noop, onAddNote: noop, onTranslateSentence: noop, saved: false, debug: true };
   try {
     act(() => render(<LookupBottomSheet {...props} selectionKey="first" />, host));
-    expect(host.querySelector('.context-actions,.language-tabs,.engine-debug,select')).toBeNull();
+    expect(host.querySelector('.context-actions,select')).toBeNull();
+    expect(host.querySelector('.inspector-sources')?.hasAttribute('open')).toBe(false);
     expect(host.querySelector('[aria-label="Save word"]')).not.toBeNull();
+    expect(host.querySelector('.inspector-header .inspector-controls .language-tabs')).not.toBeNull();
+    expect(host.querySelector('.inspector-header .explain-button')?.textContent).toContain('Show more');
+    expect(host.querySelectorAll('[aria-label="Add note"]')).toHaveLength(1);
     act(() => (host.querySelector('.explain-button') as HTMLButtonElement).click());
+    expect(host.querySelector('.inspector-header .explain-button')?.textContent).toContain('Show less');
+    expect(host.querySelectorAll('[aria-label="Add note"]')).toHaveLength(1);
     expect(host.querySelector('[aria-label="Save word"]')?.textContent).toBe('Save');
     act(() => render(<LookupBottomSheet {...props} selectionKey="first" loading error="Unavailable" />, host));
     expect(host.querySelector('.meaning-en')?.textContent).toBe(validLookup.quick.definition_en);
     act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })); });
     expect(close).not.toHaveBeenCalled();
-    expect(host.querySelector('.language-tabs')).toBeNull();
+    expect(host.querySelector('.inspector-controls .language-tabs')).not.toBeNull();
+    expect(host.querySelector('.lookup-sheet.quick')).not.toBeNull();
     act(() => (host.querySelector('.explain-button') as HTMLButtonElement).click());
     host.querySelector<HTMLSelectElement>('select')?.focus();
     act(() => render(<LookupBottomSheet {...props} selectionKey="second" />, host));
-    expect(host.querySelector('.language-tabs')).toBeNull();
+    expect(host.querySelector('.inspector-controls .language-tabs')).not.toBeNull();
+    expect(host.querySelector('.lookup-sheet.quick')).not.toBeNull();
     expect(document.activeElement).toBe(host.querySelector('.explain-button'));
     act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })); });
     expect(close).toHaveBeenCalledOnce();
@@ -72,7 +120,7 @@ it.each([false, true])('only traps focus when mobile is modal (desktop=%s)', des
     expect(host.querySelector('[aria-modal="true"]') !== null).toBe(!desktop);
     expect(host.querySelector('.sheet-backdrop') !== null).toBe(!desktop);
     const buttons = host.querySelectorAll<HTMLButtonElement>('.lookup-sheet button');
-    buttons[buttons.length - 1].focus();
+    host.querySelector<HTMLElement>('.inspector-sources>summary')!.focus();
     const event = new KeyboardEvent('keydown', { key: 'Tab', cancelable: true });
     act(() => { document.dispatchEvent(event); });
     expect(event.defaultPrevented).toBe(!desktop);
@@ -80,7 +128,7 @@ it.each([false, true])('only traps focus when mobile is modal (desktop=%s)', des
   } finally { act(() => render(null, host)); host.remove(); previous.remove(); vi.unstubAllGlobals(); }
 });
 
-it('offers explicit controls for switching between word popup and side panel', () => {
+it('opens Full from the word popup without requesting new data', () => {
   vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
   const host = document.createElement('div'); document.body.append(host);
   const onDisplayModeChange = vi.fn(); const noop = vi.fn();
@@ -88,17 +136,17 @@ it('offers explicit controls for switching between word popup and side panel', (
     act(() => render(<LookupBottomSheet open displayMode="popup" onDisplayModeChange={onDisplayModeChange} result={validLookup} loading={false} error={null} mode="en" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
     expect(host.querySelector('.word-popup')).not.toBeNull();
     expect(host.querySelector('.deep-explanation')).toBeNull();
-    const panelButton = Array.from(host.querySelectorAll<HTMLButtonElement>('.lookup-view-switch button')).find(button => button.textContent === 'Bảng bên phải');
+    const panelButton = host.querySelector<HTMLButtonElement>('.explain-button');
     act(() => panelButton?.click());
     expect(onDisplayModeChange).toHaveBeenCalledWith('panel');
   } finally { act(() => render(null, host)); host.remove(); vi.unstubAllGlobals(); }
 });
 
-it('shows a subtle AI caution in the lookup surface', () => {
+it('shows a subtle AI caution when AI context is present', () => {
   const host = document.createElement('div'); document.body.append(host);
   const noop = vi.fn();
   try {
-    act(() => render(<LookupBottomSheet open result={validLookup} loading={false} error={null} mode="bilingual" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    act(() => render(<LookupBottomSheet open result={validLookup} contextResult={{ ...validLookup, source: 'ai' }} loading={false} error={null} mode="bilingual" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
     expect(host.querySelector('.ai-caution')?.textContent).toContain('AI có thể mắc lỗi');
   } finally { act(() => render(null, host)); host.remove(); }
 });
@@ -132,52 +180,26 @@ it('shows available content immediately and enriches it inside the same sheet', 
   } finally { act(() => render(null, host)); host.remove(); }
 });
 
-it('keeps priority content visible and reveals long panel details in ordered levels', () => {
+it('keeps contextual POS first and exposes other groups independently in Full', () => {
   const host = document.createElement('div'); document.body.append(host);
   const noop = vi.fn();
-  const senses = ['Priority one', 'Priority two', 'Priority three', 'Priority four', 'Priority five', 'Priority six', 'Additional seven', 'Additional eight'].map((definitionEn, index) => ({
-    id: `sense-${index}`, pos: index === 1 ? 'noun' : 'verb', definitionEn, meaningsVi: [`Nghĩa ${index + 1}`],
-    source: 'local' as const, contextScore: 8 - index, contextMatch: index === 0
-  }));
-  const result = { ...validLookup, dictionary: { word: 'maintain', surfaceForm: 'maintain', lemma: 'maintain', pronunciation: null, contextConfidence: .9, senses } };
+  const senses = Array.from({ length: 8 }, (_, index) => ({ id: `sense-${index}`, pos: index === 1 ? 'noun' : 'verb', definitionEn: `Meaning ${index + 1}`, meaningsVi: [`VI ${index + 1}`], source: 'local' as const, contextScore: 8 - index, contextMatch: index === 0 }));
+  const result = { ...validLookup, dictionary: { word: 'maintain', surfaceForm: 'maintain', lemma: 'maintain', pronunciation: null, contextConfidence: .9, contextPos: 'verb', senseStatus: 'context' as const, senses } };
   try {
-    act(() => render(<LookupBottomSheet open displayMode="panel" selectionText="maintain" result={result} loading={false} error={null} mode="bilingual" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} onAddNote={noop} onTranslateSentence={noop} saved={false} />, host));
-    act(() => (host.querySelector('.explain-button') as HTMLButtonElement).click());
-    expect(host.textContent).toContain('Priority one');
-    expect(host.textContent).toContain('Priority five');
-    expect(host.textContent).not.toContain('Priority six');
-    expect(host.textContent).not.toContain('Additional seven');
-    expect(Array.from(host.querySelectorAll('.explain-toolstrip>button')).map(button => button.textContent)).toEqual(['Pronounce', 'Add note', 'AI Explain']);
-    expect(host.querySelector('.explain-more-actions>summary')?.textContent).toBe('More');
-
-    const openNext = () => act(() => (Array.from(host.querySelectorAll<HTMLButtonElement>('button')).find(button => button.textContent?.startsWith('Mở thêm:')) as HTMLButtonElement).click());
-    openNext();
-    expect(host.textContent).toContain('Grammar');
-    expect(host.textContent).not.toContain('Additional seven');
-    openNext();
-    expect(host.textContent).toContain('Additional seven');
-    expect(host.textContent).not.toContain('Structure');
-    openNext();
-    expect(host.textContent).toContain('Structure');
-  } finally { act(() => render(null, host)); host.remove(); }
-});
-
-it('expands all remaining meanings inside the popup without opening panel details', () => {
-  const host = document.createElement('div'); document.body.append(host);
-  const noop = vi.fn();
-  const senses = Array.from({ length: 7 }, (_, index) => ({ id: `popup-${index}`, pos: 'adjective', definitionEn: `Meaning ${index + 1}`,
-    meaningsVi: [`Nghĩa ${index + 1}`], source: 'local' as const, contextScore: 7 - index, contextMatch: index === 0 }));
-  const result = { ...validLookup, dictionary: { word: 'maintain', surfaceForm: 'maintain', lemma: 'maintain', pronunciation: null, contextConfidence: .9, senses } };
-  try {
-    act(() => render(<LookupBottomSheet open displayMode="popup" selectionText="maintain" result={result} loading={false} error={null} mode="bilingual" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
-    expect(host.textContent).not.toContain('Meaning 7');
-    const toggle = host.querySelector<HTMLButtonElement>('button.more-meanings')!;
-    expect(toggle.textContent).toContain('Mở thêm 3 nghĩa');
-    act(() => toggle.click());
-    expect(host.textContent).toContain('Meaning 7');
+    act(() => render(<LookupBottomSheet open result={result} loading={false} error={null} mode="bilingual" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    expect(host.querySelector('.inspector-context')?.textContent).toContain('Meaning 1');
+    expect(host.textContent).not.toContain('Meaning 8');
+    act(() => host.querySelector<HTMLButtonElement>('.explain-button')!.click());
+    const groups = host.querySelectorAll<HTMLDetailsElement>('.sense-group');
+    expect(groups).toHaveLength(2);
+    expect(groups[0].querySelector('summary')?.textContent).toContain('verb');
+    expect(groups[0].open).toBe(true);
+    expect(groups[1].open).toBe(false);
+    expect(groups[0].textContent).toContain('Meaning 8');
+    expect(groups[0].querySelector<HTMLDetailsElement>('.more-group-meanings')?.open).toBe(false);
+    expect(host.querySelector('.inspector-sources')?.hasAttribute('open')).toBe(false);
+    act(() => host.querySelector<HTMLButtonElement>('.explain-button')!.click());
     expect(host.querySelector('.deep-explanation')).toBeNull();
-    act(() => toggle.click());
-    expect(host.textContent).not.toContain('Meaning 7');
   } finally { act(() => render(null, host)); host.remove(); }
 });
 
@@ -193,12 +215,12 @@ it('shows a short confirmed summary and keeps aggregate Vietnamese meanings expl
   try {
     act(() => render(<LookupBottomSheet open result={result} loading={false} error={null} mode="bilingual"
       onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
-    expect(host.querySelector('.context-summary')?.textContent).toContain('still→vẫn');
-    expect(host.querySelector('.context-hint')?.textContent).toContain('Nghĩa trong câu');
+    expect(host.querySelector('.inspector-context')?.textContent).toContain('vẫn');
+    expect(host.querySelector('.context-badge')?.textContent).toContain('Context');
     expect(host.querySelector('.context-confidence')).toBeNull();
-    expect(host.querySelector('.bilingual-sense-layout.has-unpaired')).not.toBeNull();
+    expect(host.querySelector('.inspector-context .sense-vi')?.textContent).toBe('vẫn');
     expect(host.querySelector('.unpaired-meanings')?.textContent).toContain('Hơn nữa');
-    expect(host.querySelector('.sense-row')?.textContent).not.toContain('Hơn nữa');
+    expect(host.querySelector('.inspector-context')?.textContent).not.toContain('Hơn nữa');
   } finally { act(() => render(null, host)); host.remove(); }
 });
 
@@ -213,7 +235,7 @@ it('labels materially different same-POS meanings as multiple readings', () => {
   try {
     act(() => render(<LookupBottomSheet open result={result} loading={false} error={null} mode="bilingual"
       onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
-    expect(host.querySelector('.context-hint')?.textContent).toContain('Có nhiều cách hiểu');
+    expect(host.querySelector('.context-badge')).toBeNull();
     expect(host.querySelector('.context-confidence')).toBeNull();
     expect(host.querySelector('.context-summary')).toBeNull();
   } finally { act(() => render(null, host)); host.remove(); }
@@ -228,9 +250,57 @@ it('retains English without a Vietnamese column and labels unresolved references
   try {
     act(() => render(<QuickExplain result={result} mode="bilingual" />, host));
     expect(host.querySelector('.sense-definition')?.textContent).toBe('English stays visible');
-    expect(host.querySelector('.sense-vi')).toBeNull();
+    expect(host.querySelector('.sense-row .sense-vi')).toBeNull();
     expect(host.querySelector('.web-badge')).toBeNull();
     expect(host.querySelector('.unpaired-meanings')?.textContent).toContain('Xem absentfixture');
-    expect(host.textContent).toContain('Tham chiếu từ điển tiếng Việt chưa giải quyết được.');
+    expect(host.textContent).toContain('Vietnamese dictionary reference could not be resolved.');
   } finally { act(() => render(null, host)); }
+});
+
+it.each(['en', 'vi', 'bilingual'] as const)('preserves linked sense rows in Quick and Full (%s)', mode => {
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn();
+  const senses = Array.from({ length: 6 }, (_, index) => ({ id: `paired-${index}`, pos: 'adjective', definitionEn: `English ${index}`, meaningsVi: [`Vietnamese ${index}`], source: 'local' as const, contextScore: 0, contextMatch: false }));
+  const result = { ...validLookup, dictionary: { word: 'maintain', surfaceForm: 'maintain', lemma: 'maintain', pronunciation: null, contextConfidence: 0, senses, unpairedMeaningsVi: ['Unmatched gloss'] } };
+  try {
+    act(() => render(<LookupBottomSheet open result={result} loading={false} error={null} mode={mode} onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} onAddNote={noop} onExplain={noop} saved={false} />, host));
+    const quick = host.querySelector('.sense-row .sense-bilingual')!;
+    expect(Boolean(quick.querySelector('.sense-definition'))).toBe(mode !== 'vi');
+    expect(Boolean(quick.querySelector('.sense-vi'))).toBe(mode !== 'en');
+    expect(quick.classList.contains('paired-columns')).toBe(mode === 'bilingual');
+    expect(host.querySelectorAll('.quick-pos-group h4')).toHaveLength(1);
+    act(() => host.querySelector<HTMLButtonElement>('.explain-button')!.click());
+    const full = host.querySelector('.expanded-sense-list .sense-bilingual')!;
+    expect(full.classList.contains('paired-columns')).toBe(mode === 'bilingual');
+    if (mode === 'bilingual') {
+      expect(full.children[0].textContent).toBe('English 0');
+      expect(full.children[1].textContent).toBe('Vietnamese 0');
+    }
+    expect(full.textContent).not.toContain('Unmatched gloss');
+    expect(host.querySelector('.inspector-controls .inspector-sources')).toBeNull();
+    expect(host.querySelector('.inspector-body>.inspector-footer .inspector-sources')).not.toBeNull();
+    expect(host.querySelector('.inspector-controls .ai-explain-button')).not.toBeNull();
+    expect(host.querySelector('.inspector-controls [aria-label="Add note"]')).not.toBeNull();
+  } finally { act(() => render(null, host)); host.remove(); }
+});
+
+it.each(['en', 'vi', 'bilingual'] as const)('shows entry-level Vietnamese glosses immediately without inventing pairs (%s)', mode => {
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn();
+  const result = { ...validLookup, dictionary: { word: 'obvious', surfaceForm: 'obvious', lemma: 'obvious', pronunciation: null, contextConfidence: 0, contextPos: 'adjective', senseStatus: 'common' as const,
+    senses: [{ id: 'obvious-en', pos: 'adjective', definitionEn: 'easily perceived by the senses', meaningsVi: [], source: 'wordnet' as const, contextScore: 0, contextMatch: false }], unpairedMeaningsVi: ['Vietnamese entry gloss'] } };
+  try {
+    act(() => render(<LookupBottomSheet open result={result} loading={false} error={null} mode={mode} onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    expect(Boolean(host.querySelector('.entry-glosses'))).toBe(mode !== 'en');
+    if (mode !== 'en') {
+      expect(host.querySelector('.entry-glosses')?.textContent).toContain('Vietnamese entry gloss');
+      expect(host.querySelector('.entry-glosses')?.closest('details')).toBeNull();
+    }
+    expect(Boolean(host.querySelector('.has-entry-glosses'))).toBe(mode === 'bilingual');
+    expect(host.querySelector('.sense-row .sense-vi')).toBeNull();
+    const body = host.querySelector('.inspector-body')!;
+    expect(body.lastElementChild?.classList.contains('inspector-footer')).toBe(true);
+    expect(host.querySelector('.inspector-header .inspector-sources')).toBeNull();
+    expect(host.querySelector('.explain-direction path')?.getAttribute('d')).toBe('M3 8h10m-4-4 4 4-4 4');
+  } finally { act(() => render(null, host)); host.remove(); }
 });

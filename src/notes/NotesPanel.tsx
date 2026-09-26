@@ -26,7 +26,7 @@ export function NotesPanel({ document, selection, location, onJump, onClose }: {
   return <div class="notes-layer">
     {!desktop && <button class="modal-backdrop" tabIndex={-1} aria-label="Close notes" onClick={onClose} />}
     <section ref={dialogRef} tabIndex={-1} class="settings-modal notes-panel" role={desktop ? 'complementary' : 'dialog'} aria-modal={desktop ? undefined : true} aria-labelledby="notes-title">
-      <header><div><p class="eyebrow">Offline notes</p><h2 id="notes-title">Notes for {document.title}</h2></div><button class="icon-button close-button" onClick={onClose} aria-label="Close notes">×</button></header>
+      <header><div><p class="eyebrow">Context &middot; Notes</p><h2 id="notes-title">Notes for {document.title}</h2></div><button class="icon-button close-button" onClick={onClose} aria-label="Close notes">×</button></header>
       {selection && !editing && <div class="note-selection"><strong>Selected text</strong><q>{selection.text}</q><small>{selection.context.current}</small></div>}
       <label class="note-editor">{editing ? 'Edit note' : 'New note'}<textarea value={text} maxLength={5000} onInput={event => setText(event.currentTarget.value)} placeholder="Write a private note kept on this device…" /></label>
       <div class="note-actions"><button class="primary-button" disabled={!text.trim()} onClick={() => void submit()}>{editing ? 'Update note' : 'Save note'}</button>{editing && <button class="secondary-button" onClick={beginNew}>Cancel</button>}</div>

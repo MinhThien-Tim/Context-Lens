@@ -1,5 +1,7 @@
 import { useDesktop } from '../components/useDesktop';
 import { ReaderShell } from '../reader/ReaderShell';
+import { ReaderProgress } from '../reader/ReaderProgress';
+import { ContextPanel } from '../reader/ContextPanel';
 import { ReaderToolbar } from '../reader/ReaderToolbar';
 import { ContentsPanel } from '../reader/ContentsPanel';
 import { DocumentPosition, GoToLocation, PageNavigation } from '../reader/DocumentPosition';
@@ -92,6 +94,7 @@ export function App() {
   const [progress, setProgress] = useState(0);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [contentsOpen, setContentsOpen] = useState(false);
+  const [contextPanelOpen, setContextPanelOpen] = useState(false);
   const [goToOpen, setGoToOpen] = useState(false);
   const [pdfNavigationToken, setPdfNavigationToken] = useState(0);
   const [currentLocation, setCurrentLocation] = useState<DocumentLocation>(initialTextLocation());
@@ -112,7 +115,6 @@ export function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showOnboardingCard, setShowOnboardingCard] = useState(false);
   const [guideLanguage, setGuideLanguage] = useState<GuideLanguage>('en');
-  const [homeTheme, setHomeTheme] = useState<'calm' | 'bright'>('calm');
   const preferredPdfMode = documentRecord?.location.kind === 'pdf' ? (documentRecord.location.viewMode ?? (desktop ? preferences.pdfViewMode : preferences.pdfMobileViewMode)) : (desktop ? preferences.pdfViewMode : preferences.pdfMobileViewMode);
   const ocrLanguage = documentRecord?.pdfOcrLanguage ?? 'eng';
   const hasSelectedOcr = ocrPages.some(record => record.language === ocrLanguage);
@@ -147,7 +149,6 @@ export function App() {
     void maintainStorageBudget();
     void hasSeenContextLensOnboarding().then(seen => setShowOnboardingCard(!seen)).catch(() => {});
     void loadGuideLanguage().then(setGuideLanguage).catch(() => {});
-    void db.settings.get('homepage.theme').then(record => setHomeTheme(record?.value === 'bright' ? 'bright' : 'calm')).catch(() => {});
     void Promise.all([loadPreferences(), loadAiSettings(), db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray()]).then(([prefs, ai, words]) => {
       setPreferences(prefs); setPreferencesLoaded(true); setAiSettings(ai); setVocabulary(words);
     });
@@ -232,7 +233,7 @@ export function App() {
       document.removeEventListener('visibilitychange', onVisibility);
       persist.flush();
     };
-  }, [documentRecord?.id, pdfMode]);
+  }, [documentRecord?.id]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = preferences.theme;
@@ -241,8 +242,39 @@ export function App() {
 
   const readerStyle = useMemo(() => ({
     '--reader-size': `${preferences.fontSize}px`, '--reader-leading': String(preferences.lineHeight),
-    '--reader-font': preferences.fontFamily === 'serif' ? 'Georgia, Cambria, serif' : 'system-ui, sans-serif'
+    '--reader-font': preferences.fontFamily === 'serif' ? 'var(--font-reading)' : 'var(--font-ui)'
   }), [preferences]);
+
+  useEffect(() => {
+    setContentsOpen(Boolean(documentRecord && desktop && preferences.interfaceMode === 'advanced'));
+    setContextPanelOpen(false); setLookupOpen(false); setShowNotes(false);
+  }, [preferences.interfaceMode]);
+  useEffect(() => {
+    requestRef.current?.abort(); contextRequestRef.current?.abort();
+    setContentsOpen(Boolean(documentRecord && desktop && preferences.interfaceMode === 'advanced'));
+    setContextPanelOpen(false); setLookupOpen(false); setShowNotes(false);
+    setLookup(null); setActiveSelection(null); setContextResult(null);
+    setShowReaderSettings(false); setHighlightToolsOpen(false); setGoToOpen(false);
+  }, [documentRecord?.id]);
+
+  const closeContext = () => {
+    requestRef.current?.abort(); contextRequestRef.current?.abort();
+    setContextPanelOpen(false); setLookupOpen(false); setShowNotes(false);
+  };
+  const toggleDocumentPanel = () => {
+    if (!contentsOpen && !desktop) closeContext();
+    setContentsOpen(value => !value);
+  };
+  const toggleContextPanel = () => {
+    if (contextPanelOpen || lookupOpen || showNotes) { closeContext(); return; }
+    if (!desktop) setContentsOpen(false);
+    setContextPanelOpen(true);
+    if (activeSelection && lookup) { setLookupDisplay('panel'); setLookupOpen(true); }
+  };
+  const changeLookupDisplay = (mode: 'popup' | 'panel') => {
+    setLookupDisplay(mode); setContextPanelOpen(mode === 'panel');
+    if (!desktop) setContentsOpen(false);
+  };
 
   const openDocument = async (doc: DocumentRecord) => {
     const current = await db.documents.get(doc.id) ?? doc;
@@ -284,7 +316,7 @@ export function App() {
     requestRef.current?.abort(); contextRequestRef.current?.abort();
     if (documentRecord?.kind === 'pdf') pdfPersistence.flush();
     else if (documentRecord) await saveDocumentLocation(documentRecord);
-    setDocumentRecord(null); setLookupOpen(false); setShowNotes(false); setContentsOpen(false); setGoToOpen(false); setActiveSelection(null);
+    setDocumentRecord(null); setContextPanelOpen(false); setLookupOpen(false); setShowNotes(false); setContentsOpen(false); setGoToOpen(false); setActiveSelection(null);
     const result = await queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, limit: 18 });
     setLibraryDocs(result.items); setLibraryHasMore(result.hasMore);
   };
@@ -297,6 +329,8 @@ export function App() {
     // Invalidate the previous selection before moving/opening the surface. The
     // asynchronous local lookup below is the first result that should be shown.
     setLookup(null);
+    setLookupDisplay('popup');
+    setContextPanelOpen(false);
     setActiveSelection(selection); setShowNotes(false); if (!desktop) setContentsOpen(false); setLookupOpen(true); setError(null);
     setContextResult(null); setLoading(false);
     const immediate = lookupService.immediate(request, engines);
@@ -410,7 +444,7 @@ export function App() {
       ? (() => { const page = selection.pdfPage ?? currentLocation.page; const length = ocrPages.find(record => record.page === page && record.language === ocrLanguage)?.text.length ?? 0; const pageOffset = length ? Math.min(1, selection.offset / length) : 0; return { ...currentLocation, page, pageOffset, textOffset: selection.offset, textSource: 'ocr' as const, absoluteOffset: pdfOffsetForPage(documentRecord.pageOffsets, page), progress: (page - 1 + pageOffset) / (documentRecord.pageOffsets?.length ?? 1), viewMode: 'reading' as const }; })()
       : selection ? locationAtOffset(documentRecord, selection.offset) : currentLocation;
     setNoteLocation(captured.kind === 'pdf' ? { ...captured, viewMode: pdfMode } : captured);
-    setLookupOpen(false); if (!desktop) setContentsOpen(false); setShowNotes(true);
+    setLookupOpen(false); if (!desktop) setContentsOpen(false); setContextPanelOpen(true); setShowNotes(true);
   };
   const changePdfViewMode = (mode: 'original' | 'reading') => {
     if (!documentRecord || documentRecord.kind !== 'pdf' || mode === pdfMode || (mode === 'reading' && !pdfHasReadableText(documentRecord) && !hasSelectedOcr)) return;
@@ -438,7 +472,7 @@ export function App() {
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (!documentRecord || !keyboardCanNavigate(event)) return;
-      if (event.key.toLowerCase() === 't') { event.preventDefault(); setContentsOpen(value => !value); }
+      if (event.key.toLowerCase() === 't') { event.preventDefault(); toggleDocumentPanel(); }
       if (event.key.toLowerCase() === 'g') { event.preventDefault(); setGoToOpen(true); }
       if (documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf' && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
         const offset = navigationOffset(documentRecord, currentLocation.page + (event.key === 'ArrowRight' ? 1 : -1));
@@ -447,15 +481,14 @@ export function App() {
     };
     window.addEventListener('keydown', keydown);
     return () => window.removeEventListener('keydown', keydown);
-  }, [documentRecord, currentLocation]);
+  }, [documentRecord, currentLocation, contentsOpen, desktop]);
   const sections = useMemo(() => documentRecord?.toc ?? (documentRecord?.safeHtml ? htmlSections(documentRecord.safeHtml).toc : textSections(documentRecord?.content ?? '')), [documentRecord]);
   const openOnboarding = () => { setShowOnboarding(true); setShowOnboardingCard(false); void markContextLensOnboardingSeen(); };
   const dismissOnboarding = () => { setShowOnboardingCard(false); void markContextLensOnboardingSeen(); };
   const changeGuideLanguage = (value: GuideLanguage) => { setGuideLanguage(value); void saveGuideLanguage(value); };
-  const changeHomeTheme = (value: 'calm' | 'bright') => { setHomeTheme(value); void db.settings.put({ key: 'homepage.theme', value }); };
 
   if (!documentRecord) return (
-    <main class="home-shell" data-home-theme={homeTheme}>
+    <main class="home-shell" data-interface-mode={preferences.interfaceMode}>
       {!online && <div class="status-banner" role="status">Offline mode · Saved documents and cached meanings remain available.</div>}
       {updateReady && <button class="status-banner update-banner" onClick={() => window.dispatchEvent(new Event('context-lens:apply-update'))}>An update is ready · Reload</button>}
       <header class="brand-header">
@@ -467,10 +500,10 @@ export function App() {
           <button class="nav-button nav-button-guide" aria-label="Guide" onClick={openOnboarding}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.5 2.5 0 1 1 3.6 2.25c-.85.45-1.3.95-1.3 1.75m0 3h.01"/></svg><span>Guide</span></button>
           <LookupStatistics />
           <LanguageToggle language={guideLanguage} onChange={changeGuideLanguage} />
-          <div class="home-theme-toggle" role="group" aria-label={guideLanguage === 'vi' ? 'Màu trang chủ' : 'Homepage color theme'}>
-            <button aria-pressed={homeTheme === 'calm'} onClick={() => changeHomeTheme('calm')}>{guideLanguage === 'vi' ? 'Dịu' : 'Calm'}</button>
-            <button aria-pressed={homeTheme === 'bright'} onClick={() => changeHomeTheme('bright')}>{guideLanguage === 'vi' ? 'Tươi' : 'Bright'}</button>
+          <div class="home-theme-toggle" role="group" aria-label="Interface density">
+            {(['simple', 'advanced'] as const).map(mode => <button disabled={!preferencesLoaded} aria-pressed={preferences.interfaceMode === mode} onClick={() => setPreferences({ ...preferences, interfaceMode: mode })}>{mode === 'simple' ? 'Simple' : 'Advanced'}</button>)}
           </div>
+          <label class="appearance-control">Appearance <select disabled={!preferencesLoaded} aria-label="Appearance" value={preferences.theme} onChange={event => setPreferences({ ...preferences, theme: event.currentTarget.value as AppPreferences['theme'] })}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
         </nav>
       </header>
       <section class="home-intro"><p class="eyebrow">Your reading space</p><h2>Start reading.</h2><p>Paste a passage or open a document. Select any word or phrase when you need context.</p></section>
@@ -503,28 +536,32 @@ export function App() {
   const activeOcrProgress = ocrQueue.status && ['preparing', 'running', 'paused'].includes(ocrQueue.status.state) ? ocrQueue.status : null;
   const progressPercent = activeOcrProgress ? activeOcrProgress.total ? (activeOcrProgress.completed + activeOcrProgress.progress / 100) / activeOcrProgress.total * 100 : 0 : progress * 100;
   return (
-    <ReaderShell contentsOpen={contentsOpen} contextOpen={(lookupOpen && lookupDisplay === 'panel') || showNotes}>
+    <ReaderShell interfaceMode={preferences.interfaceMode} surface={documentRecord.kind === 'pdf' ? pdfMode : 'text'} controlsLocked={lookupOpen || showNotes || showReaderSettings || showApiSettings || goToOpen || highlightToolsOpen || activeMarkupTool !== null} contentsOpen={contentsOpen} contextOpen={contextPanelOpen}>
       {!online && <div class="reader-offline" role="status">Offline</div>}
-      <ReaderToolbar title={documentRecord.title} contentsOpen={contentsOpen} highlightAvailable highlightActive={activeMarkupTool !== null} highlightOpen={highlightToolsOpen} onHighlight={() => setHighlightToolsOpen(value => !value)} onBack={() => void closeDocument()} onContents={() => setContentsOpen(!contentsOpen)} onNote={() => openNotes(null)} onSettings={() => setShowReaderSettings(!showReaderSettings)} onEngines={() => setShowApiSettings(true)}>
-        {documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf' ? <><PdfModeSwitch mode={pdfMode} uiLanguage={guideLanguage} canRead={pdfHasReadableText(documentRecord) || hasSelectedOcr} hasPdfText={Boolean(documentRecord.pdfPages?.[currentLocation.page - 1]?.plainText.trim())} hasOcr={ocrPages.some(record => record.page === currentLocation.page && record.language === ocrLanguage)} language={ocrLanguage} onOriginal={() => changePdfViewMode('original')} onReading={() => changePdfViewMode('reading')} onSource={source => choosePdfTextSource(currentLocation.page, source)} onLanguage={language => { setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfOcrLanguage: language } : current); void db.documents.update(documentRecord.id, { pdfOcrLanguage: language }); }} onRecognizeCurrent={() => { void ocrQueue.startCurrent(currentLocation.page); }} onRecognizeNext={() => { void ocrQueue.startNextUnprocessed(6); }} queueStatus={ocrQueue.status} onPause={ocrQueue.pause} onContinue={ocrQueue.continueQueue} onCancel={ocrQueue.cancel} hasAnyOcr={ocrPages.length > 0} onClear={() => { if (confirm('Xóa kết quả OCR của tài liệu này khỏi thiết bị?')) void ocrQueue.clear(); }} /><PageNavigation page={currentLocation.page} total={documentRecord.pageOffsets?.length ?? 1} onPrevious={() => jumpPdfPage(currentLocation.page - 1)} onNext={() => jumpPdfPage(currentLocation.page + 1)} onOpen={() => setGoToOpen(true)} /></> : <DocumentPosition document={documentRecord} location={currentLocation} onOpen={() => setGoToOpen(true)} />}
+      <ReaderToolbar primaryActions={documentRecord.kind === 'pdf' ? <button class="toolbar-button ocr-next-button" aria-label="OCR next" title="Find and OCR the next 6 unprocessed scanned pages" disabled={Boolean(ocrQueue.status && ['preparing', 'running', 'paused'].includes(ocrQueue.status.state)) || (ocrQueue.status?.state === 'done' && ocrQueue.status.message === 'Không còn trang cần OCR.')} onClick={() => { void ocrQueue.startNextUnprocessed(6); }}>OCR next</button> : null} contextOpen={contextPanelOpen} onContext={toggleContextPanel} interfaceMode={preferences.interfaceMode} title={documentRecord.title} contentsOpen={contentsOpen} highlightAvailable highlightActive={activeMarkupTool !== null} highlightOpen={highlightToolsOpen} onHighlight={() => setHighlightToolsOpen(value => !value)} onBack={() => void closeDocument()} onContents={toggleDocumentPanel} onNote={() => openNotes(null)} onSettings={() => setShowReaderSettings(!showReaderSettings)} onEngines={() => setShowApiSettings(true)}>
+        {documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf' ? <PdfModeSwitch showNext={false} mode={pdfMode} uiLanguage={guideLanguage} canRead={pdfHasReadableText(documentRecord) || hasSelectedOcr} hasPdfText={Boolean(documentRecord.pdfPages?.[currentLocation.page - 1]?.plainText.trim())} hasOcr={ocrPages.some(record => record.page === currentLocation.page && record.language === ocrLanguage)} language={ocrLanguage} onOriginal={() => changePdfViewMode('original')} onReading={() => changePdfViewMode('reading')} onSource={source => choosePdfTextSource(currentLocation.page, source)} onLanguage={language => { setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfOcrLanguage: language } : current); void db.documents.update(documentRecord.id, { pdfOcrLanguage: language }); }} onRecognizeCurrent={() => { void ocrQueue.startCurrent(currentLocation.page); }} onRecognizeNext={() => { void ocrQueue.startNextUnprocessed(6); }} queueStatus={ocrQueue.status} onPause={ocrQueue.pause} onContinue={ocrQueue.continueQueue} onCancel={ocrQueue.cancel} hasAnyOcr={ocrPages.length > 0} onClear={() => { if (confirm('Xóa kết quả OCR của tài liệu này khỏi thiết bị?')) void ocrQueue.clear(); }}  /> : null}
+
       </ReaderToolbar>
-      {highlightToolsOpen && <MarkupPalette tool={activeMarkupTool} color={activeMarkupColor} onToolChange={setActiveMarkupTool} onColorChange={setActiveMarkupColor} onClose={() => setHighlightToolsOpen(false)} />}
+      {highlightToolsOpen && <MarkupPalette onNote={() => { setHighlightToolsOpen(false); openNotes(null); }} tool={activeMarkupTool} color={activeMarkupColor} onToolChange={setActiveMarkupTool} onColorChange={setActiveMarkupColor} onClose={() => setHighlightToolsOpen(false)} />}
       {showReaderSettings && <ReaderSettings value={preferences} onChange={setPreferences} onClose={() => setShowReaderSettings(false)} />}
       {goToOpen && <GoToLocation document={documentRecord} onClose={() => setGoToOpen(false)} onJump={jump} onPage={jumpPdfPage} />}
-      {contentsOpen && <ContentsPanel sections={sections} offset={currentLocation.absoluteOffset ?? 0} onJump={jump} onClose={() => setContentsOpen(false)} />}
+      {contentsOpen && <ContentsPanel pageCount={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets?.length : undefined} page={currentLocation.kind === 'pdf' ? currentLocation.page : undefined} onPage={jumpPdfPage} onGoTo={() => setGoToOpen(true)} onNotes={() => openNotes(null)} sections={sections} offset={currentLocation.absoluteOffset ?? 0} onJump={jump} onClose={() => setContentsOpen(false)} />}
       <div class="visually-hidden" role="status" aria-live="polite">{jumpAnnouncement}</div>
-      <div class="progress-line" role="progressbar" aria-label={activeOcrProgress ? 'OCR progress' : 'Reading progress'} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progressPercent)}><span style={{ width: `${progressPercent}%` }} /></div>
       <div class="reader-viewport">
       {documentRecord.source && <div class="reader-source">{documentRecord.source.author && <span>{documentRecord.source.author}</span>}{documentRecord.source.siteName && <span>{documentRecord.source.siteName}</span>}{documentRecord.source.url && <a href={documentRecord.source.url} target="_blank" rel="noreferrer noopener">Original ↗</a>}</div>}
       {documentRecord.kind === 'pdf' && pdfMode === 'original' && currentLocation.kind === 'pdf'
-        ? <PdfViewer key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} zoomMode={desktop ? preferences.pdfZoomMode : 'fit-width'} ocrBusy={Boolean(ocrQueue.status && !['error', 'done'].includes(ocrQueue.status.state))} onZoomMode={pdfZoomMode => setPreferences(current => ({ ...current, pdfZoomMode }))} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
+        ? <PdfViewer interfaceMode={preferences.interfaceMode} key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} zoomMode={desktop ? preferences.pdfZoomMode : 'fit-width'} ocrBusy={Boolean(ocrQueue.status && !['error', 'done'].includes(ocrQueue.status.state))} onZoomMode={pdfZoomMode => setPreferences(current => ({ ...current, pdfZoomMode }))} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
         : documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf'
         ? <PdfReadingView key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} style={readerStyle} ocrPages={ocrPages} ocrLanguage={ocrLanguage} onTextSource={(page, source) => { const pdfTextSources = { ...documentRecord.pdfTextSources, [page]: source }; setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfTextSources } : current); void db.documents.update(documentRecord.id, { pdfTextSources }); }} onOpenOriginal={() => changePdfViewMode('original')} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset, ocrPage, ocrLanguage) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset, ocrPage, ocrLanguage); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
         : <TextReader offsets={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets : documentRecord.chapterOffsets} onAddNote={selection => openNotes(selection)} content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />}
       </div>
-      <LookupBottomSheet displayMode={lookupDisplay} onDisplayModeChange={setLookupDisplay} anchor={activeSelection?.anchor} selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} selectionText={activeSelection?.text} debug={engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} geminiConnected={geminiVerified && aiSettings.provider === 'gemini'} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={() => { requestRef.current?.abort(); contextRequestRef.current?.abort(); setLookupOpen(false); }} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary().catch(() => setError("Unable to save vocabulary. Please try again."))} onAddNote={() => openNotes(activeSelection)} saved={saved} collectionTitle={collectionTitle(documentRecord ?? {})} />
+      <ReaderProgress showPercentage={documentRecord.kind === 'pdf'} progress={progress} ocr={activeOcrProgress ? { progress: progressPercent, completed: activeOcrProgress.completed, total: activeOcrProgress.total } : null}>
+        {documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf' ? <PageNavigation page={currentLocation.page} total={documentRecord.pageOffsets?.length ?? 1} onPrevious={() => jumpPdfPage(currentLocation.page - 1)} onNext={() => jumpPdfPage(currentLocation.page + 1)} onOpen={() => setGoToOpen(true)} /> : <DocumentPosition document={documentRecord} location={currentLocation} onOpen={() => setGoToOpen(true)} />}
+      </ReaderProgress>
+      {contextPanelOpen && !lookupOpen && !showNotes && <ContextPanel onClose={closeContext} onNote={() => openNotes(null)} />}
+      <LookupBottomSheet displayMode={lookupDisplay} onDisplayModeChange={changeLookupDisplay} anchor={activeSelection?.anchor} selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} selectionText={activeSelection?.text} debug={preferences.interfaceMode === 'advanced' && engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} geminiConnected={geminiVerified && aiSettings.provider === 'gemini'} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={closeContext} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary().catch(() => setError("Unable to save vocabulary. Please try again."))} onAddNote={() => openNotes(activeSelection)} saved={saved} collectionTitle={collectionTitle(documentRecord ?? {})} />
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} initialVerified={geminiVerified} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
-      {showNotes && <NotesPanel document={documentRecord} selection={noteSelection} location={noteLocation} onJump={location => { if (location.kind === 'pdf') { if (location.textSource) { const pdfTextSources = { ...documentRecord.pdfTextSources, [location.page]: location.textSource }; setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfTextSources } : current); void db.documents.update(documentRecord.id, { pdfTextSources }); } pdfPersistence.flush(); setPdfNavigationToken(value => value + 1); setCurrentLocation(location); setProgress(location.progress); setPreferences(current => desktop ? { ...current, pdfViewMode: location.viewMode ?? 'reading' } : { ...current, pdfMobileViewMode: location.viewMode ?? 'reading' }); return; } const offset = location.absoluteOffset ?? (location.kind === 'epub' ? documentRecord.chapterOffsets?.[location.chapter - 1] : undefined); if (offset !== undefined) jump(offset); else window.scrollTo({ top: location.scrollY, behavior: 'auto' }); }} onClose={() => setShowNotes(false)} />}
+      {showNotes && <NotesPanel document={documentRecord} selection={noteSelection} location={noteLocation} onJump={location => { if (location.kind === 'pdf') { if (location.textSource) { const pdfTextSources = { ...documentRecord.pdfTextSources, [location.page]: location.textSource }; setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfTextSources } : current); void db.documents.update(documentRecord.id, { pdfTextSources }); } pdfPersistence.flush(); setPdfNavigationToken(value => value + 1); setCurrentLocation(location); setProgress(location.progress); setPreferences(current => desktop ? { ...current, pdfViewMode: location.viewMode ?? 'reading' } : { ...current, pdfMobileViewMode: location.viewMode ?? 'reading' }); return; } const offset = location.absoluteOffset ?? (location.kind === 'epub' ? documentRecord.chapterOffsets?.[location.chapter - 1] : undefined); if (offset !== undefined) jump(offset); else window.scrollTo({ top: location.scrollY, behavior: 'auto' }); }} onClose={closeContext} />}
     </ReaderShell>
   );
 }

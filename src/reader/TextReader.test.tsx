@@ -19,7 +19,7 @@ it('keeps a dragged phrase selected until the user explicitly looks it up', asyn
   act(() => { document.dispatchEvent(new Event('selectionchange')); });
   await act(async () => { vi.runAllTimers(); await Promise.resolve(); });
   expect(onLookup).not.toHaveBeenCalled();
-  expect(host.querySelector('.selection-lookup')?.textContent).toBe('Look up selection');
+  expect(host.querySelector('.selection-lookup')?.textContent).toBe('Define');
   act(() => (host.querySelector('.selection-lookup') as HTMLButtonElement).click());
   expect(onLookup).toHaveBeenCalledWith(expect.objectContaining({ text: 'accounts for 40%', type: 'phrase' }));
 });

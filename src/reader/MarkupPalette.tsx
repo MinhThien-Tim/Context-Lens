@@ -2,12 +2,13 @@ import type { ReaderHighlight } from '../db/database';
 
 export type MarkupTool = 'highlight' | 'underline' | 'eraser';
 
-export function MarkupPalette({ tool, color, onToolChange, onColorChange, onClose }: {
+export function MarkupPalette({ tool, color, onToolChange, onColorChange, onClose, onNote }: {
   tool: MarkupTool | null;
   color: ReaderHighlight['color'];
   onToolChange: (tool: MarkupTool | null) => void;
   onColorChange: (color: ReaderHighlight['color']) => void;
   onClose: () => void;
+  onNote?: () => void;
 }) {
   const chooseTool = (next: MarkupTool) => onToolChange(tool === next ? null : next);
   return <div class="reader-highlight-palette" role="dialog" aria-label="Markup tools">
@@ -19,6 +20,7 @@ export function MarkupPalette({ tool, color, onToolChange, onColorChange, onClos
     <div class="reader-highlight-colors" role="group" aria-label="Markup color">
       {(['yellow', 'pink', 'blue'] as const).map(next => <button key={next} class={`highlight-color highlight-color-${next} ${color === next ? 'selected' : ''}`} aria-label={`Use ${next}`} aria-pressed={color === next} disabled={tool === 'eraser'} onClick={() => { onColorChange(next); onToolChange(tool ?? 'highlight'); }} />)}
     </div>
+    {onNote && <button class="markup-done" onClick={onNote}>Note</button>}
     <button class="markup-done" onClick={onClose}>Done</button>
   </div>;
 }

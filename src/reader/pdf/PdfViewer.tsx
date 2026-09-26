@@ -11,7 +11,7 @@ import type { MarkupTool } from '../MarkupPalette';
 
 const DEFAULT_SIZE = { width: 612, height: 792 };
 
-export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, activeMarkupTool, activeMarkupColor = 'yellow', onLocation, onLookup, onAddNote, navigationToken = 0, onHighlight, onErase, ocrBusy = false }: { navigationToken?: number; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: import('../../db/database').ReaderHighlight['color']; onHighlight?: (highlight: import('../../db/database').ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; documentRecord: DocumentRecord; location: PdfDocumentLocation; zoomMode: PdfZoomMode; onZoomMode: (mode: PdfZoomMode) => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void; ocrBusy?: boolean }) {
+export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location, zoomMode, onZoomMode, activeMarkupTool, activeMarkupColor = 'yellow', onLocation, onLookup, onAddNote, navigationToken = 0, onHighlight, onErase, ocrBusy = false }: { interfaceMode?: 'simple' | 'advanced'; navigationToken?: number; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: import('../../db/database').ReaderHighlight['color']; onHighlight?: (highlight: import('../../db/database').ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; documentRecord: DocumentRecord; location: PdfDocumentLocation; zoomMode: PdfZoomMode; onZoomMode: (mode: PdfZoomMode) => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void; ocrBusy?: boolean }) {
   const desktop = useDesktop();
   const [mobileZoom, setMobileZoom] = useState<PdfZoomMode>('fit-width');
   const effectiveZoom = desktop ? zoomMode : mobileZoom;
@@ -19,6 +19,14 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, acti
   const [moreOpen, setMoreOpen] = useState(false);
   const { pdf, error, passwordRequired, password, setPassword, submitPassword } = usePdfDocument(documentRecord.data);
   const rootRef = useRef<HTMLDivElement>(null);
+  const zoomMenu = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!moreOpen) return;
+    const dismiss = (event: PointerEvent) => { if (!zoomMenu.current?.contains(event.target as Node)) setMoreOpen(false); };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); setMoreOpen(false); zoomMenu.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true }); } };
+    document.addEventListener('pointerdown', dismiss); document.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('pointerdown', dismiss); document.removeEventListener('keydown', escape); };
+  }, [moreOpen]);
   const [sizes, setSizes] = useState<Record<number, PdfPageSize>>({});
   const [geometryError, setGeometryError] = useState<string | null>(null);
   const [visible, setVisible] = useState(location.page);
@@ -69,7 +77,7 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, acti
   if (!pdf || !ready) return <div class="pdf-state" role="status">Opening PDF…</div>;
   return <div class="pdf-viewer-wrap">
     <div class="pdf-toolbar" aria-label="PDF controls">
-      {desktop ? <><button aria-label="Zoom out" onClick={() => { changeZoom('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>−</button><button aria-label="Zoom in" onClick={() => { changeZoom('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>+</button><select aria-label="PDF zoom" value={effectiveZoom} onChange={event => changeZoom(event.currentTarget.value as PdfZoomMode)}><option value="fit-width">Vừa chiều ngang</option><option value="fit-page">Vừa trang</option><option value="custom">Tùy chỉnh</option></select></> : <div class="pdf-more"><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>•••</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => { changeZoom('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>Zoom out</button><button onClick={() => { changeZoom('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>Zoom in</button><button onClick={() => changeZoom('fit-width')}>Fit width</button><button onClick={() => changeZoom('fit-page')}>Fit page</button></div>}</div>}
+      {desktop && interfaceMode === 'advanced' ? <><button aria-label="Zoom out" onClick={() => { changeZoom('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>−</button><button aria-label="Zoom in" onClick={() => { changeZoom('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>+</button><select aria-label="PDF zoom" value={effectiveZoom} onChange={event => changeZoom(event.currentTarget.value as PdfZoomMode)}><option value="fit-width">Vừa chiều ngang</option><option value="fit-page">Vừa trang</option><option value="custom">Tùy chỉnh</option></select></> : <div class="pdf-more" ref={zoomMenu}><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>Zoom</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => { changeZoom('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>Zoom out</button><button onClick={() => { changeZoom('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>Zoom in</button><button onClick={() => changeZoom('fit-width')}>Fit width</button><button onClick={() => changeZoom('fit-page')}>Fit page</button></div>}</div>}
     </div>
     <div ref={rootRef} class="pdf-scroll" tabIndex={0}>
       {Array.from({ length: pdf.numPages }, (_, index) => index + 1).map(pageNumber => {
