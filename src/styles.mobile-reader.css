@@ -63,8 +63,19 @@
   .reader-shell.reader-shell .lookup-sheet *::after { box-sizing: border-box; min-width: 0; overflow-wrap: anywhere; }
   .reader-shell.reader-shell .inspector-header { padding: 4px 8px; gap: 0 4px; background: var(--elevated-surface); }
   .reader-shell.reader-shell .inspector-word-title { gap: 4px; }
-  .reader-shell.reader-shell .inspector-word-title > strong { font-size: 20px; }
-  .reader-shell.reader-shell .lookup-sheet.quick .inspector-word { align-self: center; padding-left: 4px; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .inspector-word-title > strong { font-size: 20px; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .inspector-word { align-self: center; padding-left: 4px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .inspector-header { padding: 8px 10px 7px; column-gap: 6px; row-gap: 6px; background: var(--elevated-surface); }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .inspector-word-title > strong { font-size: 24px; line-height: 1.15; color: var(--context); }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .inspector-word-speak { min-height: 44px; padding-right: 8px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .inspector-note,
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .save-inline { position: relative; min-height: 32px; padding: 5px 10px; font-size: 12px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .inspector-note::after,
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .save-inline::after { content: ""; position: absolute; inset: -6px 0; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .explain-close { position: relative; min-height: 32px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .explain-close::after { content: ""; position: absolute; inset: -6px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .explain-more-actions > summary { min-height: 32px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .inspector-lookup-tools .explain-toggle { min-height: 32px; padding: 4px 2px; }
   .reader-shell.reader-shell .lookup-sheet.quick .inspector-word-title > strong { font-size: 22px; line-height: 1.2; color: var(--context); }
   .reader-shell.reader-shell .lookup-sheet.quick .quick-context-ambiguity { margin: 0 0 6px; padding: 3px 6px; border-radius: 4px; background: color-mix(in srgb, var(--context) 6%, var(--elevated-surface)); color: var(--secondary-text); font: 400 11px/1.4 var(--font-ui); }
   .reader-shell.reader-shell .lookup-sheet.quick .quick-context-summary { display: inline; }
@@ -76,15 +87,15 @@
   .reader-shell.reader-shell .lookup-sheet.quick .sense-list:has(> .quick-more-meanings) > .quick-pos-group:nth-last-child(2) > * { flex: 0 0 100%; }
   .reader-shell.reader-shell .lookup-sheet.quick .sense-list:has(> .quick-more-meanings) > .quick-pos-group:nth-last-child(2) > .sense-row:last-child { flex: 1 1 auto; width: max-content; max-width: 100%; margin-bottom: 0; }
   .reader-shell.reader-shell .lookup-sheet.quick .quick-more-meanings { flex: 0 0 auto; max-width: 100%; min-height: 28px; margin: 0 0 0 auto; padding: 2px 0; font: 600 11px/1.4 var(--font-ui); }
-  .reader-shell.reader-shell .inspector-header-actions { flex-direction: row; gap: 0; }
-  .reader-shell.reader-shell .inspector-header-actions button { min-width: 44px; min-height: 44px; padding-inline: 6px; font-size: 11px; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .inspector-header-actions { flex-direction: row; gap: 0; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .inspector-header-actions button { min-width: 44px; min-height: 44px; padding-inline: 6px; font-size: 11px; }
   .reader-shell.reader-shell .inspector-header-actions .explain-close { width: 44px; min-width: 44px; }
-  .reader-shell.reader-shell .inspector-pronunciation { grid-column: 1 / -1; flex-wrap: wrap; gap: 0 4px; padding: 0; }
-  .reader-shell.reader-shell .ipa-line { flex: 0 1 auto; font-size: 11px; }
-  .reader-shell.reader-shell .inspector-pronunciation > button { min-width: 44px; min-height: 44px; }
-  .reader-shell.reader-shell .inspector-lookup-tools { display: flex; flex-wrap: wrap; gap: 0 4px; margin-left: auto; }
-  .reader-shell.reader-shell .explain-more-actions > summary { min-width: 44px; min-height: 44px; }
-  .reader-shell.reader-shell .inspector-lookup-tools .explain-toggle { width: auto; min-height: 44px; margin: 0; padding: 0 2px; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .inspector-pronunciation { grid-column: 1 / -1; flex-wrap: wrap; gap: 0 4px; padding: 0; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .ipa-line { flex: 0 1 auto; font-size: 11px; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .inspector-pronunciation > button { min-width: 44px; min-height: 44px; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .inspector-lookup-tools { display: flex; flex-wrap: wrap; gap: 0 4px; margin-left: auto; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .explain-more-actions > summary { min-width: 44px; min-height: 44px; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .inspector-lookup-tools .explain-toggle { width: auto; min-height: 44px; margin: 0; padding: 0 2px; }
   .reader-shell.reader-shell .inspector-controls { grid-column: 1 / -1; padding: 0; border: 0; }
   .reader-shell.reader-shell .inspector-controls .explain-toolstrip { flex-wrap: wrap; margin: 0; }
   .reader-shell.reader-shell .explain-more-actions > div { right: 8px; max-width: calc(100% - 16px); width: 210px; }

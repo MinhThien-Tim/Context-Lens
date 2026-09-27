@@ -9,6 +9,11 @@ import { useDialog } from './useDialog';
 import type { ContextMode } from '../core/context/types';
 import { getDiagnostics } from '../core/diagnostics';
 
+const SPEAKER_ICON = <svg class="header-icon" aria-hidden="true" viewBox="0 0 16 16"><path d="M2 6v4h2.5L9 13V3L4.5 6H2z" /><path d="M11 6a3.2 3.2 0 0 1 0 4M12.8 4a5.6 5.6 0 0 1 0 8" /></svg>;
+const NOTE_ICON = <svg class="header-icon" aria-hidden="true" viewBox="0 0 16 16"><rect x="3" y="2.5" width="10" height="11" rx="1.5" /><path d="M5.5 6h5M5.5 8.7h5M5.5 11.4h3" /></svg>;
+const SAVE_ICON = <svg class="header-icon" aria-hidden="true" viewBox="0 0 16 16"><path d="M4.5 2.5h7a.5.5 0 0 1 .5.5v10L8 10.3 4 13V3a.5.5 0 0 1 .5-.5z" /></svg>;
+const CLOSE_ICON = <svg class="header-icon" aria-hidden="true" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" /></svg>;
+
 interface Props {
   quickMode?: 'simple' | 'standard';
   onQuickModeChange?: (mode: 'simple' | 'standard') => void;
@@ -144,11 +149,12 @@ export function LookupBottomSheet(props: Props) {
     {!desktop && <button class="sheet-backdrop" aria-label="Close meaning" tabIndex={-1} onClick={props.onClose} />}
     <section ref={sheetRef} tabIndex={-1} style={popupStyle} data-quick-mode={deepOpen ? undefined : props.quickMode ?? 'standard'} class={`lookup-sheet ${popup ? 'word-popup' : 'side-panel'} ${deepOpen ? 'expanded' : 'quick'}`} role={desktop ? 'complementary' : 'dialog'} aria-modal={desktop ? undefined : true} aria-label="Meaning in context">
       <header class="inspector-header">
-        <div class={`inspector-word ${desktop && popup ? 'lookup-drag-handle' : ''} ${dragPosition ? 'is-dragging' : ''}`} title={desktop && popup ? 'Drag to keep popup here' : undefined} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={event => endDrag(event)} onPointerCancel={event => endDrag(event, true)} onLostPointerCapture={event => endDrag(event, true)}><div class="inspector-word-title"><strong>{result?.selection.surface || props.selectionText}</strong>{result && (result.dictionary?.contextPos || result.selection.part_of_speech) && <span class="pos-chip">{result.dictionary?.contextPos || result.selection.part_of_speech}</span>}{simple && result && <button class="inspector-word-speak" aria-label="Pronounce word" onClick={() => props.onSpeak(result.selection.surface)}>{"\u266a"}</button>}</div></div>
-        <div class="inspector-header-actions">{result && props.onAddNote && <button class="inspector-note secondary-button" onClick={props.onAddNote} aria-label="Add note" title="Add note">Note</button>}{result && <button class="save-inline" aria-label={props.saved ? 'Remove saved word' : 'Save word'} aria-pressed={props.saved} onClick={props.onToggleSave}>{props.saved ? '✓ Saved' : 'Save'}</button>}<button class="explain-close" aria-label="Close meaning" onClick={props.onClose}>×</button></div>
-        {result && <div class="inspector-pronunciation">
-          {ipa && <span class="ipa-line">{ipa}</span>}{!simple && <button aria-label="Pronounce word" onClick={() => props.onSpeak(result.selection.surface)}>♪</button>}
-          <div class="inspector-lookup-tools">
+        <div class={`inspector-word ${desktop && popup ? 'lookup-drag-handle' : ''} ${dragPosition ? 'is-dragging' : ''}`} title={desktop && popup ? 'Drag to keep popup here' : undefined} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={event => endDrag(event)} onPointerCancel={event => endDrag(event, true)} onLostPointerCapture={event => endDrag(event, true)}><div class="inspector-word-title"><strong>{result?.selection.surface || props.selectionText}</strong>{result && (result.dictionary?.contextPos || result.selection.part_of_speech) && <span class="pos-chip">{result.dictionary?.contextPos || result.selection.part_of_speech}</span>}</div></div>{simple && result && <button class="inspector-word-speak" aria-label="Pronounce word" title="Pronounce word" onClick={() => props.onSpeak(result.selection.surface)}>{ipa ? <span class="ipa-line">{ipa}</span> : null}{SPEAKER_ICON}</button>}
+        <div class="inspector-header-actions">{result && props.onAddNote && <button class="inspector-note secondary-button" onClick={props.onAddNote} aria-label="Add note" title="Add note">{NOTE_ICON}Note</button>}{result && <button class="save-inline" aria-label={props.saved ? 'Remove saved word' : 'Save word'} aria-pressed={props.saved} title={props.saved ? 'Remove saved word' : 'Save word'} onClick={props.onToggleSave}>{SAVE_ICON}{props.saved ? 'Saved' : 'Save'}</button>}<button class="explain-close" aria-label="Close meaning" title="Close meaning" onClick={props.onClose}>{CLOSE_ICON}</button></div>
+        {result && !simple && <div class="inspector-pronunciation">
+          {ipa && <span class="ipa-line">{ipa}</span>}<button aria-label="Pronounce word" onClick={() => props.onSpeak(result.selection.surface)}>♪</button>
+        </div>}
+        {result && <div class="inspector-lookup-tools">
             {!simple && <LanguageTabs value={props.mode} onChange={props.onModeChange} compact />}
             {!deepOpen && props.onQuickModeChange && <button class="quick-mode-toggle" aria-pressed={simple} aria-label={simple ? 'Use Standard Quick card' : 'Use Simple Quick card'} onClick={() => props.onQuickModeChange?.(simple ? 'standard' : 'simple')}>{simple ? 'Simple' : 'Standard'}</button>}
             <details class="explain-more-actions"><summary aria-label="More actions" title="More actions">⋯</summary><div>
@@ -162,7 +168,6 @@ export function LookupBottomSheet(props: Props) {
               {deepOpen && !props.geminiConnected && <select class="compact-select" aria-label="AI explanation type" value="" onChange={event => { if (event.currentTarget.value) props.onExplain?.(event.currentTarget.value as ContextMode); }}><option value="">AI task…</option><option value="grammar">Grammar</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>}
             </div></details>
             <button class="explain-toggle explain-button" aria-expanded={deepOpen} aria-label={deepOpen ? 'Show less' : 'Show more'} title={deepOpen ? 'Show less' : 'Show more'} onClick={toggleFull}>{!deepOpen && 'Show more'} <svg class="explain-direction" aria-hidden="true" viewBox="0 0 16 16"><path d={deepOpen ? "M13 8H3m4-4L3 8l4 4" : "M3 8h10m-4-4 4 4-4 4"} /></svg></button>
-          </div>
         </div>}
         {result && <div class="inspector-word-meta">{result.selection.lemma && result.selection.lemma !== result.selection.surface && <span>{result.selection.lemma.includes(' ') ? 'Meaning for' : 'Base'}: {result.selection.lemma}</span>}{contextual && <span class="context-badge">✓ Context</span>}</div>}
         {result && deepOpen && (props.onTranslateSentence || !props.geminiConnected) && <div class="inspector-controls"><div class="explain-toolstrip">

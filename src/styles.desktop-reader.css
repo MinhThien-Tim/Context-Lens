@@ -60,16 +60,19 @@
     box-shadow: 0 5px 18px color-mix(in srgb, var(--primary-text) 14%, transparent);
   }
   .reader-shell.reader-shell .lookup-sheet .inspector-header { gap: 2px 6px; padding: 6px 10px; }
-  .reader-shell.reader-shell .inspector-word-title { gap: 5px; }
-  .reader-shell.reader-shell .inspector-word-title > strong { font-size: 21px; }
-  .reader-shell.reader-shell .inspector-header-actions { gap: 2px; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .inspector-word-title { gap: 5px; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .inspector-word-title > strong { font-size: 21px; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .inspector-header-actions { gap: 2px; }
   .reader-shell.reader-shell .lookup-sheet button,
   .reader-shell.reader-shell .lookup-sheet select,
   .reader-shell.reader-shell .lookup-sheet summary { min-height: 34px; }
   .reader-shell.reader-shell .lookup-sheet .inspector-header-actions button { padding-inline: 6px; border-color: transparent; }
   .reader-shell.reader-shell .lookup-sheet .inspector-pronunciation { flex-wrap: wrap; gap: 2px 4px; }
-  .reader-shell.reader-shell .ipa-line { font-size: 11px; flex: 0 1 auto; }
-  .reader-shell.reader-shell .inspector-lookup-tools { gap: 3px; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .ipa-line { font-size: 11px; flex: 0 1 auto; }
+  .reader-shell.reader-shell .quick:not([data-quick-mode="simple"]) .inspector-lookup-tools { gap: 3px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .inspector-header { gap: 4px 6px; padding: 7px 10px 6px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .inspector-word-title > strong { font-size: 23px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .header-icon { width: 15px; height: 15px; }
   .reader-shell.reader-shell .lookup-sheet .inspector-lookup-tools .explain-toggle { width: auto; padding-inline: 3px; }
   .reader-shell.reader-shell .lookup-sheet .inspector-controls .explain-toolstrip { display: flex; flex-wrap: wrap; margin: 0; }
   .reader-shell.reader-shell .inspector-body { padding: 8px 12px; font-size: 14px; }
