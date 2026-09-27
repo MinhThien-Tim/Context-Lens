@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LexicalEngine } from './lexicon';
 import { SenseResolver } from './sense-resolver';
+import { analyzeGrammar } from './grammar';
 import type { SentenceAnalysis } from './types';
 
 const senses = [
@@ -66,6 +67,36 @@ describe('sense evidence is independent from part-of-speech evidence', () => {
       sentenceAnalysis: analysis(repeated), selectionStart: repeated.lastIndexOf('zorp'), pos: 'verb', candidateSenses: senses,
       sentenceTranslationVi: 'Họ điều hành việc đó, rồi làm việc kia.' });
     expect(repeatedResult.contextMatch).toBe(false);
+  });
+});
+
+describe('grammar bounds cached translation evidence', () => {
+  it.each([
+    ['They zorp it.', 'Họ điều hành nó.', 5, true],
+    ['They zorp it and she leaves.', 'Họ điều hành nó và cô ấy đi.', 5, false],
+    ['They zorp it.', 'Họ điều hành nó; cô ấy đi.', 5, false],
+    ['They zorp it, then zorp that.', 'Họ điều hành nó rồi làm việc kia.', 19, false],
+    ['They zorp it, then zorp that.', 'Họ điều hành nó rồi làm việc kia.', undefined, false],
+    ['They zorp it.', 'Họ điều hành nó.', 0, false]
+  ])('uses safe strength for %s / %s at %s', (sentence, translation, offset, strong) => {
+    const parsed = analysis(sentence);
+    parsed.grammar = analyzeGrammar(parsed.tokens, sentence);
+    const result = new SenseResolver().resolve({ selection: 'zorp', lemma: 'zorp', sentence, sentenceAnalysis: parsed,
+      selectionStart: offset, candidateSenses: senses.map(sense => ({ ...sense, keywords: [] })), sentenceTranslationVi: translation });
+    expect(result.contextMatch).toBe(false);
+    const diagnostic = result.diagnostics!.find(item => item.senseId === 'zorp.manage')!;
+    const translationReason = diagnostic.reasons.find(reason => reason.includes('saved sentence translation'));
+    if (strong) expect(translationReason).toContain('Linked dictionary');
+    else if (translationReason) expect(translationReason).toContain('Weak whole-sentence');
+    if (offset === 0 || offset === undefined) expect(translationReason).toBeUndefined();
+  });
+  it('does not use a shared Vietnamese gloss to distinguish English senses', () => {
+    const sentence = 'They zorp it.';
+    const parsed = analysis(sentence); parsed.grammar = analyzeGrammar(parsed.tokens, sentence);
+    const result = new SenseResolver().resolve({ selection: 'zorp', lemma: 'zorp', sentence, sentenceAnalysis: parsed,
+      sentenceTranslationVi: 'Họ điều hành nó.', candidateSenses: senses.map(sense => ({ ...sense, keywords: [], meaningVi: 'điều hành' })) });
+    expect(result.contextMatch).toBe(false);
+    expect(result.diagnostics!.every(item => !item.reasons.some(reason => reason.includes('translation')))).toBe(true);
   });
 });
 

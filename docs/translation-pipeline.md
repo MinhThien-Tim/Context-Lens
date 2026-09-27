@@ -313,3 +313,40 @@ with `dependsOnSenseId`. Resolver translation scoring and exact-gloss reuse reje
 translations. Alignment confidence remains separate from occurrence sense confidence. Existing
 `pairingState`, paired rows and unpaired meanings remain compatible; provider gates and request
 counts are unchanged. No new automatic translation or AI requests are introduced.
+
+## Bounded sentence grammar
+
+`grammar.ts` extracts local clause spans, token-to-clause indices and predicate features once
+in `SentenceEngine` (analysis version 3). Predicate windows are limited to six preceding tokens;
+argument/complement windows are bounded. Auxiliary chains, tense/aspect, voice, negation,
+argument candidates and modifier classes remain independent of dictionary sense candidates.
+`constructions.ts` owns complement and preposition/particle observations. PhraseDetector still
+owns known lexical phrases. Missing lexical POS can leave argument heads or voice unknown.
+
+SenseResolver reuses cached predicates for occurrence POS and construction/frame evidence.
+Frame conflicts receive a moderate penalty; frame matches remain weak. Tense/aspect,
+negation and modifiers are exposed as diagnostic provenance and do not independently establish
+Context. Existing semantic thresholds and translation alignment gates remain unchanged.
+Clause spans describe source structure only and never establish bilingual alignment.
+
+## Stable grammar in bilingual alignment
+
+`alignment.ts` prepares bounded patterns from stable source examples (up to eight examples,
+240 characters each) or supplied `grammarPatterns`. Source verb frames and complement,
+preposition/particle patterns constrain inferred candidates. Frame/pattern incompatibility
+rejects inference; a match adds weak support to the existing competitor margin. At least two
+POS-compatible independent lexical anchors must still support each linked Vietnamese fragment.
+Explicit pairs are preserved, generated definition translations are excluded from exact reuse,
+and broad or unsupported source meanings remain unresolved. Multiple supported VI fragments may
+belong to one English sense; shared VI strings never merge English senses.
+
+Alignment memoization is stamped `bilingual-alignment-2`; learned lexical records use
+`local-lexicon-8`. No Dexie migration or dictionary pack format change is required.
+
+Cached translation evidence uses the selected token's predicate and source clause span.
+Strong whole-sentence support requires one grammar clause and one punctuation segment on both
+sides. Multiple clauses, missing grammar or target boundary mismatch receive at most one point.
+A valid exact offset identifies a repeated occurrence; an absent or invalid offset contributes
+no occurrence translation evidence. No positional clause pairing is inferred. Independent
+semantic evidence and the existing Context thresholds remain mandatory. Provider priority,
+opt-in gates, request counts and translation `localContext` are unchanged.

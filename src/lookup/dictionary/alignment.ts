@@ -1,5 +1,9 @@
 import type { LexicalEntry, LexicalSense } from '../../core/language/types';
 import type { SenseAlignment } from './types';
+import { frameCompatibility, occurrenceConstruction } from '../../core/language/constructions';
+import type { StableGrammarPattern } from '../../core/language/types';
+
+export const ALIGNMENT_VERSION = 'bilingual-alignment-2';
 
 const alignmentCache = new Map<string, LexicalSense[]>();
 const normalize = (text: string) => text.normalize('NFC').toLowerCase().replace(/[^\p{L}\p{M}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
@@ -8,7 +12,7 @@ type SourceSense = NonNullable<LexicalEntry['vietnameseSenses']>[number];
 
 /** Stable lexical alignment. No sentence, occurrence, provider or mutable resolver result. */
 export function alignBilingualSenses(senses: LexicalSense[], vietnamese: SourceSense[], anchors: (lemma: string) => LexicalEntry | undefined, version?: string): LexicalSense[] {
-  const cacheKey = version ? JSON.stringify([version, senses, vietnamese]) : undefined;
+  const cacheKey = version ? JSON.stringify([ALIGNMENT_VERSION, version, senses, vietnamese]) : undefined;
   if (cacheKey && alignmentCache.has(cacheKey)) return structuredClone(alignmentCache.get(cacheKey)!);
   const exact = senses.map(sense => {
     if (sense.meaningVi || sense.meaningsVi?.length) return { ...sense, alignment: sense.alignment ?? {
@@ -25,11 +29,24 @@ export function alignBilingualSenses(senses: LexicalSense[], vietnamese: SourceS
   const anchorEntries = new Map<string, LexicalEntry | undefined>();
   const anchorGlosses = new Map<string, Set<string>>();
   const sourceGlosses = vietnamese.map(source => new Set(source.glosses.flatMap(fragments)));
+  // Source examples are stable lexical data. Prepare each once, outside candidate scoring.
+  const sourcePatterns = vietnamese.map(source => source.grammarPatterns ?? examplePatterns(source.examples ?? [], [source.lemma]));
+  const sensePatterns = exact.map(sense => sense.grammarPatterns ?? examplePatterns(sense.examples ?? [], sense.synonyms ?? []));
+  const grammar = exact.map((sense, index) => vietnamese.map((source, sourceIndex) => {
+    if (sense.pos !== 'verb') return 0;
+    const patterns = sourcePatterns[sourceIndex];
+    const frames = sense.verbFrames ?? [];
+    if (frames.length && source.verbFrames?.length && !frames.some(frame => source.verbFrames!.includes(frame))) return -1;
+    if (patterns.length && frames.length && patterns.every(pattern => frameCompatibility(features(pattern), frames) < 0)) return -1;
+    if (patterns.length && sensePatterns[index].length && !patterns.some(pattern => sensePatterns[index].some(other => samePattern(pattern, other)))) return -1;
+    return patterns.some(pattern => frameCompatibility(features(pattern), frames) > 0 || sensePatterns[index].some(other => samePattern(pattern, other)))
+      || Boolean(frames.length && source.verbFrames?.some(frame => frames.includes(frame))) ? 1 : 0;
+  }));
   const support = exact.map(sense => {
     const terms = [...new Set([...(sense.synonyms ?? []), ...(sense.definitionEn.match(/[a-z]+(?:-[a-z]+)*/gi) ?? [])])]
       .filter(term => term.length > 3);
     return vietnamese.map((source, sourceIndex) => {
-      if (!sense.pos || source.pos !== sense.pos) return [];
+      if (!sense.pos || source.pos !== sense.pos || grammar[exact.indexOf(sense)][sourceIndex] < 0) return [];
       return terms.filter(term => {
         if (!anchorEntries.has(term)) {
           const entry = anchors(term);
@@ -38,21 +55,21 @@ export function alignBilingualSenses(senses: LexicalSense[], vietnamese: SourceS
             .filter(anchor => anchor.split(' ').length >= 2 && anchor.length >= 6)));
         }
         const entry = anchorEntries.get(term);
-        return entry?.lemma !== source.lemma && [...sourceGlosses[sourceIndex]].some(gloss => anchorGlosses.get(term)?.has(gloss));
+        return entry?.lemma !== source.lemma && entry?.pos.includes(sense.pos!) && [...sourceGlosses[sourceIndex]].some(gloss => anchorGlosses.get(term)?.has(gloss));
       });
     });
   });
   const result = exact.map((sense, index) => {
     if (sense.alignment.kind !== 'unresolved') return sense;
     const matches = vietnamese.filter((_, sourceIndex) => support[index][sourceIndex].length >= 2
-      && support.every((other, competitor) => competitor === index || other[sourceIndex].length <= support[index][sourceIndex].length - 2));
+      && support.every((other, competitor) => competitor === index || grammar[competitor][sourceIndex] < 0 || other[sourceIndex].length + grammar[competitor][sourceIndex] <= support[index][sourceIndex].length + grammar[index][sourceIndex] - 2));
     if (!matches.length) return sense;
     const meaningsVi = [...new Set(matches.flatMap(source => source.glosses.flatMap(fragments).filter(fragment =>
       support[index][vietnamese.indexOf(source)].filter(term =>
         anchorGlosses.get(term)?.has(fragment)).length >= 2)))];
     if (!meaningsVi.length) return sense;
     return { ...sense, meaningsVi, meaningVi: meaningsVi.join(' / '), alignment: {
-      kind: 'inferred', confidence: 'high', evidence: ['compatible POS', ...(version ? [version] : []), ...matches.map(source => source.id), ...matches.flatMap(source => support[index][vietnamese.indexOf(source)])]
+      kind: 'inferred', confidence: 'high', evidence: ['compatible POS', ALIGNMENT_VERSION, ...(matches.some(source => grammar[index][vietnamese.indexOf(source)] > 0) ? ['stable grammar/frame match'] : []), ...(version ? [version] : []), ...matches.map(source => source.id), ...matches.flatMap(source => support[index][vietnamese.indexOf(source)])]
     } as SenseAlignment };
   });
   if (cacheKey) {
@@ -60,4 +77,22 @@ export function alignBilingualSenses(senses: LexicalSense[], vietnamese: SourceS
     if (alignmentCache.size > 512) alignmentCache.delete(alignmentCache.keys().next().value!);
   }
   return structuredClone(result);
+}
+
+function features(pattern: StableGrammarPattern) {
+  return { ...pattern, imperative: false, passive: false, predicative: false, evaluationModifier: false };
+}
+function samePattern(a: StableGrammarPattern, b: StableGrammarPattern): boolean {
+  return a.complement === b.complement && a.preposition === b.preposition && a.particle === b.particle;
+}
+function examplePatterns(examples: string[], lemmas: string[]): StableGrammarPattern[] {
+  return examples.slice(0, 8).flatMap(example => {
+    const tokens = [...example.slice(0, 240).matchAll(/[a-z]+/gi)].map(match => ({ text: match[0], normalized: match[0].toLowerCase(), lemma: match[0].toLowerCase(), start: match.index!, end: match.index! + match[0].length }));
+    const matches = tokens.map((token, i) => lemmas.includes(token.lemma) ? i : -1).filter(i => i >= 0);
+    if (matches.length !== 1) return [];
+    const pattern = occurrenceConstruction(tokens, matches[0]);
+    // Generic or unknown object shapes cannot constrain stable alignment.
+    return ['clause', 'wh-clause', 'infinitive', 'gerund', 'prepositional'].includes(pattern.complement)
+      ? [{ complement: pattern.complement, preposition: pattern.preposition, particle: pattern.particle }] : [];
+  });
 }

@@ -14,7 +14,7 @@ export interface SenseResolution {
 }
 
 const stop = new Set('a an the to of for in on or and be is are was were something someone particular this that it they we you he she'.split(' '));
-const viStop = new Set('là và của một những các cho với trong được bị đã đang sẽ thì mà'.split(' '));
+const viStop = new Set('lÃ  vÃ  cá»§a má»™t nhá»¯ng cÃ¡c cho vá»›i trong Ä‘Æ°á»£c bá»‹ Ä‘Ã£ Ä‘ang sáº½ thÃ¬ mÃ '.split(' '));
 
 export class SenseResolver {
   constructor(private lexical = new LexicalEngine()) {}
@@ -23,7 +23,8 @@ export class SenseResolver {
     const context = new Set(this.lexical.tokenize(input.sentence).map(token => token.lemma)
       .filter(word => !stop.has(word) && !selectedWords.has(word)));
     const syntacticRole = inferSyntacticRole(input, this.lexical);
-    const translatedClause = alignedTranslationClause(input);
+    const translationEvidence = alignedTranslationClause(input);
+    const translatedClause = translationEvidence?.text;
     const matchingTranslationSenses = translatedClause ? input.candidateSenses.filter(sense =>
       Boolean(sense.alignment?.kind !== 'translated-definition' && !sense.alignment?.dependsOnSenseId && sense.meaningVi && sense.meaningVi.split(/\s*(?:\/|;)\s*/).some(meaning => containsWords(translatedClause, meaning)))) : [];
     const ranked = input.candidateSenses.map(sense => {
@@ -51,10 +52,18 @@ export class SenseResolver {
       semanticScore += construction.score; if (construction.reason) reasons.push(construction.reason);
       const index = selectedTokenIndex(input);
       if (index >= 0 && sense.pos === 'verb' && input.sentenceAnalysis) {
-        const features = input.sentenceAnalysis.constructions?.[index] ?? occurrenceConstruction(input.sentenceAnalysis.tokens, index);
+        const features = input.sentenceAnalysis.grammar?.predicates.find(predicate => predicate.tokenIndex === index) ?? input.sentenceAnalysis.constructions?.[index] ?? occurrenceConstruction(input.sentenceAnalysis.tokens, index);
         const compatibility = frameCompatibility(features, sense.verbFrames ?? []);
-        semanticScore += compatibility;
-        if (compatibility) reasons.push(`Verb frame compatibility: ${compatibility} (${features.complement})`);
+        semanticScore += compatibility > 0 ? 1 : compatibility * 2;
+        reasons.push('Grammar complement: ' + features.complement);
+        const predicate = input.sentenceAnalysis.grammar?.predicates.find(item => item.tokenIndex === index);
+        if (predicate) {
+          reasons.push(`Grammar predicate: ${predicate.lemma}; clause ${predicate.clauseIndex}; finite ${predicate.finite}; ${predicate.tense}/${predicate.aspect}; voice ${predicate.voice}; negated ${predicate.negated}; auxiliaries ${predicate.auxiliaryChain.join(',')}`);
+          reasons.push(`Grammar arguments: subject ${predicate.subjectHead ?? 'unknown'}, object ${predicate.objectHead ?? 'unknown'}, indirect ${predicate.indirectObjectHead ?? 'unknown'}`);
+          for (const modifier of predicate.modifiers) reasons.push(`Grammar modifier: ${modifier.kind} at ${modifier.tokenIndex}`);
+        }
+        if (features.preposition || features.particle) reasons.push(`Preposition/particle: ${features.preposition ?? 'none'}/${features.particle ?? 'none'}`);
+        if (compatibility) reasons.push(`Frame ${compatibility > 0 ? 'match' : 'conflict'}: ${compatibility} (${features.complement})`);
         if (features.evaluationModifier && /\b(?:regard|opinion|esteem|evaluate|rate)\b/i.test(sense.definitionEn)) {
           semanticScore += 4;
           reasons.push('Evaluative modifier with of-complement');
@@ -72,15 +81,15 @@ export class SenseResolver {
         const specific = features.complement !== 'none' && features.complement !== 'object';
         if (examplePatterns.some(pattern => (specific && pattern.complement === features.complement)
           || (features.predicative && pattern.predicative)
-          || (features.preposition && pattern.preposition === features.preposition))) {
+          || (features.preposition && pattern.preposition === features.preposition) || (features.particle && pattern.particle === features.particle))) {
           semanticScore += 3;
           reasons.push(`Example construction: ${features.complement}${features.preposition ? ` + ${features.preposition}` : ''}`);
         }
       }
       const translation = matchingTranslationSenses.length <= 1 ? translationScore(translatedClause, sense.alignment?.kind === 'translated-definition' || sense.alignment?.dependsOnSenseId ? undefined : sense.meaningVi) : { score: 0 };
-      if (translation.score && /[,;:.!?].*\p{L}/u.test(input.sentence)) {
+      if (translation.score && !translationEvidence?.strong) {
         translation.score = Math.min(1, translation.score);
-        translation.reason = 'Weak whole-sentence translation support; clause alignment unverified';
+        translation.reason = 'Weak whole-sentence support from saved sentence translation; clause alignment unverified';
       }
       const independentSemanticScore = semanticScore;
       semanticScore += translation.score; if (translation.reason) reasons.push(translation.reason);
@@ -119,21 +128,26 @@ function equivalentMeaning(left: LexicalSense, right: LexicalSense): boolean {
 }
 
 /** Sentence translation is usable only where the selected source clause can be identified. */
-function alignedTranslationClause(input: SenseInput): string | undefined {
+function alignedTranslationClause(input: SenseInput): { text: string; strong: boolean } | undefined {
   if (!input.sentenceTranslationVi) return undefined;
   const selectedIndex = selectedTokenIndex(input);
   const selected = input.sentenceAnalysis?.tokens[selectedIndex];
-  if (!selected || input.sentenceAnalysis?.tokens.filter(token => token.normalized === selected.normalized).length !== 1) return undefined;
+  if (!selected || selected.normalized !== input.selection.toLowerCase()) return undefined;
   const split = (value: string) => value.split(/[,;:.!?]+/).map(part => part.trim()).filter(Boolean);
   const sourceClauses = split(input.sentence);
   const translatedClauses = split(input.sentenceTranslationVi);
   // Clause counts do not establish alignment. Preserve only weak whole-sentence support
   // for multi-clause translations; independent lexical evidence still gates Context.
-  if (sourceClauses.length !== 1 || translatedClauses.length !== 1) return input.sentenceTranslationVi;
+  const grammar = input.sentenceAnalysis?.grammar;
+  const predicate = grammar?.predicates.find(item => item.tokenIndex === selectedIndex);
+  const clause = predicate && grammar?.clauses[predicate.clauseIndex];
+  const strong = Boolean(clause && grammar?.clauses.length === 1 && clause.start <= selected.start && selected.end <= clause.end
+    && sourceClauses.length === 1 && translatedClauses.length === 1);
+  if (sourceClauses.length !== 1 || translatedClauses.length !== 1 || !strong) return { text: input.sentenceTranslationVi, strong: false };
   let offset = 0;
   for (let index = 0; index < sourceClauses.length; index++) {
     const start = input.sentence.indexOf(sourceClauses[index], offset);
-    if (start <= selected.start && selected.end <= start + sourceClauses[index].length) return translatedClauses[index];
+    if (start <= selected.start && selected.end <= start + sourceClauses[index].length) return { text: translatedClauses[index], strong };
     offset = start + sourceClauses[index].length;
   }
   return undefined;
@@ -180,6 +194,7 @@ function translationScore(translation: string | undefined, meaning: string | und
 function inferSyntacticRole(input: SenseInput, lexical: LexicalEngine): 'verb' | 'noun' | 'adjective' | 'adverb' | undefined {
   const tokens = input.sentenceAnalysis?.tokens ?? [], index = selectedTokenIndex(input);
   if (index < 0) return undefined;
+  if (input.sentenceAnalysis?.grammar?.predicates.some(predicate => predicate.tokenIndex === index)) return 'verb';
   const previous = tokens[index - 1]?.normalized, next = tokens[index + 1]?.normalized, beforePrevious = tokens[index - 2]?.normalized;
   const subjects = new Set(['i', 'we', 'you', 'they', 'he', 'she', 'it']);
   const auxiliaries = new Set(['did', 'do', 'does', 'have', 'has', 'had', 'would', 'could', 'will', 'shall', 'should', 'can', 'may', 'might', 'must']);
@@ -201,7 +216,7 @@ function inferSyntacticRole(input: SenseInput, lexical: LexicalEngine): 'verb' |
 
 function selectedTokenIndex(input: SenseInput): number {
   const tokens = input.sentenceAnalysis?.tokens ?? [];
-  if (input.selectionStart !== undefined) return tokens.findIndex(token => token.start === input.selectionStart);
+  if (input.selectionStart !== undefined) return tokens.findIndex(token => token.start === input.selectionStart && token.normalized === input.selection.toLowerCase());
   const normalized = input.selection.toLocaleLowerCase();
   const matches = tokens.map((token, index) => token.normalized === normalized ? index : -1).filter(index => index >= 0);
   return matches.length === 1 ? matches[0] : -1;

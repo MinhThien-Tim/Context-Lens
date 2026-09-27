@@ -1,6 +1,7 @@
 export type { TranslationResult } from '../translation/types';
 
 export interface LexicalSense {
+  grammarPatterns?: StableGrammarPattern[];
   alignment?: import('../../lookup/dictionary/types').SenseAlignment;
   verbFrames?: number[];
   id: string;
@@ -18,8 +19,13 @@ export interface LexicalSense {
   frequency?: number;
   cefr?: string;
 }
+export interface StableGrammarPattern {
+  complement: import('./constructions').ConstructionFeatures['complement'];
+  preposition?: string;
+  particle?: string;
+}
 export interface LexicalEntry {
-  vietnameseSenses?: { id: string; lemma: string; pos?: string; glosses: string[]; examples?: string[]; source: string }[];
+  vietnameseSenses?: { id: string; lemma: string; pos?: string; glosses: string[]; examples?: string[]; grammarPatterns?: StableGrammarPattern[]; verbFrames?: number[]; domains?: string[]; source: string }[];
   lemma: string; pos: string[]; forms?: string[]; senses: LexicalSense[]; meaningsVi?: string[];
   morphology?: { surface: string; baseLemma: string; inflection: import('../../lookup/dictionary/types').InflectionType };
   vietnameseReferences?: import('../../lookup/dictionary/types').VietnameseReference[];
@@ -29,6 +35,7 @@ export interface PhraseEntry extends LexicalEntry { type: 'idiom' | 'phrasal ver
 export interface TokenInfo { text: string; normalized: string; lemma: string; start: number; end: number; pos?: string }
 export interface DetectedPhrase { canonical: string; text: string; start: number; end: number; type: PhraseEntry['type'] }
 export interface SentenceAnalysis {
+  grammar?: ReturnType<typeof import('./grammar').analyzeGrammar>;
   constructions?: import('./constructions').ConstructionFeatures[];
   id: string; sourceText: string; normalizedText: string; sourceLang: string;
   translationVi?: string; simpleEnglish?: string;

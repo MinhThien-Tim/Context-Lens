@@ -3,10 +3,11 @@ import { EngineCache, cacheKey, normalizeText, type ResultCache } from '../cache
 import { LexicalEngine } from './lexicon';
 import { PhraseDetector } from './phrases';
 import { occurrenceConstruction } from './constructions';
+import { analyzeGrammar } from './grammar';
 import type { SelectionInput, SentenceAnalysis } from './types';
 export { buildSentenceIndex } from '../../lookup/context';
 
-export const ANALYSIS_VERSION = 2;
+export const ANALYSIS_VERSION = 3;
 export class SentenceAnalysisCache extends EngineCache<SentenceAnalysis> {
   constructor(database = db, limit = 1000, enabled = true) { super(database.sentenceAnalyses, `sentence-v${ANALYSIS_VERSION}`, limit, enabled); }
 }
@@ -29,6 +30,7 @@ export class SentenceEngine {
       const tokens = this.lexical.tokenize(normalizedText);
       const analysis: SentenceAnalysis = {
         id: key, sourceText: normalizedText, normalizedText, sourceLang, tokens,
+        grammar: analyzeGrammar(tokens, normalizedText),
         constructions: tokens.map((_, index) => occurrenceConstruction(tokens, index)),
         lemmas: tokens.map(token => token.lemma), phrases: this.phrases.detect(normalizedText),
         semanticHints: /\d+(?:\.\d+)?\s*(?:%|percent)/i.test(normalizedText) ? ['proportion'] : [],
