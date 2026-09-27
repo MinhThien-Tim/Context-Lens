@@ -831,3 +831,111 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
   .meaning-reveal { animation: none; }
 }
 .lookup-enrichment-status { font-size: 0.75rem; margin-block: 0.25rem; }
+
+/* Shared semantic palette, available only to Advanced home and Standard Quick. */
+.home-shell[data-interface-mode="advanced"],
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] {
+  --advanced-orange: #a95032;
+  --advanced-orange-soft: #f7e9e1;
+  --advanced-green: #657744;
+  --advanced-green-soft: #edf1e5;
+  --advanced-gold: #98702d;
+  --advanced-gold-soft: #f4eedf;
+  --advanced-blue: #526f88;
+  --advanced-blue-soft: #eaf0f4;
+  --advanced-paper: #fbf8f1;
+}
+/* Standard Quick is a compact learning inspector; Simple keeps the shared quiet reader palette. */
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] {
+  background: color-mix(in srgb, var(--advanced-paper) 56%, var(--elevated-surface));
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .inspector-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--advanced-orange) 22%, var(--border));
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .inspector-word-title > strong {
+  color: color-mix(in srgb, var(--advanced-orange) 84%, var(--primary-text));
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .pos-chip,
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .sense-pos {
+  color: color-mix(in srgb, var(--advanced-gold) 88%, var(--primary-text));
+  background: color-mix(in srgb, var(--advanced-gold-soft) 78%, transparent);
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .inspector-context {
+  margin: 0 0 12px;
+  padding: 8px 9px;
+  border-left: 3px solid var(--advanced-green);
+  border-radius: 0 7px 7px 0;
+  background: color-mix(in srgb, var(--advanced-green-soft) 76%, var(--surface));
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .inspector-context h3 {
+  color: color-mix(in srgb, var(--advanced-green) 88%, var(--primary-text));
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .inspector-context .sense-pos {
+  background: transparent;
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .inspector-meanings > h3::before,
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .quick-sense-status::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 0.9em;
+  margin-right: 6px;
+  border-radius: 2px;
+  background: var(--advanced-gold);
+  vertical-align: -1px;
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .quick-pos-group > h4 {
+  color: color-mix(in srgb, var(--advanced-gold) 88%, var(--primary-text));
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .context-badge {
+  color: color-mix(in srgb, var(--advanced-green) 88%, var(--primary-text));
+  background: color-mix(in srgb, var(--advanced-green-soft) 80%, transparent);
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .inspector-lookup-tools .language-tabs,
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .quick-mode-toggle {
+  background: color-mix(in srgb, var(--advanced-blue-soft) 72%, var(--surface));
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .language-tabs button.active,
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .language-tabs button[aria-selected="true"],
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .quick-mode-toggle,
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .inspector-sources > summary {
+  color: color-mix(in srgb, var(--advanced-blue) 90%, var(--primary-text));
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .lexical-unit {
+  border-left: 2px solid var(--advanced-green);
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, var(--advanced-green-soft) 50%, transparent);
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .lexical-label,
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .lexical-unit h3 {
+  color: color-mix(in srgb, var(--advanced-green) 88%, var(--primary-text));
+}
+.reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .lexical-unit p {
+  color: var(--primary-text);
+}
+:root[data-theme="dark"] .home-shell[data-interface-mode="advanced"],
+:root[data-theme="dark"] .reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] {
+  --advanced-orange: #d18a6d;
+  --advanced-orange-soft: #3b2a25;
+  --advanced-green: #a2b184;
+  --advanced-green-soft: #2c3428;
+  --advanced-gold: #c5a667;
+  --advanced-gold-soft: #393326;
+  --advanced-blue: #91abc0;
+  --advanced-blue-soft: #29343c;
+  --advanced-paper: #282823;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] .home-shell[data-interface-mode="advanced"],
+  :root[data-theme="system"] .reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] {
+    --advanced-orange: #d18a6d;
+    --advanced-orange-soft: #3b2a25;
+    --advanced-green: #a2b184;
+    --advanced-green-soft: #2c3428;
+    --advanced-gold: #c5a667;
+    --advanced-gold-soft: #393326;
+    --advanced-blue: #91abc0;
+    --advanced-blue-soft: #29343c;
+    --advanced-paper: #282823;
+  }
+}

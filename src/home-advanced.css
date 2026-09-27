@@ -21,7 +21,7 @@
 .home-shell[data-interface-mode="advanced"] .library-section { margin-top:var(--home-section-gap); }
 .home-shell[data-interface-mode="advanced"] .section-heading h2 { font-weight:500; font-size:26px; }
 .home-shell[data-interface-mode="advanced"] .primary-actions { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:28px; align-items:start; }
-.home-shell[data-interface-mode="advanced"] .action-card { --home-function:var(--accent); --home-function-soft:var(--accent-soft); padding:20px 0; border:0; border-top:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none; }
+.home-shell[data-interface-mode="advanced"] .action-card { --home-function:var(--advanced-orange); --home-function-soft:var(--advanced-orange-soft); padding:20px 0; border:0; border-top:1px solid var(--border); border-radius:0; background:transparent; box-shadow:none; }
 .home-shell[data-interface-mode="advanced"] .import-card { order:0; }
 .home-shell[data-interface-mode="advanced"] .action-card-icon { background:transparent; color:var(--accent); border-radius:0; width:28px; flex-basis:28px; }
 .home-shell[data-interface-mode="advanced"] .action-card-heading h2 { font-weight:500; }
@@ -83,24 +83,25 @@
   .home-shell[data-interface-mode="advanced"] .home-advanced-tools { position:fixed; right:14px; top:140px; }
 }
 
-:root .home-shell[data-interface-mode="advanced"] .paste-card { --home-function:light-dark(#326da6,#9cc6ee); --home-function-soft:color-mix(in srgb,var(--home-function) 12%,var(--surface)); }
+:root .home-shell[data-interface-mode="advanced"] .paste-card { --home-function:var(--advanced-blue); --home-function-soft:var(--advanced-blue-soft); }
 .home-shell[data-interface-mode="advanced"] .action-card-icon,.home-shell[data-interface-mode="advanced"] .action-card-heading .eyebrow { color:var(--home-function); }
 .home-shell[data-interface-mode="advanced"] .paste-mode { background:var(--home-function-soft); }
 .home-shell[data-interface-mode="advanced"] .paste-mode button.active { color:var(--home-function); }
 .home-shell[data-interface-mode="advanced"] .paste-card .primary-button { background:var(--home-function); color:var(--bg); }
 .home-shell[data-interface-mode="advanced"] {
-  /* Home-only palette follows the root appearance, including System. */
-  --bg:light-dark(#f2f5f6,#0f1417);
-  --surface:light-dark(#ffffff,#171c20);
-  --line:light-dark(#dce3e8,#2a333a);
-  --muted:light-dark(#5b6770,#aab7c0);
+  /* Existing home-only aliases use the same warm palette as Standard Quick. */
+  --bg:var(--advanced-paper);
+  --surface:color-mix(in srgb,var(--advanced-paper) 56%,var(--elevated-surface));
+  --line:light-dark(#e0dcd2,#3b3b34);
+  --muted:light-dark(#69665e,#b5b3a8);
+  --advanced-on-color:light-dark(#fff,#211f1c);
   /* Rebind aliases here: inherited aliases resolve at their defining scope. */
   --border:var(--line);
   --secondary-text:var(--muted);
   --muted-text:var(--muted);
   --home-section-gap:24px;
   background:var(--bg);
-  border-top:3px solid var(--accent);
+  border-top:3px solid var(--advanced-orange);
 }
 .home-shell[data-interface-mode="advanced"] .continue-card,
 .home-shell[data-interface-mode="advanced"] .library-card { background:var(--surface); }
@@ -136,3 +137,70 @@
 .home-shell[data-interface-mode="advanced"] .home-entry-actions .text-button { color:var(--accent); }
 .home-shell[data-interface-mode="advanced"] .home-preferences .guide-language { margin-left:0; }
 .home-shell[data-interface-mode="advanced"]>.settings-popover { z-index:45; }
+
+/* Color only: retain the existing geometry, controls and document list. */
+.home-shell[data-interface-mode="advanced"] .brand-mark,
+.home-shell[data-interface-mode="advanced"] .home-entry-actions .primary-button,
+.home-shell[data-interface-mode="advanced"] .home-theme-toggle button[aria-pressed="true"] {
+  background:var(--advanced-orange); color:var(--advanced-on-color);
+}
+.home-shell[data-interface-mode="advanced"] .home-intro .eyebrow { color:var(--advanced-orange); }
+.home-shell[data-interface-mode="advanced"] .home-theme-toggle button:not([aria-pressed="true"]):hover {
+  background:var(--advanced-orange-soft); color:var(--advanced-orange);
+}
+.home-shell[data-interface-mode="advanced"] .action-card { border-top-color:color-mix(in srgb,var(--home-function) 40%,var(--border)); }
+.home-shell[data-interface-mode="advanced"] .action-card-icon { background:var(--home-function-soft); }
+:root .home-shell[data-interface-mode="advanced"] .import-card { --home-function:var(--advanced-orange); --home-function-soft:var(--advanced-orange-soft); }
+.home-shell[data-interface-mode="advanced"] .document-drop { background:color-mix(in srgb,var(--advanced-orange-soft) 45%,var(--surface)); }
+.home-shell[data-interface-mode="advanced"] .document-drop:focus-within { outline-color:var(--advanced-orange); }
+.home-shell[data-interface-mode="advanced"] .paste-card .primary-button { color:var(--advanced-on-color); }
+.home-shell[data-interface-mode="advanced"] .import-form .secondary-button {
+  color:var(--advanced-orange); border-color:color-mix(in srgb,var(--advanced-orange) 35%,var(--border));
+}
+.home-shell[data-interface-mode="advanced"] .continue-section .section-heading h2,
+.home-shell[data-interface-mode="advanced"] .document-resume { color:var(--advanced-green); }
+.home-shell[data-interface-mode="advanced"] .continue-card {
+  border-left-color:var(--advanced-green);
+  background:color-mix(in srgb,var(--advanced-green-soft) 38%,var(--surface));
+}
+.home-shell[data-interface-mode="advanced"] .continue-card:hover {
+  border-color:color-mix(in srgb,var(--advanced-green) 35%,var(--border));
+  border-left-color:var(--advanced-green); background:var(--advanced-green-soft);
+}
+.home-shell[data-interface-mode="advanced"] .mini-progress i { background:var(--advanced-green); }
+.home-shell[data-interface-mode="advanced"] .document-cover {
+  color:var(--advanced-gold); background:var(--advanced-gold-soft);
+  border-color:color-mix(in srgb,var(--advanced-gold) 24%,var(--border)); border-left-color:var(--advanced-gold);
+}
+.home-shell[data-interface-mode="advanced"] .continue-card .document-cover {
+  color:var(--advanced-green); background:var(--advanced-green-soft);
+  border-color:color-mix(in srgb,var(--advanced-green) 24%,var(--border)); border-left-color:var(--advanced-green);
+}
+.home-shell[data-interface-mode="advanced"] .library-section .eyebrow,
+.home-shell[data-interface-mode="advanced"] .home-entry-actions .text-button,
+:root .home-shell[data-interface-mode="advanced"] .document-copy .document-badge { color:var(--advanced-gold); }
+.home-shell[data-interface-mode="advanced"] .library-card:hover {
+  border-color:color-mix(in srgb,var(--advanced-gold) 35%,var(--border));
+  background:color-mix(in srgb,var(--advanced-gold-soft) 60%,var(--surface));
+}
+.home-shell[data-interface-mode="advanced"] .home-nav :is(.nav-button,.stats-trigger),
+.home-shell[data-interface-mode="advanced"] .home-preferences .text-button,
+.home-shell[data-interface-mode="advanced"] .home-entry-actions .secondary-button,
+.home-shell[data-interface-mode="advanced"] .library-section .load-more { color:var(--advanced-blue); }
+.home-shell[data-interface-mode="advanced"] .home-nav :is(.nav-button,.stats-trigger):hover,
+.home-shell[data-interface-mode="advanced"] .home-preferences .text-button:hover,
+.home-shell[data-interface-mode="advanced"] .home-entry-actions .secondary-button:hover,
+.home-shell[data-interface-mode="advanced"] .library-section .load-more:hover { background:var(--advanced-blue-soft); }
+.home-shell[data-interface-mode="advanced"] .guide-language button[aria-pressed="true"] {
+  background:var(--advanced-blue); color:var(--advanced-on-color);
+}
+.home-shell[data-interface-mode="advanced"] :is(button,a,input,textarea,select,[contenteditable]):focus-visible { outline-color:var(--advanced-blue); }
+.home-shell[data-interface-mode="advanced"] .paste-card :is(.composer-title:focus-within,.paste-editor:focus,textarea:focus) {
+  border-color:var(--advanced-blue); box-shadow:0 0 0 3px color-mix(in srgb,var(--advanced-blue) 12%,transparent);
+}
+.home-shell[data-interface-mode="advanced"] .import-form input:focus {
+  border-color:var(--advanced-orange); box-shadow:0 0 0 3px color-mix(in srgb,var(--advanced-orange) 12%,transparent);
+}
+.home-shell[data-interface-mode="advanced"] .library-search:focus-within {
+  border-color:var(--advanced-gold); box-shadow:0 0 0 3px color-mix(in srgb,var(--advanced-gold) 12%,transparent);
+}
