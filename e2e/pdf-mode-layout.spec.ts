@@ -14,7 +14,7 @@ test('PDF mode toolbar stays aligned across viewport sizes and follows UI langua
   await page.getByRole('dialog', { name: 'Go to location', exact: true }).getByRole('spinbutton').fill('3');
   await page.getByRole('button', { name: 'Go', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Current PDF page', exact: true })).toHaveText('3 / 8');
-  for (const width of [320, 360, 390, 430, 768, 1366]) {
+  for (const width of [320, 360, 390, 430, 768, 1024, 1280, 1366, 1440, 1920]) {
     await page.setViewportSize({ width, height: 850 });
     await expect(mode.getByRole('button')).toHaveCount(2);
     const layout = await page.evaluate(() => {
@@ -28,6 +28,13 @@ test('PDF mode toolbar stays aligned across viewport sizes and follows UI langua
     expect(layout.modeRight).toBeLessThanOrEqual(layout.viewport);
     expect(layout.navRight).toBeLessThanOrEqual(layout.viewport);
     expect(layout.overflow).toBe(false);
+    if (width >= 1024) {
+      expect(layout.headerBottom).toBe(56);
+      for (const selector of ['.reader-header-leading', '.reader-header-position', '.reader-header-actions']) {
+        expect(await page.locator(selector).evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+      }
+      await expect(page.getByRole('button', { name: 'OCR next', exact: true })).toBeVisible();
+    }
     if (width <= 767) {
       expect(layout.headerBottom).toBeLessThanOrEqual(88);
       for (const selector of ['.reader-primary-tools', '.pdf-mode-switch']) {

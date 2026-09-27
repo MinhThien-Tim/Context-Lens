@@ -1,5 +1,46 @@
 import { test, expect } from '@playwright/test';
 
+test('desktop Quick stays contained at selection edges with long bilingual content', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 850 });
+  await page.goto('/');
+  await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill('We maintain public confidence through careful work.');
+  await page.getByRole('button', { name: /Preview & read/ }).click();
+  const sheet = page.locator('.lookup-sheet');
+  for (const [left, top] of [[12, 80], [720, 80], [12, 740], [720, 740]]) {
+    await page.locator('.reader-text').evaluate((el, position) => {
+      const paragraph = el as HTMLElement;
+      Object.assign(paragraph.style, { position: 'fixed', left: `${position[0]}px`, top: `${position[1]}px`, width: '280px', margin: '0', padding: '0' });
+    }, [left, top]);
+    await page.locator('.reader-text').evaluate(root => {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let node = walker.nextNode()!;
+      while (!node.textContent!.includes('maintain')) node = walker.nextNode()!;
+      const start = node.textContent!.indexOf('maintain');
+      const range = document.createRange(); range.setStart(node, start); range.setEnd(node, start + 8);
+      const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
+      root.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+    });
+    await page.locator('.selection-actions').getByRole('button', { name: 'Define', exact: true }).click();
+    await expect(sheet.locator('.sense-definition').first()).toBeVisible();
+    await sheet.locator('.sense-definition,.sense-vi').evaluateAll(elements => {
+      for (const el of elements) el.textContent += ' Long English definition và nghĩa tiếng Việt liên kết.'.repeat(50);
+    });
+    const bounds = await sheet.boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(12);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(1012);
+    expect(bounds!.y).toBeGreaterThanOrEqual(72);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(838);
+    expect(bounds!.height).toBeLessThanOrEqual(520);
+    expect(await sheet.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    const header = await sheet.locator('.inspector-header').boundingBox();
+    await sheet.locator('.inspector-body').evaluate(el => { el.scrollTop = el.scrollHeight; });
+    expect((await sheet.locator('.inspector-header').boundingBox())!.y).toBe(header!.y);
+    await sheet.locator('.inspector-sources > summary').click();
+    await expect(sheet.locator('.inspector-sources')).toHaveAttribute('open', '');
+    await sheet.getByRole('button', { name: 'Close meaning', exact: true }).click();
+  }
+});
+
 for (const width of [1366, 320]) {
   test(`lookup Vietnamese meanings and saved view at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 850 });
@@ -189,7 +230,7 @@ for (const width of [320, 360, 390, 430]) {
   });
 }
 
-for (const width of [1366, 390]) {
+for (const width of [1024, 1280, 1366, 1440, 1920, 390]) {
   for (const mode of ['Simple', 'Advanced']) {
     test(`reader shell ${mode} at ${width}px keeps panels independent and navigation usable`, async ({ page }) => {
       await page.setViewportSize({ width, height: 850 });
@@ -204,7 +245,7 @@ for (const width of [1366, 390]) {
       await expect(shell).not.toHaveClass(/has-context/);
       await page.screenshot({ path: `tmp/phase2/reader-${mode.toLowerCase()}-${width}.png` });
       const action = async (panel: 'Document' | 'Context') => {
-        if (desktopAdvanced) await page.getByRole('button', { name: panel === 'Document' ? 'Contents' : 'Context panel', exact: true }).click();
+        if (desktopAdvanced) await page.locator('.reader-header').getByRole('button', { name: panel === 'Document' ? 'Contents' : 'Context panel', exact: true }).click();
         else {
           await page.getByRole('button', { name: 'Reader menu', exact: true }).click();
           await page.getByRole('menuitem', { name: panel === 'Document' ? 'Document / Contents' : 'Context panel', exact: true }).click();
@@ -220,6 +261,11 @@ for (const width of [1366, 390]) {
       if (width >= 1024) {
         await expect(shell).toHaveClass(/has-contents/);
         expect(await page.locator('.reader-viewport').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(width / 2);
+        expect(await page.locator('.reader-text').evaluate(el => {
+          const content = el.getBoundingClientRect();
+          const viewport = el.closest('.reader-viewport')!.getBoundingClientRect();
+          return content.left >= viewport.left && content.right <= viewport.right;
+        })).toBe(true);
       } else {
         await expect(page.locator('.contents-panel')).toHaveCount(0);
         await expect(page.locator('.context-panel')).toHaveAttribute('aria-modal', 'true');

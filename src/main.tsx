@@ -3,6 +3,7 @@ import { registerSW } from 'virtual:pwa-register';
 import { App } from './app/App';
 import './styles.css';
 import './styles.mobile-reader.css';
+import './styles.desktop-reader.css';
 
 const applyUpdate = registerSW({
   immediate: true,

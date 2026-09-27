@@ -1,0 +1,144 @@
+/* Desktop reader presentation. Repeated shell specificity survives lazy reader-layout.css. */
+@media (min-width: 1024px) {
+  .reader-shell.reader-shell {
+    --reader-header-height: 56px;
+    --reader-footer-height: calc(40px + env(safe-area-inset-bottom));
+    --document-panel-size: clamp(260px, 20vw, 290px);
+    --context-panel-size: clamp(360px, 27vw, 400px);
+  }
+  /* At the boundary, share less than half the viewport between both columns. */
+  .reader-shell.reader-shell.has-contents.has-context {
+    --document-panel-size: clamp(180px, 18vw, 270px);
+    --context-panel-size: min(clamp(320px, 27vw, 400px), calc(49vw - var(--document-panel-size)));
+  }
+  .reader-shell.reader-shell .reader-header {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 10px; padding-inline: 12px;
+  }
+  .reader-shell.reader-shell .reader-header-leading { overflow: hidden; gap: 8px; }
+  .reader-shell.reader-shell .reader-document {
+    min-width: 0; max-width: clamp(120px, 20vw, 320px);
+    border-radius: 5px; background: color-mix(in srgb, var(--accent-soft) 45%, var(--reading-surface));
+  }
+  .reader-shell.reader-shell .reader-document h1 { max-width: 100%; padding: 5px 8px; font-size: 13px; }
+  .reader-shell.reader-shell .reader-header-actions { gap: 4px; }
+  .reader-shell.reader-shell .reader-primary-tools { gap: 3px; padding-right: 6px; border-right: 1px solid var(--border); }
+  .reader-shell.reader-shell .reader-header .toolbar-button { min-height: 36px; padding-inline: 7px; gap: 5px; font-size: 12px; white-space: nowrap; }
+  .reader-shell.reader-shell .reader-header .icon-button { flex: 0 0 36px; width: 36px; min-width: 36px; min-height: 36px; }
+  .reader-shell.reader-shell .reader-header .toolbar-button[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent); }
+  .reader-shell.reader-shell .ocr-next-button { background: color-mix(in srgb, var(--accent-soft) 55%, var(--reading-surface)); }
+  .reader-shell.reader-shell .pdf-mode-controls { gap: 6px; }
+  .reader-shell.reader-shell .pdf-mode-switch > button { min-height: 34px; min-width: 66px; padding-inline: 9px; font-size: 12px; }
+  .reader-shell.reader-shell .pdf-mode-switch > button[aria-pressed="true"] { color: var(--accent); background: var(--reading-surface); }
+  .reader-shell.reader-shell .reader-header-position { justify-self: center; }
+  .reader-shell.reader-shell .reader-more-menu button,
+  .reader-shell.reader-shell .pdf-reading-options button,
+  .reader-shell.reader-shell .pdf-reading-options select { min-height: 36px; }
+  .reader-shell.reader-shell .pdf-toolbar { min-height: 38px; padding-block: 1px; gap: 4px; }
+  .reader-shell.reader-shell .pdf-toolbar button,
+  .reader-shell.reader-shell .pdf-toolbar select { min-height: 36px; }
+  .reader-shell.reader-shell .pdf-queue-status { min-height: 36px; padding-block: 0; }
+  .reader-shell.reader-shell .pdf-queue-status button { min-height: 34px; }
+  .reader-shell.reader-shell .reader-text { padding-top: clamp(24px, 3vh, 40px); }
+  .reader-shell.reader-shell .reader-viewport { transition: none; }
+  .reader-shell.reader-shell .pdf-reading-page { padding-top: 24px; }
+  .reader-shell.reader-shell .reader-progress { padding-top: 0; }
+  .reader-shell.reader-shell .page-navigation .icon-button,
+  .reader-shell.reader-shell .page-navigation .page-count,
+  .reader-shell.reader-shell .document-position { min-height: 36px; }
+  .reader-shell.reader-shell .contents-panel { background: var(--reading-surface); padding: 12px; }
+  .reader-shell.reader-shell .contents-panel button { min-height: 36px; }
+  .reader-shell.reader-shell .document-panel-content button { max-width: 100%; overflow-wrap: anywhere; white-space: normal; text-align: left; }
+  .reader-shell.reader-shell .contents-item > span { min-width: 0; overflow-wrap: anywhere; }
+  .reader-shell.reader-shell .document-panel-actions { flex-wrap: wrap; gap: 4px; }
+  .reader-shell.reader-shell .context-panel,
+  .reader-shell.reader-shell .lookup-sheet.side-panel { background: color-mix(in srgb, var(--accent-soft) 12%, var(--elevated-surface)); }
+  .reader-shell.reader-shell .lookup-sheet { container-type: inline-size; }
+  .reader-shell.reader-shell .lookup-sheet.word-popup {
+    width: 360px; padding: 0; height: auto; min-height: 0;
+    max-height: min(520px, calc(100dvh - 84px)); border-radius: 8px;
+    box-shadow: 0 5px 18px color-mix(in srgb, var(--primary-text) 14%, transparent);
+  }
+  .reader-shell.reader-shell .lookup-sheet .inspector-header { gap: 2px 6px; padding: 6px 10px; }
+  .reader-shell.reader-shell .inspector-word-title { gap: 5px; }
+  .reader-shell.reader-shell .inspector-word-title > strong { font-size: 21px; }
+  .reader-shell.reader-shell .inspector-header-actions { gap: 2px; }
+  .reader-shell.reader-shell .lookup-sheet button,
+  .reader-shell.reader-shell .lookup-sheet select,
+  .reader-shell.reader-shell .lookup-sheet summary { min-height: 34px; }
+  .reader-shell.reader-shell .lookup-sheet .inspector-header-actions button { padding-inline: 6px; border-color: transparent; }
+  .reader-shell.reader-shell .lookup-sheet .inspector-pronunciation { flex-wrap: wrap; gap: 2px 4px; }
+  .reader-shell.reader-shell .ipa-line { font-size: 11px; flex: 0 1 auto; }
+  .reader-shell.reader-shell .inspector-lookup-tools { gap: 3px; }
+  .reader-shell.reader-shell .lookup-sheet .inspector-lookup-tools .explain-toggle { width: auto; padding-inline: 3px; }
+  .reader-shell.reader-shell .lookup-sheet .inspector-controls .explain-toolstrip { display: flex; flex-wrap: wrap; margin: 0; }
+  .reader-shell.reader-shell .inspector-body { padding: 8px 12px; font-size: 14px; }
+  .reader-shell.reader-shell .lookup-sheet .sense-definition,
+  .reader-shell.reader-shell .lookup-sheet .sense-vi,
+  .reader-shell.reader-shell .lookup-sheet .meaning-en,
+  .reader-shell.reader-shell .lookup-sheet .meaning-vi,
+  .reader-shell.reader-shell .lookup-sheet .unpaired-meanings li { font-size: 14px; line-height: 1.45; }
+  .reader-shell.reader-shell .lookup-sheet .bilingual-sense-layout,
+  .reader-shell.reader-shell .lookup-sheet .quick-meaning-table.has-entry-glosses { grid-template-columns: minmax(0, 1fr); }
+  .reader-shell.reader-shell .lookup-sheet .sense-bilingual.paired-columns { display: flex; flex-direction: column; gap: 3px; }
+  .reader-shell.reader-shell .lookup-sheet .paired-columns .sense-vi { border: 0; padding-left: 10px; }
+  .reader-shell.reader-shell .lookup-sheet .expanded-sense-list li { margin-bottom: 8px; }
+  .reader-shell.reader-shell .lookup-sheet .sense-group > summary,
+  .reader-shell.reader-shell .lookup-sheet .inspector-disclosure > summary { padding-block: 6px; }
+  .reader-shell.reader-shell .lookup-sheet .inspector-footer { margin: 4px 0 0; padding: 0; }
+  .reader-shell.reader-shell .lookup-sheet .inspector-sources { margin: 0; padding: 0; border: 0; }
+  .reader-shell.reader-shell .lookup-sheet .inspector-sources > summary { min-height: 34px; padding: 4px 0; background: transparent; }
+  .reader-shell.reader-shell .lookup-sheet .inspector-sources p { margin: 0 0 8px; }
+  @container (min-width: 390px) {
+    .reader-shell.reader-shell .lookup-sheet.expanded .sense-bilingual.paired-columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+    .reader-shell.reader-shell .lookup-sheet.expanded .paired-columns .sense-vi { border-left: 1px solid var(--border); padding-left: 10px; }
+  }
+}
+@media (min-width: 1024px) and (max-width: 1199px) {
+  /* Labels remain available through aria-label; OCR next stays directly visible. */
+  .reader-shell.reader-shell .reader-header-actions .toolbar-button > svg + span { display: none; }
+  .reader-shell.reader-shell .reader-header-actions .toolbar-button { min-width: 36px; }
+}
+
+/* Quick only: source-linked pairs share rows; entry glosses remain in the VI column. */
+@media (min-width: 1024px) {
+  .reader-shell.reader-shell .lookup-sheet.word-popup.quick {
+    font-family: var(--font-ui);
+  }
+  .reader-shell.reader-shell .word-popup.quick :is(.quick-explanation, .quick-meaning-table, .sense-list, .quick-pos-group, .sense-row, .sense-bilingual, .sense-definition, .sense-vi, .entry-glosses, .lookup-note, .quick-sense-status, .legacy-meanings) {
+    min-width: 0; overflow-wrap: anywhere;
+  }
+  .reader-shell.reader-shell .word-popup.quick :is(.lookup-note, .quick-sense-status, .sense-pos, .entry-glosses h4, .inspector-sources, button, summary, .pos-chip, .inspector-word-meta) {
+    font-family: var(--font-ui); line-height: 1.45;
+  }
+  .reader-shell.reader-shell .word-popup.quick .lookup-note { margin: 0 0 8px; }
+  .reader-shell.reader-shell .word-popup.quick .has-bilingual-content {
+    display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 6px 8px; align-items: start;
+  }
+  .reader-shell.reader-shell .word-popup.quick .has-bilingual-content > .sense-list { grid-column: 1 / -1; }
+  .reader-shell.reader-shell .word-popup.quick .has-entry-glosses > .sense-list { grid-column: 1; }
+  .reader-shell.reader-shell .word-popup.quick .has-bilingual-content > .entry-glosses { grid-column: 2; }
+  .reader-shell.reader-shell .word-popup.quick .has-bilingual-content .sense-bilingual,
+  .reader-shell.reader-shell .word-popup.quick .sense-bilingual.paired-columns {
+    display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 8px;
+  }
+  .reader-shell.reader-shell .word-popup.quick .has-entry-glosses .sense-bilingual { grid-template-columns: minmax(0, 1fr); }
+  .reader-shell.reader-shell .word-popup.quick .has-bilingual-content .sense-definition { grid-column: 1; }
+  .reader-shell.reader-shell .word-popup.quick .has-bilingual-content .sense-vi { grid-column: 2; }
+  .reader-shell.reader-shell .word-popup.quick .sense-bilingual.paired-columns .sense-vi {
+    border-left: 1px solid var(--border); padding-left: 7px;
+  }
+  .reader-shell.reader-shell .word-popup.quick .entry-glosses {
+    margin: 0; padding: 5px 7px; border: 0; border-left: 1px solid var(--border); border-radius: 0;
+    background: color-mix(in srgb, var(--accent-soft) 20%, transparent); box-shadow: none;
+  }
+  .reader-shell.reader-shell .word-popup.quick .entry-glosses h4 { margin: 0 0 4px; font-size: 11px; }
+  .reader-shell.reader-shell .word-popup.quick .entry-glosses h4 small { display: block; font-size: 10px; font-weight: 400; }
+  .reader-shell.reader-shell .word-popup.quick .entry-glosses li { font-weight: 400; }
+  .reader-shell.reader-shell .word-popup.quick [data-language="bilingual"] .legacy-meanings:has(.meaning-en):has(.meaning-vi) {
+    display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 8px;
+  }
+  .reader-shell.reader-shell .word-popup.quick .legacy-meanings .meaning-en { grid-column: 1; grid-row: 1; }
+  .reader-shell.reader-shell .word-popup.quick .legacy-meanings .meaning-vi { grid-column: 2; grid-row: 1; }
+  .reader-shell.reader-shell .word-popup.quick [data-language="vi"] .legacy-meanings .meaning-vi { grid-column: auto; grid-row: auto; }
+}

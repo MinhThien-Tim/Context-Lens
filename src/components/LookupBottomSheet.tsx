@@ -69,7 +69,8 @@ export function LookupBottomSheet(props: Props) {
     : Math.max(12, (props.anchor?.left ?? 12) - 372);
   const popupStyle = popup && desktop && props.anchor ? {
     left: `${popupLeft}px`,
-    top: `${Math.max(72, Math.min(props.anchor.top - 28, window.innerHeight - 430))}px`,
+    // Reserve the same maximum height as the desktop CSS, including edge clearance.
+    top: `${Math.max(72, Math.min(props.anchor.top - 28, window.innerHeight - Math.min(520, window.innerHeight - 84) - 12))}px`,
   } : undefined;
   const toggleFull = () => {
     changeDisplay(!deepOpen);
