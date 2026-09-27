@@ -48,6 +48,8 @@ import { EngineError } from '../core/errors';
 import { ensureLocalDictionaryAssets } from '../lookup/localAssets';
 import { ContextLensOnboarding, LanguageToggle, OnboardingCard } from '../onboarding/ContextLensOnboarding';
 import { hasSeenContextLensOnboarding, loadGuideLanguage, markContextLensOnboardingSeen, saveGuideLanguage, type GuideLanguage } from '../onboarding/store';
+import { ContinueReading } from '../components/ContinueReading';
+import { dismissContinueReading, queryContinueReading } from './continueReading';
 import { DocumentIdentity } from '../components/DocumentIdentity';
 import { PasteComposer } from '../components/PasteComposer';
 import { MarkupPalette, type MarkupTool } from '../reader/MarkupPalette';
@@ -183,7 +185,7 @@ export function App() {
   }, [libraryQuery, libraryKind]);
 
   useEffect(() => {
-    void db.documents.orderBy('updatedAt').reverse().limit(16).toArray().then(documents => setContinueDocs(documents.filter(document => document.location.progress > 0).slice(0, 4)));
+    void queryContinueReading().then(setContinueDocs);
   }, [documentRecord]);
 
   useEffect(() => {
@@ -501,6 +503,13 @@ export function App() {
     if (preferences.interfaceMode === 'advanced') void import('../home-advanced.css');
   }, [preferences.interfaceMode]);
 
+  const continueReadingSection = <ContinueReading documents={continueDocs} advanced={preferences.interfaceMode === 'advanced'}
+    positionLabel={doc => positionLabel(doc, doc.location)} kindLabel={documentKindLabel}
+    onOpen={doc => void openDocument(doc)} onDismiss={doc => {
+      void dismissContinueReading(doc.id).then(() => setContinueDocs(items => items.filter(item => item.id !== doc.id)))
+        .catch(() => setImportError('Unable to remove this item from Continue reading. Please try again.'));
+    }} />;
+
   if (!documentRecord) return (
     <main class="home-shell" data-interface-mode={preferences.interfaceMode}>
       {!online && <div class="status-banner" role="status">Offline mode · Saved documents and cached meanings remain available.</div>}
@@ -532,7 +541,7 @@ export function App() {
           {importProgress && <div class="import-progress" role="status"><span>{importProgress}</span><button onClick={() => importControllerRef.current?.abort()}>Cancel</button></div>}
         </section>
       </div>
-      <section class="continue-section"><div class="section-heading"><div><p class="eyebrow">Continue</p><h2>Pick up where you left off</h2></div></div>{continueDocs.length ? <div class="continue-grid">{continueDocs.map(doc => <button class="continue-card" onClick={() => void openDocument(doc)}><span class={`document-badge kind-${doc.kind}`}>{documentKindLabel(doc)}</span><strong>{doc.title}</strong><small>{positionLabel(doc, doc.location)}</small><span class="mini-progress"><i style={{ width: `${Math.round(doc.location.progress * 100)}%` }} /></span></button>)}</div> : <p class="section-empty">Your reading progress will appear here.</p>}</section>
+      {continueReadingSection}
       <section class="library-section">
         <div class="section-heading"><div><p class="eyebrow">Library</p><h2>All documents</h2></div></div>
         <div class="library-tools"><label class="library-search"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input value={libraryQuery} onInput={event => setLibraryQuery(event.currentTarget.value)} placeholder="Search by title" aria-label="Search library" /></label><select aria-label="Filter document type" value={libraryKind} onChange={event => setLibraryKind(event.currentTarget.value as typeof libraryKind)}><option value="all">All types</option><option value="pdf">PDF</option><option value="epub">EPUB</option><option value="docx">DOCX</option><option value="article">Articles</option><option value="text">Text</option><option value="markdown">Markdown</option></select></div>
@@ -559,7 +568,7 @@ export function App() {
           </div>
           <label class="appearance-control">Appearance <select disabled={!preferencesLoaded} aria-label="Appearance" value={preferences.theme} onChange={event => setPreferences({ ...preferences, theme: event.currentTarget.value as AppPreferences['theme'] })}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label></section>
       <section class="home-intro"><p class="eyebrow">Your reading space</p><h2>Start reading.</h2><p>Open a book or paste a passage. Read at your own pace.</p><div class="home-entry-actions"><a class="primary-button" href="#import-document">Import document</a><a class="secondary-button" href="#paste-text">Paste text</a><a class="text-button" href="#library">Library</a></div></section>
-      {continueDocs.length > 0 && <section class="continue-section"><div class="section-heading"><div><h2>Continue reading</h2></div></div><div class="continue-grid">{continueDocs.map(doc => <button class="continue-card" onClick={() => void openDocument(doc)}><DocumentIdentity compact document={doc} detail={positionLabel(doc, doc.location)} kindLabel={documentKindLabel(doc)} /></button>)}</div></section>}
+      {continueDocs.length > 0 && continueReadingSection}
       <div key="home-primary-actions" class="primary-actions">
         <PasteComposer disabled={importing} initialText={sharedDraft} onCreate={imported => void storeImportedDocument(imported)} />
         <section id="import-document" class="action-card import-card">
@@ -584,7 +593,7 @@ export function App() {
       {showOnboarding && <ContextLensOnboarding language={guideLanguage} onLanguageChange={changeGuideLanguage} onClose={() => setShowOnboarding(false)} />}
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} initialVerified={geminiVerified} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
       {showVocabulary && <VocabularyLibrary records={vocabulary} onClose={() => setShowVocabulary(false)} onDelete={(id) => { void db.vocabulary.delete(id); setVocabulary((items) => items.filter((item) => item.id !== id)); }} />}
-      {showDataManagement && <DataManagement onClose={() => setShowDataManagement(false)} onRestored={() => { void queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, limit: 18 }).then(result => { setLibraryDocs(result.items); setLibraryHasMore(result.hasMore); }); void db.documents.orderBy('updatedAt').reverse().limit(16).toArray().then(documents => setContinueDocs(documents.filter(document => document.location.progress > 0).slice(0, 4))); void db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray().then(setVocabulary); }} />}
+      {showDataManagement && <DataManagement onClose={() => setShowDataManagement(false)} onRestored={() => { void queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, limit: 18 }).then(result => { setLibraryDocs(result.items); setLibraryHasMore(result.hasMore); }); void queryContinueReading().then(setContinueDocs); void db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray().then(setVocabulary); }} />}
     </main>
   );
 

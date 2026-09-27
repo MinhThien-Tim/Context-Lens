@@ -33,6 +33,8 @@ export interface DocumentRecord {
   createdAt: number;
   updatedAt: number;
   location: DocumentLocation;
+  /** Homepage dismissal only; never changes the document or reading position. */
+  continueReadingDismissed?: boolean;
   /** Version 1 compatibility. Removed after all existing databases migrate. */
   lastPosition?: number;
 }

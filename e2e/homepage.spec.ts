@@ -65,8 +65,10 @@ test('phase 4 reading shelf and themes preserve document entry', async ({ page }
   await page.evaluate(() => scrollTo(0, 500));
   await page.getByRole('button', { name: 'Back to library' }).click();
   await expect(page.locator('.continue-card')).toHaveCount(1);
+  await page.locator('.continue-disclosure > summary').click();
   await expect(page.locator('.document-cover')).toHaveCount(0);
   await page.getByRole('button', { name: 'Advanced', exact: true }).click();
+  if (!await page.locator('.continue-disclosure').evaluate(element => (element as HTMLDetailsElement).open)) await page.locator('.continue-disclosure > summary').click();
   await expect(page.locator('.document-cover').first()).toBeVisible();
   for (const width of [1366, 1024, 768, 390, 320, 844]) {
     await page.setViewportSize({ width, height: width === 844 ? 390 : 900 });
@@ -77,9 +79,10 @@ test('phase 4 reading shelf and themes preserve document entry', async ({ page }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       for (const mode of ['simple', 'advanced'] as const) {
         await page.getByRole('group', { name: 'Interface density' }).getByRole('button', { name: mode === 'simple' ? 'Simple' : 'Advanced', exact: true }).click();
+        if (!await page.locator('.continue-disclosure').evaluate(element => (element as HTMLDetailsElement).open)) await page.locator('.continue-disclosure > summary').click();
         const card = await page.locator('.continue-card').boundingBox();
         if (mode === 'advanced') expect(card!.height).toBeLessThanOrEqual(104);
-        else await expect(page.getByRole('heading', { name: 'Pick up where you left off' })).toBeVisible();
+        else await expect(page.getByRole('heading', { name: 'Continue reading', exact: true })).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
         await page.screenshot({ path: `tmp/phase4/modes-${width}-${theme}-${mode}.png`, fullPage: true });
       }

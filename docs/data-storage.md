@@ -52,6 +52,12 @@ library → queryDocumentLibrary({ query, kind, offset, limit }) — paged, sort
 Deleting a document does not remove caches or vocabulary; the storage dashboard handles those
 separately.
 
+Homepage Continue reading uses `src/app/continueReading.ts` to select up to 16 recent documents
+with progress and without `continueReadingDismissed`. Dismissal updates only this optional,
+unindexed boolean on `DocumentRecord`; no schema migration is needed. It persists across reloads
+and remains hidden when opened from Library. File data, location, highlights, notes, timestamps,
+and Library queries are unchanged. Backup restoration does not promise to retain this UI flag.
+
 ## Cache data flow
 
 - `EngineCache` writes only through `put()`, which stores

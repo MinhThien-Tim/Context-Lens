@@ -295,6 +295,21 @@ body:has(.pdf-viewer-wrap),body:has(.pdf-reading-view) { overflow:hidden; }
 .continue-card { display:grid; gap:8px; min-height:132px; padding:16px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
 .continue-card strong,.library-open strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; }
 .continue-card small,.library-open small { color:var(--muted); }
+.home-shell .continue-disclosure > summary { display:flex; align-items:center; gap:10px; min-height:44px; cursor:pointer; list-style:none; }
+.continue-disclosure > summary::-webkit-details-marker { display:none; }
+.home-shell .continue-disclosure > summary h2 { margin:0; font-size:20px; }
+.continue-count { color:var(--muted); font-size:12px; }
+.continue-chevron { margin-left:auto; font-size:22px; }
+.continue-disclosure[open] .continue-chevron { transform:rotate(180deg); }
+.home-shell .continue-disclosure .continue-grid { max-height:320px; overflow-y:auto; overscroll-behavior-y:contain; align-items:start; padding:2px; }
+.continue-item { position:relative; min-width:0; }
+.home-shell .continue-disclosure .continue-item .continue-card { width:100%; min-height:100px; padding:10px 44px 10px 12px; gap:4px; }
+.continue-dismiss { position:absolute; top:4px; right:4px; display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:8px; background:transparent; color:var(--muted); font-size:20px; cursor:pointer; }
+.continue-dismiss:hover { background:var(--border); }
+.continue-disclosure > summary:focus-visible,.continue-dismiss:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+@media (max-width:600px) {
+  .home-shell .continue-disclosure .continue-grid { max-height:300px; }
+}
 .document-badge { justify-self:start; padding:3px 7px; border-radius:5px; background:var(--accent-soft); color:var(--accent); font-size:9px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
 .mini-progress { align-self:end; height:3px; overflow:hidden; border-radius:3px; background:var(--border); }
 .mini-progress i { display:block; height:100%; background:var(--accent); }

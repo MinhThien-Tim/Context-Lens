@@ -41,6 +41,8 @@ Rendered by the `if (!documentRecord)` branch in `src/app/App.tsx`. Sections, in
 - Advanced Continue-reading appears before import/paste only when history exists. Simple retains Continue after import/paste, including its empty state and original cards. Advanced document lists reuse presentational
   `DocumentIdentity` for local title-initial covers, existing location/progress, and updated date.
   The current document model has no cover/thumbnail field; no extraction or external service is added.
+  Both densities use the default-closed `ContinueReading` disclosure with a bounded scrolling list.
+  Its sibling dismiss controls call `src/app/continueReading.ts`; App owns the displayed documents.
 - `PasteComposer` and the existing file/article import surface, with stable anchor targets. Simple retains two framed entry surfaces: Paste on the left, Import on the right at tablet/desktop widths; phones stack Paste first.
 - Library: title search, kind filter, `Load more` through `queryDocumentLibrary`, and existing
   per-document transactional delete. Simple retains its original responsive card grid; Advanced uses a compact list with aligned metadata/progress. Phones retain a vertical list.
