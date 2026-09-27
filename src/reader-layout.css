@@ -1,3 +1,6 @@
+@import './styles.mobile-reader.css';
+@import './styles.desktop-reader.css';
+
 /* Reader shell: one chrome geometry for each responsive layout. */
 .reader-shell {
   --reader-header-height:64px;
@@ -437,5 +440,3 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .lookup-sheet .inspector-lookup-tools .explain-toggle,
   .lookup-sheet .explain-more-actions>summary { min-height:44px; }
 }
-@import './styles.mobile-reader.css';
-@import './styles.desktop-reader.css';
