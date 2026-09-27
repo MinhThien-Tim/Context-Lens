@@ -110,3 +110,37 @@ it('passive page updates never navigate; each explicit token navigates once', as
   await act(() => render(<Harness page={3} token={1} />, host)); expect(writes).toBe(2);
   await act(() => render(null, host)); vi.unstubAllGlobals();
 });
+
+it('round-trips the top page fraction while visibility has advanced to the next page', async () => {
+  const host = document.createElement('div'); document.body.append(host);
+  let top = 0, writes = 0;
+  vi.spyOn(HTMLElement.prototype, 'scrollTop', 'get').mockImplementation(() => top);
+  vi.spyOn(HTMLElement.prototype, 'scrollTop', 'set').mockImplementation(value => { top = value; writes++; });
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function(this: HTMLElement) {
+    const page = Number(this.dataset.page ?? 0);
+    const y = page ? 48 + (page - 1) * 468 - top : 0;
+    return { top: y, bottom: y + (page ? 450 : 839), height: page ? 450 : 839 } as DOMRect;
+  });
+  let frame: FrameRequestCallback | undefined;
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { frame = callback; return 1; });
+  vi.stubGlobal('cancelAnimationFrame', vi.fn());
+  const onVisible = vi.fn();
+  function Harness({ page, fraction = 0 }: { page: number; fraction?: number }) {
+    const root = useRef<HTMLDivElement>(null);
+    usePdfScroll(root, '[data-page]', true, { kind: 'pdf', page, pageOffset: fraction, scrollY: 0, progress: 0, updatedAt: 0 }, 0, onVisible);
+    return <div ref={root}>{[1, 2, 3].map(n => <div data-page={n} ref={el => { if (el) Object.defineProperty(el, 'offsetHeight', { value: 450 }); }} />)}</div>;
+  }
+  await act(() => render(<Harness page={1} />, host));
+  Object.defineProperty(host.firstElementChild!, 'clientHeight', { value: 839 });
+  top = 350; host.firstElementChild!.dispatchEvent(new Event('scroll'));
+  await act(() => frame?.(0));
+  const [page, fraction, savedTop, visiblePage] = onVisible.mock.calls.at(-1)!;
+  expect({ page, savedTop, visiblePage }).toEqual({ page: 1, savedTop: 350, visiblePage: 2 });
+  expect(fraction).toBeCloseTo(302 / 450);
+  expect(writes).toBe(1);
+  await act(() => render(null, host));
+  await act(() => render(<Harness page={page} fraction={fraction} />, host));
+  // The same slot geometry restores the exact position on return to Original.
+  expect(top).toBeCloseTo(350);
+  await act(() => render(null, host)); vi.unstubAllGlobals();
+});

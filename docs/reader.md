@@ -45,7 +45,7 @@ It renders plain `content` or sanitized `safeHtml` (markdown/article), and reuse
 | Zoom | `calculatePdfScale` fit-width / fit-page / custom; desktop control bar, mobile overflow menu | Reader typography only (`--reader-size`, `--reader-leading`, `--reader-font`) |
 | OCR display | Never overlays OCR on the original page | Renders OCR text for pages that need it |
 | Extra chrome | Shared top mode switch + Document tools, quiet zoom controls | Shared top mode switch + Document tools, reading typography |
-| Page mounting | Current page + one neighbor kept mounted, skipped while OCR is busy (`neighbor` in `PdfViewer`) | All pages in one scroll container |
+| Page mounting | Visible page + immediate previous/next pages, at most three canvases; neighbors skipped while OCR is busy | All pages in one scroll container |
 
 Both PDF surfaces share the shell bottom `PageNavigation`; the header Original/Reading segment
 contains only the two view choices, with OCR/source controls in a separate Document tools popover.
@@ -70,8 +70,10 @@ disabled under the same condition.
   reading keeps working offline.
 - Geometry: `PdfViewer` resolves all page sizes first (`ready` gate) before mounting canvases,
   so restoring a saved location does not allocate canvases at the wrong scale.
-- Scrolling: `usePdfScroll` reports page + page fraction; `PdfViewer` converts that into a
-  document `absoluteOffset` using `pageOffsets`, then persists a debounced location.
+- Scrolling: `usePdfScroll` reports the page crossing the viewport top + its page fraction;
+  `PdfViewer` converts that into a document `absoluteOffset` using `pageOffsets`, then persists
+  a debounced location. Visibility hysteresis is reported separately for bounded canvas mounting;
+  it does not replace the saved top-of-viewport position.
 - Password failure, geometry failure, and "still opening" each render a distinct `pdf-state`
   surface in `PdfViewer`.
 
@@ -102,7 +104,8 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 - Original Reader: `selectionAdapter.ts` converts a PDF.js text-layer range through `PdfTextIndex`.
 - Reading Mode: `readingSelectionAdapter.ts` maps rendered blocks back to `documentRecord.content`;
   a 160 ms `selectionchange` debounce produces the selection, and the click that follows a
-  selection is ignored once (`ignoreClick`).
+  selection is ignored once (`ignoreClick`). Define consumes that selection and clears its native
+  range and click suppression so the first word tap after closing lookup remains usable.
 - Selection inside an OCR page is intentionally not captured by native selection
   (`closest('[data-ocr-page]')` guard in `PdfReadingView`).
 - `App.tsx` `makeRequest` builds the `LookupRequest` consumed by `LookupService`.
@@ -167,7 +170,8 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 2. `structuredPages.ts` is the single page-model source. Do not re-extract text in Reading Mode.
 3. Canonical offsets come from `pageOffsets`; normalization is only for alignment.
 4. OCR is additive: separate table, separate key, per-page opt-in, original page retained.
-5. `PdfPage` mounting stays bounded (current page + neighbor, paused during OCR).
+5. `PdfPage` mounting stays bounded (visible page + immediate previous/next, at most three;
+   neighbors paused during OCR).
 6. Heavy PDF/OCR libraries stay behind dynamic `import()` and their own Rollup chunks.
 7. **No scroll-observer / navigation feedback loop.** Both PDF modes read position from the shared
    `usePdfScroll` controller (passive, RAF-coalesced, complete slot geometry, boundary hysteresis)

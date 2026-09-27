@@ -18,7 +18,7 @@ export function pageAtPosition(slots: HTMLElement[], root: HTMLElement, previous
 /** Passive tracking cannot navigate. Only a changed command token or initial mount can restore. */
 export function usePdfScroll(rootRef: RefObject<HTMLDivElement>, selector: string, ready: boolean,
   location: PdfDocumentLocation, navigationToken: number,
-  onVisible: (page: number, fraction: number, scrollY: number) => void, geometryKey?: unknown) {
+  onVisible: (page: number, fraction: number, scrollY: number, visiblePage: number) => void, geometryKey?: unknown) {
   const latest = useRef({ location, onVisible });
   latest.current = { location, onVisible };
   const currentPage = useRef(location.page);
@@ -32,7 +32,7 @@ export function usePdfScroll(rootRef: RefObject<HTMLDivElement>, selector: strin
     currentPage.current = page;
     root.scrollTop = root.scrollTop + slot.getBoundingClientRect().top - root.getBoundingClientRect().top - root.clientTop + slot.offsetHeight * Math.max(0, Math.min(1, fraction));
     commandedTop.current = root.scrollTop;
-    latest.current.onVisible(page, fraction, root.scrollTop);
+    latest.current.onVisible(page, fraction, root.scrollTop, page);
   };
   useEffect(() => {
     if (!ready) return;
@@ -48,12 +48,17 @@ export function usePdfScroll(rootRef: RefObject<HTMLDivElement>, selector: strin
       commandedTop.current = undefined;
       if (commanded !== undefined && Math.abs(root.scrollTop - commanded) < 1) return;
       const slots = Array.from(root.querySelectorAll<HTMLElement>(selector));
-      const page = pageAtPosition(slots, root, currentPage.current);
+      const visiblePage = pageAtPosition(slots, root, currentPage.current);
+      // Visibility hysteresis is for rendering. Persist the page crossing the
+      // viewport's top so restoring page + fraction cannot skip visible text.
+      const top = root.getBoundingClientRect().top + root.clientTop;
+      const anchor = slots.findIndex(slot => slot.getBoundingClientRect().bottom > top);
+      const page = anchor < 0 ? slots.length : anchor + 1;
       const slot = slots[page - 1];
       if (!slot) return;
-      currentPage.current = page;
-      const fraction = Math.max(0, Math.min(1, (root.getBoundingClientRect().top + root.clientTop - slot.getBoundingClientRect().top) / Math.max(1, slot.offsetHeight)));
-      latest.current.onVisible(page, fraction, root.scrollTop);
+      currentPage.current = visiblePage;
+      const fraction = Math.max(0, Math.min(1, (top - slot.getBoundingClientRect().top) / Math.max(1, slot.offsetHeight)));
+      latest.current.onVisible(page, fraction, root.scrollTop, visiblePage);
     };
     const schedule = () => { if (!raf) raf = requestAnimationFrame(track); };
     root.addEventListener('scroll', schedule, { passive: true });

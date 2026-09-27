@@ -34,8 +34,8 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
   const [bounds, setBounds] = useState({ width: window.innerWidth, height: window.innerHeight - 110 });
   const scaleFor = (size: PdfPageSize) => calculatePdfScale(effectiveZoom, customScale, bounds.width, bounds.height, size.width, size.height);
   const geometryKey = `${effectiveZoom}:${customScale}:${bounds.width}:${bounds.height}`;
-  // Keep the current page and one page ahead (or behind at the end) mounted.
-  const neighbor = visible < (pdf?.numPages ?? 1) ? visible + 1 : visible - 1;
+  // The previous page can still be visible when tracking advances. Keep both
+  // neighbors within the existing three-canvas budget; OCR keeps only one.
 
   // Resolve geometry without allocating canvases before restoring the saved location.
   useEffect(() => {
@@ -56,8 +56,8 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
   }, [pdf]);
   const ready = Boolean(pdf && Object.keys(sizes).length === pdf.numPages);
   const lastPosition = useRef('');
-  const goTo = usePdfScroll(rootRef, '.pdf-page-slot', ready, location, navigationToken, (page, pageOffset, scrollY) => {
-    setVisible(page);
+  const goTo = usePdfScroll(rootRef, '.pdf-page-slot', ready, location, navigationToken, (page, pageOffset, scrollY, visiblePage) => {
+    setVisible(visiblePage);
     const key = `${page}:${Math.round(pageOffset * 1000)}:${Math.round(scrollY)}`;
     if (lastPosition.current === key || !pdf) return;
     lastPosition.current = key;
@@ -84,7 +84,7 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
         const size = sizes[pageNumber] ?? DEFAULT_SIZE;
         const scale = scaleFor(size);
         return <div key={pageNumber} class="pdf-page-slot" data-pdf-page={pageNumber} style={{ width: `${size.width * scale}px`, height: `${size.height * scale}px` }}>
-          {(pageNumber === visible || (!ocrBusy && pageNumber === neighbor)) && <PdfPage pdf={pdf} pageNumber={pageNumber} scale={scale} active documentText={documentRecord.content} pageOffset={pdfOffsetForPage(documentRecord.pageOffsets, pageNumber)} onSize={() => {}} onNavigate={page => goTo(page)} pageEnd={documentRecord.pageOffsets?.[pageNumber] ?? documentRecord.content.length} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={onHighlight} onErase={onErase} onLookup={onLookup} onAddNote={onAddNote} />}
+          {(pageNumber === visible || (!ocrBusy && Math.abs(pageNumber - visible) === 1)) && <PdfPage pdf={pdf} pageNumber={pageNumber} scale={scale} active documentText={documentRecord.content} pageOffset={pdfOffsetForPage(documentRecord.pageOffsets, pageNumber)} onSize={() => {}} onNavigate={page => goTo(page)} pageEnd={documentRecord.pageOffsets?.[pageNumber] ?? documentRecord.content.length} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={onHighlight} onErase={onErase} onLookup={onLookup} onAddNote={onAddNote} />}
         </div>;
       })}
     </div>
