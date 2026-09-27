@@ -1,0 +1,203 @@
+{
+  "source": "https://aclanthology.org/P19-1285.pdf",
+  "page": 1,
+  "width": 595.276,
+  "height": 841.89,
+  "items": [
+    {
+      "str": "Transformer-XL: Attentive Language Models",
+      "transform": [
+        14.3462,
+        0,
+        0,
+        14.3462,
+        159.041,
+        760.197
+      ],
+      "width": 279.463976,
+      "height": 14.3462
+    },
+    {
+      "str": "Transformers",
+      "transform": [
+        9.9626,
+        0,
+        0,
+        9.9626,
+        89.008,
+        588.53
+      ],
+      "width": 53.31983520000001,
+      "height": 9.9626
+    },
+    {
+      "str": "have",
+      "transform": [
+        9.9626,
+        0,
+        0,
+        9.9626,
+        148.77363740000004,
+        588.53
+      ],
+      "width": 18.4606978,
+      "height": 9.9626
+    },
+    {
+      "str": "a",
+      "transform": [
+        9.9626,
+        0,
+        0,
+        9.9626,
+        173.68013740000006,
+        588.53
+      ],
+      "width": 4.4233944,
+      "height": 9.9626
+    },
+    {
+      "str": "potential",
+      "transform": [
+        9.9626,
+        0,
+        0,
+        9.9626,
+        184.54933400000007,
+        588.53
+      ],
+      "width": 34.8691,
+      "height": 9.9626
+    },
+    {
+      "str": "of",
+      "transform": [
+        9.9626,
+        0,
+        0,
+        9.9626,
+        225.8642362000001,
+        588.53
+      ],
+      "width": 8.2988458,
+      "height": 9.9626
+    },
+    {
+      "str": "learning",
+      "transform": [
+        9.9626,
+        0,
+        0,
+        9.9626,
+        240.60888420000012,
+        588.53
+      ],
+      "width": 32.6474402,
+      "height": 9.9626
+    },
+    {
+      "str": "longer-term dependency, but are limited by a",
+      "transform": [
+        9.9626,
+        0,
+        0,
+        9.9626,
+        89.008,
+        576.575
+      ],
+      "width": 184.24832440000003,
+      "height": 9.9626
+    },
+    {
+      "str": "fixed-length context in the setting of language",
+      "transform": [
+        9.9626,
+        0,
+        0,
+        9.9626,
+        89.008,
+        564.62
+      ],
+      "width": 184.2483244,
+      "height": 9.9626
+    },
+    {
+      "str": "modeling.",
+      "transform": [
+        9.9626,
+        0,
+        0,
+        9.9626,
+        89.008,
+        552.665
+      ],
+      "width": 40.12935280000001,
+      "height": 9.9626
+    },
+    {
+      "str": "We propose a novel neural ar-",
+      "transform": [
+        9.9626,
+        0,
+        0,
+        9.9626,
+        140.47479160000003,
+        552.665
+      ],
+      "width": 132.78153280000004,
+      "height": 9.9626
+    },
+    {
+      "str": "tion to language modeling and obtained strong",
+      "transform": [
+        10.9091,
+        0,
+        0,
+        10.9091,
+        307.276,
+        581.292
+      ],
+      "width": 218.26927280000004,
+      "height": 10.9091
+    },
+    {
+      "str": "results on multiple benchmarks.",
+      "transform": [
+        10.9091,
+        0,
+        0,
+        10.9091,
+        307.276,
+        567.743
+      ],
+      "width": 150.57830730000006,
+      "height": 10.9091
+    },
+    {
+      "str": "Despite the",
+      "transform": [
+        10.9091,
+        0,
+        0,
+        10.9091,
+        472.4288649000002,
+        567.743
+      ],
+      "width": 53.11640790000005,
+      "height": 10.9091
+    },
+    {
+      "str": "wide adaption, RNNs are difficult to optimize",
+      "transform": [
+        10.9091,
+        0,
+        0,
+        10.9091,
+        307.276,
+        554.194
+      ],
+      "width": 218.26927279999995,
+      "height": 10.9091
+    }
+  ]
+}

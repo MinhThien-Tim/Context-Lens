@@ -70,6 +70,9 @@ disabled under the same condition.
   reading keeps working offline.
 - Geometry: `PdfViewer` resolves all page sizes first (`ready` gate) before mounting canvases,
   so restoring a saved location does not allocate canvases at the wrong scale.
+- Zoom buttons step from the displayed scale of the visible page, including fit modes;
+  custom scale is bounded to 0.1–3. Mobile zoom remains session-local and resets to fit-width
+  when the viewer remounts. Pinch gestures and margin cropping are not implemented.
 - Scrolling: `usePdfScroll` reports the page crossing the viewport top + its page fraction;
   `PdfViewer` converts that into a document `absoluteOffset` using `pageOffsets`, then persists
   a debounced location. Visibility hysteresis is reported separately for bounded canvas mounting;
@@ -81,6 +84,12 @@ disabled under the same condition.
 
 - Extraction happens **at import**, not at render: `src/documents/pdf/extractStructuredPages.ts`
   produces `PdfStructuredPage { pageNumber, startOffset, endOffset, plainText, extractionQuality, blocks }`.
+- Two-column ordering requires repeated body-sized text regions with comparable font sizes and
+  overlapping vertical coverage (at least three right-edge baselines and two left-region baselines).
+  A confirmed gutter splits rows before joining. Text crossing the gutter remains in visual order
+  as a separator; each intervening band reads left column then right column. Without that evidence,
+  extraction retains top-to-bottom, then left-to-right order. Sparse columns, fragmented items,
+  asymmetric layouts and unmarked inset quotations remain limitations; tables/figures are not parsed.
 - Line joining keeps an indented paragraph boundary when the preceding line is short and ends
   a sentence. Only an explicit soft hyphen is removed across lines; hard hyphens remain because
   lexical compounds and discretionary breaks cannot reliably be distinguished from geometry.

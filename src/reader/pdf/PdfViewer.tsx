@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { DocumentRecord } from '../../db/database';
 import type { PdfDocumentLocation } from '../../documents/location';
 import type { ReaderSelection } from '../TextReader';
-import { calculatePdfScale, pdfOffsetForPage, type PdfZoomMode } from './navigation';
+import { calculatePdfScale, pdfOffsetForPage, stepPdfScale, type PdfZoomMode } from './navigation';
 import { PdfPage, type PdfPageSize } from './PdfPage';
 import { usePdfDocument } from './usePdfDocument';
 import { usePdfScroll } from './usePdfScroll';
@@ -33,6 +33,10 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
   const [customScale, setCustomScale] = useState(1);
   const [bounds, setBounds] = useState({ width: window.innerWidth, height: window.innerHeight - 110 });
   const scaleFor = (size: PdfPageSize) => calculatePdfScale(effectiveZoom, customScale, bounds.width, bounds.height, size.width, size.height);
+  const stepZoom = (direction: -1 | 1) => {
+    setCustomScale(stepPdfScale(scaleFor(sizes[visible] ?? DEFAULT_SIZE), direction));
+    changeZoom('custom');
+  };
   const geometryKey = `${effectiveZoom}:${customScale}:${bounds.width}:${bounds.height}`;
   // The previous page can still be visible when tracking advances. Keep both
   // neighbors within the existing three-canvas budget; OCR keeps only one.
@@ -77,7 +81,7 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
   if (!pdf || !ready) return <div class="pdf-state" role="status">Opening PDF…</div>;
   return <div class="pdf-viewer-wrap">
     <div class="pdf-toolbar" aria-label="PDF controls">
-      {desktop && interfaceMode === 'advanced' ? <><button aria-label="Zoom out" onClick={() => { changeZoom('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>−</button><button aria-label="Zoom in" onClick={() => { changeZoom('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>+</button><select aria-label="PDF zoom" value={effectiveZoom} onChange={event => changeZoom(event.currentTarget.value as PdfZoomMode)}><option value="fit-width">Vừa chiều ngang</option><option value="fit-page">Vừa trang</option><option value="custom">Tùy chỉnh</option></select></> : <div class="pdf-more" ref={zoomMenu}><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>Zoom</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => { changeZoom('custom'); setCustomScale(value => Math.max(.5, value - .15)); }}>Zoom out</button><button onClick={() => { changeZoom('custom'); setCustomScale(value => Math.min(3, value + .15)); }}>Zoom in</button><button onClick={() => changeZoom('fit-width')}>Fit width</button><button onClick={() => changeZoom('fit-page')}>Fit page</button></div>}</div>}
+      {desktop && interfaceMode === 'advanced' ? <><button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button><button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button><select aria-label="PDF zoom" value={effectiveZoom} onChange={event => changeZoom(event.currentTarget.value as PdfZoomMode)}><option value="fit-width">Vừa chiều ngang</option><option value="fit-page">Vừa trang</option><option value="custom">Tùy chỉnh</option></select></> : <div class="pdf-more" ref={zoomMenu}><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>Zoom</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => stepZoom(-1)}>Zoom out</button><button onClick={() => stepZoom(1)}>Zoom in</button><button onClick={() => changeZoom('fit-width')}>Fit width</button><button onClick={() => changeZoom('fit-page')}>Fit page</button></div>}</div>}
     </div>
     <div ref={rootRef} class="pdf-scroll" tabIndex={0}>
       {Array.from({ length: pdf.numPages }, (_, index) => index + 1).map(pageNumber => {

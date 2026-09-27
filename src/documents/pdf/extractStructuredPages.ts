@@ -35,6 +35,13 @@ export function extractStructuredPage(pageNumber: number, sourceItems: PdfSource
 
 function groupTextItems(items: PdfSourceTextItem[], pageWidth: number): Line[] {
   const parts = items.map(item => ({ item, x: item.transform[4] ?? 0, y: item.transform[5] ?? 0, fontSize: Math.abs(item.transform[3] ?? item.height ?? 12) || 12 })).filter(part => part.item.str.length);
+  // Infer a repeated right body edge before row joining can swallow a narrow gutter.
+  const body = parts.filter(part => part.item.str.trim().length > 8 && part.item.width >= pageWidth * .15 && part.item.width <= pageWidth * .48 && !/^[“"‘']/.test(part.item.str));
+  const rightRegion = body.find(candidate => {
+    const right = body.filter(part => Math.abs(part.x - candidate.x) <= candidate.fontSize && Math.abs(part.fontSize - candidate.fontSize) <= candidate.fontSize * .25);
+    const left = body.filter(part => part.x + part.item.width < candidate.x - candidate.fontSize && part.x < candidate.x - pageWidth * .25 && Math.abs(part.fontSize - candidate.fontSize) <= candidate.fontSize * .25);
+    return new Set(right.map(part => Math.round(part.y))).size >= 3 && new Set(left.map(part => Math.round(part.y))).size >= 2 && right.filter(a => left.some(b => Math.abs(a.y - b.y) < candidate.fontSize * 3)).length >= 3;
+  });
   const rows: Array<{ y: number; parts: typeof parts }> = [];
   for (const part of [...parts].sort((a, b) => b.y - a.y || a.x - b.x)) {
     const row = rows.find(candidate => Math.abs(candidate.y - part.y) <= Math.max(2, part.fontSize * .28));
@@ -47,7 +54,8 @@ function groupTextItems(items: PdfSourceTextItem[], pageWidth: number): Line[] {
     let right = 0;
     for (const part of row.parts) {
       const gap = part.x - right;
-      if (chunks.at(-1)!.length && gap > Math.max(part.fontSize * 2.8, pageWidth * .13)) chunks.push([]);
+      const crossesGutter = rightRegion && Math.abs(part.x - rightRegion.x) <= rightRegion.fontSize && right < rightRegion.x - rightRegion.fontSize;
+      if (chunks.at(-1)!.length && (crossesGutter || gap > Math.max(part.fontSize * 2.8, pageWidth * .13))) chunks.push([]);
       chunks.at(-1)!.push(part);
       right = Math.max(right, part.x + part.item.width);
     }
@@ -71,12 +79,23 @@ function groupTextItems(items: PdfSourceTextItem[], pageWidth: number): Line[] {
       lines.push({ text, x, y: row.y, width: Math.max(...chunk.map(part => part.x + part.item.width)) - x, fontSize: Math.max(...chunk.map(part => part.fontSize)), column: 0, letterSpaced });
     }
   }
-  // A column is a repeated body-text region, not the x coordinate of a title glyph.
-  const left = lines.filter(line => line.x < pageWidth * .45 && line.x + line.width < pageWidth * .62 && line.text.length > 8);
-  const right = lines.filter(line => line.x > pageWidth * .5 && line.text.length > 8);
-  const twoColumns = left.length >= 2 && right.length >= 2 && left.some(a => right.some(b => Math.abs(a.y - b.y) < a.fontSize * 3));
-  if (twoColumns) for (const line of lines) line.column = line.x > pageWidth * .5 ? 1 : 0;
-  return lines.sort((a, b) => a.column - b.column || b.y - a.y || a.x - b.x);
+  const visual = lines.sort((a, b) => b.y - a.y || a.x - b.x);
+  if (!rightRegion) return visual;
+  const edge = rightRegion.x;
+  const ordered: Line[] = [];
+  let band: Line[] = [], bandNumber = 0;
+  const flush = () => {
+    for (const line of band) line.column = bandNumber * 3 + (line.x >= edge - rightRegion.fontSize ? 1 : 0);
+    ordered.push(...band.sort((a, b) => a.column - b.column || b.y - a.y || a.x - b.x));
+    band = []; bandNumber++;
+  };
+  for (const line of visual) {
+    if (line.x < edge - rightRegion.fontSize && line.x + line.width > edge + rightRegion.fontSize) {
+      flush(); line.column = bandNumber * 3 - 1; ordered.push(line);
+    } else band.push(line);
+  }
+  flush();
+  return ordered;
 }
 
 function classifyLine(line: Line, median: number, pageHeight: number): PdfTextBlock['type'] {

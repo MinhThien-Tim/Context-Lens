@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { extractStructuredPage, joinLines, shiftStructuredPage } from './extractStructuredPages';
 import type { PdfSourceTextItem } from './types';
 import { readingExtractionSamples } from './readingExtraction.fixtures';
+import realColumns from './twoColumn.real.fixture.json';
 
 const item = (str: string, x: number, y: number, size = 12, width = str.length * 6): PdfSourceTextItem => ({ str, width, height: size, transform: [size, 0, 0, size, x, y] });
 
@@ -21,8 +22,42 @@ describe('structured PDF extraction', () => {
   });
 
   it('orders the left column before the right column', () => {
-    const page = extractStructuredPage(1, [item('Right first visually', 340, 720), item('Left first logically', 30, 710), item('Right second', 340, 700), item('Left second', 30, 690)], 600, 800);
+    const page = extractStructuredPage(1, [item('Right first visually', 340, 720), item('Left first logically', 30, 710), item('Right second body line', 340, 700), item('Left second body line', 30, 690), item('Right third body line', 340, 680), item('Left third body line', 30, 670)], 600, 800);
     expect(page.plainText.indexOf('Left')).toBeLessThan(page.plainText.indexOf('Right'));
+  });
+
+  it('reads the real ACL page excerpt left column then right, with its spanning title first', () => {
+    const page = shiftStructuredPage(extractStructuredPage(1, realColumns.items, realColumns.width, realColumns.height), 100);
+    expect(page.plainText.startsWith('Transformer-XL: Attentive Language Models')).toBe(true);
+    expect(page.plainText.indexOf('We propose')).toBeLessThan(page.plainText.indexOf('tion to language'));
+    expect(page.plainText.indexOf('fixed-length')).toBeLessThan(page.plainText.indexOf('results on multiple'));
+    expect(page.plainText).toContain('longer-term dependency, but are limited by a fixed-length context in the setting of language modeling. We propose a novel neural ar-');
+    for (const block of page.blocks) expect(page.plainText.slice(block.startOffset - 100, block.endOffset - 100)).toBe(block.text);
+    expect(page.endOffset).toBe(100 + page.plainText.length);
+  });
+
+  it('places spanning title, quotation and footnote around complete column bands', () => {
+    const items = [item('A spanning title for both columns', 40, 760, 20, 510),
+      ...[700, 684, 668].flatMap((y, i) => [item(`Left body line ${i}`, 40, y, 12, 220), item(`Right body line ${i}`, 330, y, 12, 220)]),
+      item('“A spanning quotation across both text regions.”', 60, 620, 12, 490),
+      ...[580, 564, 548].flatMap((y, i) => [item(`Lower left line ${i}`, 40, y, 12, 220), item(`Lower right line ${i}`, 330, y, 12, 220)]),
+      item('1 A full width footnote explaining the source.', 40, 60, 9, 510)];
+    const text = extractStructuredPage(1, items, 600, 800).plainText;
+    const phrases = ['A spanning title', 'Left body line 2', 'Right body line 0', 'Right body line 2', 'A spanning quotation', 'Lower left line 2', 'Lower right line 0', 'full width footnote'];
+    for (let i = 1; i < phrases.length; i++) expect(text.indexOf(phrases[i])).toBeGreaterThan(text.indexOf(phrases[i - 1]));
+  });
+
+  it('does not turn isolated right-aligned quotes into a second column', () => {
+    const items = [item('First short body line.', 40, 700), item('“An inset quotation.”', 340, 680), item('Second short body line.', 40, 660), item('“Another quotation.”', 340, 640), item('Body text resumes here.', 40, 620)];
+    const text = extractStructuredPage(1, items, 600, 800).plainText;
+    expect(text.indexOf('An inset')).toBeLessThan(text.indexOf('Second short'));
+    expect(text.indexOf('Another quotation')).toBeLessThan(text.indexOf('Body text resumes'));
+  });
+
+  it('keeps visual order when only two lines support each possible column', () => {
+    const page = extractStructuredPage(1, [item('Right first visually', 340, 720), item('Left first logically', 30, 710), item('Right second', 340, 700), item('Left second', 30, 690)], 600, 800);
+    expect(page.plainText.indexOf('Right first')).toBeLessThan(page.plainText.indexOf('Left first'));
+    expect(page.plainText.indexOf('Left first')).toBeLessThan(page.plainText.indexOf('Right second'));
   });
 
   it('joins explicit soft hyphens but preserves ambiguous hard hyphens', () => {

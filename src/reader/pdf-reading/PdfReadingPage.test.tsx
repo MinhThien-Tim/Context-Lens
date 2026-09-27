@@ -6,14 +6,16 @@ import type { DocumentRecord } from '../../db/database';
 import { extractStructuredPage, shiftStructuredPage } from '../../documents/pdf/extractStructuredPages';
 import { readingExtractionSamples } from '../../documents/pdf/readingExtraction.fixtures';
 import { readingSelectionFromDom, readingWordFromRange } from './readingSelectionAdapter';
+import realColumns from '../../documents/pdf/twoColumn.real.fixture.json';
 
 describe('paginated PDF reading', () => {
   it('keeps fixture text order, page offsets, selection and highlights aligned', () => {
     let content = '';
     const pageOffsets: number[] = [];
-    const pages = Object.values(readingExtractionSamples).map((items, index) => {
+    const samples = [...Object.values(readingExtractionSamples).map(items => ({ items, width: 600, height: 800 })), realColumns];
+    const pages = samples.map(({ items, width, height }, index) => {
       pageOffsets.push(content.length);
-      const page = shiftStructuredPage(extractStructuredPage(index + 1, items, 600, 800), content.length);
+      const page = shiftStructuredPage(extractStructuredPage(index + 1, items, width, height), content.length);
       content += page.plainText + '\n\n';
       return page;
     });

@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { calculatePdfScale, pdfOffsetForPage, pdfPageForOffset } from './navigation';
+import { calculatePdfScale, pdfOffsetForPage, pdfPageForOffset, stepPdfScale } from './navigation';
 
 describe('PDF navigation', () => {
+  it('steps from the displayed fit scale on narrow phones', () => {
+    const fitted = calculatePdfScale('fit-width', 1, 320, 700, 612, 792);
+    expect(stepPdfScale(fitted, -1)).toBeLessThan(fitted);
+    expect(stepPdfScale(fitted, 1)).toBeCloseTo(fitted + .15);
+    expect(calculatePdfScale('custom', stepPdfScale(fitted, -1), 320, 700, 612, 792)).toBeLessThan(fitted);
+  });
   it('maps pages and text offsets in both directions, including blank pages', () => {
     const offsets = [0, 12, 12, 40];
     expect(pdfOffsetForPage(offsets, 3)).toBe(12);
