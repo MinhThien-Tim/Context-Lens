@@ -163,8 +163,10 @@ There is no global store. Ownership rules:
   `usePdfOcrQueue` queue status, `VocabularyLibrary` and `DataManagement` modals.
 - Data is not mirrored into component state: the reader holds a `DocumentRecord` and re-renders
   after `db.documents.update`.
-- Reading typography is passed down as CSS custom properties (`--reader-size`, `--reader-leading`,
-  `--reader-font`) from the `readerStyle` memo in `App.tsx`.
+- Reading typography and page margins are passed as CSS custom properties from the `readerStyle`
+  memo in `App.tsx`. `ReaderSettings` provides Book, News and Academic presets plus manual controls;
+  size, line height, font, margin and appearance use the existing `reader-preferences` record, with
+  no per-document or location state.
 
 ## Theme system
 

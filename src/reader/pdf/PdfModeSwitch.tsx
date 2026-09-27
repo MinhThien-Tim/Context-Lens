@@ -49,7 +49,14 @@ export function PdfModeSwitch({ showNext = true, mode, uiLanguage, canRead, hasP
       {queueStatus?.state === 'running' && <button onClick={onPause}>Tạm dừng OCR</button>}
       {queueStatus?.state === 'paused' && <button onClick={onContinue}>Tiếp tục OCR</button>}
       {queueStatus && <button onClick={onCancel}>Hủy OCR</button>}
-      {queueStatus?.message && <p role="status">{queueStatus.message}</p>}
+      {queueStatus && <p role="status">
+        {queueStatus.state === 'preparing' ? (uiLanguage === 'vi' ? 'Đang kiểm tra trang cần OCR…' : 'Checking pages for OCR…') : <>
+          {queueStatus.state === 'paused' && (uiLanguage === 'vi' ? 'Tạm dừng trước trang tiếp theo. ' : 'Paused before the next page. ')}
+          {uiLanguage === 'vi' ? 'Đã xong' : 'Completed'} {queueStatus.completed}/{queueStatus.total}
+          {queueStatus.page !== undefined && <> · {uiLanguage === 'vi' ? 'Trang' : 'Page'} {queueStatus.page}: {queueStatus.progress}%</>}
+        </>}
+        {queueStatus.message && <> · {queueStatus.message}</>}
+      </p>}
       {hasAnyOcr && <button disabled={busy} onClick={() => { setOpen(false); onClear(); }}>Xóa kết quả OCR của tài liệu</button>}
       <p>OCR chạy trên thiết bị. Lần đầu tải khoảng 5–10 MB. Chữ nhận dạng có thể sai.</p>
       </section></>}

@@ -119,6 +119,29 @@ test('plain text creates a persistent library item that can be searched, opened 
   await expect(page.locator('.library-card')).toHaveCount(0);
 });
 
+test('reader presets and manual typography controls fit one phone viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Plain text', exact: true }).click();
+  await page.getByLabel('Paste and edit plain text').fill('A phone reading sample with enough words to check its visible width.');
+  await page.getByRole('button', { name: /Preview & read/ }).click();
+  const reader = page.locator('.reader-text');
+  await expect(reader).toBeVisible();
+  await page.getByRole('button', { name: 'Reading appearance', exact: true }).click();
+  const settings = page.getByRole('dialog', { name: 'Reader settings' });
+  await settings.getByRole('button', { name: 'News', exact: true }).click();
+  await expect(reader).toHaveCSS('font-size', '18px');
+  expect(await reader.evaluate(element => getComputedStyle(element).fontFamily)).toContain('ui-sans-serif');
+  const newsWidth = await reader.evaluate(element => element.getBoundingClientRect().width);
+  await settings.getByRole('button', { name: 'Wide', exact: true }).click();
+  const wideWidth = await reader.evaluate(element => element.getBoundingClientRect().width);
+  expect(wideWidth).toBeLessThan(newsWidth);
+  await settings.getByLabel('Text size').fill('23');
+  await expect(reader).toHaveCSS('font-size', '23px');
+  await expect(settings.getByRole('button', { name: 'News', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).resolves.toBe(true);
+});
+
 
 test('density switch preserves rich and plain drafts, URL and reader preferences', async ({ page }) => {
   await page.goto('/');

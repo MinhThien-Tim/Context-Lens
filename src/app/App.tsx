@@ -247,8 +247,10 @@ export function App() {
 
   const readerStyle = useMemo(() => ({
     '--reader-size': `${preferences.fontSize}px`, '--reader-leading': String(preferences.lineHeight),
-    '--reader-font': preferences.fontFamily === 'serif' ? 'var(--font-reading)' : 'var(--font-ui)'
-  }), [preferences]);
+    '--reader-font': preferences.fontFamily === 'serif' ? 'var(--font-reading)' : 'var(--font-ui)',
+    '--reader-gutter-total': preferences.readingMargin === 'narrow' ? '24px' : preferences.readingMargin === 'wide' ? '52px' : '36px',
+    '--reader-page-padding': preferences.readingMargin === 'narrow' ? '12px' : preferences.readingMargin === 'wide' ? '26px' : '18px'
+  }), [preferences.fontSize, preferences.lineHeight, preferences.fontFamily, preferences.readingMargin]);
 
   useEffect(() => {
     setContentsOpen(Boolean(documentRecord && desktop && preferences.interfaceMode === 'advanced'));

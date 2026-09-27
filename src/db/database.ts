@@ -256,6 +256,7 @@ export interface AppPreferences {
   fontSize: number;
   lineHeight: number;
   fontFamily: 'serif' | 'sans';
+  readingMargin: 'narrow' | 'comfortable' | 'wide';
   theme: 'light' | 'dark' | 'system';
   pdfViewMode: 'original' | 'reading';
   pdfMobileViewMode: 'original' | 'reading';
@@ -271,6 +272,7 @@ export const defaultPreferences: AppPreferences = {
   fontSize: 19,
   lineHeight: 1.75,
   fontFamily: 'serif',
+  readingMargin: 'comfortable',
   theme: 'system',
   pdfViewMode: 'original',
   pdfMobileViewMode: 'reading',
@@ -285,9 +287,17 @@ export async function loadPreferences(): Promise<AppPreferences> {
   const interfaceMode: AppPreferences['interfaceMode'] = rawMode === 'simple' || rawMode === 'advanced' ? rawMode
     : (rawMode ?? legacy?.value) === 'bright' ? 'advanced' : 'simple';
   const theme = ['system', 'light', 'dark'].includes(stored.theme ?? '') ? stored.theme! : 'system';
+  const fontSize = typeof stored.fontSize === 'number' && Number.isFinite(stored.fontSize)
+    ? Math.min(26, Math.max(16, Math.round(stored.fontSize))) : defaultPreferences.fontSize;
+  const lineHeight = typeof stored.lineHeight === 'number' && Number.isFinite(stored.lineHeight)
+    ? Math.round(Math.min(2.1, Math.max(1.4, stored.lineHeight)) * 20) / 20 : defaultPreferences.lineHeight;
+  const fontFamily: AppPreferences['fontFamily'] = stored.fontFamily === 'sans' ? 'sans' : stored.fontFamily === 'serif' ? 'serif' : defaultPreferences.fontFamily;
+  const readingMargin: AppPreferences['readingMargin'] = ['narrow', 'comfortable', 'wide'].includes(stored.readingMargin ?? '')
+    ? stored.readingMargin! : defaultPreferences.readingMargin;
   const lookupViewMode: AppPreferences['lookupViewMode'] = stored.lookupViewMode === 'full' ? 'full' : 'quick';
-  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, lookupViewMode, lookupQuickMode: stored.lookupQuickMode === 'simple' ? 'simple' as const : 'standard' as const, lookupPopupPlacement: normalizePopupPlacement(stored.lookupPopupPlacement) };
-  if (rawMode !== interfaceMode || stored.theme !== theme || legacy) {
+  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, fontSize, lineHeight, fontFamily, readingMargin, lookupViewMode, lookupQuickMode: stored.lookupQuickMode === 'simple' ? 'simple' as const : 'standard' as const, lookupPopupPlacement: normalizePopupPlacement(stored.lookupPopupPlacement) };
+  const normalizedChanged = (Object.keys(defaultPreferences) as (keyof AppPreferences)[]).some(key => JSON.stringify(stored[key]) !== JSON.stringify(preferences[key]));
+  if (normalizedChanged || legacy) {
     await db.transaction('rw', db.settings, async () => {
       await savePreferences(preferences);
       await db.settings.delete('homepage.theme');

@@ -49,8 +49,8 @@
   .reader-shell.reader-shell .pdf-scroll { padding-top: 48px; padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); }
   .reader-shell.reader-shell .pdf-toolbar { position: absolute; top: 0; left: 0; right: 0; height: 44px; min-height: 44px; padding-block: 0; }
   .reader-shell.reader-shell.chrome-quiet .pdf-toolbar { opacity: 0; pointer-events: none; }
-  .reader-shell.reader-shell .reader-text { width: min(calc(100% - 28px), var(--reading-width), var(--reading-chars)); padding-top: calc(var(--reader-header-height) + 12px); }
-  .reader-shell.reader-shell .pdf-reading-page { box-sizing: border-box; width: min(calc(100% - 28px), var(--reading-width), var(--reading-chars)); padding: 12px 0 32px; }
+  .reader-shell.reader-shell .reader-text { width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding-top: calc(var(--reader-header-height) + 12px); }
+  .reader-shell.reader-shell .pdf-reading-page { box-sizing: border-box; width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding: 12px max(var(--reader-page-padding, 18px), env(safe-area-inset-right)) 32px max(var(--reader-page-padding, 18px), env(safe-area-inset-left)); }
   .reader-shell.reader-shell .pdf-reading-page > header { margin-bottom: 12px; }
   .reader-shell.reader-shell .reader-progress { padding-top: 0; padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right)); gap: 4px; }
   .reader-shell.reader-shell .reader-reveal { bottom: max(8px, env(safe-area-inset-bottom)); box-shadow: none; }
@@ -77,7 +77,8 @@
   .reader-shell.reader-shell .lookup-sheet.quick .sense-list:has(> .quick-more-meanings) > .quick-pos-group:nth-last-child(2) > .sense-row:last-child { flex: 1 1 auto; width: max-content; max-width: 100%; margin-bottom: 0; }
   .reader-shell.reader-shell .lookup-sheet.quick .quick-more-meanings { flex: 0 0 auto; max-width: 100%; min-height: 28px; margin: 0 0 0 auto; padding: 2px 0; font: 600 11px/1.4 var(--font-ui); }
   .reader-shell.reader-shell .inspector-header-actions { flex-direction: row; gap: 0; }
-  .reader-shell.reader-shell .inspector-header-actions button { min-height: 44px; padding-inline: 6px; font-size: 11px; }
+  .reader-shell.reader-shell .inspector-header-actions button { min-width: 44px; min-height: 44px; padding-inline: 6px; font-size: 11px; }
+  .reader-shell.reader-shell .inspector-header-actions .explain-close { width: 44px; min-width: 44px; }
   .reader-shell.reader-shell .inspector-pronunciation { grid-column: 1 / -1; flex-wrap: wrap; gap: 0 4px; padding: 0; }
   .reader-shell.reader-shell .ipa-line { flex: 0 1 auto; font-size: 11px; }
   .reader-shell.reader-shell .inspector-pronunciation > button { min-width: 44px; min-height: 44px; }

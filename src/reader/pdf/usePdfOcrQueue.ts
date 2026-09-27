@@ -31,10 +31,11 @@ export function usePdfOcrQueue(documentRecord: DocumentRecord | null, language: 
   const start = async (firstPage: number, mode: 'current' | 'next' | 'preload', batchLimit = 6) => {
     const { documentRecord: doc, language: selectedLanguage } = latest.current;
     if (!doc?.data || doc.kind !== 'pdf' || controller.current) return;
-    const selected = mode === 'current' ? [firstPage] : Array.from({ length: doc.pageOffsets?.length ?? 0 }, (_, index) => index + 1);
+    const selected = mode === 'current' ? [firstPage] : Array.from({ length: mode === 'preload' ? Math.min(12, doc.pageOffsets?.length ?? 0) : doc.pageOffsets?.length ?? 0 }, (_, index) => index + 1);
     if (!selected.length) return;
     const taskController = new AbortController(); controller.current = taskController;
     const run = ++generation.current;
+    const isCurrent = () => !taskController.signal.aborted && run === generation.current && latest.current.documentRecord?.id === doc.id;
     setStatus({ state: 'preparing', completed: 0, total: mode === 'next' ? batchLimit : selected.length, progress: 0 });
     let loadingTask: ReturnType<typeof import('pdfjs-dist')['getDocument']> | undefined;
     try {
@@ -43,8 +44,10 @@ export function usePdfOcrQueue(documentRecord: DocumentRecord | null, language: 
       const hash = doc.pdfHash ?? Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), byte => byte.toString(16).padStart(2, '0')).join('');
       if (!doc.pdfHash) void db.documents.update(doc.id, { pdfHash: hash });
       const storage = await navigator.storage?.estimate?.();
+      if (!isCurrent()) return;
       if (storage?.quota !== undefined && storage.usage !== undefined && storage.quota - storage.usage < 1_000_000) throw new Error('Thiết bị sắp hết dung lượng lưu trữ. Hãy giải phóng dung lượng trước khi OCR.');
       const pdfjs = await import('pdfjs-dist');
+      if (!isCurrent()) return;
       pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
       loadingTask = pdfjs.getDocument({ data: bytes });
       const pdf = await loadingTask.promise;
@@ -68,9 +71,10 @@ export function usePdfOcrQueue(documentRecord: DocumentRecord | null, language: 
             if (!ink) continue;
           }
           pending.push(pageNumber);
-          if (mode === 'preload' && pending.length >= 12) break;
+          if (mode === 'preload' && pending.length >= 6) break;
         }
       }
+      if (!isCurrent()) return;
       if (!pending.length) { setStatus({ state: 'done', completed: 0, total: 0, progress: 100, message: 'Không còn trang cần OCR.' }); return; }
       setStatus({ state: 'running', completed: 0, total: pending.length, progress: 0, message: `${pending.length} trang cần OCR` });
       let completed = 0;
@@ -86,6 +90,7 @@ export function usePdfOcrQueue(documentRecord: DocumentRecord | null, language: 
         if (taskController.signal.aborted) return;
         if (!text.trim()) throw new Error(`Trang ${pageNumber} không nhận dạng được chữ.`);
         const record = await saveOcrPage(doc.id, pageNumber, text, selectedLanguage, hash);
+        if (!isCurrent()) return;
         latest.current.onResult(record);
         completed++;
         setStatus({ state: paused.current ? 'paused' : 'running', completed, total: pending.length, progress: 100, message: `Trang ${pageNumber}: ${Math.round(performance.now() - started)} ms` });
@@ -96,7 +101,7 @@ export function usePdfOcrQueue(documentRecord: DocumentRecord | null, language: 
     } finally {
       if (controller.current === taskController) controller.current = null;
       await loadingTask?.destroy().catch(() => {});
-      if (taskController.signal.aborted) await terminateOcrWorker();
+      // cancel() owns worker termination. A late finally must not stop a newer run.
     }
   };
   const pause = () => { paused.current = true; setStatus(value => value ? { ...value, state: 'paused' } : value); };

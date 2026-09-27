@@ -156,7 +156,7 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
   partially recognized page is never persisted.
 - Queue: `src/reader/pdf/usePdfOcrQueue.ts`. States `preparing | running | paused | done | error`,
   one job at a time, abort on document change. `preloadFirstTwelve` scans at most the first 12 pages
-  on open and skips pages that already carry PDF text; `App.tsx` only triggers it when a page in
+  on open, recognizes at most 6 candidates per run, and skips pages that already carry PDF text; `App.tsx` only triggers it when a page in
   that window has empty `plainText` and passes `ocrCandidate`. `startCurrent(page)` and
   `startNextUnprocessed(limit)` are explicit user actions, and `limit` is clamped to 1–6.
 - Per-page text source choice: `DocumentRecord.pdfTextSources[page] = 'pdf' | 'ocr'`, toggled by
