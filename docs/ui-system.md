@@ -226,3 +226,20 @@ handle; a completed drag saves normalized ratios once through App's existing pre
 size and observes resize to restore relative placement with 12 px clearance, below the reader header.
 The body scrolls within the remaining viewport height. Full, closing, selection and document changes
 preserve the preference; mobile ignores it. Placement never invokes lookup providers.
+
+### Quick presentation
+`AppPreferences.lookupQuickMode` independently selects Standard (default) or Simple inside Quick,
+persisted in `reader-preferences`; absent/invalid values normalize to Standard without a schema change.
+App passes the preference and change callback to the existing `LookupBottomSheet`. Its compact header
+button switches presentation immediately without replacing the result or invoking lookup services.
+Simple moves the shared language cycle into More, retaining the same EN/VI/bilingual preference.
+`QuickExplain` retains existing sense ordering and source-linked pairs. Simple selects 3–6 nonempty
+meanings according to average visible text length, including confirmed context. Exact duplicate
+pairs are omitted. Unpaired fallback uses at most 4 long or 6 short Vietnamese glosses when visible
+senses have no linked Vietnamese. Standard retains existing content and local expansion.
+Simple uses flexible EN/VI columns on desktop and sheets at least 430 px wide; narrower phones
+stack each pair EN then VI. Entry-level glosses remain separate and lightly labelled.
+Simple uses compact ambiguity
+status on both platforms. Full ignores this preference; Show less restores it. Desktop retains the
+340 px width, drag handle, saved placement and existing resize measurement. Platform styles own
+presentation through `data-quick-mode`; no new lookup pipeline or storage table is introduced.

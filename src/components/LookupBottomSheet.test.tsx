@@ -488,3 +488,67 @@ it('ignores pinned placement and hides drag controls on mobile', () => {
     expect(host.querySelector<HTMLElement>('.lookup-sheet')!.style.left).toBe('');
   } finally { act(() => render(null, host)); host.remove(); vi.unstubAllGlobals(); }
 });
+
+it.each([false, true])('shares Simple languages and preserves result, scroll and Full transition (desktop=%s)', desktop => {
+  vi.stubGlobal('matchMedia', () => ({ matches: desktop, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  const host = document.createElement('div'); document.body.append(host);
+  const fetchSpy = vi.fn(); vi.stubGlobal('fetch', fetchSpy);
+  const noop = vi.fn(); const explain = vi.fn(); const translate = vi.fn();
+  const result = { ...validLookup, dictionary: { word: 'maintain', surfaceForm: 'maintain', lemma: 'maintain', pronunciation: null, contextConfidence: 0, contextPos: 'verb',
+    senses: ['verb', 'verb', 'verb', 'noun'].map((pos, i) => ({ id: String(i), pos, definitionEn: `English ${i}`, meaningsVi: [`Vietnamese ${i}`], source: 'local' as const, contextScore: 0, contextMatch: false })), unpairedMeaningsVi: ['fallback 1', 'fallback 2', 'fallback 3'] } };
+  let quickMode: 'simple' | 'standard' = 'simple'; let mode: 'en' | 'vi' | 'bilingual' = 'bilingual';
+  const draw = () => render(<LookupBottomSheet open result={result} quickMode={quickMode} onQuickModeChange={next => { quickMode = next; draw(); }}
+    loading={false} error={null} mode={mode} onModeChange={next => { mode = next; draw(); }} onClose={noop} onOpenSettings={noop}
+    onSpeak={noop} onAddNote={noop} onToggleSave={noop} onExplain={explain} onTranslateSentence={translate} saved={false} />, host);
+  try {
+    act(draw);
+    for (const label of ['Pronounce word', 'Save word', 'Add note', 'Show more']) expect(host.querySelector(`[aria-label="${label}"]`)).not.toBeNull();
+    expect(host.querySelector('.inspector-word-title strong')?.textContent).toBe(result.selection.surface);
+    expect(host.querySelector('.pos-chip')?.textContent).toBe('verb');
+    expect(host.querySelector('.language-cycle')?.closest('details')).not.toBeNull();
+    for (const expected of ['bilingual', 'en', 'vi'] as const) {
+      expect(mode).toBe(expected);
+      expect(host.querySelectorAll('.sense-row')).toHaveLength(4);
+      expect(host.querySelectorAll('.sense-row .sense-definition')).toHaveLength(expected === 'vi' ? 0 : 4);
+      expect(host.querySelectorAll('.sense-row .sense-vi')).toHaveLength(expected === 'en' ? 0 : 4);
+      expect(host.querySelector('.entry-glosses')).toBeNull();
+      act(() => host.querySelector<HTMLButtonElement>('.language-cycle')!.click());
+    }
+    const body = host.querySelector<HTMLElement>('.inspector-body')!; body.scrollTop = 25;
+    act(() => host.querySelector<HTMLButtonElement>('.quick-mode-toggle')!.click());
+    expect(host.querySelector('.lookup-sheet')?.getAttribute('data-quick-mode')).toBe('standard');
+    expect(host.querySelectorAll('.sense-row')).toHaveLength(3);
+    expect(host.querySelector('.entry-glosses')?.textContent).toContain('fallback 3');
+    expect(body.scrollTop).toBe(25);
+    act(() => host.querySelector<HTMLButtonElement>('.quick-mode-toggle')!.click());
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="Show more"]')!.click());
+    expect(host.querySelector('.lookup-sheet.expanded')).not.toBeNull();
+    expect(host.querySelector('.quick-mode-toggle')).toBeNull();
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="Show less"]')!.click());
+    expect(host.querySelector('.lookup-sheet.quick')?.getAttribute('data-quick-mode')).toBe('simple');
+    expect(fetchSpy).not.toHaveBeenCalled(); expect(explain).not.toHaveBeenCalled(); expect(translate).not.toHaveBeenCalled();
+  } finally { act(() => render(null, host)); host.remove(); vi.unstubAllGlobals(); }
+});
+it('limits truthful unpaired Simple fallback without losing Standard glosses', () => {
+  const host = document.createElement('div');
+  const result = { ...validLookup, dictionary: { word: 'word', surfaceForm: 'word', lemma: 'word', pronunciation: null, contextConfidence: 0, senses: [], unpairedMeaningsVi: ['one', 'two', 'three'] } };
+  act(() => render(<QuickExplain result={result} mode="vi" presentation="simple" />, host));
+  expect(host.querySelectorAll('.entry-glosses li')).toHaveLength(3);
+  act(() => render(<QuickExplain result={result} mode="vi" presentation="standard" />, host));
+  expect(host.querySelectorAll('.entry-glosses li')).toHaveLength(3);
+  act(() => render(null, host));
+});
+
+it.each(['en', 'vi', 'bilingual'] as const)('adapts Simple coverage to visible text in %s', mode => {
+  const host = document.createElement('div');
+  for (const [length, count] of [[220, 3], [130, 4], [20, 6]]) {
+    const result = { ...validLookup, dictionary: { ...validLookup.dictionary!, contextPos: 'verb', senseStatus: 'context' as const,
+      senses: Array.from({ length: 9 }, (_, i) => ({ id: String(i), pos: i < 4 ? 'verb' : 'noun', definitionEn: `${i} ${'x'.repeat(length)}`, meaningsVi: [`${i} ${'y'.repeat(length)}`], source: 'local' as const, contextMatch: i === 0, contextScore: 0 })) } };
+    act(() => render(<QuickExplain result={result} mode={mode} presentation="simple" />, host));
+    expect(host.querySelectorAll('.sense-row')).toHaveLength(count - 1);
+    expect(host.querySelector('.inspector-context')?.textContent).toContain('0 ');
+    expect(host.querySelector('.quick-more-meanings')).toBeNull();
+    if (count === 6) expect(host.querySelector('.sense-list')?.textContent).toContain('noun');
+  }
+  act(() => render(null, host));
+});

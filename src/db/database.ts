@@ -251,6 +251,7 @@ export interface AppPreferences {
   interfaceMode: 'simple' | 'advanced';
   languageMode: LanguageMode;
   lookupViewMode: 'quick' | 'full';
+  lookupQuickMode: 'simple' | 'standard';
   lookupPopupPlacement: LookupPopupPlacement;
   fontSize: number;
   lineHeight: number;
@@ -265,6 +266,7 @@ export const defaultPreferences: AppPreferences = {
   interfaceMode: 'simple',
   languageMode: 'bilingual',
   lookupViewMode: 'quick',
+  lookupQuickMode: 'standard',
   lookupPopupPlacement: { mode: 'auto' },
   fontSize: 19,
   lineHeight: 1.75,
@@ -284,7 +286,7 @@ export async function loadPreferences(): Promise<AppPreferences> {
     : (rawMode ?? legacy?.value) === 'bright' ? 'advanced' : 'simple';
   const theme = ['system', 'light', 'dark'].includes(stored.theme ?? '') ? stored.theme! : 'system';
   const lookupViewMode: AppPreferences['lookupViewMode'] = stored.lookupViewMode === 'full' ? 'full' : 'quick';
-  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, lookupViewMode, lookupPopupPlacement: normalizePopupPlacement(stored.lookupPopupPlacement) };
+  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, lookupViewMode, lookupQuickMode: stored.lookupQuickMode === 'simple' ? 'simple' as const : 'standard' as const, lookupPopupPlacement: normalizePopupPlacement(stored.lookupPopupPlacement) };
   if (rawMode !== interfaceMode || stored.theme !== theme || legacy) {
     await db.transaction('rw', db.settings, async () => {
       await savePreferences(preferences);

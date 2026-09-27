@@ -63,3 +63,13 @@ describe('reader interface preferences', () => {
     expect(await loadPreferences()).toMatchObject({ interfaceMode: 'advanced', theme: 'system' });
   });
 });
+
+it('persists Simple Quick independently of language and default view', async () => {
+  expect(defaultPreferences.lookupQuickMode).toBe('standard');
+  await savePreferences({ ...defaultPreferences, lookupQuickMode: 'simple', languageMode: 'vi', lookupViewMode: 'full' });
+  expect(await loadPreferences()).toMatchObject({ lookupQuickMode: 'simple', languageMode: 'vi', lookupViewMode: 'full' });
+});
+it.each([undefined, 'invalid'])('normalizes invalid Quick presentation (%s)', async lookupQuickMode => {
+  await db.settings.put({ key: 'reader-preferences', value: { ...defaultPreferences, lookupQuickMode } });
+  expect((await loadPreferences()).lookupQuickMode).toBe('standard');
+});

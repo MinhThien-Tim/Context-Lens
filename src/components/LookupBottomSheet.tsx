@@ -10,6 +10,8 @@ import type { ContextMode } from '../core/context/types';
 import { getDiagnostics } from '../core/diagnostics';
 
 interface Props {
+  quickMode?: 'simple' | 'standard';
+  onQuickModeChange?: (mode: 'simple' | 'standard') => void;
   placement?: LookupPopupPlacement;
   onPlacementChange?: (placement: LookupPopupPlacement) => void;
   displayMode?: 'popup' | 'panel';
@@ -41,6 +43,7 @@ interface Props {
 export function LookupBottomSheet(props: Props) {
   const [expanded, setExpanded] = useState(false);
   const deepOpen = props.displayMode ? props.displayMode === 'panel' : expanded;
+  const simple = !deepOpen && props.quickMode === 'simple';
   const desktop = useDesktop();
   const bodyRef = useRef<HTMLDivElement>(null);
   const popup = !deepOpen;
@@ -138,15 +141,17 @@ export function LookupBottomSheet(props: Props) {
   const sources = [...new Set([...(result?.dictionary?.senses.map(sense => sense.source) ?? []), result?.source, result?.engine?.provider, ...Object.values(result?.lens?.providers ?? {}), contextResult?.engine?.provider].filter(Boolean))];
   return <>
     {!desktop && <button class="sheet-backdrop" aria-label="Close meaning" tabIndex={-1} onClick={props.onClose} />}
-    <section ref={sheetRef} tabIndex={-1} style={popupStyle} class={`lookup-sheet ${popup ? 'word-popup' : 'side-panel'} ${deepOpen ? 'expanded' : 'quick'}`} role={desktop ? 'complementary' : 'dialog'} aria-modal={desktop ? undefined : true} aria-label="Meaning in context">
+    <section ref={sheetRef} tabIndex={-1} style={popupStyle} data-quick-mode={deepOpen ? undefined : props.quickMode ?? 'standard'} class={`lookup-sheet ${popup ? 'word-popup' : 'side-panel'} ${deepOpen ? 'expanded' : 'quick'}`} role={desktop ? 'complementary' : 'dialog'} aria-modal={desktop ? undefined : true} aria-label="Meaning in context">
       <header class="inspector-header">
         <div class={`inspector-word ${desktop && popup ? 'lookup-drag-handle' : ''} ${dragPosition ? 'is-dragging' : ''}`} title={desktop && popup ? 'Drag to keep popup here' : undefined} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={event => endDrag(event)} onPointerCancel={event => endDrag(event, true)} onLostPointerCapture={event => endDrag(event, true)}><div class="inspector-word-title"><strong>{result?.selection.surface || props.selectionText}</strong>{result && (result.dictionary?.contextPos || result.selection.part_of_speech) && <span class="pos-chip">{result.dictionary?.contextPos || result.selection.part_of_speech}</span>}</div></div>
         <div class="inspector-header-actions">{result && props.onAddNote && <button class="inspector-note secondary-button" onClick={props.onAddNote} aria-label="Add note" title="Add note">Note</button>}{result && <button class="save-inline" aria-label={props.saved ? 'Remove saved word' : 'Save word'} aria-pressed={props.saved} onClick={props.onToggleSave}>{props.saved ? '✓ Saved' : 'Save'}</button>}<button class="explain-close" aria-label="Close meaning" onClick={props.onClose}>×</button></div>
         {result && <div class="inspector-pronunciation">
           {ipa && <span class="ipa-line">{ipa}</span>}<button aria-label="Pronounce word" onClick={() => props.onSpeak(result.selection.surface)}>♪</button>
           <div class="inspector-lookup-tools">
-            <LanguageTabs value={props.mode} onChange={props.onModeChange} compact />
+            {!simple && <LanguageTabs value={props.mode} onChange={props.onModeChange} compact />}
+            {!deepOpen && props.onQuickModeChange && <button class="quick-mode-toggle" aria-pressed={simple} aria-label={simple ? 'Use Standard Quick card' : 'Use Simple Quick card'} onClick={() => props.onQuickModeChange?.(simple ? 'standard' : 'simple')}>{simple ? 'Simple' : 'Standard'}</button>}
             <details class="explain-more-actions"><summary aria-label="More actions" title="More actions">⋯</summary><div>
+              {simple && <LanguageTabs value={props.mode} onChange={props.onModeChange} compact />}
               {props.onDisplayModeChange && <label class="lookup-view-preference">Default view<select aria-label="Default lookup view" value={props.preferredView ?? (deepOpen ? 'full' : 'quick')} onChange={event => changeDisplay(event.currentTarget.value === 'full')}><option value="quick">Quick</option><option value="full">Show more</option></select><small>Saved for new lookups.</small></label>}
               {desktop && popup && props.onPlacementChange && <label class="lookup-view-preference">Popup position<select aria-label="Popup position" value={placement.mode} onChange={event => {
                 if (event.currentTarget.value === 'auto') props.onPlacementChange?.({ mode: 'auto' });
@@ -166,7 +171,7 @@ export function LookupBottomSheet(props: Props) {
       </header>
       <div class="inspector-body" ref={bodyRef}>
       {!result ? <div class="lookup-pending"><strong>{props.selectionText}</strong><span>Finding meaning…</span></div> : <>
-        <QuickExplain key={props.selectionKey || result.selection.surface} result={result} mode={props.mode} expanded={deepOpen} />
+        <QuickExplain key={props.selectionKey || result.selection.surface} result={result} mode={props.mode} expanded={deepOpen} presentation={props.quickMode} />
         {props.loading && <p class="lookup-status" role="status">Finding context...</p>}
         {props.error && <div class="lookup-error" role="status">{props.error}</div>}
         {deepOpen && <>
@@ -177,7 +182,7 @@ export function LookupBottomSheet(props: Props) {
           {deep && <ExpandedExplain result={result} deep={deep} mode={props.mode} loading={props.loading} contextResult={props.contextResult} />}
         </>}
 
-        {(contextResult?.source === 'ai' || props.geminiConnected) && <p class="ai-caution" role="note">AI có thể mắc lỗi. Hãy kiểm tra lại thông tin quan trọng.</p>}
+        {(simple ? result.source === 'ai' : (contextResult?.source === 'ai' || props.geminiConnected)) && <p class="ai-caution" role="note">AI có thể mắc lỗi. Hãy kiểm tra lại thông tin quan trọng.</p>}
         <footer class="inspector-footer">
           <details class="inspector-sources"><summary><span aria-hidden="true">ⓘ</span> Sources</summary><p>{sources.length ? sources.join(' · ') : 'Local'}</p>{props.debug && <details><summary>Diagnostics</summary>{result.engine && <dl class="engine-debug"><div><dt>Provider</dt><dd>{result.engine.provider}</dd></div><div><dt>Cache</dt><dd>{result.engine.cached ? 'hit' : 'miss'}</dd></div>{result.engine.latencyMs !== undefined && <div><dt>Latency</dt><dd>{Math.round(result.engine.latencyMs)} ms</dd></div>}</dl>}<dl class="engine-debug">{Object.entries(getDiagnostics().counters).map(([name, count]) => <div key={name}><dt>{name}</dt><dd>{count}</dd></div>)}</dl></details>}</details>
         </footer>

@@ -91,6 +91,7 @@ export function App() {
   const [lookupOpen, setLookupOpen] = useState(false);
   const [lookupDisplay, setLookupDisplay] = useState<'popup' | 'panel'>('popup');
   const [loading, setLoading] = useState(false);
+  const [quickPending, setQuickPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
@@ -333,21 +334,20 @@ export function App() {
     contextRequestRef.current?.abort();
     const controller = new AbortController(); requestRef.current = controller;
     const request = makeRequest(selection, mode);
-    // Invalidate the previous selection before moving/opening the surface. The
-    // asynchronous local lookup below is the first result that should be shown.
-    setLookup(null);
+    const immediate = lookupService.immediate(request, engines);
+    setLookup(immediate);
+    setQuickPending(true);
     const display = preferences.lookupViewMode === 'full' ? 'panel' : 'popup';
     setLookupDisplay(display);
     setContextPanelOpen(display === 'panel');
     setActiveSelection(selection); setShowNotes(false); if (!desktop) setContentsOpen(false); setLookupOpen(true); setError(null);
     setContextResult(null); setLoading(false);
-    const immediate = lookupService.immediate(request, engines);
     setSaved(false);
     if (documentRecord) void isVocabularySaved(documentRecord.id, immediate).then(value => { if (!controller.signal.aborted) setSaved(value); });
-    // A stable selection delay avoids network calls during repeated mobile selection changes.
+    // Yield the synchronous dictionary result to the UI before enrichment starts.
     const timer = window.setTimeout(() => { void lookupService.quick(request, engines, controller.signal, local => {
       if (!controller.signal.aborted) setLookup(local);
-    }).then((result) => {
+    }, immediate).then((result) => {
       if (result && !controller.signal.aborted) {
         setLookup(result);
         if (documentRecord) void isVocabularySaved(documentRecord.id, result).then(value => { if (!controller.signal.aborted) setSaved(value); });
@@ -358,7 +358,7 @@ export function App() {
         if (failure instanceof EngineError && failure.code === 'QUOTA') setError('Online translation limit reached. Cached and offline meanings remain available.');
         else if (failure instanceof EngineError && ['TIMEOUT', 'PROVIDER_DOWN', 'NETWORK'].includes(failure.code)) setError('Online translation is temporarily unavailable. You can continue reading.');
       }
-    }); }, 0);
+    }).finally(() => { if (!controller.signal.aborted) setQuickPending(false); }); }, 0);
     controller.signal.addEventListener('abort', () => clearTimeout(timer), { once: true });
   };
 
@@ -612,7 +612,7 @@ export function App() {
         {documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf' ? <PageNavigation page={currentLocation.page} total={documentRecord.pageOffsets?.length ?? 1} onPrevious={() => jumpPdfPage(currentLocation.page - 1)} onNext={() => jumpPdfPage(currentLocation.page + 1)} onOpen={() => setGoToOpen(true)} /> : <DocumentPosition document={documentRecord} location={currentLocation} onOpen={() => setGoToOpen(true)} />}
       </ReaderProgress>
       {contextPanelOpen && !lookupOpen && !showNotes && <ContextPanel onClose={closeContext} onNote={() => openNotes(null)} />}
-      <LookupBottomSheet placement={preferences.lookupPopupPlacement} onPlacementChange={lookupPopupPlacement => setPreferences(current => ({ ...current, lookupPopupPlacement }))} displayMode={lookupDisplay} preferredView={preferences.lookupViewMode} onDisplayModeChange={changeLookupDisplay} anchor={activeSelection?.anchor} selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} selectionText={activeSelection?.text} debug={preferences.interfaceMode === 'advanced' && engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} geminiConnected={geminiVerified && aiSettings.provider === 'gemini'} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={closeContext} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary().catch(() => setError("Unable to save vocabulary. Please try again."))} onAddNote={() => openNotes(activeSelection)} saved={saved} collectionTitle={collectionTitle(documentRecord ?? {})} />
+      <LookupBottomSheet quickMode={preferences.lookupQuickMode} onQuickModeChange={lookupQuickMode => setPreferences(current => ({ ...current, lookupQuickMode }))} placement={preferences.lookupPopupPlacement} onPlacementChange={lookupPopupPlacement => setPreferences(current => ({ ...current, lookupPopupPlacement }))} displayMode={lookupDisplay} preferredView={preferences.lookupViewMode} onDisplayModeChange={changeLookupDisplay} anchor={activeSelection?.anchor} selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} selectionText={activeSelection?.text} debug={preferences.interfaceMode === 'advanced' && engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} geminiConnected={geminiVerified && aiSettings.provider === 'gemini'} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={closeContext} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary().catch(() => setError("Unable to save vocabulary. Please try again."))} onAddNote={() => openNotes(activeSelection)} saved={saved} collectionTitle={collectionTitle(documentRecord ?? {})} />
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} initialVerified={geminiVerified} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
       {showNotes && <NotesPanel document={documentRecord} selection={noteSelection} location={noteLocation} onJump={location => { if (location.kind === 'pdf') { if (location.textSource) { const pdfTextSources = { ...documentRecord.pdfTextSources, [location.page]: location.textSource }; setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfTextSources } : current); void db.documents.update(documentRecord.id, { pdfTextSources }); } pdfPersistence.flush(); setPdfNavigationToken(value => value + 1); setCurrentLocation(location); setProgress(location.progress); setPreferences(current => desktop ? { ...current, pdfViewMode: location.viewMode ?? 'reading' } : { ...current, pdfMobileViewMode: location.viewMode ?? 'reading' }); return; } const offset = location.absoluteOffset ?? (location.kind === 'epub' ? documentRecord.chapterOffsets?.[location.chapter - 1] : undefined); if (offset !== undefined) jump(offset); else window.scrollTo({ top: location.scrollY, behavior: 'auto' }); }} onClose={closeContext} />}
     </ReaderShell>

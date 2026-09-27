@@ -101,3 +101,23 @@
   .reader-shell.reader-shell .inspector-sources > summary { display: flex; align-items: center; gap: 4px; min-height: 44px; padding: 0; background: transparent; }
   .reader-shell.reader-shell .inspector-sources p { margin: 0 0 8px; }
 }
+
+/* Quick presentation preference; tablet sheets share the mobile presentation. */
+@media (max-width: 1023px) {
+  .reader-shell.reader-shell .quick-mode-toggle { padding: 0 5px; font: 600 10px/1.4 var(--font-ui); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 5px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .inspector-body { padding-top: 6px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .sense-row { margin-bottom: 6px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .inspector-word-meta { font-size: 10px; color: var(--secondary-text); }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .explain-toggle { color: var(--accent); font-weight: 600; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .sense-bilingual { display: flex; flex-direction: column; gap: 3px; }
+}
+
+/* Wide sheets share the paired split; narrow phones keep EN then VI per sense. */
+@media (min-width: 430px) and (max-width: 1023px) {
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .sense-bilingual.paired-columns,
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .quick-meaning-table.has-entry-glosses {
+    display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 8px;
+  }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .paired-columns .sense-vi { border-left: 1px solid var(--border); padding-left: 7px; }
+}
+.reader-shell.reader-shell .quick[data-quick-mode="simple"] .entry-glosses { background: transparent; border-radius: 0; box-shadow: none; }

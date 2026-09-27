@@ -150,3 +150,12 @@
   .reader-shell.reader-shell .word-popup .inspector-header { flex-shrink: 0; }
   .reader-shell.reader-shell .word-popup .inspector-body { min-height: 0; overflow: auto; }
 }
+
+@media (min-width: 1024px) {
+  .reader-shell.reader-shell .quick-mode-toggle { padding: 0 5px; font: 600 10px/1.4 var(--font-ui); color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 5px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .entry-glosses { background: transparent; padding-block: 0; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .quick-context-ambiguity { margin: 0 0 6px; padding: 3px 6px; background: var(--accent-soft); color: var(--secondary-text); font-size: 11px; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .inspector-word-meta { font-size: 10px; color: var(--secondary-text); }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .explain-toggle { color: var(--accent); font-weight: 600; }
+  .reader-shell.reader-shell .quick[data-quick-mode="simple"] .sense-row { margin-bottom: 6px; }
+}
