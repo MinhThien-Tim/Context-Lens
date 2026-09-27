@@ -56,14 +56,16 @@ command; its default release version is now `2026.09.3`.
 
 WordNet format 2 retains verb frames as `[frameNumber, wordNumber]` tuples on stable synsets.
 Word number 0 applies to all lemmas; loading filters lemma-specific frames. Pointers remain omitted.
-Lexical cache version `local-lexicon-8`, WordNet format identity, and sentence analysis version 3
+Lexical cache version `local-lexicon-9`, WordNet format identity, and sentence analysis version 3
 invalidate stale derived records without a Dexie schema migration.
 
-Stable bilingual alignment version `bilingual-alignment-2` can consume these source examples
-and WordNet frames as conservative grammatical constraints, alongside independent bilingual
+Stable bilingual alignment version `bilingual-alignment-3` can consume these source examples
+and WordNet frames as weak supporting evidence, alongside independent bilingual
 lexical anchors and matching POS. Reader sentences never update permanent EN–VI pairs.
 Unresolved source glosses remain available; provider definition translations retain their
 dependent display-only provenance. Pack format and source tuples are unchanged.
 
 The service-worker per-asset precache limit is 25 MiB, matching the installer budget, so the
 22.48 MiB source-preserving release is included in offline precache.
+
+Disjoint WordNet frames and mismatching extracted examples are neutral because usage metadata is incomplete. Only clearly contradictory explicit controlled grammar patterns reject an alignment candidate.

@@ -18,11 +18,11 @@ it('requires multiple lexical anchors, compatible POS and no competing sense', (
 });
 
 it.each(['think', 'mean', 'run', 'take', 'hold', 'consider', 'remember', 'stop'])('uses stable frames without occurrence input for %s', lemma => {
-  const source = [{ id: 'source', lemma, pos: 'verb', glosses: ['cho rằng'], examples: [`They ${lemma} that it works.`], source: 'dictionary' }];
+  const source = [{ id: 'source', lemma, pos: 'verb', glosses: ['cho rằng'], examples: [`They ${lemma} that it works.`], grammarPatterns: [{ complement: 'clause' as const }], source: 'dictionary' }];
   const anchor = (word: string): LexicalEntry => ({ lemma: word, pos: ['verb'], senses: [], meaningsVi: ['cho rằng'] });
   const candidates: LexicalSense[] = [
-    { id: 'clause', pos: 'verb', definitionEn: 'believe suppose', verbFrames: [26] },
-    { id: 'infinitive', pos: 'verb', definitionEn: 'believe suppose', verbFrames: [28] }
+    { id: 'clause', pos: 'verb', definitionEn: 'believe suppose', verbFrames: [26], grammarPatterns: [{ complement: 'clause' }] },
+    { id: 'infinitive', pos: 'verb', definitionEn: 'believe suppose', verbFrames: [28], grammarPatterns: [{ complement: 'infinitive' }] }
   ];
   const result = alignBilingualSenses(candidates, source, anchor, lemma);
   expect(result[0]).toMatchObject({ meaningVi: 'cho rằng', alignment: { kind: 'inferred' } });
@@ -42,19 +42,19 @@ it('preserves one-to-many meanings and does not merge English senses sharing VI'
 });
 
 it('rejects mismatching anchor POS and grammar-only alignment', () => {
-  const sense: LexicalSense = { id: 'consider', pos: 'verb', definitionEn: 'believe suppose', verbFrames: [26] };
+  const sense: LexicalSense = { id: 'consider', pos: 'verb', definitionEn: 'believe suppose', verbFrames: [26], grammarPatterns: [{ complement: 'clause' }] };
   const source = [{ id: 'vi', lemma: 'consider', pos: 'verb', glosses: ['cho rằng'], verbFrames: [26], source: 'dictionary' }];
   expect(alignBilingualSenses([sense], source, word => ({ lemma: word, pos: ['noun'], senses: [], meaningsVi: ['cho rằng'] }))[0].alignment?.kind).toBe('unresolved');
   expect(alignBilingualSenses([sense], source, () => undefined)[0].alignment?.kind).toBe('unresolved');
 });
 
-it('allows distinct frame-supported senses to share VI and rejects preposition conflicts', () => {
+it('allows controlled-pattern-supported senses to share VI and rejects explicit preposition conflicts', () => {
   const anchor = (lemma: string): LexicalEntry => ({ lemma, pos: ['verb'], senses: [], meaningsVi: ['suy nghĩ'] });
   const candidates: LexicalSense[] = [
-    { id: 'clause', pos: 'verb', definitionEn: 'reflect ponder', verbFrames: [26] },
-    { id: 'gerund', pos: 'verb', definitionEn: 'reflect ponder', verbFrames: [33] }
+    { id: 'clause', pos: 'verb', definitionEn: 'reflect ponder', verbFrames: [26], grammarPatterns: [{ complement: 'clause' }] },
+    { id: 'gerund', pos: 'verb', definitionEn: 'reflect ponder', verbFrames: [33], grammarPatterns: [{ complement: 'gerund' }] }
   ];
-  const source = [26, 33].map(frame => ({ id: String(frame), lemma: 'think', pos: 'verb', glosses: ['suy nghĩ'], verbFrames: [frame], source: 'dictionary' }));
+  const source = [26, 33].map(frame => ({ id: String(frame), lemma: 'think', pos: 'verb', glosses: ['suy nghĩ'], verbFrames: [frame], grammarPatterns: [{ complement: frame === 26 ? 'clause' as const : 'gerund' as const }], source: 'dictionary' }));
   expect(alignBilingualSenses(candidates, source, anchor).map(sense => sense.meaningVi)).toEqual(['suy nghĩ', 'suy nghĩ']);
   const mismatch = alignBilingualSenses([{ ...candidates[0], verbFrames: [15], grammarPatterns: [{ complement: 'prepositional', preposition: 'about' }] }],
     [{ ...source[0], verbFrames: [15], grammarPatterns: [{ complement: 'prepositional', preposition: 'of' }] }], anchor);
@@ -89,4 +89,13 @@ it('does not reuse generated translations as exact source links', () => {
     alignment: { kind: 'translated-definition', confidence: 'low', evidence: ['provider'], dependsOnSenseId: 'generated' } },
   { id: 'copy', pos: 'verb', definitionEn: 'reflect' }], [], anchors);
   expect(result[1].alignment?.kind).toBe('unresolved');
+});
+
+it('treats disjoint frames and extracted example mismatch as incomplete metadata', () => {
+  const anchor = (lemma: string): LexicalEntry => ({ lemma, pos: ['verb'], senses: [], meaningsVi: ['reflect deeply'] });
+  const sense: LexicalSense = { id: 'a', pos: 'verb', definitionEn: 'reflect ponder', verbFrames: [28], examples: ['They ponder to leave.'], synonyms: ['ponder'] };
+  const source = { id: 'vi', lemma: 'consider', pos: 'verb', glosses: ['reflect deeply'], verbFrames: [26], examples: ['They consider that it works.'], source: 'test' };
+  expect(alignBilingualSenses([sense], [source], anchor)[0].alignment?.kind).toBe('inferred');
+  const competitors = alignBilingualSenses([sense, { ...sense, id: 'b', verbFrames: [26] }], [source], anchor);
+  expect(competitors.every(item => item.alignment?.kind === 'unresolved')).toBe(true);
 });

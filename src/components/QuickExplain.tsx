@@ -9,6 +9,12 @@ export function QuickExplain({ result, mode, expanded = false }: { result: Looku
   const showEn = mode !== 'vi', showVi = mode !== 'en';
   const all = prioritizeDictionarySenses(pairDictionarySenses(result.dictionary?.senses ?? []), result.dictionary?.contextPos);
   const matched = all.find(sense => sense.contextMatch && !['common', 'ambiguous'].includes(result.dictionary?.senseStatus ?? 'context'));
+  const diagnostics = result.lens?.sense?.diagnostics ?? [];
+  const samePos = all.filter(sense => sense.pos && sense.pos === result.dictionary?.contextPos);
+  const scores = samePos.map(sense => diagnostics.find(item => item.senseId === sense.id)).filter(item => item !== undefined);
+  const topScore = Math.max(0, ...scores.map(item => item.semanticScore));
+  const closeMeanings = result.dictionary?.senseStatus === 'ambiguous'
+    && scores.filter(item => item.semanticScore >= topScore - 1 && !item.reasons.includes('Explicit grammar pattern: HARD_CONFLICT')).length > 1;
   const ordinary = all.filter(sense => sense !== matched && ((showEn && sense.definitionEn) || (showVi && sense.meaningsVi.length)));
   const compact = compactDictionarySenses(ordinary, result.dictionary?.contextPos);
   const longMeanings = compact.some(sense => (showEn && sense.definitionEn.length > 180) || (showVi && sense.meaningsVi.join('; ').length > 180));
@@ -24,6 +30,7 @@ export function QuickExplain({ result, mode, expanded = false }: { result: Looku
     {result.lens?.selection.status === 'reconstructed' && <p class="lookup-note">Detected as part of: <strong>{result.lens.selection.reconstructedToken}</strong></p>}
     {result.lens?.selection.status === 'fragment' && <p class="lookup-note">This selection is only part of a longer word.</p>}
     {['subphrase', 'head'].includes(result.lens?.selection.matchType ?? '') && <p class="lookup-note">Meaning shown for: <strong>{result.lens?.selection.matchedText}</strong></p>}
+    {closeMeanings && <p class="lookup-note" role="note">{showEn && <span>Context is not strong enough to distinguish these closely related meanings.</span>}{showEn && showVi && <br />}{showVi && <span>Ng? c?nh ch?a ?? ?? ph?n bi?t ch?c ch?n c?c ngh?a g?n nhau.</span>}</p>}
     {matched && ((showEn && matched.definitionEn) || (showVi && matched.meaningsVi.length > 0)) && <section class="inspector-context" aria-label="Context meaning"><h3>Context <span class="sense-pos">{matched.pos}</span></h3>{renderSense(matched)}</section>}
     {!expanded && (visible.length > 0 || (showVi && unpaired.length > 0)) && <section class="inspector-meanings">
       {matched ? <h3>Other meanings</h3> : <p class="quick-sense-status">{result.dictionary?.senseStatus === 'common' ? 'Common meaning' : 'Multiple possible meanings'}{result.dictionary?.contextPos && <> {'\u00b7'} {result.dictionary.contextPos}</>}</p>}

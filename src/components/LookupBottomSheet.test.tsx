@@ -3,6 +3,7 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { expect, it, vi } from 'vitest';
 import { LookupBottomSheet } from './LookupBottomSheet';
+import type { LookupResponse } from '../lookup/types';
 import { validLookup } from '../test/fixtures';
 
 it.each([false, true])('shows local Vietnamese glosses immediately in Full even when context omits them (desktop=%s)', desktop => {
@@ -417,4 +418,17 @@ it.each(['en', 'vi', 'bilingual'] as const)('shows entry-level Vietnamese glosse
     expect(host.querySelector('.inspector-header .inspector-sources')).toBeNull();
     expect(host.querySelector('.explain-direction path')?.getAttribute('d')).toBe('M3 8h10m-4-4 4 4-4 4');
   } finally { act(() => render(null, host)); host.remove(); }
+});
+
+it.each(['ambiguous', 'common', undefined] as const)('shows the close-sense note only for analyzed ambiguity (%s)', senseStatus => {
+  const host = document.createElement('div');
+  const senses = ['a', 'b'].map(id => ({ id, pos: 'verb', definitionEn: id, meaningsVi: [], source: 'wordnet' as const, contextScore: 0, contextMatch: false }));
+  const result = { ...validLookup, dictionary: { word: 'think', surfaceForm: 'think', lemma: 'think', pronunciation: null, contextConfidence: 0, contextPos: 'verb', senseStatus, senses },
+    lens: { ...validLookup.lens, selection: validLookup.lens?.selection ?? { status: 'exact', surface: 'think', normalized: 'think', lemma: 'think', matchedText: 'think', matchType: 'exact', candidates: [] }, sense: { id: 'a', alternatives: ['b'], reasons: [], diagnostics: senses.map(sense => ({ senseId: sense.id, score: 1, semanticScore: 1, reasons: [] })) } } as NonNullable<LookupResponse['lens']> };
+  try {
+    act(() => render(<QuickExplain result={result} mode="en" />, host));
+    expect(host.textContent?.includes('Context is not strong enough')).toBe(senseStatus === 'ambiguous');
+    act(() => render(<QuickExplain result={{ ...result, lens: undefined }} mode="en" />, host));
+    expect(host.textContent).not.toContain('Context is not strong enough');
+  } finally { act(() => render(null, host)); }
 });

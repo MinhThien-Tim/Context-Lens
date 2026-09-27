@@ -230,16 +230,20 @@ it.each([
   ["I think he'll arrive tomorrow.", false],
   ['I think that he will arrive tomorrow.', false],
   ['I think highly of her.', true],
-  ['They think him foolish.', true],
+  // Judgment/belief senses share predicative examples; grammar cannot pick a meaning.
+  ['They think him foolish.', false],
   ['I need time to think.', false],
   ['I think of my mother.', false],
-  ['I think him to be honest.', true]
+  ['I think him to be honest.', false]
 ])('keeps release-data think safe in %s', async (sentence, confirmed) => {
   const word = sentence.startsWith('Think') ? 'Think' : 'think';
   const result = await new LookupService().quick({ ...request(word, sentence), selection_start: sentence.toLowerCase().indexOf('think') },
     { ...defaultEngineSettings, quickEngine: 'offline' });
   expect(result.dictionary?.senses[0].pos).toBe('verb');
   if (confirmed) expect(result.dictionary?.senses[0].contextMatch).toBe(true);
-  if (sentence.startsWith('Think twice')) expect(result.dictionary?.senseStatus).toBe('ambiguous');
+  if (!confirmed) {
+    expect(result.dictionary?.senseStatus).toBe('ambiguous');
+    expect(result.dictionary?.senses[0].contextMatch).toBe(false);
+  }
   process.stderr.write(`[think] ${sentence} => ${result.dictionary?.senseStatus}: ${result.quick.definition_en}\n`);
 });

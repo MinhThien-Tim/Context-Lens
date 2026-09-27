@@ -1,9 +1,9 @@
 import type { LexicalEntry, LexicalSense } from '../../core/language/types';
 import type { SenseAlignment } from './types';
-import { frameCompatibility, occurrenceConstruction } from '../../core/language/constructions';
+import { frameCompatibility, occurrenceConstruction, patternEvidence } from '../../core/language/constructions';
 import type { StableGrammarPattern } from '../../core/language/types';
 
-export const ALIGNMENT_VERSION = 'bilingual-alignment-2';
+export const ALIGNMENT_VERSION = 'bilingual-alignment-3';
 
 const alignmentCache = new Map<string, LexicalSense[]>();
 const normalize = (text: string) => text.normalize('NFC').toLowerCase().replace(/[^\p{L}\p{M}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
@@ -36,9 +36,10 @@ export function alignBilingualSenses(senses: LexicalSense[], vietnamese: SourceS
     if (sense.pos !== 'verb') return 0;
     const patterns = sourcePatterns[sourceIndex];
     const frames = sense.verbFrames ?? [];
-    if (frames.length && source.verbFrames?.length && !frames.some(frame => source.verbFrames!.includes(frame))) return -1;
-    if (patterns.length && frames.length && patterns.every(pattern => frameCompatibility(features(pattern), frames) < 0)) return -1;
-    if (patterns.length && sensePatterns[index].length && !patterns.some(pattern => sensePatterns[index].some(other => samePattern(pattern, other)))) return -1;
+    // Only explicit, single controlled patterns can establish a contradiction.
+    // Extracted examples and disjoint frame lists are incomplete usage evidence.
+    if (source.grammarPatterns?.length === 1 && sense.grammarPatterns?.length === 1
+      && patternEvidence(source.grammarPatterns[0], sense.grammarPatterns[0]) === 'HARD_CONFLICT') return -1;
     return patterns.some(pattern => frameCompatibility(features(pattern), frames) > 0 || sensePatterns[index].some(other => samePattern(pattern, other)))
       || Boolean(frames.length && source.verbFrames?.some(frame => frames.includes(frame))) ? 1 : 0;
   }));

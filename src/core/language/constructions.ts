@@ -1,4 +1,4 @@
-import type { TokenInfo } from './types';
+import type { StableGrammarPattern, TokenInfo } from './types';
 
 /** Bounded occurrence features, independent of candidate dictionary senses. */
 export interface ConstructionFeatures {
@@ -55,13 +55,30 @@ export function occurrenceConstruction(tokens: TokenInfo[], index: number): Cons
     evaluationModifier: /^(?:highly|well|poorly|badly|favorably|unfavorably)$/.test(tokens[index + 1]?.normalized ?? '') && preposition === 'of', passive: false };
 }
 
-export function frameCompatibility(features: ConstructionFeatures, frames: number[]): number {
+export type GrammarCompatibility = 'MATCH' | 'UNKNOWN' | 'SOFT_CONFLICT' | 'HARD_CONFLICT';
+
+/** WordNet frames describe attested usage, not an exhaustive complement inventory. */
+export function frameEvidence(features: ConstructionFeatures, frames: number[]): GrammarCompatibility {
   const expected: Record<ConstructionFeatures['complement'], number[]> = {
     clause: [26], 'wh-clause': [26, 29], infinitive: [28, 32], 'bare-infinitive': [32],
     'object-infinitive': [24, 25], 'object-bare-infinitive': [25], 'object-adjective': [5, 9],
     'object-noun': [9], 'double-object': [14], prepositional: [15, 16, 17, 18, 19, 20, 21, 22],
     predicative: [6, 7], gerund: [33], object: [8, 9, 10, 11], none: [1, 2]
   };
-  if (!frames.length || features.passive) return 0;
-  return frames.some(frame => expected[features.complement].includes(frame)) ? 1 : -1;
+  if (!frames.length || features.passive) return 'UNKNOWN';
+  return frames.some(frame => expected[features.complement].includes(frame)) ? 'MATCH' : 'SOFT_CONFLICT';
+}
+
+export function frameCompatibility(features: ConstructionFeatures, frames: number[]): number {
+  return frameEvidence(features, frames) === 'MATCH' ? 1 : 0;
+}
+
+/** Only controlled, explicit patterns can establish a hard complement contradiction. */
+export function patternEvidence(a: StableGrammarPattern, b: StableGrammarPattern): GrammarCompatibility {
+  const specific = ['clause', 'infinitive', 'gerund'];
+  if ((specific.includes(a.complement) && specific.includes(b.complement) && a.complement !== b.complement)
+    || (a.complement === b.complement && Boolean(a.preposition && b.preposition && a.preposition !== b.preposition))
+    || Boolean(a.particle && b.particle && a.particle !== b.particle)) return 'HARD_CONFLICT';
+  if (a.complement === b.complement && a.preposition === b.preposition && a.particle === b.particle) return 'MATCH';
+  return 'UNKNOWN';
 }

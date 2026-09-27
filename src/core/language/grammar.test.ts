@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { LexicalEngine } from './lexicon';
 import { analyzeGrammar } from './grammar';
-import { occurrenceConstruction } from './constructions';
+import { occurrenceConstruction, frameEvidence, patternEvidence } from './constructions';
 const lexical = new LexicalEngine();
 it.each([
  ['He runs.', 'runs', 'simple', 'present', false],
@@ -62,4 +62,12 @@ it('reuses versioned sentence grammar and exposes diagnostic evidence', async ()
  candidateSenses: ['a', 'b'].map(id => ({ id, pos: 'verb', definitionEn: id, verbFrames: [8] })) });
  expect(result.contextMatch).toBe(false);
  expect(result.reasons.join(' ')).toContain('negated true');
+});
+
+it('separates incomplete frames from controlled structural contradictions', () => {
+ const features = occurrenceConstruction(lexical.tokenize('They consider to leave.'), 1);
+ expect(frameEvidence(features, [])).toBe('UNKNOWN');
+ expect(frameEvidence(features, [28])).toBe('MATCH');
+ expect(frameEvidence(features, [26])).toBe('SOFT_CONFLICT');
+ expect(patternEvidence({ complement: 'clause' }, { complement: 'infinitive' })).toBe('HARD_CONFLICT');
 });

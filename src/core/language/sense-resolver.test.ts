@@ -198,3 +198,30 @@ it('blocks dependent translated-definition evidence from self-confirming a sense
   expect(result.contextMatch).toBe(false);
   expect(result.diagnostics?.every(candidate => !candidate.reasons.some(reason => reason.includes('translation')))).toBe(true);
 });
+
+it('keeps shared construction evidence out of semantic ranking', () => {
+  const sentence = 'They zorp to leave.';
+  const result = new SenseResolver().resolve({ selection: 'zorp', lemma: 'zorp', sentence, sentenceAnalysis: analysis(sentence), pos: 'verb',
+    candidateSenses: ['a', 'b', 'c'].map(id => ({ id, pos: 'verb', definitionEn: 'try attempting', verbFrames: [28], examples: ['They zorp to arrive.'] })) });
+  expect(result.contextMatch).toBe(false);
+  expect(result.diagnostics?.every(item => item.semanticScore === 0)).toBe(true);
+});
+
+it('uses unique construction evidence without penalizing incomplete frames', () => {
+  const sentence = 'They zorp to leave.';
+  const result = new SenseResolver().resolve({ selection: 'zorp', lemma: 'zorp', sentence, sentenceAnalysis: analysis(sentence), pos: 'verb',
+    candidateSenses: [{ id: 'effort', pos: 'verb', definitionEn: 'try attempting', verbFrames: [1] }, { id: 'other', pos: 'verb', definitionEn: 'move quickly', verbFrames: [28] }] });
+  expect(result.contextMatch).toBe(true);
+  expect(result.selectedSense?.id).toBe('effort');
+  expect(result.reasons.join(' ')).toContain('SOFT_CONFLICT');
+});
+
+it('rejects explicit complement contradictions before ranking but keeps dictionary alternatives', () => {
+  const sentence = 'They zorp to leave.';
+  const result = new SenseResolver().resolve({ selection: 'zorp', lemma: 'zorp', sentence, sentenceAnalysis: analysis(sentence), pos: 'verb',
+    candidateSenses: [{ id: 'impossible', pos: 'verb', definitionEn: 'try attempting', grammarPatterns: [{ complement: 'gerund' }], keywords: ['leave'] },
+      { id: 'possible', pos: 'verb', definitionEn: 'try attempting', grammarPatterns: [{ complement: 'infinitive' }], keywords: ['leave'] }] });
+  expect(result.contextMatch).toBe(true);
+  expect(result.selectedSense?.id).toBe('possible');
+  expect(result.alternatives.map(sense => sense.id)).toContain('impossible');
+});

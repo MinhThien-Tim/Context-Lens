@@ -1,5 +1,5 @@
 import { LexicalEngine } from './lexicon';
-import { occurrenceConstruction, frameCompatibility } from './constructions';
+import { occurrenceConstruction, frameEvidence, patternEvidence } from './constructions';
 import type { LexicalSense, SentenceAnalysis } from './types';
 
 export interface SenseInput {
@@ -27,7 +27,8 @@ export class SenseResolver {
     const translatedClause = translationEvidence?.text;
     const matchingTranslationSenses = translatedClause ? input.candidateSenses.filter(sense =>
       Boolean(sense.alignment?.kind !== 'translated-definition' && !sense.alignment?.dependsOnSenseId && sense.meaningVi && sense.meaningVi.split(/\s*(?:\/|;)\s*/).some(meaning => containsWords(translatedClause, meaning)))) : [];
-    const ranked = input.candidateSenses.map(sense => {
+    const grammarEvidence = input.candidateSenses.map(sense => this.grammarEvidence(input, sense));
+    const ranked = input.candidateSenses.map((sense, candidateIndex) => {
       let score = 0, semanticScore = 0;
       const reasons: string[] = [];
       if (!syntacticRole && input.pos && sense.pos === input.pos) score += 1.5;
@@ -48,43 +49,14 @@ export class SenseResolver {
       if (keywordOverlap.length) { semanticScore += Math.min(6, keywordOverlap.length * 3); reasons.push(`Sense keyword: ${keywordOverlap.join(', ')}`); }
       const semanticHints = input.sentenceAnalysis?.semanticHints.filter(hint => evidenceWords.has(hint) || keywordWords.has(hint)) ?? [];
       if (semanticHints.length) { semanticScore += 4; reasons.push(`Sentence structure hint: ${semanticHints.join(', ')}`); }
-      const construction = constructionScore(input, sense);
-      semanticScore += construction.score; if (construction.reason) reasons.push(construction.reason);
-      const index = selectedTokenIndex(input);
-      if (index >= 0 && sense.pos === 'verb' && input.sentenceAnalysis) {
-        const features = input.sentenceAnalysis.grammar?.predicates.find(predicate => predicate.tokenIndex === index) ?? input.sentenceAnalysis.constructions?.[index] ?? occurrenceConstruction(input.sentenceAnalysis.tokens, index);
-        const compatibility = frameCompatibility(features, sense.verbFrames ?? []);
-        semanticScore += compatibility > 0 ? 1 : compatibility * 2;
-        reasons.push('Grammar complement: ' + features.complement);
-        const predicate = input.sentenceAnalysis.grammar?.predicates.find(item => item.tokenIndex === index);
-        if (predicate) {
-          reasons.push(`Grammar predicate: ${predicate.lemma}; clause ${predicate.clauseIndex}; finite ${predicate.finite}; ${predicate.tense}/${predicate.aspect}; voice ${predicate.voice}; negated ${predicate.negated}; auxiliaries ${predicate.auxiliaryChain.join(',')}`);
-          reasons.push(`Grammar arguments: subject ${predicate.subjectHead ?? 'unknown'}, object ${predicate.objectHead ?? 'unknown'}, indirect ${predicate.indirectObjectHead ?? 'unknown'}`);
-          for (const modifier of predicate.modifiers) reasons.push(`Grammar modifier: ${modifier.kind} at ${modifier.tokenIndex}`);
-        }
-        if (features.preposition || features.particle) reasons.push(`Preposition/particle: ${features.preposition ?? 'none'}/${features.particle ?? 'none'}`);
-        if (compatibility) reasons.push(`Frame ${compatibility > 0 ? 'match' : 'conflict'}: ${compatibility} (${features.complement})`);
-        if (features.evaluationModifier && /\b(?:regard|opinion|esteem|evaluate|rate)\b/i.test(sense.definitionEn)) {
-          semanticScore += 4;
-          reasons.push('Evaluative modifier with of-complement');
-        }
-        if (features.preposition && /^(?:about|into|through)$/.test(features.preposition)
-          && new RegExp(`\\b[a-z]+\\s+${features.preposition}\\b`, 'i').test(sense.definitionEn)) {
-          semanticScore += 4;
-          reasons.push(`Definition argument pattern: ${features.preposition}`);
-        }
-        const examplePatterns = (sense.examples ?? []).flatMap(example => {
-          const tokens = this.lexical.tokenize(example);
-          const position = tokens.findIndex(token => token.lemma === input.lemma || sense.synonyms?.includes(token.lemma));
-          return position < 0 ? [] : [occurrenceConstruction(tokens, position)];
-        });
-        const specific = features.complement !== 'none' && features.complement !== 'object';
-        if (examplePatterns.some(pattern => (specific && pattern.complement === features.complement)
-          || (features.predicative && pattern.predicative)
-          || (features.preposition && pattern.preposition === features.preposition) || (features.particle && pattern.particle === features.particle))) {
-          semanticScore += 3;
-          reasons.push(`Example construction: ${features.complement}${features.preposition ? ` + ${features.preposition}` : ''}`);
-        }
+      const grammar = grammarEvidence[candidateIndex];
+      reasons.push(...grammar.reasons);
+      for (const event of grammar.events) {
+        const peers = grammarEvidence.filter((peer, i) => peer.compatible && input.candidateSenses[i].pos === sense.pos);
+        const supported = peers.filter(peer => peer.events.some(other => other.reason === event.reason)).length;
+        const contribution = !grammar.compatible ? 0 : supported === 1 ? event.score : supported * 2 < peers.length ? Math.min(1, event.score) : 0;
+        semanticScore += contribution;
+        reasons.push(event.reason, `Grammar ranking contribution: ${contribution}`);
       }
       const translation = matchingTranslationSenses.length <= 1 ? translationScore(translatedClause, sense.alignment?.kind === 'translated-definition' || sense.alignment?.dependsOnSenseId ? undefined : sense.meaningVi) : { score: 0 };
       if (translation.score && !translationEvidence?.strong) {
@@ -94,19 +66,24 @@ export class SenseResolver {
       const independentSemanticScore = semanticScore;
       semanticScore += translation.score; if (translation.reason) reasons.push(translation.reason);
       score += semanticScore;
-      return { sense, score, semanticScore, independentSemanticScore, reasons };
-    }).sort((left, right) => right.score - left.score);
-    const best = ranked[0];
+      return { sense, score, semanticScore, independentSemanticScore, reasons, compatible: grammar.compatible };
+    });
+    // Stage A: exclude explicit structural contradictions, retaining every dictionary sense.
+    const compatible = ranked.filter(item => item.compatible);
+    const ranking = compatible.length ? compatible : ranked;
+    ranking.sort((left, right) => right.score - left.score);
+    const best = ranking[0];
     if (!best) return { senseConfidence: 0, posConfidence: syntacticRole ? 0.9 : input.pos ? 0.65 : 0,
       contextMatch: false, status: 'ambiguous', alternatives: [], reasons: ['No local entry'] };
     const posConfidence = syntacticRole && syntacticRole === best.sense.pos ? 0.9 : input.pos && input.pos === best.sense.pos ? 0.65 : 0;
-    const semanticRunnerUp = Math.max(0, ...ranked.slice(1).filter(item => (!syntacticRole || item.sense.pos === best.sense.pos) && !equivalentConstruction(best, item)).map(item => item.semanticScore));
+    const semanticRunnerUp = Math.max(0, ...ranking.slice(1).filter(item => (!syntacticRole || item.sense.pos === best.sense.pos) && !equivalentConstruction(best, item)).map(item => item.semanticScore));
     const semanticMargin = best.semanticScore - semanticRunnerUp;
-    const contextMatch = best.semanticScore >= 3 && best.independentSemanticScore >= 2 && semanticMargin >= 2 && (!syntacticRole || !best.sense.pos || best.sense.pos === syntacticRole);
+    const contextMatch = best.compatible && best.semanticScore >= 3 && best.independentSemanticScore >= 2 && semanticMargin >= 2 && (!syntacticRole || !best.sense.pos || best.sense.pos === syntacticRole);
     // Close semantic evidence is not a reason to reverse dictionary order.
     if (!contextMatch) ranked.sort((left, right) =>
       (syntacticRole ? Number(right.sense.pos === syntacticRole) - Number(left.sense.pos === syntacticRole) : 0)
       || input.candidateSenses.indexOf(left.sense) - input.candidateSenses.indexOf(right.sense));
+    if (contextMatch) ranked.sort((a, b) => Number(b === best) - Number(a === best) || b.score - a.score);
     const selected = contextMatch ? best : ranked[0];
     const samePos = ranked.filter(item => item.sense.pos === (syntacticRole ?? input.pos ?? best.sense.pos));
     const materiallyDifferent = samePos.some(item => item !== best && !equivalentMeaning(best.sense, item.sense));
@@ -118,6 +95,52 @@ export class SenseResolver {
       reasons: [...selected.reasons, `Semantic margin: ${semanticMargin}`, ...(contextMatch ? [] : ['No evidence distinguishing this meaning from the alternatives'])],
       diagnostics: ranked.map(item => ({ senseId: item.sense.id, score: item.score, semanticScore: item.semanticScore, reasons: item.reasons })) };
   }
+  private grammarEvidence(input: SenseInput, sense: LexicalSense) {
+    let compatible = true;
+    const reasons: string[] = [], events: { score: number; reason: string }[] = [];
+    const add = (score: number, reason: string) => events.push({ score, reason });
+    const construction = constructionScore(input, sense);
+    if (construction.reason) add(construction.score, construction.reason);
+    const index = selectedTokenIndex(input);
+    if (index >= 0 && sense.pos === 'verb' && input.sentenceAnalysis) {
+      const features = input.sentenceAnalysis.grammar?.predicates.find(predicate => predicate.tokenIndex === index) ?? input.sentenceAnalysis.constructions?.[index] ?? occurrenceConstruction(input.sentenceAnalysis.tokens, index);
+      const compatibility = frameEvidence(features, sense.verbFrames ?? []);
+      if (sense.grammarPatterns?.length && sense.grammarPatterns.every(pattern => patternEvidence(features, pattern) === 'HARD_CONFLICT')) {
+        compatible = false;
+        reasons.push('Explicit grammar pattern: HARD_CONFLICT');
+      }
+      if (compatibility === 'MATCH') add(1, 'Frame match');
+      reasons.push('Grammar complement: ' + features.complement);
+      const predicate = input.sentenceAnalysis.grammar?.predicates.find(item => item.tokenIndex === index);
+      if (predicate) {
+        reasons.push(`Grammar predicate: ${predicate.lemma}; clause ${predicate.clauseIndex}; finite ${predicate.finite}; ${predicate.tense}/${predicate.aspect}; voice ${predicate.voice}; negated ${predicate.negated}; auxiliaries ${predicate.auxiliaryChain.join(',')}`);
+        reasons.push(`Grammar arguments: subject ${predicate.subjectHead ?? 'unknown'}, object ${predicate.objectHead ?? 'unknown'}, indirect ${predicate.indirectObjectHead ?? 'unknown'}`);
+        for (const modifier of predicate.modifiers) reasons.push(`Grammar modifier: ${modifier.kind} at ${modifier.tokenIndex}`);
+      }
+      if (features.preposition || features.particle) reasons.push(`Preposition/particle: ${features.preposition ?? 'none'}/${features.particle ?? 'none'}`);
+      reasons.push(`Frame compatibility: ${compatibility} (${features.complement})`);
+      if (features.evaluationModifier && /\b(?:regard|opinion|esteem|evaluate|rate)\b/i.test(sense.definitionEn)) {
+        add(4, 'Evaluative modifier with of-complement');
+      }
+      if (features.preposition && /^(?:about|into|through)$/.test(features.preposition)
+        && new RegExp(`\\b[a-z]+\\s+${features.preposition}\\b`, 'i').test(sense.definitionEn)) {
+        add(4, `Definition argument pattern: ${features.preposition}`);
+      }
+      const examplePatterns = (sense.examples ?? []).flatMap(example => {
+        const tokens = this.lexical.tokenize(example);
+        const position = tokens.findIndex(token => token.lemma === input.lemma || sense.synonyms?.includes(token.lemma));
+        return position < 0 ? [] : [occurrenceConstruction(tokens, position)];
+      });
+      const specific = features.complement !== 'none' && features.complement !== 'object';
+      if (examplePatterns.some(pattern => (specific && pattern.complement === features.complement)
+        || (features.predicative && pattern.predicative)
+        || (features.preposition && pattern.preposition === features.preposition) || (features.particle && pattern.particle === features.particle))) {
+        add(3, `Example construction: ${features.complement}${features.preposition ? ` + ${features.preposition}` : ''}`);
+      }
+    }
+    return { reasons, events, compatible };
+  }
+
 }
 
 function equivalentMeaning(left: LexicalSense, right: LexicalSense): boolean {

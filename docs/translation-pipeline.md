@@ -350,3 +350,15 @@ A valid exact offset identifies a repeated occurrence; an absent or invalid offs
 no occurrence translation evidence. No positional clause pairing is inferred. Independent
 semantic evidence and the existing Context thresholds remain mandatory. Provider priority,
 opt-in gates, request counts and translation `localContext` are unchanged.
+
+## Task 2 scoring calibration and accepted limitations
+
+Frame evidence distinguishes MATCH, UNKNOWN, SOFT_CONFLICT and HARD_CONFLICT. WordNet frame absence or non-intersection is incomplete usage metadata and contributes no penalty. A match remains weak support (at most one point). Only contradictory explicit controlled grammar patterns exclude a candidate before ranking; extracted example mismatches cannot reject it. Every English dictionary sense remains visible.
+
+Construction events are compared across compatible same-POS candidates before scoring: unique support keeps its bounded score, support shared by a minority is capped at one, and support shared by at least half contributes zero. Compatibility diagnostics remain available. Lexical evidence, independent evidence gates and the semantic margin still determine Context. Alignment retains two lexical anchors, POS checks, competitor margin and provenance; disjoint frames alone cannot bypass a competitor. Cache versions are `bilingual-alignment-3` and `local-lexicon-9`. No provider or network route changes.
+
+Release-data regression policy: `Think about the consequences.` and `I think highly of her.` have distinct definition argument/modifier evidence; removing the incomplete-frame penalty should preserve that evidence. `They think him foolish.` and `I think him to be honest.` intentionally remain ambiguous: multiple WordNet judgment/belief senses share predicative examples, and frames do not supply independent semantic distinctions. Generic `think that`, bare `think`, and `think of` also require richer lexical context. Broad Vietnamese glosses and overlapping examples cannot resolve WordNet's finer sense granularity. Do not add phrase-specific winners without independent lexical data.
+
+The quick explanation adds a quiet EN/VI note only for ambiguous analyzed results with multiple same-POS candidates within one semantic point. It excludes explicit pattern conflicts and does not warn for ordinary dictionary lists or missing translations.
+
+Stabilization verification: typecheck and diff checks PASS. The focused language/alignment launch was BLOCKED by esbuild `spawn EPERM`; the exact approved retry started, but the single permitted result-status check returned no final report (UNRESOLVED). Later calibration and UI regression additions are NOT RUN. Full suite is NOT RUN because focused verification is unresolved. The prior unrelated `PdfPage.test.tsx` missing Explain-button failure remains outside scope; PDF code is untouched.
