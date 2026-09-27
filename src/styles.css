@@ -17,6 +17,20 @@
 :root[data-theme="light"] { color-scheme:light; }
 :root[data-theme="dark"] { --bg:#111213; --surface:#18191b; --reading-surface:#141516; --elevated-surface:#202124; --text:#f1f1ef; --muted:#a9aaa7; --line:#303236; --border:var(--line); --accent:#91cabb; --accent-soft:#253d37; --vi:#91cabb; --error:#ef9292; color-scheme:dark; }
 @media (prefers-color-scheme: dark) { :root[data-theme="system"] { --bg:#111213; --surface:#18191b; --reading-surface:#141516; --elevated-surface:#202124; --text:#f1f1ef; --muted:#a9aaa7; --line:#303236; --border:var(--line); --accent:#91cabb; --accent-soft:#253d37; --vi:#91cabb; --error:#ef9292; color-scheme:dark; } }
+/* System Reading Mode keeps its editorial palette regardless of the OS scheme. */
+:root[data-theme="system"]:has(.reader-shell[data-reader-surface="reading"]) { background:#fff; }
+:root[data-theme="system"] body:has(.reader-shell[data-reader-surface="reading"]) { background:#fff; }
+:root[data-theme="system"] .reader-shell[data-reader-surface="reading"] {
+  --bg:#fff; --surface:#fff; --reading-surface:#fff; --elevated-surface:#fafafa;
+  --app-background:#fff; --reading-background:#fff; --subtle-surface:#fafafa; --muted-text:#666;
+  --text:#252525; --muted:#666; --line:#d5d5d5; --border:var(--line);
+  --accent:#b3262d; --accent-soft:#f3e8e6; --vi:#772c2c; --selection:#ead1cb;
+  --error:#a83232; --primary-text:var(--text); --secondary-text:var(--muted); --danger:var(--error);
+  --overlay:color-mix(in srgb,#171614 30%,transparent);
+  --shadow:0 8px 28px color-mix(in srgb,#171614 14%,transparent);
+  --context:var(--accent); --context-soft:var(--accent-soft);
+  color:var(--text); background:var(--bg); color-scheme:light;
+}
 * { box-sizing: border-box; }
 html { background: var(--bg); color: var(--text); }
 body { margin:0; min-width:320px; min-height:100vh; background:var(--bg); color:var(--text); }
