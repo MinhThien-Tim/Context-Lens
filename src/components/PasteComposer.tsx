@@ -33,7 +33,7 @@ export function PasteComposer({ onCreate, disabled, initialText = '' }: { onCrea
     }
   };
 
-  return <section class="action-card paste-card">
+  return <section id="paste-text" class="action-card paste-card">
     <div class="action-card-heading"><span class="action-card-icon" aria-hidden="true">Aa</span><div><p class="eyebrow">Quick start</p><h2>Paste text</h2><p>Review and edit before you read.</p></div></div>
     <label class="composer-title">Title<input value={title} onInput={event => setTitle(event.currentTarget.value)} /></label>
     <div class="paste-mode" role="group" aria-label="Paste format">

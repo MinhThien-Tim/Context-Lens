@@ -57,7 +57,7 @@ export function LookupStatistics() {
 
   return <div class="stats-anchor" ref={rootRef}>
     <button class="nav-button stats-trigger" type="button" aria-label="Lookup statistics" aria-haspopup="dialog" aria-expanded={open} onClick={() => { const snapshot = getDiagnostics(); setCounters(snapshot.counters); setDetails(snapshot.details); setSelected(null); setExpanded(null); setOpen(value => !value); }}>
-      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V5m0 14h17M8 16v-4m4 4V8m4 8v-6m4 6V5"/></svg><span>Stats</span>
+      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V5m0 14h17M8 16v-4m4 4V8m4 8v-6m4 6V5"/></svg><span>Diagnostics</span>
     </button>
     {open && <section class="stats-popover" role="dialog" aria-label="Lookup statistics" tabIndex={-1}>
       <header class="stats-heading">{selected ? <><button class="stats-back" type="button" onClick={() => { setSelected(null); setExpanded(null); }}>‹ <span>Statistics</span></button><h2>{eventLabel(selected)}</h2></> : <h2>Statistics</h2>}<button class="stats-close" type="button" aria-label="Close statistics" onClick={close}>×</button></header>
@@ -75,8 +75,9 @@ export function LookupStatistics() {
           {!grouped(selected).length && <p class="stats-no-details">No selected text in the recent runtime history.</p>}
         </div>
       </> : <>
-        <section class="stats-section stats-quick" aria-labelledby="stats-quick-title"><h3 id="stats-quick-title">Quick Lookup</h3><dl>{rows.slice(0, 8).map(row => counterRow(row.event))}</dl></section>
-        <section class="stats-section stats-gemini" aria-labelledby="stats-gemini-title"><h3 id="stats-gemini-title">Gemini</h3><dl>{rows.slice(8).map(row => counterRow(row.event))}</dl></section>
+        <section class="stats-section stats-quick" aria-labelledby="stats-quick-title"><h3 id="stats-quick-title">Lookup</h3><dl>{rows.slice(0, 3).map(row => counterRow(row.event))}</dl></section>
+        <section class="stats-section"><h3>Translation</h3><dl>{rows.slice(3, 14).map(row => counterRow(row.event))}</dl></section>
+        <section class="stats-section stats-gemini" aria-labelledby="stats-gemini-title"><h3 id="stats-gemini-title">AI</h3><dl>{rows.slice(14).map(row => counterRow(row.event))}</dl></section>
       </>}
       <footer class="stats-footer"><button class="text-button" type="button" onClick={reset}>Reset</button></footer>
     </section>}

@@ -33,12 +33,17 @@ Rendered by the `if (!documentRecord)` branch in `src/app/App.tsx`. Sections, in
 
 - Status banners: offline notice, and a service-worker "update ready" action driven by the
   `context-lens:update-ready` / `context-lens:apply-update` window events from `src/main.tsx`.
-- `brand-header`: brand lockup plus `home-nav` actions — Saved words (`VocabularyLibrary`),
-  Storage (`DataManagement`), Settings (`ApiSettings`), Guide (`ContextLensOnboarding`),
-  `LookupStatistics`, `LanguageToggle`, and independent interface-density and appearance controls.
-- `PasteComposer` — the primary text entry point, and the file / article-URL import entry.
-- Continue-reading and the document library grid: title search, kind filter, `Load more` via
-  `queryDocumentLibrary` with offset paging, and per-document delete in a single Dexie transaction.
+- `brand-header`: brand lockup and Saved words, Storage, Settings (language engines), Guide,
+  plus a Tools disclosure in Simple containing interactive Diagnostics. Advanced exposes the same Diagnostics entry directly.
+- `home-preferences`: independent density, appearance, guide language, and Typography entry
+  (reuses `ReaderSettings`; no second preference state).
+- Compact opening area with Import document, Paste text and Library anchor links.
+- Continue-reading appears before the import/paste surfaces only when reading history exists. Both document lists reuse presentational
+  `DocumentIdentity` for local title-initial covers, existing location/progress, and updated date.
+  The current document model has no cover/thumbnail field; no extraction or external service is added.
+- `PasteComposer` and the existing file/article import surface, with stable anchor targets. Simple retains two framed entry surfaces: Paste on the left, Import on the right at tablet/desktop widths; phones stack Paste first.
+- Library: title search, kind filter, `Load more` through `queryDocumentLibrary`, and existing
+  per-document transactional delete. Simple desktop/tablet use two columns; Advanced uses a compact list with aligned metadata/progress. Phones retain a vertical list.
 - `OnboardingCard` until dismissed, then `ContextLensOnboarding` as a modal.
 - `home-note` privacy line.
 
@@ -140,7 +145,7 @@ There is no global store. Ownership rules:
 - Theme selection is `data-theme` on `:root` with values `light`, `dark`, `system`; `system` is
   handled by `@media (prefers-color-scheme: dark)`. `AppPreferences.theme` is persisted in
   `db.settings` under `reader-preferences` via `loadPreferences` / `savePreferences`.
-- System follows the OS color scheme on all surfaces; density never overrides the palette.
+- System follows the OS color scheme on all surfaces; density never overrides appearance. Home Advanced uses a subtly cooler surface mix; Simple keeps warm paper. Paste has a distinct blue accent in both modes, while Import retains green. Reader palette remains shared.
 - Reader surfaces deliberately reuse the same semantic tokens in light, dark, and system. Do not
   introduce a second palette for the reader.
 
