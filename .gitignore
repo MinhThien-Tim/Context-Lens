@@ -2,6 +2,17 @@ node_modules
 dist
 .env
 .env.local
+.env.*
+!.env.example
+!.env.*.example
+!.env.pilot
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+*-credentials.json
 coverage
 *.log
 *.tsbuildinfo

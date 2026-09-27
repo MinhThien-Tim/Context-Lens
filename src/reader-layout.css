@@ -437,3 +437,5 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .lookup-sheet .inspector-lookup-tools .explain-toggle,
   .lookup-sheet .explain-more-actions>summary { min-height:44px; }
 }
+@import './styles.mobile-reader.css';
+@import './styles.desktop-reader.css';
