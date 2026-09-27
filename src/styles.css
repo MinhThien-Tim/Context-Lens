@@ -149,7 +149,7 @@ button { cursor:pointer; } button:disabled { cursor:default; }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
 
 .reader-text .text-segment { margin:0; }
-.lookup-sheet.quick .meaning-en,.lookup-sheet.quick .meaning-vi { display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
+.lookup-sheet.quick .meaning-en,.lookup-sheet.quick .meaning-vi { display:-webkit-box; -webkit-line-clamp:4; line-clamp:4; -webkit-box-orient:vertical; overflow:hidden; }
 
 /* Library-first home */
 .home-nav .guide-language { margin-left:6px; }

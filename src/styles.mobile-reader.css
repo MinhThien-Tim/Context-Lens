@@ -113,11 +113,11 @@
   .reader-shell.reader-shell .quick[data-quick-mode="simple"] .sense-bilingual { display: flex; flex-direction: column; gap: 3px; }
 }
 
-/* Wide sheets share the paired split; narrow phones keep EN then VI per sense. */
-@media (min-width: 430px) and (max-width: 1023px) {
+/* Simple Quick uses readable bilingual columns on ordinary phones and tablets. */
+@media (min-width: 340px) and (max-width: 1023px) {
   .reader-shell.reader-shell .quick[data-quick-mode="simple"] .sense-bilingual.paired-columns,
   .reader-shell.reader-shell .quick[data-quick-mode="simple"] .quick-meaning-table.has-entry-glosses {
-    display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 8px;
+    display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 8px;
   }
   .reader-shell.reader-shell .quick[data-quick-mode="simple"] .paired-columns .sense-vi { border-left: 1px solid var(--border); padding-left: 7px; }
 }
