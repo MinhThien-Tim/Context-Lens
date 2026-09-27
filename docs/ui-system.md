@@ -65,7 +65,7 @@ subscription and is the responsive authority.
 | Side panel | Contents and context render as columns (`reader-shell.has-contents` / `.has-context`) | Drawers/sheets; `App.tsx` auto-closes Contents when the lookup sheet or notes open |
 | Lookup result | Quick popup; explicit Full opens Context Inspector | Quick bottom sheet; Full expands the same sheet |
 | Notes | Side panel | Full-height panel (`NotesPanel`) |
-| Toolbar | Left: Library and bounded title; center: PDF mode and Document tools; right: Contents, Markup, OCR next, Aa, overflow; Advanced adds Context | Back, shortened title, Aa, overflow; Contents/Markup on a second row, PDF mode/tools on a third |
+| Toolbar | Left: Library and bounded title; center: PDF mode and Document tools; right: Contents, Markup, OCR next, Aa, overflow; Advanced adds Context | Phones ≤767 px: Back/title/Aa/menu, then Contents/Markup/OCR next and PDF mode/tools together; tablets retain the three-row PDF layout |
 | Contents / Go to | Keyboard `T` and `G` (guarded by `keyboardCanNavigate`) | Visible Contents button / bottom location button |
 | PDF paging | Bottom `PageNavigation` and guarded arrow keys | Bottom touch navigation / Go to page |
 
@@ -86,7 +86,9 @@ Reading retains the shared structured pages with comfortable margins and no card
 `ReaderProgress` always reports reading progress separately from optional OCR status. PDF page
 navigation is rendered once at the bottom; non-PDF location opens the existing Go to dialog.
 Header/footer size variables determine PDF viewport height; quiet chrome changes opacity/transform,
-not viewport size. Long text continues to use window scrolling and the existing location contract.
+not viewport size. On phones, PDF scroll surfaces keep a full viewport height and the viewport moves
+into the header area when quiet, without changing scroll offsets or slot geometry. Text chrome overlays
+window-scrolled content. Long text continues to use window scrolling and the existing location contract.
 
 `LookupBottomSheet` presents the Quick/Full display mode supplied by App. New lookups use the saved
 `AppPreferences.lookupViewMode` (Quick by default): a selection-anchored Quick popup on desktop
@@ -155,6 +157,7 @@ There is no global store. Ownership rules:
 ## Theme system
 
 - `src/styles.css` contains shared styling and the original Simple homepage, imported once from `src/main.tsx`. `src/reader-layout.css` holds reader layout/inspector overrides and loads before opening a document. Both CSS chunks remain in the service-worker precache. `src/home-advanced.css` is loaded on demand for Advanced and scopes its rules to the Advanced home shell.
+- `src/styles.mobile-reader.css` loads after shared styles and scopes phone reader/lookup presentation to ≤767 px. Shell specificity preserves its overrides when reader-layout loads later. Linked bilingual meanings stack per sense; unmatched entry glosses remain separate. Quick and Full size to content up to their respective caps.
 - Design tokens are CSS variables on `:root` (palette, surfaces, `--reading-surface`,
   `--elevated-surface`, `--primary-text`, `--secondary-text`, `--border`, `--selection`,
   `--danger`, `--overlay`, `--shadow`).
@@ -194,7 +197,7 @@ Individual CSS declarations are intentionally not documented here; this file rec
 1. `useDesktop()` (1024 px) is the single responsive authority; do not add a second breakpoint
    source inside a component.
 2. New UI goes through `App.tsx` state and props; components stay presentational.
-3. Styling changes stay in `src/styles.css` and reuse existing tokens.
+3. Styling changes stay in the shared or scoped presentation stylesheets and reuse existing tokens.
 4. Appearance state is `preferences.theme` → `data-theme`, independent of `preferences.interfaceMode`.
 5. Modal surfaces keep the `useDialog` focus trap and Escape behavior.
 6. Selection-anchored UI must tolerate re-anchoring when the reader scrolls.

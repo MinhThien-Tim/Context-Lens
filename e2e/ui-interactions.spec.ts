@@ -115,6 +115,22 @@ for (const width of [1366, 320, 360, 390, 430]) {
     await page.screenshot({ path: `tmp/phase3/full-${width}.png` });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const headerBefore = await sheet.locator('.inspector-header').boundingBox();
+    if (width === 320) {
+      await page.emulateMedia({ colorScheme: 'dark' });
+      for (const theme of ['light', 'dark', 'system']) {
+        await page.locator('html').evaluate((el, value) => el.setAttribute('data-theme', value), theme);
+        await sheet.locator('.sense-definition,.sense-vi,.unpaired-meanings li').evaluateAll(elements => {
+          for (const el of elements) el.textContent = `${el.textContent} ${'Long English definition và nghĩa tiếng Việt liên kết '.repeat(12)} ${'unbroken'.repeat(30)}`;
+        });
+        expect(await sheet.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+        expect(await sheet.locator('.inspector-body').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+        await sheet.locator('.inspector-sources').evaluate(el => { (el as HTMLDetailsElement).open = true; });
+        await sheet.locator('.inspector-body').evaluate(el => { el.scrollTop = el.scrollHeight; });
+        await page.screenshot({ path: `tmp/mobile-reader/sources-long-${theme}.png` });
+        await sheet.locator('.inspector-sources').evaluate(el => { (el as HTMLDetailsElement).open = false; });
+      }
+      await page.locator('html').evaluate(el => el.setAttribute('data-theme', 'light'));
+    }
     await sheet.locator('.inspector-body').evaluate(el => { el.scrollTop = el.scrollHeight; });
     expect((await sheet.locator('.inspector-header').boundingBox())!.y).toBe(headerBefore!.y);
     await sheet.getByRole('button', { name: 'Close meaning', exact: true }).click();

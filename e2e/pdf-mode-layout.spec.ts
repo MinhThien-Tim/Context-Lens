@@ -9,11 +9,12 @@ test('PDF mode toolbar stays aligned across viewport sizes and follows UI langua
   const mode = page.locator('.pdf-mode-switch');
   await expect(mode.getByRole('button', { name: 'Trang gốc' })).toBeVisible();
   await expect(mode.getByRole('button', { name: 'Đọc chữ' })).toBeVisible();
+  await page.locator('.reader-document h1').evaluate(el => { el.textContent = 'A very long document title '.repeat(15); });
   await page.getByRole('button', { name: 'Current PDF page', exact: true }).click();
   await page.getByRole('dialog', { name: 'Go to location', exact: true }).getByRole('spinbutton').fill('3');
   await page.getByRole('button', { name: 'Go', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Current PDF page', exact: true })).toHaveText('3 / 8');
-  for (const width of [320, 390, 768, 1366]) {
+  for (const width of [320, 360, 390, 430, 768, 1366]) {
     await page.setViewportSize({ width, height: 850 });
     await expect(mode.getByRole('button')).toHaveCount(2);
     const layout = await page.evaluate(() => {
@@ -27,6 +28,12 @@ test('PDF mode toolbar stays aligned across viewport sizes and follows UI langua
     expect(layout.modeRight).toBeLessThanOrEqual(layout.viewport);
     expect(layout.navRight).toBeLessThanOrEqual(layout.viewport);
     expect(layout.overflow).toBe(false);
+    if (width <= 767) {
+      expect(layout.headerBottom).toBeLessThanOrEqual(88);
+      for (const selector of ['.reader-primary-tools', '.pdf-mode-switch']) {
+        expect((await page.locator(selector).boundingBox())!.y + (await page.locator(selector).boundingBox())!.height).toBeLessThanOrEqual(88);
+      }
+    }
     await page.locator('.pdf-reading-options-toggle').click();
     await expect(page.locator('.pdf-reading-options')).toBeVisible();
     await expect(page.locator('.pdf-reading-options').getByRole('button', { name: /OCR.*6/ })).toBeVisible();
@@ -38,6 +45,19 @@ test('PDF mode toolbar stays aligned across viewport sizes and follows UI langua
     await expect(page.locator('.pdf-reading-view')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Current PDF page', exact: true })).toHaveText('3 / 8');
     await page.screenshot({ path: `tmp/phase2/pdf-reading-${width}.png` });
+    if (width <= 767) {
+      const scroll = page.locator('.pdf-reading-scroll');
+      await scroll.evaluate(el => { el.scrollTop += 100; });
+      const before = await scroll.evaluate(el => ({ top: el.scrollTop, height: el.clientHeight, y: el.getBoundingClientRect().top }));
+      // Isolate the CSS state contract from gesture timing and navigation.
+      await page.locator('.reader-shell').evaluate(el => el.classList.add('chrome-quiet'));
+      const quiet = await scroll.evaluate(el => ({ top: el.scrollTop, height: el.clientHeight, y: el.getBoundingClientRect().top }));
+      expect(quiet.top).toBe(before.top);
+      expect(quiet.height).toBe(before.height);
+      expect(quiet.y).toBe(0);
+      expect(before.y).toBe(88);
+      await page.locator('.reader-shell').evaluate(el => el.classList.remove('chrome-quiet'));
+    }
     await mode.getByRole('button', { name: 'Trang g' }).click();
     await expect(page.getByRole('button', { name: 'Current PDF page', exact: true })).toHaveText('3 / 8');
   }
@@ -46,4 +66,7 @@ test('PDF mode toolbar stays aligned across viewport sizes and follows UI langua
   await page.locator('.library-open').filter({ hasText: 'layout' }).click();
   await expect(page.locator('.pdf-mode-switch').getByRole('button', { name: 'Original' })).toBeVisible();
   await expect(page.locator('.pdf-mode-switch').getByRole('button', { name: 'Reading' })).toBeVisible();
+  await page.setViewportSize({ width: 320, height: 850 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.getByRole('button', { name: 'OCR next', exact: true })).toBeVisible();
 });
