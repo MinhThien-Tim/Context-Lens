@@ -249,6 +249,7 @@ export async function queryDocumentLibrary(options: { query?: string; kind?: Doc
 export interface AppPreferences {
   interfaceMode: 'simple' | 'advanced';
   languageMode: LanguageMode;
+  lookupViewMode: 'quick' | 'full';
   fontSize: number;
   lineHeight: number;
   fontFamily: 'serif' | 'sans';
@@ -261,6 +262,7 @@ export interface AppPreferences {
 export const defaultPreferences: AppPreferences = {
   interfaceMode: 'simple',
   languageMode: 'bilingual',
+  lookupViewMode: 'quick',
   fontSize: 19,
   lineHeight: 1.75,
   fontFamily: 'serif',
@@ -278,7 +280,8 @@ export async function loadPreferences(): Promise<AppPreferences> {
   const interfaceMode: AppPreferences['interfaceMode'] = rawMode === 'simple' || rawMode === 'advanced' ? rawMode
     : (rawMode ?? legacy?.value) === 'bright' ? 'advanced' : 'simple';
   const theme = ['system', 'light', 'dark'].includes(stored.theme ?? '') ? stored.theme! : 'system';
-  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme };
+  const lookupViewMode: AppPreferences['lookupViewMode'] = stored.lookupViewMode === 'full' ? 'full' : 'quick';
+  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, lookupViewMode };
   if (rawMode !== interfaceMode || stored.theme !== theme || legacy) {
     await db.transaction('rw', db.settings, async () => {
       await savePreferences(preferences);

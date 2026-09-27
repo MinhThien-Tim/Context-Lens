@@ -5,14 +5,14 @@ import adverbUrl from '../../../release/wordnet/wordnet-adv.json?url';
 import licenseUrl from '../../../release/wordnet/WORDNET-LICENSE.md?url&no-inline';
 import type { LexicalEntry } from './types';
 
-type Synset = [string, string[], string, string[]];
-interface WordNetPack { version: string; pos: string; synsets: Synset[]; entries: Record<string, number[]> }
+type Synset = [string, string[], string, string[], [number, number][]?];
+interface WordNetPack { version: string; formatVersion?: 1 | 2; pos: string; synsets: Synset[]; entries: Record<string, number[]> }
 const packs = new Map<string, WordNetPack>();
 let pending: Promise<void> | undefined;
 let lastFailure = false;
 export const wordNetLicenseUrl = licenseUrl;
 export function wordNetStatus() { return packs.size === 4 ? 'ready' : lastFailure ? 'unavailable' : pending ? 'loading' : 'not-loaded'; }
-export function wordNetVersion() { return `wordnet-3.0:${[...packs.keys()].sort().join(',')}`; }
+export function wordNetVersion() { return `wordnet-3.0-format2:${[...packs.keys()].sort().join(',')}`; }
 /** Same-origin packaged assets, precached by the PWA. Never sends reading text. */
 export function loadWordNet(): Promise<void> {
   if (packs.size === 4) return Promise.resolve();
@@ -23,7 +23,7 @@ export function loadWordNet(): Promise<void> {
       const response = await fetch(url);
       if (!response.ok) throw new Error('English dictionary unavailable');
       const pack = await response.json() as WordNetPack;
-      if (pack.version !== '3.0' || !['n', 'v', 'a', 'r'].includes(pack.pos) || !Array.isArray(pack.synsets) || !pack.entries) throw new Error('Invalid English dictionary');
+      if (pack.version !== '3.0' || (pack.formatVersion !== undefined && ![1, 2].includes(pack.formatVersion)) || !['n', 'v', 'a', 'r'].includes(pack.pos) || !Array.isArray(pack.synsets) || !pack.entries) throw new Error('Invalid English dictionary');
       packs.set(url, pack);
     })).then(() => undefined).catch(error => { lastFailure = true; throw error; }).finally(() => { pending = undefined; });
   }
@@ -39,9 +39,10 @@ export function lookupWordNet(lemma: string): LexicalEntry | undefined {
   for (const pack of packs.values()) {
     const indices = Object.hasOwn(pack.entries, lemma) ? pack.entries[lemma] : [];
     for (const [rank, index] of indices.entries()) {
-      const [offset, words, definitionEn, examples] = pack.synsets[index];
+      const [offset, words, definitionEn, examples, frames] = pack.synsets[index];
+      const wordIndex = words.findIndex(word => word.toLowerCase() === lemma) + 1;
       pos.add(posNames[pack.pos]);
-      senses.push({ id: `wn3:${pack.pos}:${offset}`, definitionEn, examples, synonyms: words.filter(word => word.toLowerCase() !== lemma), pos: posNames[pack.pos], frequency: 1 / (rank + 1) });
+      senses.push({ id: `wn3:${pack.pos}:${offset}`, definitionEn, examples, verbFrames: frames?.filter(([, target]) => target === 0 || target === wordIndex).map(([frame]) => frame), synonyms: words.filter(word => word.toLowerCase() !== lemma), pos: posNames[pack.pos], frequency: 1 / (rank + 1) });
     }
   }
   return senses.length ? { lemma, pos: [...pos], senses } : undefined;

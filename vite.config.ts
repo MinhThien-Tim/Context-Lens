@@ -49,7 +49,7 @@ export default defineConfig({
         navigateFallback: '/index.html',
         globPatterns: ['**/*.{js,css,html,svg,woff2}', 'assets/context-lens-en-vi-*.json', 'assets/wordnet-*.json', 'assets/WORDNET-LICENSE-*.md', 'assets/ATTRIBUTION-*.md'],
         globIgnores: ['**/pdf-reader-*.js', '**/ocr-reader-*.js', '**/ocr/**', '**/epub-reader-*.js', '**/docx-reader-*.js', '**/archive-runtime-*.js'],
-        maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 25 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.startsWith('/ocr/'),

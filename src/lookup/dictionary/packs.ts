@@ -3,7 +3,7 @@ import { db, type DictionaryPackRecord } from '../../db/database';
 import { dictionaryRegistry } from './registry';
 import { rankedLemmaCandidates } from './seedDictionary';
 import type { DictionaryEntry, DictionaryMatch, DictionaryProvider, DictionaryQuality } from './types';
-import bundledPackUrl from '../../../release/dictionary/context-lens-en-vi-2026.09.1.json?url';
+import bundledPackUrl from '../../../release/dictionary/context-lens-en-vi-2026.09.3.json?url';
 import reviewedPackUrl from '../../../release/dictionary/context-lens-wiktionary-en-vi-reviewed-2026.09.2.json?url';
 
 let bundledPackReady: Promise<void> | undefined;
@@ -44,7 +44,8 @@ const provenanceSchema = z.object({
 
 const entrySchema = z.object({
   lemma: z.string().min(1).max(80), partOfSpeech: z.string().min(1).max(80), ipa: z.string().max(120).nullable(),
-  definitionEn: z.string().max(500), meaningsVi: z.array(z.string().min(1).max(250)).min(1).max(12),
+  definitionEn: z.string().max(500), meaningsVi: z.array(z.string().min(1).max(2000)).min(1),
+  viSenses: z.array(z.tuple([z.number().int().nonnegative(), z.string().min(1).max(80), z.number().int().nonnegative()]).rest(z.string().max(160)).transform(value => value as [number, string, number, string?])).optional(),
   baseLemma: z.string().min(1).max(80).optional(),
   inflection: z.enum(['past', 'past-participle', 'present-participle', 'third-person', 'plural', 'comparative', 'superlative', 'variant']).optional(),
   provenance: provenanceSchema.optional(),
@@ -56,12 +57,15 @@ const entrySchema = z.object({
 }).strict();
 
 export const dictionaryPackSchema = z.object({
-  schema: z.literal('context-lens.dictionary-pack'), version: z.literal(1), id: z.string().regex(/^[a-z0-9][a-z0-9._-]{1,63}$/),
+  schema: z.literal('context-lens.dictionary-pack'), version: z.union([z.literal(1), z.literal(2)]), id: z.string().regex(/^[a-z0-9][a-z0-9._-]{1,63}$/),
   name: z.string().min(1).max(100), packVersion: z.string().min(1).max(40),
   quality: z.enum(['reviewed', 'curated', 'imported']).default('imported'),
   license: z.object({ name: z.string().min(1), url: z.string().url(), attribution: z.string().min(1).max(1000) }).strict(),
   entries: z.array(entrySchema).min(1).max(200_000)
 }).strict().superRefine((pack, context) => {
+  pack.entries.forEach((entry, index) => {
+    if (entry.viSenses?.some(sense => sense[2] >= entry.meaningsVi.length)) context.addIssue({ code: z.ZodIssueCode.custom, path: ['entries', index, 'viSenses'], message: 'Invalid source gloss index' });
+  });
   if (pack.quality !== 'reviewed') return;
   pack.entries.forEach((entry, index) => {
     const provenances = entry.senses?.map(sense => sense.provenance) ?? [entry.provenance];
@@ -123,7 +127,13 @@ class InstalledDictionaryPack implements DictionaryProvider {
     const meaningsVi = entry.meaningsVi.flatMap(value => resolve(value, new Set([entry.lemma.toLowerCase()]), 0));
     const senses = entry.senses?.map(sense => ({ ...sense,
       meaningsVi: sense.meaningsVi.flatMap(value => resolve(value, new Set([entry.lemma.toLowerCase()]), 0)) }));
-    return { ...entry, meaningsVi, senses, vietnameseReferences: references };
+    const viSenses = entry.viSenses?.flatMap(([id, pos, glossIndex, example]) =>
+      resolve(entry.meaningsVi[glossIndex], new Set([entry.lemma.toLowerCase()]), 0).map(gloss => {
+        let index = meaningsVi.indexOf(gloss);
+        if (index < 0) { index = meaningsVi.length; meaningsVi.push(gloss); }
+        return (example ? [id, pos, index, example] : [id, pos, index]) as [number, string, number, string?];
+      }));
+    return { ...entry, meaningsVi, senses, viSenses, vietnameseReferences: references };
   }
 
   lookup(surface: string): DictionaryMatch | null {

@@ -5,6 +5,120 @@ import { expect, it, vi } from 'vitest';
 import { LookupBottomSheet } from './LookupBottomSheet';
 import { validLookup } from '../test/fixtures';
 
+it.each([false, true])('shows local Vietnamese glosses immediately in Full even when context omits them (desktop=%s)', desktop => {
+  vi.stubGlobal('matchMedia', () => ({ matches: desktop, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn();
+  const result = { ...validLookup, dictionary: { word: 'movement', surfaceForm: 'movement', lemma: 'movement', pronunciation: null, contextConfidence: 0,
+    senses: Array.from({ length: 11 }, (_, index) => ({ id: `movement-${index}`, pos: 'noun', definitionEn: `Movement meaning ${index}`, meaningsVi: [], source: 'wordnet' as const, contextScore: 0, contextMatch: false })),
+    unpairedMeaningsVi: ['sự chuyển động', 'phong trào'] } };
+  try {
+    act(() => render(<LookupBottomSheet open displayMode="panel" result={result} contextResult={{ ...validLookup, dictionary: undefined }} loading={false} error={null} mode="bilingual" onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    const glosses = host.querySelector('.deep-explanation>.unpaired-meanings')!;
+    expect(glosses.closest('details')).toBeNull();
+    expect(glosses.textContent).toContain('sự chuyển động');
+    expect(glosses.textContent).toContain('phong trào');
+    expect(host.querySelectorAll('.sense-group>ol>li')).toHaveLength(2);
+    expect(host.querySelector('.more-group-meanings>summary')?.textContent).toBe('More meanings (9)');
+    expect(host.querySelector<HTMLDetailsElement>('.more-group-meanings')?.open).toBe(false);
+  } finally { act(() => render(null, host)); host.remove(); vi.unstubAllGlobals(); }
+});
+
+it('keeps all POS and important Vietnamese meanings in Quick and reveals long definitions through More meanings', () => {
+  const host = document.createElement('div'); document.body.append(host);
+  const definition = 'A long English explanation with detail that is useful to the reader. '.repeat(8);
+  const result = { ...validLookup, dictionary: { word: 'on', surfaceForm: 'on', lemma: 'on', pronunciation: null, contextConfidence: 0, contextPos: 'adjective',
+    senses: ['adjective', 'adjective', 'adjective', 'adverb', 'preposition'].map((pos, index) => ({ id: `on-${index}`, pos, definitionEn: index === 0 ? definition : `Meaning ${index}`, meaningsVi: [], source: 'wordnet' as const, contextScore: 0, contextMatch: false })),
+    unpairedMeaningsVi: ['trên', 'vào', 'với'] } };
+  try {
+    act(() => render(<QuickExplain result={result} mode="bilingual" />, host));
+    expect([...host.querySelectorAll('.quick-pos-group h4')].map(el => el.textContent)).toEqual(['adjective', 'adverb', 'preposition']);
+    expect(host.querySelectorAll('.sense-row')).toHaveLength(4);
+    expect(host.querySelector('.entry-glosses')?.closest('details')).toBeNull();
+    expect(host.querySelector('.entry-glosses')?.textContent).toContain('trên');
+    expect(host.querySelector('.quick-explanation')?.classList.contains('is-compact')).toBe(true);
+    expect(host.querySelector('.long-meaning')?.textContent).toBe(definition);
+    act(() => host.querySelector<HTMLButtonElement>('.quick-more-meanings')!.click());
+    expect(host.querySelectorAll('.sense-row')).toHaveLength(5);
+    expect(host.querySelector('.quick-explanation')?.classList.contains('is-compact')).toBe(false);
+  } finally { act(() => render(null, host)); host.remove(); }
+});
+
+it('honors the saved view across selection changes and allows switching it without requesting providers', () => {
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn(); const explain = vi.fn(); const translate = vi.fn(); const changed = vi.fn();
+  let display: 'popup' | 'panel' = 'panel'; let selectionKey = 'first';
+  const draw = () => render(<LookupBottomSheet open displayMode={display} preferredView={display === 'panel' ? 'full' : 'quick'} selectionKey={selectionKey}
+    onDisplayModeChange={next => { changed(next); display = next; draw(); }} result={validLookup} loading={false} error={null} mode="bilingual"
+    onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} onExplain={explain} onTranslateSentence={translate} saved={false} />, host);
+  try {
+    act(draw);
+    expect(host.querySelector('.lookup-sheet.expanded')).not.toBeNull();
+    selectionKey = 'second'; act(draw);
+    expect(host.querySelector('.lookup-sheet.expanded')).not.toBeNull();
+    const selector = host.querySelector<HTMLSelectElement>('[aria-label="Default lookup view"]')!;
+    expect(selector.value).toBe('full');
+    act(() => { selector.value = 'quick'; selector.dispatchEvent(new Event('change', { bubbles: true })); });
+    expect(changed).toHaveBeenLastCalledWith('popup');
+    selectionKey = 'third'; act(draw);
+    expect(host.querySelector('.lookup-sheet.quick')).not.toBeNull();
+    expect(explain).not.toHaveBeenCalled(); expect(translate).not.toHaveBeenCalled();
+  } finally { act(() => render(null, host)); host.remove(); }
+});
+
+it('cycles desktop panel languages, exposes unpaired glosses and keeps Note beside Save without requesting data', () => {
+  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn(); const note = vi.fn(); const save = vi.fn(); const explain = vi.fn(); const translate = vi.fn();
+  const result = { ...validLookup, dictionary: { word: 'maintain', surfaceForm: 'maintain', lemma: 'maintain', pronunciation: null, contextConfidence: 0,
+    senses: [{ id: 'paired', pos: 'verb', definitionEn: 'Keep in good condition', meaningsVi: ['bảo dưỡng'], source: 'local' as const, contextScore: 0, contextMatch: false }],
+    unpairedMeaningsVi: ['nghĩa Việt chưa ghép'] } };
+  let mode: 'en' | 'vi' | 'bilingual' = 'bilingual';
+  const draw = () => render(<LookupBottomSheet open result={result} loading={false} error={null} mode={mode}
+    onModeChange={next => { mode = next; draw(); }} onClose={noop} onOpenSettings={noop} onSpeak={noop}
+    onToggleSave={save} onAddNote={note} onExplain={explain} onTranslateSentence={translate} saved={false} />, host);
+  try {
+    act(draw);
+    expect(host.querySelector('.language-cycle')).not.toBeNull();
+    act(() => host.querySelector<HTMLButtonElement>('.explain-button')!.click());
+    expect(host.querySelector('.language-tabs')).toBeNull();
+    const noteButton = host.querySelector<HTMLButtonElement>('.inspector-header-actions .inspector-note')!;
+    expect(noteButton.textContent).toBe('Note');
+    expect(noteButton.nextElementSibling?.getAttribute('aria-label')).toBe('Save word');
+    expect(host.querySelectorAll('[aria-label="Add note"]')).toHaveLength(1);
+    act(() => noteButton.click());
+    act(() => host.querySelector<HTMLButtonElement>('[aria-label="Save word"]')!.click());
+    expect(note).toHaveBeenCalledOnce();
+    expect(save).toHaveBeenCalledOnce();
+    const cycle = [['bilingual', 'EN+VI'], ['en', 'EN'], ['vi', 'VI'], ['bilingual', 'EN+VI']] as const;
+    for (const [index, [expectedMode, label]] of cycle.entries()) {
+      expect(mode).toBe(expectedMode);
+      expect(host.querySelector('.language-cycle')?.textContent).toContain(label);
+      expect(host.querySelector('.language-cycle')?.getAttribute('title')).toMatch(/^Switch to /);
+      const meaning = host.querySelector('.expanded-sense-list .sense-bilingual')!;
+      expect(Boolean(meaning.querySelector('.sense-definition'))).toBe(expectedMode !== 'vi');
+      expect(Boolean(meaning.querySelector('.sense-vi'))).toBe(expectedMode !== 'en');
+      const unpaired = host.querySelector('.deep-explanation>.unpaired-meanings');
+      expect(Boolean(unpaired)).toBe(expectedMode !== 'en');
+      if (unpaired) {
+        expect(unpaired.closest('details')).toBeNull();
+        expect(unpaired.textContent).toContain('nghĩa Việt chưa ghép');
+        expect(unpaired.querySelector('h3')?.textContent).toBe('Unmatched Vietnamese meanings');
+      }
+      expect(meaning.textContent).not.toContain('nghĩa Việt chưa ghép');
+      if (index < cycle.length - 1) {
+        act(() => host.querySelector<HTMLButtonElement>('.language-cycle')!.click());
+      }
+    }
+    expect(explain).not.toHaveBeenCalled();
+    expect(translate).not.toHaveBeenCalled();
+    act(() => host.querySelector<HTMLButtonElement>('.explain-button')!.click());
+    expect(host.querySelector('.language-cycle')).not.toBeNull();
+    expect(host.querySelector('.language-tabs')).toBeNull();
+    expect(host.querySelector('.inspector-header-actions [aria-label="Add note"]')).not.toBeNull();
+  } finally { act(() => render(null, host)); host.remove(); vi.unstubAllGlobals(); }
+});
+
 it.each(['en', 'vi', 'bilingual'] as const)('renders only available language rows and keeps header actions accessible (%s)', mode => {
   const host = document.createElement('div'); document.body.append(host);
   const noop = vi.fn(); const speak = vi.fn(); const save = vi.fn(); const close = vi.fn();
@@ -86,23 +200,23 @@ it('keeps Quick minimal, resets expansion on selection, and handles Escape in tw
     expect(host.querySelector('.context-actions,select')).toBeNull();
     expect(host.querySelector('.inspector-sources')?.hasAttribute('open')).toBe(false);
     expect(host.querySelector('[aria-label="Save word"]')).not.toBeNull();
-    expect(host.querySelector('.inspector-header .inspector-controls .language-tabs')).not.toBeNull();
+    expect(host.querySelector('.inspector-header .inspector-pronunciation .language-cycle')).not.toBeNull();
     expect(host.querySelector('.inspector-header .explain-button')?.textContent).toContain('Show more');
     expect(host.querySelectorAll('[aria-label="Add note"]')).toHaveLength(1);
     act(() => (host.querySelector('.explain-button') as HTMLButtonElement).click());
-    expect(host.querySelector('.inspector-header .explain-button')?.textContent).toContain('Show less');
+    expect(host.querySelector('.inspector-header .explain-button')?.getAttribute('aria-label')).toBe('Show less');
     expect(host.querySelectorAll('[aria-label="Add note"]')).toHaveLength(1);
     expect(host.querySelector('[aria-label="Save word"]')?.textContent).toBe('Save');
     act(() => render(<LookupBottomSheet {...props} selectionKey="first" loading error="Unavailable" />, host));
     expect(host.querySelector('.meaning-en')?.textContent).toBe(validLookup.quick.definition_en);
     act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })); });
     expect(close).not.toHaveBeenCalled();
-    expect(host.querySelector('.inspector-controls .language-tabs')).not.toBeNull();
+    expect(host.querySelector('.inspector-pronunciation .language-cycle')).not.toBeNull();
     expect(host.querySelector('.lookup-sheet.quick')).not.toBeNull();
     act(() => (host.querySelector('.explain-button') as HTMLButtonElement).click());
     host.querySelector<HTMLSelectElement>('select')?.focus();
     act(() => render(<LookupBottomSheet {...props} selectionKey="second" />, host));
-    expect(host.querySelector('.inspector-controls .language-tabs')).not.toBeNull();
+    expect(host.querySelector('.inspector-pronunciation .language-cycle')).not.toBeNull();
     expect(host.querySelector('.lookup-sheet.quick')).not.toBeNull();
     expect(document.activeElement).toBe(host.querySelector('.explain-button'));
     act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })); });
@@ -280,7 +394,7 @@ it.each(['en', 'vi', 'bilingual'] as const)('preserves linked sense rows in Quic
     expect(host.querySelector('.inspector-controls .inspector-sources')).toBeNull();
     expect(host.querySelector('.inspector-body>.inspector-footer .inspector-sources')).not.toBeNull();
     expect(host.querySelector('.inspector-controls .ai-explain-button')).not.toBeNull();
-    expect(host.querySelector('.inspector-controls [aria-label="Add note"]')).not.toBeNull();
+    expect(host.querySelector('.inspector-header-actions [aria-label="Add note"]')).not.toBeNull();
   } finally { act(() => render(null, host)); host.remove(); }
 });
 

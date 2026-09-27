@@ -45,13 +45,13 @@ describe('sense evidence is independent from part-of-speech evidence', () => {
     expect(result).toMatchObject({ status: 'common', contextMatch: false });
   });
 
-  it('uses a saved whole-sentence translation only when it supports a linked dictionary meaning', () => {
+  it('keeps translation-only evidence below the Context gate', () => {
     const sentence = 'They zorp it.';
     const base = { selection: 'zorp', lemma: 'zorp', sentence, sentenceAnalysis: analysis(sentence),
       selectionStart: sentence.indexOf('zorp'), pos: 'verb', candidateSenses: senses };
     const supported = new SenseResolver().resolve({ ...base, sentenceTranslationVi: 'Họ vẫn điều hành công ty.' });
     const uncertain = new SenseResolver().resolve({ ...base, sentenceTranslationVi: 'Họ vẫn làm việc ở đó.' });
-    expect(supported).toMatchObject({ contextMatch: true, selectedSense: { id: 'zorp.manage' } });
+    expect(supported).toMatchObject({ contextMatch: false, status: 'ambiguous' });
     expect(supported.reasons.join(' ')).toContain('saved sentence translation');
     expect(uncertain.contextMatch).toBe(false);
   });
@@ -71,6 +71,38 @@ describe('sense evidence is independent from part-of-speech evidence', () => {
 
 
 describe('context ranking remains conservative', () => {
+  it('rejects contrast evidence for an imperative verb and retains diagnostics', () => {
+    const sentence = 'Turn the page.';
+    const result = new SenseResolver().resolve({ selection: 'Turn', lemma: 'turn', sentence,
+      sentenceAnalysis: analysis(sentence), candidateSenses: [
+        { id: 'contrast', pos: 'verb', definitionEn: 'change to the contrary' },
+        { id: 'rotate', pos: 'verb', definitionEn: 'move around an axis' }
+      ] });
+    expect(result.contextMatch).toBe(false);
+    expect(result.reasons.join(' ')).toContain('Occurrence POS: verb');
+    expect(result.diagnostics).toHaveLength(2);
+  });
+  it('accepts a detached concessive adverb', () => {
+    const sentence = 'Still, we continued.';
+    const result = new SenseResolver().resolve({ selection: 'Still', lemma: 'still', sentence,
+      sentenceAnalysis: analysis(sentence), candidateSenses: [
+        { id: 'contrast', pos: 'adverb', definitionEn: 'despite that; nevertheless' },
+        { id: 'quiet', pos: 'adjective', definitionEn: 'without moving' }
+      ] });
+    expect(result).toMatchObject({ contextMatch: true, selectedSense: { id: 'contrast' } });
+  });
+  it.each([
+    ['Think', 'Think about the consequences.', 'verb'],
+    ['Think', 'Think twice before answering.', 'verb'],
+    ['mean', 'What does this word mean?', 'verb'],
+    ['plane', 'The plane landed at the airport.', 'noun']
+  ])('keeps occurrence POS safe for %s in %s', (selection, sentence, pos) => {
+    const lexical = new LexicalEngine([{ lemma: 'land', forms: ['landed'], pos: ['noun', 'verb'], senses: [] }]);
+    const result = new SenseResolver(lexical).resolve({ selection, lemma: selection.toLowerCase(), sentence,
+      sentenceAnalysis: analysis(sentence), candidateSenses: ['adjective', 'noun', 'verb'].map(pos => ({ id: pos, pos, definitionEn: 'undistinguished meaning' })) });
+    expect(result.selectedSense?.pos).toBe(pos);
+    expect(result.contextMatch).toBe(false);
+  });
   it('recognizes an adverb between a subject and a predicate with multiple parts of speech', () => {
     const lexical = new LexicalEngine([{ lemma: 'question', pos: ['noun', 'verb'],
       senses: [{ id: 'question.verb', pos: 'verb', definitionEn: 'ask about something' }] }]);
@@ -123,4 +155,15 @@ describe('context ranking remains conservative', () => {
     expect(result.selectedSense?.id).toBe('first');
     expect(result.contextMatch).toBe(false);
   });
+});
+
+it('blocks dependent translated-definition evidence from self-confirming a sense', () => {
+  const sentence = 'They zorp the company.';
+  const candidateSenses = senses.map(sense => ({ ...sense, keywords: [], alignment: {
+    kind: 'translated-definition' as const, confidence: 'low' as const, evidence: ['provider'], dependsOnSenseId: sense.id
+  } }));
+  const result = new SenseResolver().resolve({ selection: 'zorp', lemma: 'zorp', sentence,
+    sentenceAnalysis: analysis(sentence), sentenceTranslationVi: 'H? ?i?u h?nh c?ng ty.', candidateSenses });
+  expect(result.contextMatch).toBe(false);
+  expect(result.diagnostics?.every(candidate => !candidate.reasons.some(reason => reason.includes('translation')))).toBe(true);
 });

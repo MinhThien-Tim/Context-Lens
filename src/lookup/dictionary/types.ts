@@ -1,4 +1,11 @@
 export type DictionaryQuality = 'reviewed' | 'curated' | 'imported';
+export interface SenseAlignment {
+  kind: 'explicit' | 'identical-gloss' | 'inferred' | 'translated-definition' | 'unresolved';
+  confidence: 'high' | 'medium' | 'low';
+  evidence: string[];
+  /** Derived display translations must never become independent resolver evidence. */
+  dependsOnSenseId?: string;
+}
 export type DictionaryReviewStatus = 'imported' | 'cross-checked' | 'editor-reviewed' | 'human-reviewed';
 
 export interface DictionaryProvenance {
@@ -31,6 +38,8 @@ export interface VietnameseReference {
 }
 
 export interface DictionaryEntry {
+  /** Compact source definition ID, POS, gloss index, optional example. */
+  viSenses?: [number, string, number, string?][];
   lemma: string;
   partOfSpeech: string;
   ipa: string | null;

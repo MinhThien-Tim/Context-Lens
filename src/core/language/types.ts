@@ -1,6 +1,8 @@
 export type { TranslationResult } from '../translation/types';
 
 export interface LexicalSense {
+  alignment?: import('../../lookup/dictionary/types').SenseAlignment;
+  verbFrames?: number[];
   id: string;
   definitionEn: string;
   meaningVi?: string;
@@ -17,6 +19,7 @@ export interface LexicalSense {
   cefr?: string;
 }
 export interface LexicalEntry {
+  vietnameseSenses?: { id: string; lemma: string; pos?: string; glosses: string[]; examples?: string[]; source: string }[];
   lemma: string; pos: string[]; forms?: string[]; senses: LexicalSense[]; meaningsVi?: string[];
   morphology?: { surface: string; baseLemma: string; inflection: import('../../lookup/dictionary/types').InflectionType };
   vietnameseReferences?: import('../../lookup/dictionary/types').VietnameseReference[];
@@ -26,6 +29,7 @@ export interface PhraseEntry extends LexicalEntry { type: 'idiom' | 'phrasal ver
 export interface TokenInfo { text: string; normalized: string; lemma: string; start: number; end: number; pos?: string }
 export interface DetectedPhrase { canonical: string; text: string; start: number; end: number; type: PhraseEntry['type'] }
 export interface SentenceAnalysis {
+  constructions?: import('./constructions').ConstructionFeatures[];
   id: string; sourceText: string; normalizedText: string; sourceLang: string;
   translationVi?: string; simpleEnglish?: string;
   tokens: TokenInfo[]; lemmas: string[]; phrases: DetectedPhrase[]; semanticHints: string[];
@@ -44,7 +48,7 @@ export interface LensResult {
   vietnamese?: { meaning?: string; contextualMeaning?: string; senseAligned?: boolean };
   grammar?: { role?: string; pattern?: string; form?: string };
   context: { sentence: string; sentenceTranslation?: string; simpleEnglish?: string; previousSentence?: string; nextSentence?: string; needsPreviousSentence?: boolean };
-  sense?: { id: string; alternatives: string[]; reasons: string[] };
+  sense?: { id: string; alternatives: string[]; reasons: string[]; diagnostics?: import('./sense-resolver').SenseResolution['diagnostics'] };
   dictionary?: import('../../lookup/types').DictionaryResult;
   /** Confidence in the selected meaning; deliberately separate from POS confidence. */
   confidence: number; posConfidence?: number; providers: { lexical?: string; sentence?: string; context?: string };

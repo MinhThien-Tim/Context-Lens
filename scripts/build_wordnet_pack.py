@@ -41,12 +41,20 @@ with tarfile.open(args.source, 'r:gz') as archive:
             definition = re.split(r';?\s*"', gloss.strip(), maxsplit=1)[0].strip().rstrip(';')
             examples = re.findall(r'"([^"]+)"', gloss)
             index = len(synsets)
-            synsets.append([offset, words, definition, examples])
+            frame_start = 4 + int(count, 16) * 2
+            pointer_count = int(fields[frame_start])
+            frame_start += 1 + pointer_count * 4
+            frames = []
+            if pos == 'v':
+                for i in range(int(fields[frame_start])):
+                    base = frame_start + 1 + i * 3
+                    frames.append([int(fields[base + 1]), int(fields[base + 2], 16)])
+            synsets.append([offset, words, definition, examples, frames])
             for word in words:
                 entries.setdefault(word.lower(), []).append([index, ranks.get((word, pos, offset), 99)])
         for word in entries:
             entries[word] = [i for i, rank in sorted(entries[word], key=lambda pair: pair[1])]
-        payload = {'version': '3.0', 'pos': pos, 'synsets': synsets, 'entries': entries}
+        payload = {'formatVersion': 2, 'version': '3.0', 'pos': pos, 'synsets': synsets, 'entries': entries}
         path = args.output / f'wordnet-{part}.json'
         path.write_text(json.dumps(payload, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
         manifest['files'].append({'file': path.name, 'entries': len(entries), 'senses': len(synsets), 'bytes': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()})

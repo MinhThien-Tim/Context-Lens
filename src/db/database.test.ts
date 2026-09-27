@@ -20,6 +20,16 @@ describe('document storage', () => {
 
 describe('reader interface preferences', () => {
   afterEach(async () => { await db.settings.clear(); });
+  it('remembers lookup view and language across preference reloads', async () => {
+    await savePreferences({ ...defaultPreferences, lookupViewMode: 'full', languageMode: 'vi' });
+    expect(await loadPreferences()).toMatchObject({ lookupViewMode: 'full', languageMode: 'vi' });
+    await savePreferences({ ...defaultPreferences, lookupViewMode: 'quick', languageMode: 'bilingual' });
+    expect(await loadPreferences()).toMatchObject({ lookupViewMode: 'quick', languageMode: 'bilingual' });
+  });
+  it.each([undefined, 'invalid'])('defaults missing or invalid lookup view to Quick (%s)', async lookupViewMode => {
+    await db.settings.put({ key: 'reader-preferences', value: { ...defaultPreferences, lookupViewMode } });
+    expect((await loadPreferences()).lookupViewMode).toBe('quick');
+  });
   it('defaults to Simple and System without legacy settings', async () => {
     await db.settings.clear();
     expect(await loadPreferences()).toEqual(defaultPreferences);

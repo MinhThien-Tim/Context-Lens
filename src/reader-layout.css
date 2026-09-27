@@ -381,3 +381,59 @@ body:has(.reader-shell) { background:var(--reading-surface); }
 .lookup-sheet .inspector-footer { position:static; flex:none; margin-top:12px; padding-top:6px; }
 .lookup-sheet .inspector-footer .inspector-sources>summary { background:transparent; color:var(--secondary-text); padding-inline:0; }
 .lookup-sheet .explain-direction { width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+
+/* Shared compact lookup controls and visible Vietnamese glosses in Quick and Full. */
+.lookup-sheet .inspector-header { position:relative; z-index:2; gap:8px; }
+.lookup-sheet .inspector-header-actions { gap:6px; }
+.lookup-sheet .inspector-header-actions .save-inline,
+.lookup-sheet .inspector-header-actions .inspector-note { min-height:36px; padding:0 9px; margin:0; border:1px solid var(--border); border-radius:6px; background:transparent; color:var(--primary-text); font-size:12px; white-space:nowrap; }
+.lookup-sheet .inspector-header-actions .save-inline[aria-pressed="true"] { color:var(--context); background:var(--context-soft); border-color:var(--context); }
+.lookup-sheet .inspector-header-actions .explain-close { min-width:30px; width:30px; min-height:36px; }
+.lookup-sheet .inspector-header .inspector-controls { gap:6px; }
+.lookup-sheet .inspector-header .inspector-pronunciation { grid-column:1 / -1; padding:0; gap:6px; }
+.lookup-sheet .inspector-pronunciation .ipa-line { min-width:0; overflow-wrap:anywhere; }
+.lookup-sheet .inspector-word-meta { grid-column:1 / -1; }
+.lookup-sheet .inspector-lookup-tools { display:flex; flex:none; align-items:center; gap:4px; margin-left:auto; }
+.lookup-sheet .inspector-lookup-tools .language-cycle,
+.lookup-sheet .inspector-controls .explain-toolstrip>button { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:36px; padding:0 8px; border:1px solid var(--border); border-radius:6px; color:var(--primary-text); background:var(--subtle-surface); font:600 11px/1.2 var(--font-ui); white-space:nowrap; cursor:pointer; }
+.lookup-sheet .inspector-lookup-tools .language-cycle { flex:none; min-width:52px; padding:0 6px; gap:4px; background:var(--elevated-surface); }
+.lookup-sheet .language-cycle span { font-size:12px; color:var(--secondary-text); }
+.lookup-sheet .inspector-lookup-tools .explain-toggle { display:inline-flex; align-items:center; justify-content:center; gap:4px; order:0; width:auto; min-width:30px; min-height:36px; padding:0; margin:0; color:var(--primary-text); background:transparent; border:0; font:600 11px/1.2 var(--font-ui); white-space:nowrap; }
+.lookup-sheet.expanded .inspector-lookup-tools .explain-toggle { width:30px; padding:0; }
+.lookup-sheet .explain-more-actions>summary { min-width:30px; min-height:36px; padding:0; font-size:20px; }
+.lookup-sheet .explain-more-actions>summary::after { content:none; }
+.lookup-sheet .inspector-lookup-tools .explain-more-actions { position:static; }
+.lookup-sheet .explain-more-actions>div { position:absolute; top:calc(100% + 6px); right:12px; width:210px; max-width:none; margin:0; box-shadow:var(--shadow); }
+.lookup-view-preference { display:grid; gap:6px; color:var(--primary-text); font-size:12px; }
+.lookup-view-preference select { width:100%; min-height:36px; padding:0 8px; border:1px solid var(--border); border-radius:6px; background:var(--elevated-surface); color:var(--primary-text); }
+.lookup-view-preference small { color:var(--secondary-text); font-size:11px; }
+.lookup-sheet .inspector-body,
+.lookup-sheet .deep-explanation { font-size:15px; line-height:1.5; }
+.lookup-sheet .sense-definition,
+.lookup-sheet .sense-vi,
+.lookup-sheet .meaning-en,
+.lookup-sheet .meaning-vi { font-size:15px; line-height:1.5; overflow-wrap:anywhere; }
+.lookup-sheet.expanded .sense-bilingual.paired-columns { display:flex; gap:4px; }
+.lookup-sheet.expanded .paired-columns .sense-vi { border:0; padding:0; }
+.lookup-sheet .expanded-sense-list li,
+.lookup-sheet .expanded-sense-list .context-match { margin:0 0 10px; padding:0; background:transparent; }
+.lookup-sheet .expanded-sense-list li span { margin:0; line-height:1.5; }
+.lookup-sheet .sense-group { margin-bottom:8px; }
+.lookup-sheet .deep-explanation>.inspector-sentence { margin:0 0 12px; padding:10px; border:0; border-left:2px solid color-mix(in srgb,var(--language) 35%,var(--border)); border-radius:6px; background:color-mix(in srgb,var(--language) 6%,var(--elevated-surface)); }
+.lookup-sheet .deep-explanation>.expanded-senses { margin:0 0 12px; padding:10px; border-left:2px solid color-mix(in srgb,var(--context) 35%,var(--border)); border-radius:6px; background:color-mix(in srgb,var(--context) 5%,var(--elevated-surface)); }
+.lookup-sheet .deep-explanation>.inspector-disclosure { margin:0; padding:0; border-bottom:1px solid var(--border); border-radius:0; background:transparent; }
+.lookup-sheet .deep-explanation>.unpaired-meanings,
+.lookup-sheet .quick-meaning-table .entry-glosses { margin:0 0 12px; padding:10px; border:0; border-left:2px solid color-mix(in srgb,var(--notes) 40%,var(--border)); border-radius:6px; background:color-mix(in srgb,var(--notes) 8%,var(--elevated-surface)); }
+.lookup-sheet .deep-explanation>.unpaired-meanings h3 { margin:0 0 4px; font-size:13px; }
+.lookup-sheet .unpaired-meanings p { margin:0 0 8px; font-size:12px; line-height:1.5; }
+.lookup-sheet .unpaired-meanings ul { gap:6px; }
+.lookup-sheet .unpaired-meanings li { font-size:15px; line-height:1.5; overflow-wrap:anywhere; }
+.lookup-sheet .deep-explanation>section>h3 { margin-top:0; }
+.lookup-sheet.quick .is-compact .sense-row .long-meaning { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+@media (max-width:1023px) {
+  .lookup-sheet .inspector-header-actions button,
+  .lookup-sheet .inspector-lookup-tools .language-cycle,
+  .lookup-sheet .inspector-controls .explain-toolstrip>button,
+  .lookup-sheet .inspector-lookup-tools .explain-toggle,
+  .lookup-sheet .explain-more-actions>summary { min-height:44px; }
+}

@@ -17,7 +17,7 @@ beforeAll(async () => {
     const wordnet = url.match(/wordnet-(noun|verb|adj|adv)/)?.[1];
     const path = wordnet ? `release/wordnet/wordnet-${wordnet}.json`
       : url.includes('wiktionary') ? 'release/dictionary/context-lens-wiktionary-en-vi-reviewed-2026.09.2.json'
-        : 'release/dictionary/context-lens-en-vi-2026.09.1.json';
+        : 'release/dictionary/context-lens-en-vi-2026.09.3.json';
     return new Response(readFileSync(path, 'utf8'));
   }));
   await Promise.all([loadWordNet(), loadWordNet(), loadBundledDictionary()]);
@@ -41,7 +41,11 @@ it('delivers English definitions and Vietnamese meanings through the actual serv
     const result = await service.quick(request(word, sentence), { ...defaultEngineSettings, quickEngine: 'offline' });
     expect(result.quick.definition_en.length).toBeGreaterThan(5);
     expect(result.quick.meaning_vi.length).toBeGreaterThan(0);
-    expect(result.lens?.vietnamese?.senseAligned).toBe(false);
+    if (result.lens?.vietnamese?.senseAligned) {
+      expect(result.dictionary?.senses[0].alignment?.kind).toMatch(/^(?:explicit|identical-gloss|inferred)$/);
+      expect(result.dictionary?.senses[0].alignment?.confidence).toBe('high');
+      expect(result.dictionary?.senses[0].alignment?.evidence.length).toBeGreaterThan(0);
+    }
   }
   expect(fetch).not.toHaveBeenCalled();
 });
@@ -193,4 +197,49 @@ it('measures local warm latency with the full offline dictionaries loaded', asyn
   }
   times.sort((a, b) => a - b);
   process.stderr.write(`[performance] full local engine n=100 p50=${times[50].toFixed(2)}ms p95=${times[95].toFixed(2)}ms\n`);
+});
+
+it('preserves Vietnamese source senses and WordNet frames through lexical loading', () => {
+  const lexical = new LexicalEngine();
+  for (const [lemma, minimum] of [['think', 7], ['mean', 17], ['run', 69]] as const) {
+    const entry = lexical.lookup(lemma)!;
+    expect(entry.vietnameseSenses!.length).toBeGreaterThanOrEqual(minimum);
+    expect(entry.vietnameseSenses!.every(sense => sense.id && sense.glosses[0])).toBe(true);
+  }
+  const plane = lexical.lookup('plane')!;
+  expect(plane.vietnameseSenses!.some(sense => sense.pos === 'noun')).toBe(true);
+  expect(plane.vietnameseSenses!.some(sense => sense.pos === 'verb')).toBe(true);
+  expect(lexical.lookup('think')!.senses.some(sense => sense.verbFrames?.length)).toBe(true);
+  const manifest = JSON.parse(readFileSync('release/dictionary/manifest.json', 'utf8'));
+  const bytes = readFileSync(`release/dictionary/${manifest.pack}`);
+  expect(bytes.length).toBeLessThan(25 * 1024 * 1024);
+  expect(createHash('sha256').update(bytes).digest('hex')).toBe(manifest.sha256);
+});
+
+it('links aircraft plane independently of sentence context while preserving unresolved meanings', () => {
+  const entry = new LexicalEngine().lookup('plane')!;
+  const aircraft = entry.senses.find(sense => sense.synonyms?.includes('airplane'))!;
+  expect(aircraft.alignment).toMatchObject({ kind: 'inferred', confidence: 'high' });
+  expect(aircraft.meaningVi).toBe('máy bay');
+  expect(entry.vietnameseSenses!.some(sense => sense.glosses[0].includes('Mặt tinh thể'))).toBe(true);
+  expect(entry.senses.some(sense => sense.alignment?.kind === 'unresolved')).toBe(true);
+});
+it.each([
+  ['Think about the consequences.', true],
+  ['Think twice before answering.', false],
+  ["I think he'll arrive tomorrow.", false],
+  ['I think that he will arrive tomorrow.', false],
+  ['I think highly of her.', true],
+  ['They think him foolish.', true],
+  ['I need time to think.', false],
+  ['I think of my mother.', false],
+  ['I think him to be honest.', true]
+])('keeps release-data think safe in %s', async (sentence, confirmed) => {
+  const word = sentence.startsWith('Think') ? 'Think' : 'think';
+  const result = await new LookupService().quick({ ...request(word, sentence), selection_start: sentence.toLowerCase().indexOf('think') },
+    { ...defaultEngineSettings, quickEngine: 'offline' });
+  expect(result.dictionary?.senses[0].pos).toBe('verb');
+  if (confirmed) expect(result.dictionary?.senses[0].contextMatch).toBe(true);
+  if (sentence.startsWith('Think twice')) expect(result.dictionary?.senseStatus).toBe('ambiguous');
+  process.stderr.write(`[think] ${sentence} => ${result.dictionary?.senseStatus}: ${result.quick.definition_en}\n`);
 });

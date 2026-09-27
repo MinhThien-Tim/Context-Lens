@@ -10,6 +10,7 @@ import { getDiagnostics } from '../core/diagnostics';
 
 interface Props {
   displayMode?: 'popup' | 'panel';
+  preferredView?: 'quick' | 'full';
   onDisplayModeChange?: (mode: 'popup' | 'panel') => void;
   anchor?: { left: number; top: number; right: number; bottom: number };
   selectionKey?: string;
@@ -35,12 +36,18 @@ interface Props {
 }
 
 export function LookupBottomSheet(props: Props) {
-  const [deepOpen, setDeepOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const deepOpen = props.displayMode ? props.displayMode === 'panel' : expanded;
   const desktop = useDesktop();
   const bodyRef = useRef<HTMLDivElement>(null);
   const popup = !deepOpen;
-  const sheetRef = useDialog(() => { if (deepOpen) { setDeepOpen(false); props.onDisplayModeChange?.('popup'); if (bodyRef.current) bodyRef.current.scrollTop = 0; } else props.onClose(); }, props.open, !desktop);
-  useEffect(() => { setDeepOpen(false); if (bodyRef.current) bodyRef.current.scrollTop = 0; }, [props.selectionKey, props.open, props.result?.selection.surface, props.result?.context.sentence]);
+  const changeDisplay = (next: boolean) => {
+    setExpanded(next);
+    props.onDisplayModeChange?.(next ? 'panel' : 'popup');
+    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+  };
+  const sheetRef = useDialog(() => { if (deepOpen) changeDisplay(false); else props.onClose(); }, props.open, !desktop);
+  useEffect(() => { setExpanded(false); if (bodyRef.current) bodyRef.current.scrollTop = 0; }, [props.selectionKey, props.open]);
   useEffect(() => {
     // Collapsing can remove the focused advanced control from the mobile dialog.
     if (props.open && !desktop && !deepOpen && !sheetRef.current?.contains(document.activeElement)) {
@@ -65,10 +72,7 @@ export function LookupBottomSheet(props: Props) {
     top: `${Math.max(72, Math.min(props.anchor.top - 28, window.innerHeight - 430))}px`,
   } : undefined;
   const toggleFull = () => {
-    const next = !deepOpen;
-    setDeepOpen(next);
-    props.onDisplayModeChange?.(next ? 'panel' : 'popup');
-    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+    changeDisplay(!deepOpen);
   };
   const contextual = result?.dictionary?.senses.some(sense => sense.contextMatch) && !['common', 'ambiguous'].includes(result?.dictionary?.senseStatus ?? 'context');
   const ipa = result?.selection.ipa_uk || result?.selection.ipa_us || result?.dictionary?.pronunciation;
@@ -77,29 +81,25 @@ export function LookupBottomSheet(props: Props) {
     {!desktop && <button class="sheet-backdrop" aria-label="Close meaning" tabIndex={-1} onClick={props.onClose} />}
     <section ref={sheetRef} tabIndex={-1} style={popupStyle} class={`lookup-sheet ${popup ? 'word-popup' : 'side-panel'} ${deepOpen ? 'expanded' : 'quick'}`} role={desktop ? 'complementary' : 'dialog'} aria-modal={desktop ? undefined : true} aria-label="Meaning in context">
       <header class="inspector-header">
-        <div class="inspector-word"><div class="inspector-word-title"><strong>{result?.selection.surface || props.selectionText}</strong>{result && (result.dictionary?.contextPos || result.selection.part_of_speech) && <span class="pos-chip">{result.dictionary?.contextPos || result.selection.part_of_speech}</span>}</div>
-          <div class="inspector-pronunciation">{ipa && <span class="ipa-line">{ipa}</span>}{result && <button aria-label="Pronounce word" onClick={() => props.onSpeak(result.selection.surface)}>♪</button>}</div>
-          {result && <div class="inspector-word-meta">{result.selection.lemma && result.selection.lemma !== result.selection.surface && <span>{result.selection.lemma.includes(' ') ? 'Meaning for' : 'Base'}: {result.selection.lemma}</span>}{contextual && <span class="context-badge">✓ Context</span>}</div>}
-        </div>
-        <div class="inspector-header-actions">{result && <button class="save-inline" aria-label={props.saved ? 'Remove saved word' : 'Save word'} aria-pressed={props.saved} onClick={props.onToggleSave}>{props.saved ? '✓ Saved' : 'Save'}</button>}<button class="explain-close" aria-label="Close meaning" onClick={props.onClose}>×</button></div>
-        {result && <div class="inspector-controls">
-          <LanguageTabs value={props.mode} onChange={props.onModeChange} />
-          {deepOpen && <>
-          <div class="explain-toolstrip">
-              {props.onTranslateSentence && <button class="secondary-button compact-action" onClick={() => { setDeepOpen(true); props.onTranslateSentence?.(); }} aria-label="Translate sentence" title="Translate sentence">Translate</button>}
-
-            {!props.geminiConnected && <button class="ai-explain-button secondary-button compact-action" onClick={() => { setDeepOpen(true); props.onExplain?.('meaning-in-context'); }}>AI Explain</button>}
-            <details class="explain-more-actions"><summary aria-label="More actions" title="More actions">More</summary><div>
+        <div class="inspector-word"><div class="inspector-word-title"><strong>{result?.selection.surface || props.selectionText}</strong>{result && (result.dictionary?.contextPos || result.selection.part_of_speech) && <span class="pos-chip">{result.dictionary?.contextPos || result.selection.part_of_speech}</span>}</div></div>
+        <div class="inspector-header-actions">{result && props.onAddNote && <button class="inspector-note secondary-button" onClick={props.onAddNote} aria-label="Add note" title="Add note">Note</button>}{result && <button class="save-inline" aria-label={props.saved ? 'Remove saved word' : 'Save word'} aria-pressed={props.saved} onClick={props.onToggleSave}>{props.saved ? '✓ Saved' : 'Save'}</button>}<button class="explain-close" aria-label="Close meaning" onClick={props.onClose}>×</button></div>
+        {result && <div class="inspector-pronunciation">
+          {ipa && <span class="ipa-line">{ipa}</span>}<button aria-label="Pronounce word" onClick={() => props.onSpeak(result.selection.surface)}>♪</button>
+          <div class="inspector-lookup-tools">
+            <LanguageTabs value={props.mode} onChange={props.onModeChange} compact />
+            <details class="explain-more-actions"><summary aria-label="More actions" title="More actions">⋯</summary><div>
+              {props.onDisplayModeChange && <label class="lookup-view-preference">Default view<select aria-label="Default lookup view" value={props.preferredView ?? (deepOpen ? 'full' : 'quick')} onChange={event => changeDisplay(event.currentTarget.value === 'full')}><option value="quick">Quick</option><option value="full">Show more</option></select><small>Saved for new lookups.</small></label>}
               <button class="secondary-button compact-action" onClick={props.onOpenSettings}>Settings</button>
-              {!props.geminiConnected && <select class="compact-select" aria-label="AI explanation type" value="" onChange={event => { if (event.currentTarget.value) { setDeepOpen(true); props.onExplain?.(event.currentTarget.value as ContextMode); } }}><option value="">AI task…</option><option value="grammar">Grammar</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>}
+              {deepOpen && !props.geminiConnected && <select class="compact-select" aria-label="AI explanation type" value="" onChange={event => { if (event.currentTarget.value) props.onExplain?.(event.currentTarget.value as ContextMode); }}><option value="">AI task…</option><option value="grammar">Grammar</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>}
             </div></details>
-          </div>
-          </>}
-          <div class="inspector-primary-actions">
-            {props.onAddNote && <button class="inspector-note secondary-button" onClick={props.onAddNote} aria-label="Add note" title="Add note">Add note</button>}
-            <button class="explain-toggle explain-button" aria-expanded={deepOpen} onClick={toggleFull}>{deepOpen ? 'Show less' : 'Show more'} <svg class="explain-direction" aria-hidden="true" viewBox="0 0 16 16"><path d={deepOpen ? "M13 8H3m4-4L3 8l4 4" : "M3 8h10m-4-4 4 4-4 4"} /></svg></button>
+            <button class="explain-toggle explain-button" aria-expanded={deepOpen} aria-label={deepOpen ? 'Show less' : 'Show more'} title={deepOpen ? 'Show less' : 'Show more'} onClick={toggleFull}>{!deepOpen && 'Show more'} <svg class="explain-direction" aria-hidden="true" viewBox="0 0 16 16"><path d={deepOpen ? "M13 8H3m4-4L3 8l4 4" : "M3 8h10m-4-4 4 4-4 4"} /></svg></button>
           </div>
         </div>}
+        {result && <div class="inspector-word-meta">{result.selection.lemma && result.selection.lemma !== result.selection.surface && <span>{result.selection.lemma.includes(' ') ? 'Meaning for' : 'Base'}: {result.selection.lemma}</span>}{contextual && <span class="context-badge">✓ Context</span>}</div>}
+        {result && deepOpen && (props.onTranslateSentence || !props.geminiConnected) && <div class="inspector-controls"><div class="explain-toolstrip">
+          {props.onTranslateSentence && <button class="secondary-button compact-action" onClick={props.onTranslateSentence} aria-label="Translate sentence" title="Translate sentence">Translate</button>}
+          {!props.geminiConnected && <button class="ai-explain-button secondary-button compact-action" onClick={() => props.onExplain?.('meaning-in-context')}>AI Explain</button>}
+        </div></div>}
       </header>
       <div class="inspector-body" ref={bodyRef}>
       {!result ? <div class="lookup-pending"><strong>{props.selectionText}</strong><span>Finding meaning…</span></div> : <>

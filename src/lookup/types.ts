@@ -3,6 +3,7 @@ export type SelectionType = 'word' | 'phrase' | 'sentence';
 
 export type DictionarySenseSource = 'local' | 'wordnet' | 'wiktionary' | 'web';
 export interface DictionarySenseResult {
+  alignment?: import('./dictionary/types').SenseAlignment;
   id: string;
   pos: string;
   definitionEn: string;

@@ -47,7 +47,7 @@ def build(source: Path, output_dir: Path, version: str, attribution_file: Path) 
     connection = sqlite3.connect(f"file:{source.as_posix()}?mode=ro", uri=True)
     if connection.execute("PRAGMA integrity_check").fetchone()[0] != "ok": raise SystemExit("Source database integrity check failed")
     rows = connection.execute("""
-      SELECT w.word, d.pos, d.sub_pos, d.definition, p.ipa
+      SELECT w.word, d.pos, d.sub_pos, d.definition, p.ipa, d.id, wd.example
       FROM words w JOIN word_definitions wd ON wd.word_id=w.id
       JOIN definitions d ON d.id=wd.definition_id
       LEFT JOIN pronunciations p ON p.id=(SELECT p2.id FROM pronunciations p2 WHERE p2.word_id=w.id ORDER BY CASE WHEN p2.region IN ('BrE','UK') THEN 0 ELSE 1 END,p2.id LIMIT 1)
@@ -55,13 +55,20 @@ def build(source: Path, output_dir: Path, version: str, attribution_file: Path) 
     """)
     grouped: dict[str, dict[str, object]] = {}
     meanings: defaultdict[str, set[str]] = defaultdict(set)
-    for lemma, pos, sub_pos, definition, ipa in rows:
-        lemma, meaning = clean(lemma, 80).lower(), clean(definition, 250)
-        if not lemma or not meaning or len(meanings[lemma]) >= 12 or meaning in meanings[lemma]: continue
+    for lemma, pos, sub_pos, definition, ipa, sense_id, example in rows:
+        lemma, meaning = clean(lemma, 80).lower(), clean(definition, 2000)
+        if not lemma or not meaning: continue
         if lemma not in grouped:
-            grouped[lemma] = {"lemma": lemma, "partOfSpeech": clean(pos or sub_pos or "unknown", 80) or "unknown", "ipa": clean(ipa, 120) or None, "definitionEn": "", "meaningsVi": []}
-        meanings[lemma].add(meaning)
-        grouped[lemma]["meaningsVi"].append(meaning)
+            grouped[lemma] = {"lemma": lemma, "partOfSpeech": clean(pos or sub_pos or "unknown", 80) or "unknown", "ipa": clean(ipa, 120) or None, "definitionEn": "", "meaningsVi": [], "viSenses": []}
+        entry = grouped[lemma]
+        if meaning not in meanings[lemma]:
+            meanings[lemma].add(meaning)
+            entry["meaningsVi"].append(meaning)
+        record = [sense_id, clean(pos or sub_pos or "unknown", 80), entry["meaningsVi"].index(meaning)]
+        selected_example = clean(example, 160)
+        if len(entry["meaningsVi"]) > 1 and selected_example and lemma in selected_example.lower() and len(selected_example) >= 12 and not any(len(item) > 3 for item in entry["viSenses"]):
+            record.append(selected_example)
+        if not any(item[0] == sense_id for item in entry["viSenses"]): entry["viSenses"].append(record)
     detected = resolved = unresolved = ambiguous = inferred = 0
     for entry in grouped.values():
         hits = []
@@ -86,7 +93,7 @@ def build(source: Path, output_dir: Path, version: str, attribution_file: Path) 
                 break
     entries = list(grouped.values())
     if not 1 <= len(entries) <= 200_000: raise SystemExit(f"Unexpected entry count: {len(entries)}")
-    pack = {"schema":"context-lens.dictionary-pack","version":1,"id":"context-lens.skypedia.en-vi","name":"Context Lens English-Vietnamese (Skypedia)","packVersion":version,"quality":"curated","license":{"name":"CC BY-SA 4.0","url":LICENSE_URL,"attribution":ATTRIBUTION},"entries":entries}
+    pack = {"schema":"context-lens.dictionary-pack","version":2,"id":"context-lens.skypedia.en-vi","name":"Context Lens English-Vietnamese (Skypedia)","packVersion":version,"quality":"curated","license":{"name":"CC BY-SA 4.0","url":LICENSE_URL,"attribution":ATTRIBUTION},"entries":entries}
     pack_path = output_dir / f"context-lens-en-vi-{version}.json"
     pack_path.write_text(json.dumps(pack, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     size = pack_path.stat().st_size
@@ -100,5 +107,5 @@ def build(source: Path, output_dir: Path, version: str, attribution_file: Path) 
     print(json.dumps({**manifest, "morphology": {"detected": detected, "resolved": resolved, "inferred": inferred, "unresolved": unresolved, "ambiguous": ambiguous}},ensure_ascii=False,indent=2))
 
 if __name__ == "__main__":
-    parser=argparse.ArgumentParser(); parser.add_argument("--source",type=Path,required=True); parser.add_argument("--attribution",type=Path,required=True); parser.add_argument("--output",type=Path,default=Path("release/dictionary")); parser.add_argument("--version",default="2026.09.1")
+    parser=argparse.ArgumentParser(); parser.add_argument("--source",type=Path,required=True); parser.add_argument("--attribution",type=Path,required=True); parser.add_argument("--output",type=Path,default=Path("release/dictionary")); parser.add_argument("--version",default="2026.09.3")
     args=parser.parse_args(); build(args.source,args.output,args.version,args.attribution)

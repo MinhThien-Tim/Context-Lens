@@ -41,3 +41,23 @@ Build the production English-Vietnamese pack from the Skypedia SQLite source wit
 Publish all four release files together, preserve `ATTRIBUTION.md`, verify the checksum before and after upload, and keep the derived data under CC BY-SA 4.0. `definitionEn` is intentionally empty because the licensed source supplies Vietnamese definitions rather than English glosses.
 
 The bundled JSON is derived from the Skypedia English–Vietnamese dictionary under CC BY-SA 4.0. The original SQLite database is not shipped. The build includes the full attribution file, linked from **Data & storage**, alongside the derived JSON. Both assets are available offline after service-worker installation.
+
+## Source-preserving format v2
+
+The bundled Skypedia release `2026.09.3` uses format version 2. Version 1 imports remain supported.
+`meaningsVi` retains all source glosses, without a fixed gloss-count cap. `viSenses` stores compact
+`[definitionId, sourcePos, glossIndex, optionalExample]` tuples; the lemma belongs to the containing
+entry and source attribution/revision belongs to the pack. No English definition is invented.
+Gloss indices are validated and remapped when local Vietnamese redirects expand. Examples are
+bounded to 160 characters and at most one example per polysemous entry; they are supporting metadata.
+The generated artifact is 23,573,348 bytes (22.48 MiB), below the 25 MiB installer budget.
+The manifest and SHA256SUMS identify the new artifact. Rebuild with the existing `pack:dictionary`
+command; its default release version is now `2026.09.3`.
+
+WordNet format 2 retains verb frames as `[frameNumber, wordNumber]` tuples on stable synsets.
+Word number 0 applies to all lemmas; loading filters lemma-specific frames. Pointers remain omitted.
+Lexical cache version `local-lexicon-7`, WordNet format identity, and sentence analysis version 2
+invalidate stale derived records without a Dexie schema migration.
+
+The service-worker per-asset precache limit is 25 MiB, matching the installer budget, so the
+22.48 MiB source-preserving release is included in offline precache.

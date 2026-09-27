@@ -128,7 +128,7 @@ export class LookupService {
       const translated = await this.wordFallback!.translate({ text: sense.definitionEn, sourceLang: 'en', targetLang: 'vi', mode: 'sentence', signal });
       checkAbort(signal);
       if (!translated.text.trim() || translated.text.trim().toLowerCase() === sense.definitionEn.trim().toLowerCase()) return base;
-      const dictionary = { ...base.dictionary!, senses: base.dictionary!.senses.map(item => item.id === sense.id ? { ...item, meaningsVi: [translated.text], pairingState: 'paired' as const } : item) };
+      const dictionary = { ...base.dictionary!, senses: base.dictionary!.senses.map(item => item.id === sense.id ? { ...item, meaningsVi: [translated.text], pairingState: 'paired' as const, alignment: { kind: 'translated-definition' as const, confidence: 'low' as const, evidence: [translated.provider], dependsOnSenseId: sense.id } } : item) };
       return { ...base, dictionary,
         lens: base.lens ? { ...base.lens, dictionary, vietnamese: { meaning: translated.text, contextualMeaning: sense.contextMatch ? translated.text : undefined, senseAligned: true } } : undefined,
         quick: { ...base.quick, meaning_vi: [translated.text] }, source: translated.cached ? 'cache' : translated.offline ? 'offline' : 'translation',

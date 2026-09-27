@@ -1,9 +1,12 @@
 import type { LanguageMode, LookupResponse } from '../lookup/types';
-import { pairDictionarySenses, prioritizeDictionarySenses } from './dictionaryDisplay';
+import { pairDictionarySenses, prioritizeDictionarySenses, unpairedVietnameseMeanings } from './dictionaryDisplay';
 
 export function ExpandedExplain({ result, deep, mode, loading }: { result: LookupResponse; deep: LookupResponse; mode: LanguageMode; loading: boolean; contextResult?: LookupResponse | null }) {
   const showEn = mode !== 'vi', showVi = mode !== 'en';
-  const senses = prioritizeDictionarySenses(pairDictionarySenses(deep.dictionary?.senses ?? []), deep.dictionary?.contextPos)
+  const dictionary = deep.dictionary ?? result.dictionary;
+  const unpaired = unpairedVietnameseMeanings(result, deep);
+  const initialCount = showEn ? 2 : 4;
+  const senses = prioritizeDictionarySenses(pairDictionarySenses(dictionary?.senses ?? []), dictionary?.contextPos)
     .filter(sense => (showEn && sense.definitionEn) || (showVi && sense.meaningsVi.length));
   const groups = [...new Set(senses.map(sense => sense.pos))].map(pos => ({ pos, senses: senses.filter(sense => sense.pos === pos) }));
   const translation = deep.deep.sentence_analysis.translation_vi || deep.lens?.context.sentenceTranslation;
@@ -23,16 +26,16 @@ export function ExpandedExplain({ result, deep, mode, loading }: { result: Looku
     </section>}
     {groups.length > 0 && <section class="expanded-senses"><h3>Dictionary meanings</h3>{groups.map((group, index) => <details class="sense-group" open={index === 0} key={`${result.selection.surface}:${group.pos}`}>
       <summary>{group.pos} <small>{group.senses.length}</small></summary>
-      <ol class="expanded-sense-list">{group.senses.slice(0, 4).map(sense => <li class={`sense-bilingual${showEn && showVi && sense.definitionEn && sense.meaningsVi.length ? ' paired-columns' : ''}${sense.contextMatch ? ' context-match' : ''}`} key={sense.id}>
+      <ol class="expanded-sense-list">{group.senses.slice(0, initialCount).map(sense => <li class={`sense-bilingual${showEn && showVi && sense.definitionEn && sense.meaningsVi.length ? ' paired-columns' : ''}${sense.contextMatch ? ' context-match' : ''}`} key={sense.id}>
         {showEn && sense.definitionEn && <span class="sense-definition">{sense.definitionEn}</span>}
         {showVi && sense.meaningsVi.length > 0 && <span class="sense-vi">{sense.meaningsVi.join('; ')}</span>}
       </li>)}</ol>
-      {group.senses.length > 4 && <details class="more-group-meanings"><summary>More meanings ({group.senses.length - 4})</summary><ol start={5} class="expanded-sense-list">{group.senses.slice(4).map(sense => <li class={`sense-bilingual${showEn && showVi && sense.definitionEn && sense.meaningsVi.length ? ' paired-columns' : ''}`} key={sense.id}>
+      {group.senses.length > initialCount && <details class="more-group-meanings"><summary>More meanings ({group.senses.length - initialCount})</summary><ol start={initialCount + 1} class="expanded-sense-list">{group.senses.slice(initialCount).map(sense => <li class={`sense-bilingual${showEn && showVi && sense.definitionEn && sense.meaningsVi.length ? ' paired-columns' : ''}`} key={sense.id}>
         {showEn && sense.definitionEn && <span class="sense-definition">{sense.definitionEn}</span>}
         {showVi && sense.meaningsVi.length > 0 && <span class="sense-vi">{sense.meaningsVi.join('; ')}</span>}
       </li>)}</ol></details>}
     </details>)}</section>}
-    {showVi && Boolean(deep.dictionary?.unpairedMeaningsVi?.length) && <details class="inspector-disclosure unpaired-meanings"><summary>Unmatched Vietnamese meanings</summary><ul>{deep.dictionary!.unpairedMeaningsVi!.map(text => <li key={text}>{text}</li>)}</ul></details>}
+    {showVi && unpaired.length > 0 && <section class="unpaired-meanings"><h3>Unmatched Vietnamese meanings</h3><p>Nghĩa tiếng Việt chưa ghép với nghĩa tiếng Anh</p><ul>{unpaired.map(text => <li key={text}>{text}</li>)}</ul></section>}
     {showEn && examples.length > 0 && <details class="inspector-disclosure examples-section"><summary>Examples <small>{examples.length}</small></summary>{examples.map(text => <p class="inspector-example" key={text}>{text}</p>)}</details>}
     {(phrase || deep.lens?.phrase) && <details class="inspector-disclosure phrases-section"><summary>Phrases</summary><div class="inspector-phrase"><strong>{phrase?.text || deep.lens?.phrase?.canonical}</strong>{showVi && phrase?.meaning_vi && <p class="sense-vi">{phrase.meaning_vi}</p>}{showEn && phrase?.meaning_en && <p class="sense-definition">{phrase.meaning_en}</p>}</div></details>}
     {showEn && Boolean(deep.lens?.english?.synonyms?.length) && <details class="inspector-disclosure related-section"><summary>Related words</summary><p class="related-words">{deep.lens!.english!.synonyms!.join(', ')}</p></details>}

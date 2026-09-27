@@ -1,5 +1,66 @@
 import { test, expect } from '@playwright/test';
 
+for (const width of [1366, 320]) {
+  test(`lookup Vietnamese meanings and saved view at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 850 });
+    const openReading = async () => {
+      await page.goto('/');
+      await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill('The movement of the points on the page is obvious.');
+      await page.getByRole('button', { name: /Preview & read/ }).click();
+      await expect(page.locator('.reader-text')).toBeVisible();
+    };
+    const define = async (word: string) => {
+      await page.evaluate(text => {
+        const root = document.querySelector('.reader-text')!;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let node: Node | null;
+        while ((node = walker.nextNode())) {
+          const start = node.textContent?.indexOf(text) ?? -1;
+          if (start < 0) continue;
+          const range = document.createRange(); range.setStart(node, start); range.setEnd(node, start + text.length);
+          const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
+          root.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); break;
+        }
+      }, word);
+      await page.locator('.selection-actions').getByRole('button', { name: 'Define', exact: true }).click();
+    };
+    await openReading();
+    await define('movement');
+    const sheet = page.locator('.lookup-sheet');
+    await expect(sheet).toHaveClass(/quick/);
+    await expect(sheet.locator('.entry-glosses')).toBeVisible();
+    expect(await sheet.locator('.entry-glosses').evaluate(el => el.closest('details'))).toBeNull();
+    expect((await sheet.locator('.language-cycle').boundingBox())!.width).toBeLessThanOrEqual(72);
+    expect(await sheet.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+    await page.screenshot({ path: `tmp/phase3/vietnamese-quick-${width}.png` });
+    await sheet.getByRole('button', { name: 'Show more', exact: true }).click();
+    await expect(sheet).toHaveClass(/expanded/);
+    const glosses = sheet.locator('.deep-explanation>.unpaired-meanings');
+    await expect(glosses).toBeVisible();
+    expect(await glosses.evaluate(el => el.closest('details'))).toBeNull();
+    expect(await sheet.locator('.sense-group[open]>ol>li').count()).toBeLessThanOrEqual(2);
+    await expect(sheet.locator('.sense-group[open] .more-group-meanings')).toBeVisible();
+    const colors = await sheet.locator('.deep-explanation').evaluate(el => ['.inspector-sentence', '.expanded-senses', '.unpaired-meanings'].map(selector => getComputedStyle(el.querySelector(selector)!).backgroundColor));
+    expect(new Set(colors).size).toBe(3);
+    await page.screenshot({ path: `tmp/phase3/vietnamese-full-${width}.png` });
+    await sheet.getByRole('button', { name: 'Close meaning', exact: true }).click();
+    await define('points');
+    await expect(sheet).toHaveClass(/expanded/);
+    await page.reload();
+    await openReading();
+    await define('movement');
+    await expect(sheet).toHaveClass(/expanded/);
+    await sheet.locator('.explain-more-actions>summary').click();
+    await expect(sheet.getByLabel('Default lookup view')).toHaveValue('full');
+    await sheet.getByLabel('Default lookup view').selectOption('quick');
+    await expect(sheet).toHaveClass(/quick/);
+    await sheet.getByRole('button', { name: 'Close meaning', exact: true }).click();
+    await define('points');
+    await expect(sheet).toHaveClass(/quick/);
+    expect(await sheet.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  });
+}
+
 for (const width of [1366, 320, 360, 390, 430]) {
   test(`phase 3 context Quick and Full at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 850 });
@@ -24,14 +85,33 @@ for (const width of [1366, 320, 360, 390, 430]) {
     await expect(sheet.getByRole('button', { name: 'Show more', exact: true })).toBeVisible();
     await expect(sheet).toHaveClass(/quick/);
     await expect(sheet.getByRole('button', { name: 'Pronounce word' })).toBeVisible();
+    await expect(sheet.locator('.inspector-pronunciation .language-cycle')).toContainText('EN+VI');
+    await expect(sheet.locator('.inspector-pronunciation .language-cycle span')).toHaveText('↻');
+    await expect(sheet.locator('.inspector-header-actions [aria-label="Add note"]')).toHaveText('Note');
     const position = await page.evaluate(() => scrollY);
     await sheet.getByRole('button', { name: 'Save word', exact: true }).click();
     await expect(sheet.getByRole('button', { name: 'Remove saved word' })).toHaveAttribute('aria-pressed', 'true');
     await page.screenshot({ path: `tmp/phase3/quick-${width}.png` });
     await sheet.getByRole('button', { name: 'Show more', exact: true }).click();
     await expect(sheet).toHaveClass(/expanded/);
-    await expect(sheet.getByRole('button', { name: 'EN + VI', exact: true })).toBeVisible();
-    for (const language of ['EN', 'VI', 'EN + VI']) await sheet.getByRole('button', { name: language, exact: true }).click();
+    const language = sheet.locator('.language-cycle');
+    const cycle = [['EN+VI', 'bilingual'], ['EN', 'en'], ['VI', 'vi'], ['EN+VI', 'bilingual']];
+    for (let index = 0; index < cycle.length; index++) {
+      const [label, mode] = cycle[index];
+      await expect(language).toContainText(label);
+      await expect(sheet.locator('.deep-explanation')).toHaveAttribute('data-language', mode);
+      if (index < cycle.length - 1) await language.click();
+    }
+    const note = sheet.locator('.inspector-header-actions').getByRole('button', { name: 'Add note' });
+    await expect(note).toHaveText('Note');
+    expect(await note.evaluate(el => el.nextElementSibling?.getAttribute('aria-label'))).toBe('Remove saved word');
+    if (width >= 1024) {
+      for (const viewportWidth of [1024, 1366]) {
+        await page.setViewportSize({ width: viewportWidth, height: 850 });
+        expect(await sheet.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+        expect(await sheet.locator('.inspector-header-actions').evaluate(el => el.getBoundingClientRect().right <= el.closest('.lookup-sheet')!.getBoundingClientRect().right)).toBe(true);
+      }
+    }
     await page.screenshot({ path: `tmp/phase3/full-${width}.png` });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     const headerBefore = await sheet.locator('.inspector-header').boundingBox();

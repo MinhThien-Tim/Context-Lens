@@ -1,11 +1,12 @@
+import { alignBilingualSenses } from './dictionary/alignment';
 import { dictionaryRegistry } from './dictionary/registry';
 import type { InflectionType } from './dictionary/types';
 import type { LexicalEntry, LexicalSense } from '../core/language/types';
-import { lookupWordNet } from '../core/language/wordnet';
+import { lookupWordNet, wordNetVersion } from '../core/language/wordnet';
 
 const qualityRank = { reviewed: 0, curated: 1, imported: 2 } as const;
 
-const posNames: Record<string, string> = { n: 'noun', noun: 'noun', v: 'verb', verb: 'verb', adj: 'adjective', adjective: 'adjective', adv: 'adverb', adverb: 'adverb' };
+const posNames: Record<string, string> = { n: 'noun', noun: 'noun', v: 'verb', verb: 'verb', a: 'adjective', adj: 'adjective', adjective: 'adjective', adv: 'adverb', adverb: 'adverb' };
 function normalizePos(values: string[]): string[] {
   return [...new Set(values.flatMap(value => value.toLowerCase().split(/[\s/,]+/)).map(value => posNames[value]).filter(Boolean))];
 }
@@ -65,8 +66,19 @@ export function lookupLocalLexeme(candidate: string, surface = candidate, curate
   const morphology = morphologyMatch
     ? { surface, ...morphologyMatch }
     : surface !== lemma ? { surface, baseLemma: lemma, inflection: inferInflection(surface, lemma, pos) } : undefined;
+  const vietnameseSenses = meaningOwners.flatMap(entry => (entry.viSenses ?? []).map(([id, sourcePos, gloss, example]) => ({
+    id: `${bestDictionaryMatches.find(match => match.entry === entry || match.surfaceEntry === entry)?.providerId ?? 'local'}:${entry.lemma}:${id}`,
+    lemma: entry.lemma, pos: normalizePos([sourcePos])[0],
+    glosses: [entry.meaningsVi[gloss]], examples: example ? [example] : [],
+    source: bestDictionaryMatches.find(match => match.entry === entry || match.surfaceEntry === entry)?.providerId ?? 'local'
+  })));
+  const alignedSenses = alignBilingualSenses(senses, vietnameseSenses, term => {
+    const match = dictionaryRegistry.lookup(term);
+    return match ? { lemma: match.entry.lemma, pos: normalizePos([match.entry.partOfSpeech]), senses: [], meaningsVi: match.entry.meaningsVi } : undefined;
+  }, JSON.stringify([dictionaryRegistry.versions(), wordNetVersion()]));
   return {
-    lemma, pos, senses, meaningsVi,
+    lemma, pos, senses: alignedSenses, meaningsVi,
+    vietnameseSenses,
     morphology,
     vietnameseReferences: meaningOwners.flatMap(entry => entry.vietnameseReferences ?? []),
     sources: {

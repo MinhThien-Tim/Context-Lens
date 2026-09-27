@@ -6,29 +6,29 @@
       "file": "wordnet-noun.json",
       "entries": 117798,
       "senses": 82115,
-      "bytes": 12800540,
-      "sha256": "43cc7bd69ea233b13437166d104803543d72b5a20c8f10cb6a5e18d62695c5bf"
+      "bytes": 13046903,
+      "sha256": "6ecd4078d2db5da3f6645532dca20eac58586ae7821401aaf77ef9b20390a10e"
     },
     {
       "file": "wordnet-verb.json",
       "entries": 11529,
       "senses": 13767,
-      "bytes": 1751696,
-      "sha256": "1618dc84c8cf777f0676b8176fe62bf7b19af631ae2ec6a3427115edb652b310"
+      "bytes": 1915605,
+      "sha256": "ab15a4e19b9448b63bf6a2bfd6f69ad334b04f7604f0bd3df1b652ec76ba5d55"
     },
     {
       "file": "wordnet-adj.json",
       "entries": 21479,
       "senses": 18156,
-      "bytes": 2597981,
-      "sha256": "efcad569f9c2650eb73963fb3a9ce639223de1df2be506733b2f7fa56b82aacd"
+      "bytes": 2652467,
+      "sha256": "006e33b51c077f53f8b8d77a7fdfadc406a6e96787df55abc6acfb267677ca31"
     },
     {
       "file": "wordnet-adv.json",
       "entries": 4481,
       "senses": 3621,
-      "bytes": 509452,
-      "sha256": "7f778889b8da70cbe779116dde1205d890d58b89eb3fcb8efb64b344c03f032c"
+      "bytes": 520333,
+      "sha256": "b79bab4d01b51130444ff34e6e32e803f93548367616a542d6d954b6ddc35890"
     }
   ]
 }

@@ -88,18 +88,24 @@ navigation is rendered once at the bottom; non-PDF location opens the existing G
 Header/footer size variables determine PDF viewport height; quiet chrome changes opacity/transform,
 not viewport size. Long text continues to use window scrolling and the existing location contract.
 
-`LookupBottomSheet` owns Quick/Full presentation only. Every new lookup starts with a compact
-selection-anchored Quick popup on desktop (both densities) or a modal bottom sheet on mobile.
+`LookupBottomSheet` presents the Quick/Full display mode supplied by App. New lookups use the saved
+`AppPreferences.lookupViewMode` (Quick by default): a selection-anchored Quick popup on desktop
+(both densities) or a modal bottom sheet on mobile, or Full when the reader last chose Show more.
 Show more moves the same surface into the right Context Inspector on desktop or a taller mobile
 sheet; Show less and the first Escape return to Quick, then Escape closes it. App synchronizes
-panel layout through `onDisplayModeChange`; neither expansion nor reopening invokes providers.
+panel layout and saves the chosen default through `onDisplayModeChange`; neither expansion nor
+reopening invokes providers. The compact More menu offers a Default view selector for Quick/Show more.
 The header stays outside the single scrolling body and contains the selection, available IPA,
-pronunciation, POS/base form, a confirmed Context badge, language tabs, Show more/less, Note when
+pronunciation, POS/base form, a confirmed Context badge, a single language button, Show more/less, Note when
 available, Save and Close. Quick shows the supported
-context sense and compact ordinary senses with an inline More meanings control. Examples belong to Full only.
+context sense and at least one ordinary sense per available POS, plus a second sense in the primary
+POS, with an inline More meanings control. Ordinary definitions longer than 180 characters use
+a three-line preview; More meanings reveals the complete text and remaining senses. Examples belong to Full only.
 Quick restores bilingual columns using source-linked sense pairs; aggregate entry-level Vietnamese
-glosses are visible in an adjacent entry-level column when no linked pairs exist (also visible in VI mode). With linked pairs, unmatched glosses stay in a secondary disclosure rather than becoming fake pairs. Full groups all senses by
-POS (context first), keeping source-linked English and Vietnamese meanings in adjacent columns, with four meanings before an independent More meanings disclosure. Lower POS
+glosses are visible in an adjacent entry-level column when no linked pairs exist (also visible in VI mode).
+With linked pairs, unmatched glosses remain visible in a separate section rather than becoming fake pairs.
+Full groups all senses by POS (context first), keeping source-linked bilingual content together,
+with two meanings when English is shown (four in VI-only mode) before an independent More meanings disclosure. Lower POS
 groups, examples, phrases, related words and usage are independently collapsible. Entry-level VI
 glosses remain explicitly separate from source-linked bilingual pairs. Long original sentences/translations use collapsed disclosures. Missing fields render no
 empty sections; no word-family/etymology data is synthesized. Language controls and Show more/less
@@ -107,6 +113,16 @@ share the fixed header so changing language or expansion does not require scroll
 promoted there when the action is available. Sources remains at the end of the scrolling body, reached by scrolling through long results and optional
 Diagnostics stay inside Sources. AI and sentence translation actions remain explicit alongside the language and expansion controls in the compact Full header row, wrapping when needed.
 The secondary More disclosure opens a small inline popover without another modal.
+Quick and Full use one compact language button cycling EN → VI → EN+VI → EN, with a rotation icon,
+updating its label and displayed content together. Note sits beside Save in the word header;
+language, More and Show more/less sit beside pronunciation in one shared row. Quick has no
+separate action row; Full adds a compact row for Translate and AI Explain.
+Full displays unmatched Vietnamese glosses directly in a separate labeled section in VI
+and bilingual modes, without assigning them to English senses. Available local dictionary glosses
+remain visible when a context response omits them; aggregate quick glosses serve as an entry-level
+fallback for an English-only dictionary. Bilingual sense content stacks within each Full meaning.
+Sentence context, Dictionary meanings and unmatched Vietnamese glosses use distinct subtle theme
+token tints. Language and the chosen Quick/Full mode persist in the existing reader preferences.
 
 At ordinary laptop widths the Context column is approximately 360-400 px, bounded responsively.
 When both columns are open, the Document column becomes narrower to preserve reading space.
@@ -129,7 +145,7 @@ There is no global store. Ownership rules:
 - `lookupService` (`src/lookup/service.ts`) is a module singleton, created once and reconfigured
   from settings.
 - Feature components own only transient UI state: `MarkupPalette` tool/color, `LookupBottomSheet`
-  expansion, `ReaderToolbar` overflow menu, `ReaderShell` mobile chrome visibility, `PdfViewer` mobile zoom and page sizes,
+  disclosures (Quick/Full follows App's `lookupDisplay`), `ReaderToolbar` overflow menu, `ReaderShell` mobile chrome visibility, `PdfViewer` mobile zoom and page sizes,
   `usePdfOcrQueue` queue status, `VocabularyLibrary` and `DataManagement` modals.
 - Data is not mirrored into component state: the reader holds a `DocumentRecord` and re-renders
   after `db.documents.update`.

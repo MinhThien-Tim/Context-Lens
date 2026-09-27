@@ -34,16 +34,16 @@ describe('lookup service offline cache', () => {
     const quick = await service.quick(sentenceRequest);
     expect(quick.deep.sentence_analysis.translation_vi).toBe('Đào tạo là điều kiện tiên quyết.');
   });
-  it('uses a previously requested sentence translation to support a linked meaning', async () => {
+  it('keeps a cached translation from confirming a meaning without independent evidence', async () => {
     const translate = vi.fn().mockResolvedValue('Họ điều hành nó.');
     vi.stubGlobal('Translator', { availability: vi.fn().mockResolvedValue('available'), create: vi.fn().mockResolvedValue({ translate, destroy: vi.fn() }) });
     const service = new LookupService();
     const sentenceRequest = { ...request, selection: 'run', sentence: 'They run it.', selection_start: 5 };
     await service.translateSentence(sentenceRequest);
     const quick = await service.quick(sentenceRequest, { ...defaultEngineSettings, quickEngine: 'offline' });
-    expect(quick.lens?.sense?.id).toBe('run.manage');
-    expect(quick.dictionary?.senses.find(sense => sense.contextMatch)?.meaningsVi).toContain('điều hành');
-    expect(quick.lens?.sense?.reasons.join(' ')).toContain('saved sentence translation');
+    expect(quick.dictionary?.senseStatus).toBe('ambiguous');
+    expect(quick.dictionary?.senses.some(sense => sense.contextMatch)).toBe(false);
+    expect(quick.lens?.sense?.reasons.join(' ')).toContain('No evidence');
     expect(translate).toHaveBeenCalledOnce();
   });
   it('honors the sentence-analysis cache opt-out', async () => {
@@ -159,6 +159,7 @@ describe('selected English sense fallback', () => {
     expect(translate.mock.calls[0][0]).toMatchObject({ text: gloss, mode: 'sentence' });
     expect(first.dictionary?.senses[0]).toMatchObject({ definitionEn: gloss, pairingState: 'paired', meaningsVi: ['một mục dùng để kiểm tra bản dịch'] });
     const second = await service.quick(selection, settings);
+    expect(first.dictionary?.senses[0].alignment).toMatchObject({ kind: 'translated-definition', confidence: 'low', dependsOnSenseId: 'fixture.only' });
     expect(second.source).toBe('cache');
     expect(translate).toHaveBeenCalledOnce();
     expect(fetch.mock.calls.filter(([url]) => /^https?:/.test(String(url)))).toHaveLength(0);

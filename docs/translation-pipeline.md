@@ -93,8 +93,9 @@ source knows is `unknown`; a dictionary miss is never a fragment.
 
 ## Dictionary sense contract
 
-English senses remain independent of entry-level Vietnamese meanings: only explicit source
-sense links (including curated pairs) attach VI to an EN sense. `pairingState` distinguishes
+English senses remain independent of entry-level Vietnamese meanings: explicit source
+sense links (including curated pairs), unique exact gloss reuse, and conservative stable lexical
+alignment can attach VI to an EN sense. `pairingState` distinguishes
 paired senses from senses missing VI; `unpairedMeaningsVi` retains aggregate glosses without
 implying array-order alignment. WordNet senses carry `source: 'wordnet'`, and all senses survive
 context ranking, even when the quick view initially compacts them.
@@ -279,3 +280,36 @@ the fastest way to see which branch actually ran. API keys and reader content ar
 `src/lookup/types.ts`, `src/lookup/normalization/*`, `src/lookup/dictionary/*`,
 `src/core/language/*`, `src/core/translation/*`, `src/core/context/*`, `src/core/cache.ts`,
 `src/core/requests.ts`, `src/core/diagnostics.ts`, `src/ai/*`, `src/settings/engines.ts`.
+
+## Structured evidence and stable bilingual alignment
+
+`sentence-engine.ts` caches bounded occurrence constructions from `constructions.ts`: complement
+shape, nearby preposition, imperative and passive cues. These features do not consult dictionary
+candidate POS. `SenseResolver` consumes frames and candidate example patterns as supporting evidence;
+a shared generic frame cannot establish Context. Object + adjective and object + copular infinitive
+share a bounded predicative pattern; evaluative modifiers with an of-complement use compatible
+definition evidence without lemma-specific branches. Collocations match token lemmas around the selected
+offset. Repeated tokens without a supplied offset do not receive occurrence construction evidence.
+Detached concessive adverbs require occurrence syntax and compatible candidate POS; ordinary verbs
+never receive clause-level contrast evidence. Candidate diagnostics preserve POS conflicts, semantic
+scores and margin even when the result remains ambiguous. The score >= 3 and margin >= 2 gates remain.
+Translation also requires independent semantic support >= 2; translation alone cannot establish Context.
+Multi-clause translations retain weak whole-sentence evidence (at most 1 point); equal clause counts
+are not treated as proof of alignment.
+
+`lookup/dictionary/alignment.ts` runs before occurrence resolution and has no sentence input.
+It preserves explicit links, reuses unique exact English glosses with matching POS, and otherwise
+requires multiple stable bilingual lexical anchors, matching source POS and no equally supported
+English competitor (anchor margin at least 2). It matches exact Vietnamese gloss fragments from local lexical records, never array
+order or fuzzy similarity. Only supported fragments are linked; other parts of compound source
+glosses remain available. Results use a bounded versioned memory cache. Unresolved source senses
+and entry glosses remain available. Alignment tiers are heuristic evidence tiers, not calibrated
+probabilities. A broad gloss may remain unresolved across many English senses.
+
+Sense alignment metadata distinguishes `explicit`, `identical-gloss`, `inferred`,
+`translated-definition` and `unresolved`; it records a confidence tier and evidence references.
+`fillSelectedSense` marks provider definition translations as low-confidence display assistance
+with `dependsOnSenseId`. Resolver translation scoring and exact-gloss reuse reject dependent
+translations. Alignment confidence remains separate from occurrence sense confidence. Existing
+`pairingState`, paired rows and unpaired meanings remain compatible; provider gates and request
+counts are unchanged. No new automatic translation or AI requests are introduced.

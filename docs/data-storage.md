@@ -87,6 +87,11 @@ on the document record (`pdfTextSources`), not on the OCR row.
 Onboarding state (`src/onboarding/store.ts`) also lives in `settings`. API keys are never logged,
 and the browser secret vault is not available in this PWA.
 
+`reader-preferences` includes `lookupViewMode` (`quick` / `full`, default `quick`) alongside
+`languageMode`. App saves the reader's Quick/Show more choice and restores it for subsequent
+lookups, including after reload. Missing or invalid view values normalize to Quick. This is an
+additive field in the existing settings value; table indexes and the database version are unchanged.
+
 ## Backup and restore
 
 `src/storage/backup.ts` — schema `context-lens.backup`, discriminated union on `version`:

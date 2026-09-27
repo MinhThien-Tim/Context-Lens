@@ -43,7 +43,7 @@ export function normalizeLexical(text: string): string { return normalizeSelecti
 export class LexicalEngine {
   private learned = new Map<string, LexicalEntry>();
   constructor(private entries: LexicalEntry[] = words) {}
-  get version(): string { return JSON.stringify(['local-lexicon-6', this.entries.map(entry => entry.lemma), dictionaryRegistry.versions(), wordNetVersion()]); }
+  get version(): string { return JSON.stringify(['local-lexicon-7', this.entries.map(entry => entry.lemma), dictionaryRegistry.versions(), wordNetVersion()]); }
   async prime(surface: string): Promise<void> {
     const normalized = normalizeLexical(surface);
     if (this.learned.has(normalized)) return;
