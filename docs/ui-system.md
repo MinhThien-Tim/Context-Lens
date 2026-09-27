@@ -34,16 +34,16 @@ Rendered by the `if (!documentRecord)` branch in `src/app/App.tsx`. Sections, in
 - Status banners: offline notice, and a service-worker "update ready" action driven by the
   `context-lens:update-ready` / `context-lens:apply-update` window events from `src/main.tsx`.
 - `brand-header`: brand lockup and Saved words, Storage, Settings (language engines), Guide,
-  plus a Tools disclosure in Simple containing interactive Diagnostics. Advanced exposes the same Diagnostics entry directly.
-- `home-preferences`: independent density, appearance, guide language, and Typography entry
+  with the original language, density, appearance and Diagnostics controls in Simple. Advanced exposes Diagnostics directly.
+- Advanced-only `home-preferences`: independent density, appearance, guide language, and Typography entry
   (reuses `ReaderSettings`; no second preference state).
-- Compact opening area with Import document, Paste text and Library anchor links.
-- Continue-reading appears before the import/paste surfaces only when reading history exists. Both document lists reuse presentational
+- Advanced has a compact opening area with Import document, Paste text and Library anchor links; Simple retains its original introduction.
+- Advanced Continue-reading appears before import/paste only when history exists. Simple retains Continue after import/paste, including its empty state and original cards. Advanced document lists reuse presentational
   `DocumentIdentity` for local title-initial covers, existing location/progress, and updated date.
   The current document model has no cover/thumbnail field; no extraction or external service is added.
 - `PasteComposer` and the existing file/article import surface, with stable anchor targets. Simple retains two framed entry surfaces: Paste on the left, Import on the right at tablet/desktop widths; phones stack Paste first.
 - Library: title search, kind filter, `Load more` through `queryDocumentLibrary`, and existing
-  per-document transactional delete. Simple desktop/tablet use two columns; Advanced uses a compact list with aligned metadata/progress. Phones retain a vertical list.
+  per-document transactional delete. Simple retains its original responsive card grid; Advanced uses a compact list with aligned metadata/progress. Phones retain a vertical list.
 - `OnboardingCard` until dismissed, then `ContextLensOnboarding` as a modal.
 - `home-note` privacy line.
 
@@ -138,7 +138,7 @@ There is no global store. Ownership rules:
 
 ## Theme system
 
-- `src/styles.css` is the single stylesheet, imported once from `src/main.tsx`.
+- `src/styles.css` contains shared styling and the original Simple homepage, imported once from `src/main.tsx`. `src/reader-layout.css` holds reader layout/inspector overrides and loads before opening a document. Both CSS chunks remain in the service-worker precache. `src/home-advanced.css` is loaded on demand for Advanced and scopes its rules to the Advanced home shell.
 - Design tokens are CSS variables on `:root` (palette, surfaces, `--reading-surface`,
   `--elevated-surface`, `--primary-text`, `--secondary-text`, `--border`, `--selection`,
   `--danger`, `--overlay`, `--shadow`).

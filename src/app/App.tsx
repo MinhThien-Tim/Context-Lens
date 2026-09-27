@@ -162,6 +162,7 @@ export function App() {
       void importArticle(sharedUrl, { signal: controller.signal }).then(async (imported) => {
         const doc = toDocumentRecord(imported);
         await db.documents.put(doc);
+        await import('../reader-layout.css');
         setDocumentRecord(doc);
       }).catch((error: unknown) => setImportError(importErrorMessage(error))).finally(() => { setImporting(false); setImportProgress(null); importControllerRef.current = null; });
     }
@@ -281,6 +282,7 @@ export function App() {
 
   const openDocument = async (doc: DocumentRecord) => {
     const current = await db.documents.get(doc.id) ?? doc;
+    await import('../reader-layout.css');
     setDocumentRecord(current);
     if (current.toc?.length || (current.tocVersion ?? 0) >= 2 || !current.data || !['pdf', 'epub'].includes(current.kind)) return;
     try {
@@ -313,6 +315,7 @@ export function App() {
   const storeImportedDocument = async (imported: ImportedDocument) => {
     const doc = toDocumentRecord(imported);
     await db.documents.put(doc);
+    await import('../reader-layout.css');
     setDocumentRecord(doc);
   };
   const closeDocument = async () => {
@@ -490,10 +493,51 @@ export function App() {
   const dismissOnboarding = () => { setShowOnboardingCard(false); void markContextLensOnboardingSeen(); };
   const changeGuideLanguage = (value: GuideLanguage) => { setGuideLanguage(value); void saveGuideLanguage(value); };
 
+  useEffect(() => {
+    if (preferences.interfaceMode === 'advanced') void import('../home-advanced.css');
+  }, [preferences.interfaceMode]);
+
   if (!documentRecord) return (
     <main class="home-shell" data-interface-mode={preferences.interfaceMode}>
       {!online && <div class="status-banner" role="status">Offline mode · Saved documents and cached meanings remain available.</div>}
       {updateReady && <button class="status-banner update-banner" onClick={() => window.dispatchEvent(new Event('context-lens:apply-update'))}>An update is ready · Reload</button>}
+      {preferences.interfaceMode === 'simple' ? <>
+      <header class="brand-header">
+        <div class="brand-lockup"><div class="brand-mark">C</div><div><h1>Context Lens</h1><p>Read English. Stay in context.</p></div></div>
+        <nav class="home-nav" aria-label="Library tools">
+          <button class="nav-button" aria-label="Saved words" onClick={() => setShowVocabulary(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12a2 2 0 0 1 2 2v14l-8-3.5L4 20V6a2 2 0 0 1 2-2Z"/></svg><span>Saved words</span></button>
+          <button class="nav-button" aria-label="Storage" onClick={() => setShowDataManagement(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M6 3h12l2 4v13H4V7l2-4Zm3 8h6"/></svg><span>Storage</span></button>
+          <button class="nav-button" aria-label="Settings" onClick={() => setShowApiSettings(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M4.9 4.9 7 7m10 10 2.1 2.1M2 12h3m14 0h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span>Settings</span></button>
+          <button class="nav-button nav-button-guide" aria-label="Guide" onClick={openOnboarding}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.5 2.5 0 1 1 3.6 2.25c-.85.45-1.3.95-1.3 1.75m0 3h.01"/></svg><span>Guide</span></button>
+          <LookupStatistics />
+          <LanguageToggle language={guideLanguage} onChange={changeGuideLanguage} />
+          <div class="home-theme-toggle" role="group" aria-label="Interface density">
+            {(['simple', 'advanced'] as const).map(mode => <button disabled={!preferencesLoaded} aria-pressed={preferences.interfaceMode === mode} onClick={() => setPreferences({ ...preferences, interfaceMode: mode })}>{mode === 'simple' ? 'Simple' : 'Advanced'}</button>)}
+          </div>
+          <label class="appearance-control">Appearance <select disabled={!preferencesLoaded} aria-label="Appearance" value={preferences.theme} onChange={event => setPreferences({ ...preferences, theme: event.currentTarget.value as AppPreferences['theme'] })}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+        </nav>
+      </header>
+      <section class="home-intro"><p class="eyebrow">Your reading space</p><h2>Start reading.</h2><p>Paste a passage or open a document. Select any word or phrase when you need context.</p></section>
+      <div key="home-primary-actions" class="primary-actions">
+        <PasteComposer disabled={importing} initialText={sharedDraft} onCreate={imported => void storeImportedDocument(imported)} />
+        <section class="action-card import-card">
+          <div class="action-card-heading"><span class="action-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V3m0 0L7 8m5-5 5 5M4 14v6h16v-6"/></svg></span><div><p class="eyebrow">Your files</p><h2>Import a book or document</h2><p>TXT, Markdown, PDF, EPUB, or DOCX.</p></div></div>
+          <label class="document-drop"><input class="visually-hidden" type="file" disabled={importing} accept=".txt,.md,.markdown,.pdf,.epub,.docx,text/plain,text/markdown,application/pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => void importTextFile(event.currentTarget.files?.[0])} /><span>{importing ? 'Importing…' : 'Choose a document'}</span><small>5 MB for text · 50 MB for books</small></label>
+          <div class="import-form"><label for="article-url">Or import an article URL</label><div><input id="article-url" type="url" inputMode="url" value={articleUrl} onInput={(event) => setArticleUrl(event.currentTarget.value)} placeholder="https://example.com/article" /><button class="secondary-button" onClick={importArticleUrl} disabled={!articleUrl.trim() || importing}>Import URL</button></div></div>
+          {importError && <p class="import-error" role="alert">{importError}</p>}
+          {importProgress && <div class="import-progress" role="status"><span>{importProgress}</span><button onClick={() => importControllerRef.current?.abort()}>Cancel</button></div>}
+        </section>
+      </div>
+      <section class="continue-section"><div class="section-heading"><div><p class="eyebrow">Continue</p><h2>Pick up where you left off</h2></div></div>{continueDocs.length ? <div class="continue-grid">{continueDocs.map(doc => <button class="continue-card" onClick={() => void openDocument(doc)}><span class={`document-badge kind-${doc.kind}`}>{documentKindLabel(doc)}</span><strong>{doc.title}</strong><small>{positionLabel(doc, doc.location)}</small><span class="mini-progress"><i style={{ width: `${Math.round(doc.location.progress * 100)}%` }} /></span></button>)}</div> : <p class="section-empty">Your reading progress will appear here.</p>}</section>
+      <section class="library-section">
+        <div class="section-heading"><div><p class="eyebrow">Library</p><h2>All documents</h2></div></div>
+        <div class="library-tools"><label class="library-search"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input value={libraryQuery} onInput={event => setLibraryQuery(event.currentTarget.value)} placeholder="Search by title" aria-label="Search library" /></label><select aria-label="Filter document type" value={libraryKind} onChange={event => setLibraryKind(event.currentTarget.value as typeof libraryKind)}><option value="all">All types</option><option value="pdf">PDF</option><option value="epub">EPUB</option><option value="docx">DOCX</option><option value="article">Articles</option><option value="text">Text</option><option value="markdown">Markdown</option></select></div>
+        {libraryLoading && !libraryDocs.length ? <p class="section-empty" role="status">Loading your library…</p> : libraryDocs.length ? <div class="library-grid">{libraryDocs.map(doc => <article class="library-card"><button class="library-open" onClick={() => void openDocument(doc)}><span class={`document-badge kind-${doc.kind}`}>{documentKindLabel(doc)}</span><strong>{doc.title}</strong><small>{documentPositionDetail(doc)}</small><span class="mini-progress"><i style={{ width: `${Math.round(doc.location.progress * 100)}%` }} /></span></button><button class="icon-button library-delete" aria-label={`Delete ${doc.title}`} onClick={() => { if (confirm(`Delete “${doc.title}” and its notes from this device?`)) { void db.transaction('rw', [db.documents, db.notes, db.pdfOcr], async () => { await db.documents.delete(doc.id); await db.notes.where('documentId').equals(doc.id).delete(); await db.pdfOcr.where('documentId').equals(doc.id).delete(); }).then(async () => { const result = await queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, limit: 18 }); setLibraryDocs(result.items); setLibraryHasMore(result.hasMore); setContinueDocs(items => items.filter(item => item.id !== doc.id)); }); } }}>×</button></article>)}</div> : <p class="section-empty">{libraryQuery || libraryKind !== 'all' ? 'No documents match this search.' : 'Your imported documents will appear here.'}</p>}
+        {libraryHasMore && <button class="secondary-button load-more" disabled={libraryLoading} onClick={() => { setLibraryLoading(true); void queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, offset: libraryDocs.length, limit: 18 }).then(result => { setLibraryDocs(items => [...items, ...result.items]); setLibraryHasMore(result.hasMore); }).finally(() => setLibraryLoading(false)); }}>Load more</button>}
+      </section>
+      {showOnboardingCard && <OnboardingCard language={guideLanguage} onOpen={openOnboarding} onDismiss={dismissOnboarding} />}
+      <p class="home-note">Documents stay on this device. Offline reading remains available after the first visit.</p>
+      </> : <>
       <header class="brand-header">
         <div class="brand-lockup"><div class="brand-mark">C</div><div><h1>Context Lens</h1><p>Read English. Stay in context.</p></div></div>
         <nav class="home-nav" aria-label="Library tools">
@@ -512,7 +556,7 @@ export function App() {
           <label class="appearance-control">Appearance <select disabled={!preferencesLoaded} aria-label="Appearance" value={preferences.theme} onChange={event => setPreferences({ ...preferences, theme: event.currentTarget.value as AppPreferences['theme'] })}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label></section>
       <section class="home-intro"><p class="eyebrow">Your reading space</p><h2>Start reading.</h2><p>Open a book or paste a passage. Read at your own pace.</p><div class="home-entry-actions"><a class="primary-button" href="#import-document">Import document</a><a class="secondary-button" href="#paste-text">Paste text</a><a class="text-button" href="#library">Library</a></div></section>
       {continueDocs.length > 0 && <section class="continue-section"><div class="section-heading"><div><h2>Continue reading</h2></div></div><div class="continue-grid">{continueDocs.map(doc => <button class="continue-card" onClick={() => void openDocument(doc)}><DocumentIdentity compact document={doc} detail={positionLabel(doc, doc.location)} kindLabel={documentKindLabel(doc)} /></button>)}</div></section>}
-      <div class="primary-actions">
+      <div key="home-primary-actions" class="primary-actions">
         <PasteComposer disabled={importing} initialText={sharedDraft} onCreate={imported => void storeImportedDocument(imported)} />
         <section id="import-document" class="action-card import-card">
           <div class="action-card-heading"><span class="action-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V3m0 0L7 8m5-5 5 5M4 14v6h16v-6"/></svg></span><div><p class="eyebrow">Your files</p><h2>Import a book or document</h2><p>TXT, Markdown, PDF, EPUB, or DOCX.</p></div></div>
@@ -532,6 +576,7 @@ export function App() {
       {showOnboardingCard && <OnboardingCard language={guideLanguage} onOpen={openOnboarding} onDismiss={dismissOnboarding} />}
       <p class="home-note">Documents stay on this device. Offline reading remains available after the first visit.</p>
       {showReaderSettings && <ReaderSettings value={preferences} onChange={setPreferences} onClose={() => setShowReaderSettings(false)} />}
+      </>}
       {showOnboarding && <ContextLensOnboarding language={guideLanguage} onLanguageChange={changeGuideLanguage} onClose={() => setShowOnboarding(false)} />}
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} initialVerified={geminiVerified} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
       {showVocabulary && <VocabularyLibrary records={vocabulary} onClose={() => setShowVocabulary(false)} onDelete={(id) => { void db.vocabulary.delete(id); setVocabulary((items) => items.filter((item) => item.id !== id)); }} />}
