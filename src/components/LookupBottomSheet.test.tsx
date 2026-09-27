@@ -432,3 +432,59 @@ it.each(['ambiguous', 'common', undefined] as const)('shows the close-sense note
     expect(host.textContent).not.toContain('Context is not strong enough');
   } finally { act(() => render(null, host)); }
 });
+
+it('pins only on completed handle drag and preserves placement across selections, Full and reopen', () => {
+  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  const host = document.createElement('div'); document.body.append(host);
+  const noop = vi.fn(); const savedPlacement = vi.fn();
+  let placement: import('./lookupPopupPlacement').LookupPopupPlacement = { mode: 'auto' };
+  let display: 'popup' | 'panel' = 'popup'; let open = true; let selectionKey = 'one';
+  const draw = () => render(<LookupBottomSheet open={open} displayMode={display} selectionKey={selectionKey}
+    placement={placement} onPlacementChange={next => { savedPlacement(next); placement = next; draw(); }}
+    anchor={{ left: 100, right: 140, top: 200, bottom: 220 }} result={validLookup} loading={false} error={null} mode="bilingual"
+    onModeChange={noop} onClose={noop} onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host);
+  const pointer = (element: Element, type: string, x: number, y: number) => {
+    // jsdom lacks onpointerdown properties; Preact retains the prop event casing there.
+    const event = new Event(type.replace('pointer', 'Pointer').replace('down', 'Down').replace('move', 'Move').replace('up', 'Up'), { bubbles: true, cancelable: true });
+    Object.assign(event, { pointerId: 1, clientX: x, clientY: y, button: 0, isPrimary: true });
+    act(() => { element.dispatchEvent(event); });
+  };
+  try {
+    act(() => { draw(); });
+    const handle = host.querySelector<HTMLElement>('.lookup-drag-handle')!;
+    handle.setPointerCapture = vi.fn(); handle.hasPointerCapture = () => true; handle.releasePointerCapture = vi.fn();
+    const sheet = host.querySelector<HTMLElement>('.lookup-sheet')!;
+    vi.spyOn(sheet, 'getBoundingClientRect').mockReturnValue({ left: 152, top: 172, width: 340, height: 520 } as DOMRect);
+    pointer(host.querySelector('.save-inline')!, 'pointerdown', 160, 180);
+    expect(handle.setPointerCapture).not.toHaveBeenCalled();
+    window.getSelection()?.removeAllRanges();
+    pointer(handle, 'pointerdown', 160, 180);
+    expect(handle.setPointerCapture).toHaveBeenCalled();
+    pointer(handle, 'pointermove', 360, 250);
+    expect(savedPlacement).not.toHaveBeenCalled();
+    pointer(handle, 'pointerup', 360, 250);
+    expect(savedPlacement).toHaveBeenCalledTimes(1); expect(placement.mode).toBe('pinned');
+    const position = sheet.style.left;
+    selectionKey = 'two'; act(draw); expect(sheet.style.left).toBe(position);
+    display = 'panel'; act(draw); expect(host.querySelector('.lookup-drag-handle')).toBeNull();
+    display = 'popup'; act(draw); expect(sheet.style.left).toBe(position);
+    open = false; act(draw); open = true; act(draw);
+    expect(host.querySelector<HTMLElement>('.lookup-sheet')!.style.left).toBe(position);
+    const selector = host.querySelector<HTMLSelectElement>('[aria-label="Popup position"]')!;
+    act(() => { selector.value = 'auto'; selector.dispatchEvent(new Event('change', { bubbles: true })); });
+    expect(placement).toEqual({ mode: 'auto' });
+    expect(host.querySelector<HTMLElement>('.lookup-sheet')!.style.left).toBe('152px');
+  } finally { act(() => render(null, host)); host.remove(); vi.unstubAllGlobals(); }
+});
+it('ignores pinned placement and hides drag controls on mobile', () => {
+  vi.stubGlobal('matchMedia', () => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  const host = document.createElement('div'); document.body.append(host); const noop = vi.fn();
+  try {
+    act(() => render(<LookupBottomSheet open placement={{ mode: 'pinned', xRatio: 1, yRatio: 1 }} onPlacementChange={noop}
+      result={validLookup} loading={false} error={null} mode="bilingual" onModeChange={noop} onClose={noop}
+      onOpenSettings={noop} onSpeak={noop} onToggleSave={noop} saved={false} />, host));
+    expect(host.querySelector('.lookup-drag-handle')).toBeNull();
+    expect(host.querySelector('[aria-label="Popup position"]')).toBeNull();
+    expect(host.querySelector<HTMLElement>('.lookup-sheet')!.style.left).toBe('');
+  } finally { act(() => render(null, host)); host.remove(); vi.unstubAllGlobals(); }
+});

@@ -7,9 +7,10 @@ test('desktop Quick split Unicode and long sense fixtures', async ({ page }) => 
     await page.evaluate(async word => {
       const preactPath = '/node_modules/.vite/deps/preact.js';
       const componentPath = '/src/components/QuickExplain.tsx';
+      const cssPath = '/src/reader-layout.css';
       const { h, render } = await import(/* @vite-ignore */ preactPath);
       const { QuickExplain } = await import(/* @vite-ignore */ componentPath);
-      await import(/* @vite-ignore */ '/src/reader-layout.css');
+      await import(/* @vite-ignore */ cssPath);
       document.querySelector('#quick-fixture')?.remove();
       const root = document.createElement('div'); root.id = 'quick-fixture'; root.className = 'reader-shell'; document.body.append(root);
       const senses = ['noun', 'verb', 'adjective'].map((pos, i) => ({ id: String(i), pos, definitionEn: 'A long English definition with an unbroken word ' + 'definition'.repeat(35), meaningsVi: i === 2 ? [] : ['Vietnamese Unicode: ' + '\u0111\u1ecbnh ngh\u0129a ti\u1ebfng Vi\u1ec7t '.repeat(30)], source: 'local', contextMatch: false, contextScore: 0 }));
@@ -30,7 +31,7 @@ test('desktop Quick split Unicode and long sense fixtures', async ({ page }) => 
     expect(vi!.x).toBeGreaterThan(en!.x + en!.width);
     const gloss = await quick.locator('.entry-glosses').boundingBox();
     expect(gloss!.x).toBeGreaterThan(en!.x + en!.width);
-    expect(await quick.evaluate(el => [...el.querySelectorAll('*'), el].every(node => node.scrollWidth <= node.clientWidth + 1))).toBe(true);
+    expect(await quick.evaluate(el => [...Array.from(el.querySelectorAll('*')), el].every(node => node.scrollWidth <= node.clientWidth + 1))).toBe(true);
     await page.screenshot({ path: `tmp/quick-followup-${word}.png` });
     for (const mode of ['en', 'vi']) {
       await page.evaluate(mode => (window as any).renderQuickFixture(mode), mode);

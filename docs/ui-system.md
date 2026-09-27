@@ -158,7 +158,7 @@ There is no global store. Ownership rules:
 
 - `src/styles.css` contains shared styling and the original Simple homepage, imported once from `src/main.tsx`. `src/reader-layout.css` holds reader layout/inspector overrides and loads before opening a document. Both CSS chunks remain in the service-worker precache. `src/home-advanced.css` is loaded on demand for Advanced and scopes its rules to the Advanced home shell.
 - `src/styles.mobile-reader.css` loads after shared styles and scopes phone reader/lookup presentation to ≤767 px. Shell specificity preserves its overrides when reader-layout loads later. Linked bilingual meanings stack per sense; unmatched entry glosses remain separate. Quick and Full size to content up to their respective caps.
-- `src/styles.desktop-reader.css` loads after the mobile stylesheet and scopes reader presentation to ≥1024 px, with shell specificity that survives the lazy reader-layout chunk. It owns compact desktop chrome and bounded panel sizing; both open panels share less than half the viewport. Quick keeps its 360 px positioning contract and stacked linked senses; Full can use paired columns when its own container reaches 390 px. Shared structure and mobile presentation remain in their existing stylesheets.
+- `src/styles.desktop-reader.css` loads after the mobile stylesheet and scopes reader presentation to ≥1024 px, with shell specificity that survives the lazy reader-layout chunk. It owns compact desktop chrome and bounded panel sizing; both open panels share less than half the viewport. Quick keeps its shared 340 px positioning contract and stacked linked senses; Full can use paired columns when its own container reaches 390 px. Shared structure and mobile presentation remain in their existing stylesheets.
 - Design tokens are CSS variables on `:root` (palette, surfaces, `--reading-surface`,
   `--elevated-surface`, `--primary-text`, `--secondary-text`, `--border`, `--selection`,
   `--danger`, `--overlay`, `--shadow`).
@@ -216,3 +216,13 @@ Individual CSS declarations are intentionally not documented here; this file rec
 `src/vocabulary/VocabularyLibrary.tsx`, `src/storage/DataManagement.tsx`,
 `src/settings/ApiSettings.tsx`, `src/settings/EngineSettingsForm.tsx`,
 `src/onboarding/ContextLensOnboarding.tsx`, `src/styles.css`, `index.html`.
+
+### Desktop Quick placement
+`AppPreferences.lookupPopupPlacement` lives in the existing `reader-preferences` settings object.
+Missing or invalid values normalize to Auto without a database schema migration. Auto retains the
+selection anchor algorithm. Desktop Quick alone offers Auto/Keep here in More and a word/POS pointer
+handle; a completed drag saves normalized ratios once through App's existing preference persistence.
+`lookupPopupPlacement.ts` owns width, bounds and coordinate conversion. The component measures popup
+size and observes resize to restore relative placement with 12 px clearance, below the reader header.
+The body scrolls within the remaining viewport height. Full, closing, selection and document changes
+preserve the preference; mobile ignores it. Placement never invokes lookup providers.

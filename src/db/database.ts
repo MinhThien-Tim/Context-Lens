@@ -1,3 +1,4 @@
+import { normalizePopupPlacement, type LookupPopupPlacement } from '../components/lookupPopupPlacement';
 import Dexie, { type EntityTable, type Table } from 'dexie';
 import type { DocumentSection } from '../documents/sections';
 import type { LanguageMode, LookupResponse } from '../lookup/types';
@@ -250,6 +251,7 @@ export interface AppPreferences {
   interfaceMode: 'simple' | 'advanced';
   languageMode: LanguageMode;
   lookupViewMode: 'quick' | 'full';
+  lookupPopupPlacement: LookupPopupPlacement;
   fontSize: number;
   lineHeight: number;
   fontFamily: 'serif' | 'sans';
@@ -263,6 +265,7 @@ export const defaultPreferences: AppPreferences = {
   interfaceMode: 'simple',
   languageMode: 'bilingual',
   lookupViewMode: 'quick',
+  lookupPopupPlacement: { mode: 'auto' },
   fontSize: 19,
   lineHeight: 1.75,
   fontFamily: 'serif',
@@ -281,7 +284,7 @@ export async function loadPreferences(): Promise<AppPreferences> {
     : (rawMode ?? legacy?.value) === 'bright' ? 'advanced' : 'simple';
   const theme = ['system', 'light', 'dark'].includes(stored.theme ?? '') ? stored.theme! : 'system';
   const lookupViewMode: AppPreferences['lookupViewMode'] = stored.lookupViewMode === 'full' ? 'full' : 'quick';
-  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, lookupViewMode };
+  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, lookupViewMode, lookupPopupPlacement: normalizePopupPlacement(stored.lookupPopupPlacement) };
   if (rawMode !== interfaceMode || stored.theme !== theme || legacy) {
     await db.transaction('rw', db.settings, async () => {
       await savePreferences(preferences);

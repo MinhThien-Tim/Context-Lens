@@ -1,3 +1,4 @@
+import { clampPopup, DESKTOP_QUICK_WIDTH, normalizePopupPlacement, pinPopup, popupBounds, restorePopup, type LookupPopupPlacement, type PopupPoint } from './lookupPopupPlacement';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { LanguageMode, LookupResponse } from '../lookup/types';
 import { LanguageTabs } from './LanguageTabs';
@@ -9,6 +10,8 @@ import type { ContextMode } from '../core/context/types';
 import { getDiagnostics } from '../core/diagnostics';
 
 interface Props {
+  placement?: LookupPopupPlacement;
+  onPlacementChange?: (placement: LookupPopupPlacement) => void;
   displayMode?: 'popup' | 'panel';
   preferredView?: 'quick' | 'full';
   onDisplayModeChange?: (mode: 'popup' | 'panel') => void;
@@ -54,6 +57,60 @@ export function LookupBottomSheet(props: Props) {
       sheetRef.current?.querySelector<HTMLElement>('.explain-button')?.focus({ preventScroll: true });
     }
   }, [deepOpen, desktop, props.open]);
+  const placement = normalizePopupPlacement(props.placement);
+  const [geometry, setGeometry] = useState({ width: window.innerWidth, height: window.innerHeight, popupWidth: DESKTOP_QUICK_WIDTH, popupHeight: 520, headerBottom: 56 });
+  const [dragPosition, setDragPosition] = useState<PopupPoint | null>(null);
+  const drag = useRef<{ pointerId: number; x: number; y: number; start: PopupPoint; current: PopupPoint; moved: boolean } | null>(null);
+  const bounds = popupBounds(geometry.width, geometry.height, geometry.popupWidth, geometry.popupHeight, geometry.headerBottom);
+  useEffect(() => {
+    if (!props.open || !desktop || !popup) { drag.current = null; setDragPosition(null); return; }
+    const sheet = sheetRef.current;
+    const measure = () => {
+      if (!sheet) return;
+      const rect = sheet.getBoundingClientRect();
+      const headerBottom = sheet.closest('.reader-shell')?.querySelector('.reader-header')?.getBoundingClientRect().bottom ?? 56;
+      setGeometry(previous => {
+        const next = { width: window.innerWidth, height: window.innerHeight, popupWidth: rect.width || DESKTOP_QUICK_WIDTH, popupHeight: rect.height || 520, headerBottom };
+        return Object.keys(next).every(key => next[key as keyof typeof next] === previous[key as keyof typeof next]) ? previous : next;
+      });
+    };
+    measure();
+    const observer = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (sheet) observer?.observe(sheet);
+    window.addEventListener('resize', measure);
+    return () => { observer?.disconnect(); window.removeEventListener('resize', measure); };
+  }, [props.open, desktop, popup]);
+  useEffect(() => { setDragPosition(null); }, [props.placement]);
+  const savePosition = (point: PopupPoint) => props.onPlacementChange?.(pinPopup(point, bounds));
+  const startDrag = (event: PointerEvent) => {
+    const interactive = (event.target as Element).closest('button,a,select,input,textarea,summary,[role="button"],[contenteditable],[tabindex],[data-interactive]');
+    if (!desktop || !popup || !props.onPlacementChange || event.button !== 0 || !event.isPrimary
+      || (interactive && (event.currentTarget as HTMLElement).contains(interactive))
+      || window.getSelection()?.toString()) return;
+    const rect = sheetRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const start = { left: rect.left, top: rect.top };
+    drag.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, start, current: start, moved: false };
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    event.preventDefault();
+  };
+  const moveDrag = (event: PointerEvent) => {
+    const active = drag.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    if (!active.moved && Math.hypot(event.clientX - active.x, event.clientY - active.y) < 3) return;
+    active.moved = true;
+    active.current = clampPopup({ left: active.start.left + event.clientX - active.x, top: active.start.top + event.clientY - active.y }, bounds);
+    setDragPosition(active.current);
+  };
+  const endDrag = (event: PointerEvent, cancelled = false) => {
+    const active = drag.current;
+    if (!active || active.pointerId !== event.pointerId) return;
+    drag.current = null;
+    const handle = event.currentTarget as HTMLElement;
+    if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+    if (!cancelled && active.moved) savePosition(active.current);
+    setDragPosition(null);
+  };
   if (!props.open) return null;
   // Selection and lookup state are updated independently. Never paint a result
   // that belongs to the previous selection while the new lookup is starting.
@@ -64,13 +121,14 @@ export function LookupBottomSheet(props: Props) {
     && props.contextResult.selection.surface.normalize('NFC').trim() === result.selection.surface.normalize('NFC').trim()
     ? props.contextResult : null;
   const deep = contextResult ?? result;
-  const popupLeft = props.anchor && props.anchor.right + 372 <= window.innerWidth
-    ? props.anchor.right + 12
-    : Math.max(12, (props.anchor?.left ?? 12) - 372);
-  const popupStyle = popup && desktop && props.anchor ? {
-    left: `${popupLeft}px`,
-    // Reserve the same maximum height as the desktop CSS, including edge clearance.
-    top: `${Math.max(72, Math.min(props.anchor.top - 28, window.innerHeight - Math.min(520, window.innerHeight - 84) - 12))}px`,
+  const popupLeft = props.anchor && props.anchor.right + geometry.popupWidth + 12 <= geometry.width
+    ? props.anchor.right + 12 : Math.max(12, (props.anchor?.left ?? 12) - geometry.popupWidth - 12);
+  const autoPosition = { left: popupLeft, top: Math.max(72, Math.min((props.anchor?.top ?? 100) - 28, geometry.height - Math.min(520, geometry.height - 84) - 12)) };
+  const position = dragPosition ?? (placement.mode === 'pinned' ? restorePopup(placement, bounds) : autoPosition);
+  const popupStyle = popup && desktop ? {
+    '--desktop-quick-width': `${DESKTOP_QUICK_WIDTH}px`,
+    left: `${position.left}px`, top: `${position.top}px`,
+    maxHeight: `${Math.max(0, Math.min(520, geometry.height - bounds.minTop - 12))}px`,
   } : undefined;
   const toggleFull = () => {
     changeDisplay(!deepOpen);
@@ -82,7 +140,7 @@ export function LookupBottomSheet(props: Props) {
     {!desktop && <button class="sheet-backdrop" aria-label="Close meaning" tabIndex={-1} onClick={props.onClose} />}
     <section ref={sheetRef} tabIndex={-1} style={popupStyle} class={`lookup-sheet ${popup ? 'word-popup' : 'side-panel'} ${deepOpen ? 'expanded' : 'quick'}`} role={desktop ? 'complementary' : 'dialog'} aria-modal={desktop ? undefined : true} aria-label="Meaning in context">
       <header class="inspector-header">
-        <div class="inspector-word"><div class="inspector-word-title"><strong>{result?.selection.surface || props.selectionText}</strong>{result && (result.dictionary?.contextPos || result.selection.part_of_speech) && <span class="pos-chip">{result.dictionary?.contextPos || result.selection.part_of_speech}</span>}</div></div>
+        <div class={`inspector-word ${desktop && popup ? 'lookup-drag-handle' : ''} ${dragPosition ? 'is-dragging' : ''}`} title={desktop && popup ? 'Drag to keep popup here' : undefined} onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={event => endDrag(event)} onPointerCancel={event => endDrag(event, true)} onLostPointerCapture={event => endDrag(event, true)}><div class="inspector-word-title"><strong>{result?.selection.surface || props.selectionText}</strong>{result && (result.dictionary?.contextPos || result.selection.part_of_speech) && <span class="pos-chip">{result.dictionary?.contextPos || result.selection.part_of_speech}</span>}</div></div>
         <div class="inspector-header-actions">{result && props.onAddNote && <button class="inspector-note secondary-button" onClick={props.onAddNote} aria-label="Add note" title="Add note">Note</button>}{result && <button class="save-inline" aria-label={props.saved ? 'Remove saved word' : 'Save word'} aria-pressed={props.saved} onClick={props.onToggleSave}>{props.saved ? '✓ Saved' : 'Save'}</button>}<button class="explain-close" aria-label="Close meaning" onClick={props.onClose}>×</button></div>
         {result && <div class="inspector-pronunciation">
           {ipa && <span class="ipa-line">{ipa}</span>}<button aria-label="Pronounce word" onClick={() => props.onSpeak(result.selection.surface)}>♪</button>
@@ -90,6 +148,10 @@ export function LookupBottomSheet(props: Props) {
             <LanguageTabs value={props.mode} onChange={props.onModeChange} compact />
             <details class="explain-more-actions"><summary aria-label="More actions" title="More actions">⋯</summary><div>
               {props.onDisplayModeChange && <label class="lookup-view-preference">Default view<select aria-label="Default lookup view" value={props.preferredView ?? (deepOpen ? 'full' : 'quick')} onChange={event => changeDisplay(event.currentTarget.value === 'full')}><option value="quick">Quick</option><option value="full">Show more</option></select><small>Saved for new lookups.</small></label>}
+              {desktop && popup && props.onPlacementChange && <label class="lookup-view-preference">Popup position<select aria-label="Popup position" value={placement.mode} onChange={event => {
+                if (event.currentTarget.value === 'auto') props.onPlacementChange?.({ mode: 'auto' });
+                else { const rect = sheetRef.current?.getBoundingClientRect(); if (rect) savePosition({ left: rect.left, top: rect.top }); }
+              }}><option value="auto">Auto</option><option value="pinned">Keep here</option></select></label>}
               <button class="secondary-button compact-action" onClick={props.onOpenSettings}>Settings</button>
               {deepOpen && !props.geminiConnected && <select class="compact-select" aria-label="AI explanation type" value="" onChange={event => { if (event.currentTarget.value) props.onExplain?.(event.currentTarget.value as ContextMode); }}><option value="">AI task…</option><option value="grammar">Grammar</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>}
             </div></details>

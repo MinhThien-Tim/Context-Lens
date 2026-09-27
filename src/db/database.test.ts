@@ -19,6 +19,15 @@ describe('document storage', () => {
 });
 
 describe('reader interface preferences', () => {
+  it('persists pinned placement while preserving other preferences', async () => {
+    const preferences = { ...defaultPreferences, lookupPopupPlacement: { mode: 'pinned' as const, xRatio: 0.8, yRatio: 0.3 } };
+    await savePreferences(preferences);
+    expect(await loadPreferences()).toEqual(preferences);
+  });
+  it.each([undefined, { mode: 'pinned', xRatio: -1, yRatio: 0 }, { mode: 'unknown' }])('defaults invalid placement to Auto (%j)', async lookupPopupPlacement => {
+    await db.settings.put({ key: 'reader-preferences', value: { ...defaultPreferences, lookupPopupPlacement } });
+    expect((await loadPreferences()).lookupPopupPlacement).toEqual({ mode: 'auto' });
+  });
   afterEach(async () => { await db.settings.clear(); });
   it('remembers lookup view and language across preference reloads', async () => {
     await savePreferences({ ...defaultPreferences, lookupViewMode: 'full', languageMode: 'vi' });
