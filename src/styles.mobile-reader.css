@@ -64,6 +64,18 @@
   .reader-shell.reader-shell .inspector-header { padding: 4px 8px; gap: 0 4px; background: var(--elevated-surface); }
   .reader-shell.reader-shell .inspector-word-title { gap: 4px; }
   .reader-shell.reader-shell .inspector-word-title > strong { font-size: 20px; }
+  .reader-shell.reader-shell .lookup-sheet.quick .inspector-word { align-self: center; padding-left: 4px; }
+  .reader-shell.reader-shell .lookup-sheet.quick .inspector-word-title > strong { font-size: 22px; line-height: 1.2; color: var(--context); }
+  .reader-shell.reader-shell .lookup-sheet.quick .quick-context-ambiguity { margin: 0 0 6px; padding: 3px 6px; border-radius: 4px; background: color-mix(in srgb, var(--context) 6%, var(--elevated-surface)); color: var(--secondary-text); font: 400 11px/1.4 var(--font-ui); }
+  .reader-shell.reader-shell .lookup-sheet.quick .quick-context-summary { display: inline; }
+  .reader-shell.reader-shell .lookup-sheet.quick .quick-context-detail { display: none; }
+  /* Only the trailing meaning shares spare space; all earlier senses stay stacked. */
+  .reader-shell.reader-shell .lookup-sheet.quick .sense-list:has(> .quick-more-meanings) { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 10px; }
+  .reader-shell.reader-shell .lookup-sheet.quick .sense-list:has(> .quick-more-meanings) > .quick-pos-group { flex: 0 0 100%; }
+  .reader-shell.reader-shell .lookup-sheet.quick .sense-list:has(> .quick-more-meanings) > .quick-pos-group:nth-last-child(2) { display: contents; }
+  .reader-shell.reader-shell .lookup-sheet.quick .sense-list:has(> .quick-more-meanings) > .quick-pos-group:nth-last-child(2) > * { flex: 0 0 100%; }
+  .reader-shell.reader-shell .lookup-sheet.quick .sense-list:has(> .quick-more-meanings) > .quick-pos-group:nth-last-child(2) > .sense-row:last-child { flex: 1 1 auto; width: max-content; max-width: 100%; margin-bottom: 0; }
+  .reader-shell.reader-shell .lookup-sheet.quick .quick-more-meanings { flex: 0 0 auto; max-width: 100%; min-height: 28px; margin: 0 0 0 auto; padding: 2px 0; font: 600 11px/1.4 var(--font-ui); }
   .reader-shell.reader-shell .inspector-header-actions { flex-direction: row; gap: 0; }
   .reader-shell.reader-shell .inspector-header-actions button { min-height: 44px; padding-inline: 6px; font-size: 11px; }
   .reader-shell.reader-shell .inspector-pronunciation { grid-column: 1 / -1; flex-wrap: wrap; gap: 0 4px; padding: 0; }
