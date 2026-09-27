@@ -12,8 +12,10 @@ export function extractStructuredPage(pageNumber: number, sourceItems: PdfSource
     const previous = groups.at(-1);
     const prior = previous?.at(-1);
     const gap = prior ? Math.abs(prior.y - line.y) : Infinity;
+    // An indent alone may be alignment. Require a terminal, short preceding line too.
+    const paragraphStart = prior && line.x - prior.x >= median && prior.width < pageWidth * .6 && /[.!?]["'”’)]?$/.test(prior.text);
     const changedRole = prior && (Math.max(prior.fontSize, line.fontSize) / Math.max(1, Math.min(prior.fontSize, line.fontSize)) > 1.25 || line.x - prior.x > median * 1.8 && /[.!?]$/.test(prior.text));
-    if (!previous || !prior || line.column !== prior.column || gap > Math.max(median * 1.65, prior.fontSize * 1.7) || changedRole || classifyLine(line, median, pageHeight) !== classifyLine(prior, median, pageHeight)) groups.push([line]);
+    if (!previous || !prior || paragraphStart || line.column !== prior.column || gap > Math.max(median * 1.65, prior.fontSize * 1.7) || changedRole || classifyLine(line, median, pageHeight) !== classifyLine(prior, median, pageHeight)) groups.push([line]);
     else previous.push(line);
   }
   const rawBlocks = groups.map((group, index) => classifyBlock(group, median, pageHeight, pageNumber, index));
@@ -99,7 +101,10 @@ function classifyBlock(lines: Line[], median: number, pageHeight: number, pageNu
 export function joinLines(lines: string[]): string {
   return lines.reduce((text, line) => {
     if (!text) return line.trim();
-    if (/\p{L}-$/u.test(text) && /^\p{Ll}/u.test(line)) return text.slice(0, -1) + line.trimStart();
+    const next = line.trim();
+    if (/\p{L}\u00ad$/u.test(text) && /^\p{Ll}/u.test(next)) return text.slice(0, -1) + next;
+    // A hard hyphen can be lexical (well-known, re-creation). Retain it.
+    if (/\p{L}-$/u.test(text) && /^\p{Ll}/u.test(next)) return text + next;
     return `${text} ${line.trim()}`;
   }, '');
 }

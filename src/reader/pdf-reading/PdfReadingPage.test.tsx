@@ -3,8 +3,47 @@ import { describe, expect, it } from 'vitest';
 import { PdfReadingPage } from './PdfReadingPage';
 import { readingPagesForDocument } from './structuredPages';
 import type { DocumentRecord } from '../../db/database';
+import { extractStructuredPage, shiftStructuredPage } from '../../documents/pdf/extractStructuredPages';
+import { readingExtractionSamples } from '../../documents/pdf/readingExtraction.fixtures';
+import { readingSelectionFromDom, readingWordFromRange } from './readingSelectionAdapter';
 
 describe('paginated PDF reading', () => {
+  it('keeps fixture text order, page offsets, selection and highlights aligned', () => {
+    let content = '';
+    const pageOffsets: number[] = [];
+    const pages = Object.values(readingExtractionSamples).map((items, index) => {
+      pageOffsets.push(content.length);
+      const page = shiftStructuredPage(extractStructuredPage(index + 1, items, 600, 800), content.length);
+      content += page.plainText + '\n\n';
+      return page;
+    });
+    for (const page of pages) {
+      expect(page.startOffset).toBe(pageOffsets[page.pageNumber - 1]);
+      expect(content.slice(page.startOffset, page.endOffset)).toBe(page.plainText);
+      const word = page.pageNumber === 4 ? 'international' : 'paragraph';
+      const block = page.blocks.find(candidate => candidate.text.includes(word)) ?? page.blocks[1];
+      const selected = block.text.includes(word) ? word : block.text.split(' ')[0];
+      const offset = block.startOffset + block.text.indexOf(selected);
+      const host = document.createElement('div'); document.body.append(host);
+      render(<PdfReadingPage page={page} highlights={[{ id: 'sample', startOffset: offset, endOffset: offset + selected.length, color: 'yellow', createdAt: 1 }]} />, host);
+      expect(Array.from(host.querySelector('.pdf-reading-content')!.children).map(node => node.textContent).join('\n\n')).toBe(page.plainText);
+      const mark = host.querySelector('mark')!;
+      expect(mark.textContent).toBe(selected);
+      const range = document.createRange(); range.setStart(mark.firstChild!, 1); range.collapse(true);
+      expect(readingWordFromRange(host, content, range)).toEqual(expect.objectContaining({ text: selected, offset, endOffset: offset + selected.length }));
+      range.selectNodeContents(mark);
+      const native = window.getSelection()!; native.removeAllRanges(); native.addRange(range);
+      expect(readingSelectionFromDom(host, content)).toEqual(expect.objectContaining({ text: selected, offset, endOffset: offset + selected.length }));
+      native.removeAllRanges(); render(null, host); host.remove();
+    }
+  });
+
+  it('retains legacy page whitespace so rendered offsets still match content', () => {
+    const record = { content: '  Alpha text\n\n  Beta text', pageOffsets: [0, 14] } as DocumentRecord;
+    const pages = readingPagesForDocument(record);
+    expect(pages[1].plainText).toBe('  Beta text');
+    expect(record.content.slice(pages[1].blocks[0].startOffset, pages[1].blocks[0].endOffset)).toBe(pages[1].blocks[0].text);
+  });
   it('renders semantic blocks and a visible page boundary', () => {
     const host = document.createElement('div');
     render(<PdfReadingPage page={{ pageNumber: 4, startOffset: 20, endOffset: 40, plainText: 'Chapter\n\nHello', extractionQuality: 'good', blocks: [{ id: 'h', type: 'heading', level: 2, text: 'Chapter', startOffset: 20, endOffset: 27 }, { id: 'p', type: 'paragraph', text: 'Hello', startOffset: 29, endOffset: 34 }] }} />, host);

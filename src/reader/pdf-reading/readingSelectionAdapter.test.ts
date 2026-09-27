@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { readingSelectionFromDom, readingWordFromRange } from './readingSelectionAdapter';
 
 describe('PDF Reading selection adapter', () => {
+  it('does not delete an ambiguous hard hyphen from native selection', () => {
+    const root = document.createElement('div');
+    root.innerHTML = '<p data-offset="0">A re- creation example.</p>'; document.body.append(root);
+    const range = document.createRange(); range.setStart(root.firstChild!.firstChild!, 2); range.setEnd(root.firstChild!.firstChild!, 14);
+    const native = window.getSelection()!; native.removeAllRanges(); native.addRange(range);
+    expect(readingSelectionFromDom(root, 'A re- creation example.')).toEqual(expect.objectContaining({ text: 're- creation', offset: 2, endOffset: 14 }));
+    native.removeAllRanges(); root.remove();
+  });
   it('maps a phrase to canonical offsets from its structured block', () => {
     const root = document.createElement('div');
     root.innerHTML = '<section><p data-offset="12">A useful contextual phrase.</p></section>';

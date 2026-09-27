@@ -81,6 +81,11 @@ disabled under the same condition.
 
 - Extraction happens **at import**, not at render: `src/documents/pdf/extractStructuredPages.ts`
   produces `PdfStructuredPage { pageNumber, startOffset, endOffset, plainText, extractionQuality, blocks }`.
+- Line joining keeps an indented paragraph boundary when the preceding line is short and ends
+  a sentence. Only an explicit soft hyphen is removed across lines; hard hyphens remain because
+  lexical compounds and discretionary breaks cannot reliably be distinguished from geometry.
+  Header/footer text remains in canonical content until repetition can be established across pages.
+  Legacy page fallback preserves whitespace so DOM block offsets still address the stored content.
 - `extractionQuality` (`good` / `partial` / `poor`) drives two decisions: whether Reading Mode is
   offered at all (`pdfHasReadableText`) and whether a page is an OCR candidate (`pdfPageNeedsOcr`).
 - `PdfTextIndex` (`src/reader/pdf/PdfTextIndex.ts`) maps a DOM `Range` from the PDF.js text layer

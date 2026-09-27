@@ -9,7 +9,7 @@ export function readingSelectionFromDom(root: HTMLElement, documentText: string)
   const end = endpointOffset(root, range.endContainer, range.endOffset, 'end');
   if (start === null || end === null) return null;
   const raw = selection.toString();
-  const text = normalizeSelection(raw.replace(/-\s+/g, ''));
+  const text = normalizeSelection(raw);
   if (!text) return null;
   const from = Math.min(start, end), to = Math.max(start, end);
   const context = sentenceContextForRange(documentText, from, to);

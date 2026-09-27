@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { extractStructuredPage, joinLines, shiftStructuredPage } from './extractStructuredPages';
 import type { PdfSourceTextItem } from './types';
+import { readingExtractionSamples } from './readingExtraction.fixtures';
 
 const item = (str: string, x: number, y: number, size = 12, width = str.length * 6): PdfSourceTextItem => ({ str, width, height: size, transform: [size, 0, 0, size, x, y] });
 
@@ -24,9 +25,33 @@ describe('structured PDF extraction', () => {
     expect(page.plainText.indexOf('Left')).toBeLessThan(page.plainText.indexOf('Right'));
   });
 
-  it('joins soft line hyphens but preserves compound words', () => {
-    expect(joinLines(['inter-', 'national policy'])).toBe('international policy');
+  it('joins explicit soft hyphens but preserves ambiguous hard hyphens', () => {
+    expect(joinLines(['inter\u00ad', 'national policy'])).toBe('international policy');
+    expect(joinLines(['well-', 'known example'])).toBe('well-known example');
+    expect(joinLines(['re-', 'creation'])).toBe('re-creation');
     expect(joinLines(['a well-known', 'example'])).toBe('a well-known example');
+  });
+
+  it('preserves an indented paragraph boundary after a short terminal line', () => {
+    const page = extractStructuredPage(1, readingExtractionSamples.book, 600, 800);
+    expect(page.blocks.map(block => block.text)).toEqual(['The first paragraph ends here.', 'A new paragraph starts here and continues on the next line.']);
+  });
+
+  it('keeps article and furniture source order without deleting margin text', () => {
+    for (const name of ['article', 'furniture'] as const) {
+      const page = extractStructuredPage(1, readingExtractionSamples[name], 600, 800);
+      expect(page.blocks.find(block => block.text === (name === 'article' ? 'Research findings' : 'Methods'))?.type).toBe('heading');
+      for (const block of page.blocks) expect(page.plainText.slice(block.startOffset, block.endOffset)).toBe(block.text);
+      if (name === 'furniture') {
+        expect(page.plainText.startsWith('Journal of Reading')).toBe(true);
+        expect(page.plainText.endsWith('Journal of Reading — 12')).toBe(true);
+      }
+    }
+  });
+
+  it('keeps ambiguous hyphenation and removes only explicit discretionary hyphens', () => {
+    const page = extractStructuredPage(1, readingExtractionSamples.hyphens, 600, 800);
+    expect(page.plainText).toBe('A well-known example uses international evidence and re-creation as distinct terms.');
   });
 
   it('marks blank and scan-only pages as poor without crashing', () => {
