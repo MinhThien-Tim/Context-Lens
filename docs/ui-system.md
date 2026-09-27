@@ -135,6 +135,18 @@ capabilities remain available. `useDialog` (`src/components/useDialog.ts`) owns 
 restoration; only mobile surfaces trap focus. Focus traps include disclosure summaries and exclude
 controls inside closed disclosures.
 
+### Progressive lookup readiness
+
+App renders `lookupService.immediate` during selection and passes it into `quick` for reuse.
+`quickPending` tracks automatic enrichment separately from explicit Context/Translate `loading`.
+The existing result stays mounted as guarded service snapshots arrive. `Finding meanings…`
+appears only for an empty pending result; useful content gets a small secondary progress indicator.
+Quick and Full consume the same snapshots; changing display mode does not rerun any pipeline work.
+`useMeaningReveal` compares meaning text across committed results, so initial/cached data and
+opening Full have no reveal delay; newly arriving text can animate independently. Existing
+sense keys, disclosure state and scrolling body survive enrichment. Abort controllers remain
+owned by App and guard both progressive updates and final completion.
+
 ## UI state ownership
 
 There is no global store. Ownership rules:

@@ -24,13 +24,19 @@ Related: [ARCHITECTURE.md](ARCHITECTURE.md), [reader.md](reader.md), [data-stora
 
 ## Quick lookup — actual order
 
-`LookupService.quick(request, settings, signal, onLocal)`:
+`LookupService.quick(request, settings, signal, onLocal, initial?)`:
 
 1. **Immediate local result (synchronous).** `localLookup` returns a `LookupResponse` from the
    installed dictionary packs and curated lexical units (`matchKnownExpression`). This is what the
-   quick card shows instantly.
+   quick card shows instantly. App passes this same result as `initial` to avoid repeating the
+   initial lookup; the service publishes subsequent snapshots through `onLocal`.
 2. **Local asset readiness.** `ensureLocalDictionaryAssets()` (bundled EN→VI pack + WordNet) with
-   errors swallowed — a partial load is still usable.
+   errors swallowed — a partial load is still usable. Sentence-cache reads and a read-only
+   selection-translation cache probe overlap asset readiness. The probe uses the router's existing
+   memory/Dexie cache and validity rules, never a provider. Cached selection translations fill
+   missing entry-level content without becoming context evidence or sense pairs. The asset loader
+   publishes bundled dictionary readiness independently of WordNet, exposing those meanings
+   before WordNet or sentence analysis finishes. Already-ready assets do not repeat local lookup.
 3. **Cached sentence translation.** Looks up `db.translations` with
    `translationKey({ text: sentence, 'en'→'vi', mode: 'sentence' })`; on hit, the sentence
    translation is remembered locally and the look is marked `translationCacheHit`. This path never
@@ -40,15 +46,19 @@ Related: [ARCHITECTURE.md](ARCHITECTURE.md), [reader.md](reader.md), [data-stora
    merged over the base result with `applyLocalResult`.
 5. **Stop conditions.** If `quickEngine === 'offline'`, or the result is complete
    (English definition + useful Vietnamese meaning) under `quickEngine === 'auto'` without a selected missing sense,
-   the local result is returned. `onLocal` is always called first so the surface can enrich
+   the local result is returned. A complete base plus cached selection gloss also stops Auto
+   before network (selected-sense translation retains its existing gate). `onLocal` is always called first so the surface can enrich
    progressively rather than block on network.
 6. **Google sentence pass (optional).** When a Google/`google-web` provider is available, the
    sentence is translated and `analyzeSelection` is re-run so senses can be re-ranked. Success with
-   a context-matched sense returns immediately.
+   a context-matched sense returns immediately. Otherwise the reranked snapshot is published
+   before later fallbacks.
 7. **Wiktionary web dictionary (optional).** Only when `automaticFallback && publicTranslation &&
    targetLang === 'vi'`. `lookupWebDictionary` has its own `db.settings` cache with TTLs
    (success 30 d, miss 6 h, failure 5 min) and refuses to run while offline. Results merge into the
-   existing senses (`mergeDictionaryResult`).
+   existing senses (`mergeDictionaryResult`) and are published before translation fallback.
+   Every publication checks the same AbortSignal; the UI also guards callbacks and completion
+   with its selection controller. Provider order, quality gates and cache versions are unchanged.
 8. **Translation router.** Skipped entirely if `optionalTranslationEnabled(settings)` is false.
    Under `quickEngine === 'auto'` with a Vietnamese meaning already present, the router is skipped.
    Otherwise the selection goes to the router, with `localContext` (lemma, context POS, known

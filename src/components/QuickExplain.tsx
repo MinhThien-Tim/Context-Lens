@@ -1,8 +1,10 @@
+import { useMeaningReveal } from './useMeaningReveal';
 import { useState } from 'preact/hooks';
 import type { LanguageMode, LookupResponse } from '../lookup/types';
 import { compactDictionarySenses, pairDictionarySenses, prioritizeDictionarySenses, unpairedVietnameseMeanings } from './dictionaryDisplay';
 
-export function QuickExplain({ result, mode, expanded = false, presentation = 'standard' }: { result: LookupResponse; mode: LanguageMode; expanded?: boolean; presentation?: 'simple' | 'standard' }) {
+export function QuickExplain({ result, mode, expanded = false, presentation = 'standard', pending = false }: { result: LookupResponse; mode: LanguageMode; expanded?: boolean; presentation?: 'simple' | 'standard'; pending?: boolean }) {
+  const reveal = useMeaningReveal(result);
   const simple = !expanded && presentation === 'simple';
   const selectionKey = `${result.selection.surface}\n${result.context.sentence}`;
   const [meaningExpansion, setMeaningExpansion] = useState({ key: selectionKey, open: false });
@@ -34,8 +36,8 @@ export function QuickExplain({ result, mode, expanded = false, presentation = 's
   const unpaired = simple ? hasVisibleVi ? [] : allUnpaired.slice(0, allUnpaired.slice(0, 6).some(text => text.length > 100) ? 4 : 6) : allUnpaired;
   const entryGlossColumn = showEn && showVi && unpaired.length > 0 && visible.some(sense => sense.definitionEn) && !all.some(sense => sense.meaningsVi.length > 0);
   const renderSense = (sense: typeof all[number]) => <div class={`sense-bilingual ${showEn && showVi && sense.definitionEn && sense.meaningsVi.length > 0 ? 'paired-columns' : ''}`}>
-    {showEn && sense.definitionEn && <span class={`sense-definition${sense.definitionEn.length > 180 ? ' long-meaning' : ''}`}>{sense.definitionEn}</span>}
-    {showVi && sense.meaningsVi.length > 0 && <span class={`sense-vi${sense.meaningsVi.join('; ').length > 180 ? ' long-meaning' : ''}`}>{sense.meaningsVi.join('; ')}</span>}
+    {showEn && sense.definitionEn && <span class={`sense-definition${sense.definitionEn.length > 180 ? ' long-meaning' : ''}${reveal(sense.definitionEn)}`}>{sense.definitionEn}</span>}
+    {showVi && sense.meaningsVi.length > 0 && <span class={`sense-vi${sense.meaningsVi.join('; ').length > 180 ? ' long-meaning' : ''}${reveal(sense.meaningsVi.join('; '))}`}>{sense.meaningsVi.join('; ')}</span>}
   </div>;
   return <div class={`quick-explanation${expanded ? ' is-expanded' : ''}${!more ? ' is-compact' : ''}`} data-language={mode}>
     {result.lens?.selection.status === 'reconstructed' && <p class="lookup-note">Detected as part of: <strong>{result.lens.selection.reconstructedToken}</strong></p>}
@@ -49,14 +51,14 @@ export function QuickExplain({ result, mode, expanded = false, presentation = 's
         {visible.length > 0 && <div class="sense-list">{[...new Set(visible.map(sense => sense.pos))].map(pos => <section class="quick-pos-group" key={pos}><h4 class="sense-pos">{pos}</h4>{visible.filter(sense => sense.pos === pos).map(sense => <div class="sense-row" key={sense.id}>{renderSense(sense)}</div>)}</section>)}
           {!simple && canExpand && <button class="quick-more-meanings" aria-expanded={more} onClick={() => setMeaningExpansion({ key: selectionKey, open: !more })}>{more ? 'Fewer meanings' : `More meanings${ordinary.length > compact.length ? ` (${ordinary.length - compact.length})` : ''}`}</button>}
         </div>}
-        {showVi && unpaired.length > 0 && <section class="entry-glosses unpaired-meanings" aria-label="Entry-level Vietnamese meanings"><h4>{simple ? 'VI \u00b7 Ch\u01b0a gh\u00e9p EN' : <>Vietnamese meanings <small>Entry level · chưa ghép nghĩa Anh</small></>}</h4><ul>{unpaired.map(meaning => <li key={meaning}>{meaning}</li>)}</ul></section>}
+        {showVi && unpaired.length > 0 && <section class="entry-glosses unpaired-meanings" aria-label="Entry-level Vietnamese meanings"><h4>{simple ? 'VI \u00b7 Ch\u01b0a gh\u00e9p EN' : <>Vietnamese meanings <small>Entry level · chưa ghép nghĩa Anh</small></>}</h4><ul>{unpaired.map(meaning => <li key={meaning} class={reveal(meaning)}>{meaning}</li>)}</ul></section>}
       </div>
     </section>}
     {!expanded && all.length > 0 && !visible.length && !((showEn && matched?.definitionEn) || (showVi && matched?.meaningsVi.length)) && !(showVi && unpaired.length) && <p class="lookup-note">No definition available in this language.</p>}
     {!all.length && <div class="legacy-meanings">
-      {showVi && result.quick.meaning_vi.length > 0 && <p class="meaning-vi">{(simple ? result.quick.meaning_vi.slice(0, result.quick.meaning_vi.some(text => text.length > 100) ? 4 : 6) : result.quick.meaning_vi).join('; ')}</p>}
-      {showEn && result.quick.definition_en && <p class="meaning-en">{result.quick.definition_en}</p>}
-      {!(showEn && result.quick.definition_en) && !(showVi && result.quick.meaning_vi.length) && !(showVi && unpaired.length) && <p class="lookup-note">No definition available in this language.</p>}
+      {showVi && result.quick.meaning_vi.length > 0 && <p class={`meaning-vi${reveal(result.quick.meaning_vi.join('; '))}`}>{(simple ? result.quick.meaning_vi.slice(0, result.quick.meaning_vi.some(text => text.length > 100) ? 4 : 6) : result.quick.meaning_vi).join('; ')}</p>}
+      {showEn && result.quick.definition_en && <p class={`meaning-en${reveal(result.quick.definition_en)}`}>{result.quick.definition_en}</p>}
+      {!(showEn && result.quick.definition_en) && !(showVi && result.quick.meaning_vi.length) && !(showVi && unpaired.length) && <p class="lookup-note" role={pending ? 'status' : undefined}>{pending && !result.quick.definition_en && !result.quick.meaning_vi.length ? 'Finding meanings…' : 'No definition available in this language.'}</p>}
     </div>}
 
     {result.quick.lexical_unit && <section class="lexical-unit"><h3>In this sentence</h3><strong>{result.quick.lexical_unit.text}</strong>

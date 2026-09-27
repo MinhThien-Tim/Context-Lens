@@ -18,7 +18,7 @@ import { checkAbort } from '../core/errors';
 import { LexicalEngine } from '../core/language/lexicon';
 import { PhraseDetector } from '../core/language/phrases';
 import { SentenceAnalysisCache, SentenceEngine } from '../core/language/sentence-engine';
-import { ensureLocalDictionaryAssets } from './localAssets';
+import { ensureLocalDictionaryAssets, localAssetStatus } from './localAssets';
 import { lookupWebDictionary } from './webDictionary';
 import { recordDiagnostic } from '../core/diagnostics';
 import { ManagedTranslationProvider } from '../core/translation/providers/managed';
@@ -56,18 +56,46 @@ export class LookupService {
     }
   }
   immediate(request: LookupRequest, settings = defaultEngineSettings): LookupResponse { return localLookup(request, settings.offlineDictionary && settings.sourceLang === 'en'); }
-  async quick(request: LookupRequest, settings = defaultEngineSettings, signal?: AbortSignal, onLocal?: (result: LookupResponse) => void): Promise<LookupResponse> {
+  async quick(request: LookupRequest, settings = defaultEngineSettings, signal?: AbortSignal, onLocal?: (result: LookupResponse) => void, initial?: LookupResponse): Promise<LookupResponse> {
     checkAbort(signal);
     recordDiagnostic('quickLookup', { text: request.selection_type === 'sentence' ? undefined : request.selection, mode: request.selection_type });
     this.configure(settings);
-    let base = this.immediate(request, settings);
+    let base = initial ?? this.immediate(request, settings);
+    let cachedSelection: TranslationResult | null = null;
+    let localFinished = false;
+    const withCachedSelection = (): LookupResponse => {
+      // Cached entry-level glosses are provisional, never context evidence or sense pairs.
+      const meanings = cachedSelection && settings.targetLang === 'vi' && !base.quick.meaning_vi.length
+        ? cachedSelection.dictionary?.meanings ?? [cachedSelection.text] : [];
+      return cachedSelection ? { ...base,
+        source: 'cache', engine: { provider: cachedSelection.provider, cached: true },
+        dictionary: meanings.length ? addUnpairedTranslations(base.dictionary, meanings) : base.dictionary,
+        quick: { ...base.quick, meaning_vi: base.quick.meaning_vi.length ? base.quick.meaning_vi : meanings,
+          definition_en: base.quick.definition_en || cachedSelection.dictionary?.definition || (settings.targetLang === 'en' ? cachedSelection.text : '') }
+      } : base;
+    };
+    const publish = () => { checkAbort(signal); onLocal?.(withCachedSelection()); };
+    publish();
+    const cachedReady = optionalTranslationEnabled(settings)
+      ? (request.selection_type !== 'sentence' && settings.quickEngine === 'auto' ? this.wordFallback! : this.translation!).cached({ text: request.selection, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: request.selection_type })
+        .then(cached => { if (!localFinished && !signal?.aborted && cached) { cachedSelection = cached; publish(); } })
+      : Promise.resolve();
     let cachedSentence = false;
     if (settings.offlineDictionary && settings.sourceLang === 'en') {
-      await ensureLocalDictionaryAssets().catch(() => { /* Curated and any successfully loaded source remain usable. */ });
+      const assetsWereReady = localAssetStatus() === 'ready';
+      // Independent local I/O overlaps; neither is allowed to hide the base result.
+      const sentenceCache = settings.cacheTranslations && request.selection_type !== 'sentence' && settings.targetLang === 'vi' && request.sentence.trim()
+        ? db.translations.get(translationKey({ text: request.sentence, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: 'sentence' })).catch(() => undefined)
+        : Promise.resolve(undefined);
+      await ensureLocalDictionaryAssets(!assetsWereReady ? () => {
+        if (signal?.aborted) return;
+        base = this.immediate(request, settings);
+        publish();
+      } : undefined).catch(() => { /* Curated and any successfully loaded source remain usable. */ });
       checkAbort(signal);
       if (settings.cacheTranslations && request.selection_type !== 'sentence' && settings.sourceLang === 'en' && settings.targetLang === 'vi' && request.sentence.trim()) {
-        const key = translationKey({ text: request.sentence, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: 'sentence' });
-        const row = await db.translations.get(key).catch(() => undefined);
+        const row = await sentenceCache;
+        checkAbort(signal);
         if (row?.version === TRANSLATION_VERSION && row.result.text) {
           await this.local.rememberSentenceTranslation(request.sentence, row.result.text);
           recordDiagnostic('translationCacheHit', { provider: row.provider, mode: 'sentence' });
@@ -80,9 +108,13 @@ export class LookupService {
       const complete = Boolean(lens.english?.definition && (settings.targetLang === 'en' || lens.vietnamese?.meaning));
       // Let the surface progressively enrich the synchronous result instead of
       // holding useful local content behind a network fallback.
-      onLocal?.(base);
-      if (settings.quickEngine === 'offline' || (complete && settings.quickEngine === 'auto' && !selectedMissingSense(base))) { recordDiagnostic('localStop', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'dictionary', mode: request.selection_type }); return base; }
+      publish();
+      if (settings.quickEngine === 'offline' || (complete && settings.quickEngine === 'auto' && !selectedMissingSense(base))) { localFinished = true; recordDiagnostic('localStop', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'dictionary', mode: request.selection_type }); return base; }
+      await cachedReady;
+      checkAbort(signal);
       if (settings.sourceLang === 'en' && settings.targetLang === 'vi' && selectedMissingSense(base) && optionalTranslationEnabled(settings)) return this.fillSelectedSense(base, settings, signal);
+      const cachedBase = withCachedSelection();
+      if (cachedSelection && settings.quickEngine === 'auto' && cachedBase.quick.definition_en && cachedBase.quick.meaning_vi.length) return cachedBase;
       if (!cachedSentence && request.selection_type !== 'sentence' && settings.sourceLang === 'en' && settings.targetLang === 'vi' && this.googleContext && request.sentence.trim() && this.googleContextProviderAvailable(settings)) {
         try {
           const translated = await this.googleContext.translate({ text: request.sentence, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: 'sentence', signal });
@@ -90,6 +122,7 @@ export class LookupService {
           await this.local.rememberSentenceTranslation(request.sentence, translated.text);
           const reranked = await this.local.analyzeSelection(selectionInput(request, settings.sourceLang, settings.targetLang));
           base = applyLocalResult(base, reranked);
+          publish();
           if (reranked.dictionary?.senses.some(sense => sense.contextMatch && sense.meaningsVi.length)) {
             recordDiagnostic('googleContextResolved', { provider: translated.provider, mode: request.selection_type });
             return base;
@@ -99,13 +132,17 @@ export class LookupService {
       }
       if (settings.automaticFallback && settings.publicTranslation && settings.targetLang === 'vi') {
         const web = await lookupWebDictionary(lens.selection.lemma, request.selection, settings.networkTimeoutMs, signal);
+        checkAbort(signal);
         if (web) {
           recordDiagnostic('wiktionary', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'wiktionary', mode: request.selection_type, status: 'used' });
           base = mergeDictionaryResult(base, web);
+          publish();
           if (base.quick.definition_en && base.quick.meaning_vi.length) return base;
         }
       }
     }
+    await cachedReady;
+    checkAbort(signal);
     if (!optionalTranslationEnabled(settings)) return base;
     if (request.selection_type !== 'sentence' && settings.quickEngine === 'auto' && base.quick.meaning_vi.length) return base;
     let translated: TranslationResult;

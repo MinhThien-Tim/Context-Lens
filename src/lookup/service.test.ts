@@ -70,7 +70,8 @@ describe('lookup service offline cache', () => {
     const service = new LookupService();
     const local = vi.fn();
     const result = await service.quick({ ...request, selection: 'run', sentence: 'They run.' }, defaultEngineSettings, undefined, local);
-    expect(local).toHaveBeenCalledOnce();
+    expect(local).toHaveBeenCalled();
+    expect(local.mock.calls.at(-1)?.[0].quick.definition_en).toContain('move on foot');
     expect(result.quick.definition_en).toContain('move on foot');
   });
   it('returns a successful AI response even when cache reads and writes fail', async () => {
@@ -154,8 +155,9 @@ describe('selected English sense fallback', () => {
     const { service, translate, fetch } = setup();
     const local = vi.fn();
     const first = await service.quick(selection, settings, undefined, local);
-    expect(local.mock.calls[0][0].dictionary.senses[0].meaningsVi).toEqual([]);
-    expect(local.mock.calls[0][0].quick.definition_en).toBe(gloss);
+    const englishReady = local.mock.calls.find(([result]) => result.quick.definition_en === gloss)?.[0];
+    expect(englishReady?.dictionary.senses[0].meaningsVi).toEqual([]);
+    expect(englishReady?.quick.definition_en).toBe(gloss);
     expect(translate.mock.calls[0][0]).toMatchObject({ text: gloss, mode: 'sentence' });
     expect(first.dictionary?.senses[0]).toMatchObject({ definitionEn: gloss, pairingState: 'paired', meaningsVi: ['một mục dùng để kiểm tra bản dịch'] });
     const second = await service.quick(selection, settings);

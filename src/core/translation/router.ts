@@ -12,6 +12,10 @@ export function translationKey(input: TranslationInput): string {
 export class TranslationRouter {
   private requests = new SharedRequests<TranslationResult>();
   constructor(private providers: TranslationProvider[], private cache: ResultCache<TranslationResult>, readonly health = new ProviderHealthManager(), private fallback = true, private online = () => navigator.onLine) {}
+  /** Read only: lets the card expose a valid cached translation before enrichment. */
+  cached(input: TranslationInput): Promise<TranslationResult | null> {
+    return this.cache.get(translationKey(input));
+  }
   translate(input: TranslationInput): Promise<TranslationResult> {
     const key = translationKey(input);
     if (this.requests.has(key)) recordDiagnostic('pendingDedupeHit', { provider: 'translation', mode: input.mode });
