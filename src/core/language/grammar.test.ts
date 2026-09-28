@@ -3,6 +3,23 @@ import { LexicalEngine } from './lexicon';
 import { analyzeGrammar } from './grammar';
 import { occurrenceConstruction, frameEvidence, patternEvidence } from './constructions';
 const lexical = new LexicalEngine();
+it.each(['apply', 'reply', 'rely', 'supply', 'comply', 'multiply'])('recognizes %s as a predicate despite -ly', word => {
+ const entries = new LexicalEngine([{ lemma: word, pos: ['verb'], senses: [{ id: word, pos: 'verb', definitionEn: 'verb' }] }]);
+ const sentence = `They ${word} now.`;
+ const tokens = entries.tokenize(sentence);
+ expect(analyzeGrammar(tokens, sentence).predicates.some(predicate => predicate.tokenIndex === 1)).toBe(true);
+});
+it('does not promote a known adverb between subject and predicate', () => {
+ const entries = new LexicalEngine([
+  { lemma: 'increasingly', pos: ['adverb'], senses: [{ id: 'adv', pos: 'adverb', definitionEn: 'more and more' }] },
+  { lemma: 'rely', pos: ['verb'], senses: [{ id: 'verb', pos: 'verb', definitionEn: 'depend' }] }
+ ]);
+ const sentence = 'They increasingly rely on evidence.';
+ const tokens = entries.tokenize(sentence);
+ const predicates = analyzeGrammar(tokens, sentence).predicates;
+ expect(predicates.some(predicate => predicate.tokenIndex === 1)).toBe(false);
+ expect(predicates.some(predicate => predicate.tokenIndex === 2)).toBe(true);
+});
 it.each([
  ['He runs.', 'runs', 'simple', 'present', false],
  ['He is running.', 'running', 'progressive', 'present', false],

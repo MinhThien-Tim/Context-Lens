@@ -43,15 +43,19 @@ export function analyzeGrammar(tokens: TokenInfo[], text: string) {
     for (let i = clause.tokenStart; i < clause.tokenEnd; i++) {
       tokenClauses[i] = clauseIndex;
       const token = tokens[i], previous = tokens[i - 1];
-      if (auxiliary.test(token.normalized) || negative.test(token.normalized) || /ly$/.test(token.normalized)
+      if (auxiliary.test(token.normalized) || negative.test(token.normalized)
         || modifierClasses.some(([, pattern]) => pattern.test(token.normalized))) continue;
+      const candidates = token.posCandidates ?? (token.pos ? [token.pos] : []);
+      if (candidates.length && !candidates.includes('verb')) continue;
       const before = tokens.slice(Math.max(clause.tokenStart, i - 6), i);
       const chain = before.filter(t => auxiliary.test(t.normalized) || /n't$/.test(t.normalized));
-      const precedingContent = [...before].reverse().find(t => !negative.test(t.normalized) && !modifierClasses.some(([, pattern]) => pattern.test(t.normalized)));
+      const precedingContent = [...before].reverse().find(t => !negative.test(t.normalized) && t.pos !== 'adverb' && !modifierClasses.some(([, pattern]) => pattern.test(t.normalized)));
       const structural = subject.test(precedingContent?.normalized ?? '') || previous?.normalized === 'to'
         || (chain.length > 0 && !determiner.test(previous?.normalized ?? '') && token.pos !== 'noun' && token.pos !== 'adjective');
-      const imperative = i === clause.tokenStart && (determiner.test(tokens[i + 1]?.normalized ?? '') || /^(?:about|of|twice|once)$/.test(tokens[i + 1]?.normalized ?? ''));
-      if (!(token.pos === 'verb' || structural || imperative) || determiner.test(previous?.normalized ?? '')) continue;
+      const imperative = i === clause.tokenStart && candidates.includes('verb') && !subject.test(token.normalized)
+        && Boolean(tokens[i + 1]) && (determiner.test(tokens[i + 1].normalized) || tokens[i + 1].pos !== 'verb');
+      if (!(token.pos === 'verb' || (candidates.includes('verb') && (structural || imperative)) || (!candidates.length && structural))
+        || determiner.test(previous?.normalized ?? '')) continue;
       const construction = occurrenceConstruction(tokens.slice(0, clause.tokenEnd), i);
       // A complement marker belongs to the following clause but is still visible to its governor.
       if (tokens[clause.tokenEnd]?.normalized === 'that') construction.complement = 'clause';

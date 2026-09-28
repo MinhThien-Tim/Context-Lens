@@ -121,6 +121,11 @@ Sense-linked meaning arrays are retained without flattening away their source bo
 `SenseResolver` prioritizes lightweight sentence POS evidence before semantic scoring.
 POS checks consult the shared lexicon for following nouns and predicates, including words
 with multiple parts of speech; an adverb between a subject and predicate is not forced into a verb.
+`occurrencePos` is shared by the local result and sense ranking. It narrows only to POS values
+present in the lexical entry or candidate senses. Predicate detection consults lexical POS
+candidates and never excludes a verb from its `-ly` spelling. Determiner and linking-verb
+adjacency alone cannot introduce a new POS. Sentence analysis cache version 4 includes
+token POS candidates and the revised predicate output.
 Collocations, lexical overlap, constructions and aligned cached sentence translations remain
 local evidence. A Context label requires semantic score >= 3 and margin >= 2; close candidates
 retain dictionary order within the likely POS. POS alone never confirms a sense.

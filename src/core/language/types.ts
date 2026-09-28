@@ -32,7 +32,7 @@ export interface LexicalEntry {
   sources?: { english?: string[]; vietnamese?: string[]; morphology?: string };
 }
 export interface PhraseEntry extends LexicalEntry { type: 'idiom' | 'phrasal verb' | 'collocation' | 'fixed expression' }
-export interface TokenInfo { text: string; normalized: string; lemma: string; start: number; end: number; pos?: string }
+export interface TokenInfo { text: string; normalized: string; lemma: string; start: number; end: number; pos?: string; posCandidates?: string[] }
 export interface DetectedPhrase { canonical: string; text: string; start: number; end: number; type: PhraseEntry['type'] }
 export interface SentenceAnalysis {
   grammar?: ReturnType<typeof import('./grammar').analyzeGrammar>;

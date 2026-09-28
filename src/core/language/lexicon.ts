@@ -74,7 +74,7 @@ export class LexicalEngine {
   tokenize(text: string): TokenInfo[] {
     return Array.from(text.matchAll(/[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*|\d+(?:\.\d+)?%?/gu), match => {
       const entry = this.lookup(match[0]);
-      return { text: match[0], normalized: normalizeLexical(match[0]), lemma: entry?.lemma ?? this.lemma(match[0]), start: match.index!, end: match.index! + match[0].length, pos: entry?.pos.length === 1 ? entry.pos[0] : undefined };
+      return { text: match[0], normalized: normalizeLexical(match[0]), lemma: entry?.lemma ?? this.lemma(match[0]), start: match.index!, end: match.index! + match[0].length, pos: entry?.pos.length === 1 ? entry.pos[0] : undefined, posCandidates: entry?.pos };
     });
   }
 }

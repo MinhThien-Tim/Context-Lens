@@ -7,7 +7,7 @@ import { analyzeGrammar } from './grammar';
 import type { SelectionInput, SentenceAnalysis } from './types';
 export { buildSentenceIndex } from '../../lookup/context';
 
-export const ANALYSIS_VERSION = 3;
+export const ANALYSIS_VERSION = 4;
 export class SentenceAnalysisCache extends EngineCache<SentenceAnalysis> {
   constructor(database = db, limit = 1000, enabled = true) { super(database.sentenceAnalyses, `sentence-v${ANALYSIS_VERSION}`, limit, enabled); }
 }

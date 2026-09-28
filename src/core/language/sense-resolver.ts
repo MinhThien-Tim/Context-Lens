@@ -1,5 +1,6 @@
 import { LexicalEngine } from './lexicon';
 import { occurrenceConstruction, frameEvidence, patternEvidence } from './constructions';
+import { occurrencePos } from './pos-arbitration';
 import type { LexicalSense, SentenceAnalysis } from './types';
 
 export interface SenseInput {
@@ -22,7 +23,11 @@ export class SenseResolver {
     const selectedWords = new Set(this.lexical.tokenize(input.canonicalPhrase ?? input.lemma).map(token => token.lemma));
     const context = new Set(this.lexical.tokenize(input.sentence).map(token => token.lemma)
       .filter(word => !stop.has(word) && !selectedWords.has(word)));
-    const syntacticRole = inferSyntacticRole(input, this.lexical);
+    const selectedIndex = selectedTokenIndex(input);
+    const nextWord = input.sentenceAnalysis?.tokens[selectedIndex + 1]?.normalized;
+    const syntacticRole = occurrencePos(input.sentenceAnalysis, selectedIndex,
+      input.candidateSenses.map(sense => sense.pos).filter((pos): pos is string => Boolean(pos)),
+      nextWord ? this.lexical.lookup(nextWord)?.pos : []);
     const translationEvidence = alignedTranslationClause(input);
     const translatedClause = translationEvidence?.text;
     const matchingTranslationSenses = translatedClause ? input.candidateSenses.filter(sense =>
@@ -212,29 +217,6 @@ function translationScore(translation: string | undefined, meaning: string | und
   const translatedWords = new Set(words(translated).filter(word => !viStop.has(word)));
   const overlap = alternatives.flatMap(words).filter(word => word.length > 2 && !viStop.has(word) && translatedWords.has(word));
   return new Set(overlap).size >= 2 ? { score: 2.5, reason: 'Saved sentence translation supports this linked meaning' } : { score: 0 };
-}
-
-function inferSyntacticRole(input: SenseInput, lexical: LexicalEngine): 'verb' | 'noun' | 'adjective' | 'adverb' | undefined {
-  const tokens = input.sentenceAnalysis?.tokens ?? [], index = selectedTokenIndex(input);
-  if (index < 0) return undefined;
-  if (input.sentenceAnalysis?.grammar?.predicates.some(predicate => predicate.tokenIndex === index)) return 'verb';
-  const previous = tokens[index - 1]?.normalized, next = tokens[index + 1]?.normalized, beforePrevious = tokens[index - 2]?.normalized;
-  const subjects = new Set(['i', 'we', 'you', 'they', 'he', 'she', 'it']);
-  const auxiliaries = new Set(['did', 'do', 'does', 'have', 'has', 'had', 'would', 'could', 'will', 'shall', 'should', 'can', 'may', 'might', 'must']);
-  const determiners = new Set(['a', 'an', 'the', 'this', 'that', 'my', 'our', 'their', 'his', 'her', 'its']);
-  const linking = new Set(['be', 'is', 'am', 'are', 'was', 'were', 'seem', 'seems', 'seemed', 'feel', 'feels', 'felt', 'become', 'became']);
-  if ((subjects.has(previous) || auxiliaries.has(previous)) && input.candidateSenses.some(sense => sense.pos === 'adverb')
-    && next && lexical.lookup(next)?.pos.includes('verb')) return 'adverb';
-  if (subjects.has(previous) || auxiliaries.has(previous) || previous === 'to') return 'verb';
-  // Auxiliary inversion can separate the auxiliary from its lexical verb by a subject NP.
-  if (tokens.slice(0, index).some(token => auxiliaries.has(token.normalized)) && /^(?:what|why|when|where|how|who)$/.test(tokens[0]?.normalized ?? '') && (!next || next === 'to')) return 'verb';
-  if (index === 0 && /^(?:about|of|to|twice|once)$/.test(next ?? '')) return 'verb';
-  if (determiners.has(previous)) return (tokens[index + 1]?.pos === 'noun' || (next && lexical.lookup(next)?.pos.includes('noun') && !lexical.lookup(next)?.pos.includes('verb')))
-    && input.candidateSenses.some(sense => sense.pos === 'adjective') ? 'adjective' : 'noun';
-  if (tokens[index + 1]?.pos === 'noun') return 'adjective';
-  if (linking.has(previous) || (linking.has(beforePrevious) && /ly$|^(?:very|quite|rather|so|too)$/.test(previous ?? ''))) return 'adjective';
-  if (index === 0 && determiners.has(next) && input.candidateSenses.some(sense => sense.pos === 'verb')) return 'verb';
-  return undefined;
 }
 
 function selectedTokenIndex(input: SenseInput): number {

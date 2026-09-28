@@ -3,6 +3,7 @@ import { LexicalEngine, normalizeLexical } from './lexicon';
 import { PhraseDetector } from './phrases';
 import { ContextWindowBuilder, SentenceEngine } from './sentence-engine';
 import { SenseResolver } from './sense-resolver';
+import { occurrencePos } from './pos-arbitration';
 import type { LensResult, SelectionInput } from './types';
 import { compoundCandidates, isPartialSelection, normalizeSelection, phraseCandidates, reconstructToken } from '../../lookup/normalization';
 import { dictionaryRegistry } from '../../lookup/dictionary/registry';
@@ -48,7 +49,8 @@ export class LocalLanguageEngine {
     const candidateMatch = candidates.map(candidate => ({ candidate, entry: this.lexical.lookup(candidate) })).find(match => match.entry);
     const entry = phraseEntry ?? directEntry ?? candidateMatch?.entry;
     if (entry) this.lexical.remember(lookupText, entry);
-    const rulePos = inferContextPos(lookupText, analysis.normalizedText, entry?.pos, occurrence?.start, this.lexical);
+    const lexicalPos = [...new Set([...(entry?.pos ?? []), ...(entry?.senses ?? []).map(sense => sense.pos).filter((pos): pos is string => Boolean(pos))])];
+    const rulePos = occurrencePos(analysis, occurrence ? analysis.tokens.indexOf(occurrence) : -1, lexicalPos);
     const preferredSensePos = rulePos === 'adjective' && entry?.morphology?.inflection === 'past-participle' ? 'verb' : rulePos;
     const resolved = this.resolver.resolve({ selection: lookupText, lemma: entry?.lemma ?? normalized,
       canonicalPhrase: phraseEntry?.lemma, sentence: analysis.normalizedText, sentenceAnalysis: analysis,
@@ -66,9 +68,9 @@ export class LocalLanguageEngine {
     const matchType = phraseEntry ? 'phrase' : directEntry ? (directEntry.morphology ? 'lemma' : 'exact')
       : matchedText?.includes(' ') ? (matchedText === canonical ? 'phrase' : 'subphrase') : entry ? 'head' : undefined;
     const orderedSenses = entry ? [sense, ...resolved.alternatives, ...entry.senses].filter((item, index, all): item is NonNullable<typeof item> => Boolean(item) && all.findIndex(other => other?.id === item!.id) === index) : [];
-    const contextPos = rulePos ?? sense?.pos ?? occurrence?.pos;
+    const contextPos = rulePos ?? (lexicalPos.length === 1 ? lexicalPos[0] : undefined);
     const contextOrderedSenses = preferredSensePos ? [...orderedSenses].sort((left, right) => Number(right.pos === preferredSensePos) - Number(left.pos === preferredSensePos)) : orderedSenses;
-    const degreeMeaning = (meaning: string) => entry?.morphology?.inflection === 'comparative' && (sense?.pos ?? entry?.pos[0]) === 'adjective' && /^(?:thông minh|sáng suốt|khôn ngoan)$/.test(meaning) ? `${meaning} hơn` : meaning;
+    const degreeMeaning = (meaning: string) => entry?.morphology?.inflection === 'comparative' && (sense?.pos ?? entry?.pos[0]) === 'adjective' && /^(?:thÃ´ng minh|sÃ¡ng suá»‘t|khÃ´n ngoan)$/.test(meaning) ? `${meaning} hÆ¡n` : meaning;
     const senseResults = contextOrderedSenses.map(item => ({ id: item.id, pos: item.pos ?? entry?.pos[0] ?? 'other', definitionEn: item.definitionEn,
       meaningsVi: (item.meaningsVi ?? (item.meaningVi ? splitMeanings(item.meaningVi) : [])).map(meaning => item.id === sense?.id ? degreeMeaning(meaning) : meaning), alignment: item.alignment, source: item.source ?? 'local' as const,
       pairingState: item.meaningVi ? 'paired' as const : 'missing' as const,
@@ -100,31 +102,11 @@ export class LocalLanguageEngine {
 }
 
 function splitMeanings(value: string): string[] {
-  return [...new Set(value.split(/\s*(?:\/|;|·)\s*/).map(item => item.trim()).filter(Boolean))];
+  return [...new Set(value.split(/\s*(?:\/|;|Â·)\s*/).map(item => item.trim()).filter(Boolean))];
 }
 
 function normalizeMeaning(value: string): string { return value.normalize('NFC').toLocaleLowerCase('vi').replace(/\s+/g, ' ').trim(); }
 
 function dictionaryPronunciation(lemma: string): string | null {
   return dictionaryRegistry.lookup(lemma)?.entry.ipa ?? null;
-}
-
-function inferContextPos(selection: string, sentence: string, availablePos: string[] = [], selectionStart?: number, lexical = new LexicalEngine()): string | undefined {
-  const index = selectionStart ?? sentence.toLocaleLowerCase().indexOf(selection.toLocaleLowerCase());
-  if (index < 0) return undefined;
-  const prefix = sentence.slice(0, index);
-  const suffix = sentence.slice(index + selection.length);
-  if (/ed$/i.test(selection) && availablePos.includes('verb')) {
-    if (/\b(?:get|gets|got|getting|be|is|am|are|was|were|been|being|have|has|had)\s+$/i.test(prefix)) return 'verb';
-    if (/\b(?:the|a|an|this|that|these|those)\s+$/i.test(prefix) && /^\s+[\p{L}\p{M}]+/u.test(suffix)) return 'adjective';
-    if (/\b(?:i|you|he|she|it|we|they|[\p{L}\p{M}]+)\s+$/iu.test(prefix) && /^(?:\s|[.,;!?]|$)/.test(suffix)) return 'verb';
-  }
-  if (/(?:\b(?:can|could|may|might|must|shall|should|will|would|do|does|did)|\bto)\s+$/i.test(prefix)) return 'verb';
-  if (/\b(?:a|an|the|this|that|my|our|their|his|her|its)\s+$/i.test(prefix)) {
-    const next = suffix.match(/^\s+([\p{L}\p{M}]+)/u)?.[1];
-    if (next && lexical.lookup(next)?.pos.includes('noun') && !lexical.lookup(next)?.pos.includes('verb') && availablePos.includes('adjective')) return 'adjective';
-    return 'noun';
-  }
-  if (/\b(?:be|is|am|are|was|were|seem|seems|seemed|feel|feels|felt|become|became)\s+$/i.test(prefix)) return 'adjective';
-  return undefined;
 }

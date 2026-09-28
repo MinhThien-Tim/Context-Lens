@@ -22,6 +22,43 @@ function input(selectedText: string, sentence = selectedText): SelectionInput { 
 afterEach(async () => { await Promise.all(databases.splice(0).map(database => database.delete())); });
 
 describe('local language foundation', () => {
+  it.each([
+    ['increasingly', 'An increasingly important problem.', 'adverb'],
+    ['highly', 'The highly complex system.', 'adverb'],
+    ['remarkably', 'A remarkably clear example.', 'adverb'],
+    ['friendly', 'A friendly person.', 'adjective'],
+    ['market', 'Market prices rose.', 'noun'],
+    ['government', 'Government policy changed.', 'noun'],
+    ['computer', 'A computer system failed.', 'noun'],
+    ['happy', 'She is happy.', 'adjective'],
+    ['president', 'She is president.', 'noun'],
+    ['water', 'This is water.', 'noun'],
+    ['here', 'He is here.', 'adverb'],
+    ['apply', 'They apply pressure.', 'verb'],
+    ['rely', 'They rely on evidence.', 'verb'],
+    ['reply', 'Please reply soon.', 'verb'],
+    ['run', 'Run home.', 'verb'],
+    ['hold', 'Hold still.', 'verb'],
+    ['present', 'Present the results.', 'verb'],
+    ['record', 'Record everything.', 'verb'],
+    ['take', 'Take care.', 'verb']
+  ])('keeps lexical POS for %s in %s', async (word, sentence, pos) => {
+    const database = new ContextLensDatabase(`pos-test-${crypto.randomUUID()}`); databases.push(database);
+    const lexical = new LexicalEngine([word === 'record' || word === 'present'
+      ? { lemma: word, pos: ['noun', 'verb', 'adjective'], senses: ['noun', 'verb', 'adjective'].map(kind => ({ id: `${word}.${kind}`, pos: kind, definitionEn: `${kind} use` })) }
+      : { lemma: word, pos: [pos], senses: [{ id: `${word}.${pos}`, pos, definitionEn: `${pos} use` }] }]);
+    const phrases = new PhraseDetector(undefined, lexical);
+    const engine = new LocalLanguageEngine(lexical, phrases, new SentenceEngine(lexical, phrases, new SentenceAnalysisCache(database)));
+    expect((await engine.analyzeSelection(input(word, sentence))).dictionary?.contextPos).toBe(pos);
+  });
+  it.each(['record', 'present', 'object', 'close', 'daily', 'fast', 'hard'])('leaves unsupported ambiguity open for %s', async word => {
+    const database = new ContextLensDatabase(`ambiguous-pos-${crypto.randomUUID()}`); databases.push(database);
+    const lexical = new LexicalEngine([{ lemma: word, pos: ['noun', 'adjective', 'verb', 'adverb'],
+      senses: ['noun', 'adjective', 'verb', 'adverb'].map(pos => ({ id: `${word}.${pos}`, pos, definitionEn: `${pos} use` })) }]);
+    const phrases = new PhraseDetector(undefined, lexical);
+    const engine = new LocalLanguageEngine(lexical, phrases, new SentenceEngine(lexical, phrases, new SentenceAnalysisCache(database)));
+    expect((await engine.analyzeSelection(input(word, `We discussed ${word} yesterday.`))).dictionary?.contextPos).toBeUndefined();
+  });
   it('keeps vicariously missing and reuses only an identical explicit gloss pair', async () => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('offline'));
     const lexical = new LexicalEngine([
