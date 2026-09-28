@@ -8,12 +8,12 @@ const MISS_TTL = 6 * 60 * 60 * 1000;
 const FAILURE_TTL = 5 * 60 * 1000;
 const requests = new SharedRequests<DictionaryResult | null>();
 
-export async function lookupWebDictionary(lemma: string, surfaceForm: string, timeoutMs: number, signal?: AbortSignal): Promise<DictionaryResult | null> {
+export async function lookupWebDictionary(lemma: string, surfaceForm: string, timeoutMs: number, signal?: AbortSignal): Promise<(DictionaryResult & { webCached?: boolean }) | null> {
   const normalized = lemma.toLocaleLowerCase().trim();
   const key = `dictionary:web:${normalized}:en-vi`;
   const row = await db.settings.get(key).catch(() => undefined);
   const cached = row?.value as { version?: string; result?: DictionaryResult | null; expiresAt?: number } | undefined;
-  if (cached?.version === VERSION && (cached.expiresAt ?? 0) > Date.now()) return cached.result ? { ...cached.result, surfaceForm } : null;
+  if (cached?.version === VERSION && (cached.expiresAt ?? 0) > Date.now()) return cached.result ? { ...cached.result, surfaceForm, webCached: true } : null;
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return null;
   const result = await requests.run(key, async sharedSignal => {
     const controller = new AbortController();

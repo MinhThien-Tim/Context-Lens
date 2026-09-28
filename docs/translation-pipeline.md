@@ -56,7 +56,11 @@ Related: [ARCHITECTURE.md](ARCHITECTURE.md), [reader.md](reader.md), [data-stora
 7. **Wiktionary web dictionary (optional).** Only when `automaticFallback && publicTranslation &&
    targetLang === 'vi'`. `lookupWebDictionary` has its own `db.settings` cache with TTLs
    (success 30 d, miss 6 h, failure 5 min) and refuses to run while offline. Results merge into the
-   existing senses (`mergeDictionaryResult`) and are published before translation fallback.
+   existing senses (`mergeDictionaryResult`), collapse exact normalized POS/definition duplicates in
+   favor of local metadata, then pass the merged candidates through the same local `SenseResolver`
+   using the cached sentence analysis. The complete reranked dictionary and matching lens diagnostics
+   are published once before translation fallback. Web senses remain occurrence-only; the Wiktionary
+   cache stores raw dictionary senses, and `source: 'web'` identifies the enriched snapshot.
    Every publication checks the same AbortSignal; the UI also guards callbacks and completion
    with its selection controller. Provider order, quality gates and cache versions are unchanged.
 8. **Translation router.** Skipped entirely if `optionalTranslationEnabled(settings)` is false.

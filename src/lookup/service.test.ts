@@ -3,7 +3,7 @@ import { db } from '../db/database';
 import { PROMPT_VERSION } from '../ai/prompt';
 import { defaultAiSettings } from '../settings/types';
 import { createContextCacheKey } from './cache';
-import { LookupService } from './service';
+import { LookupService, mergeDictionaryResult } from './service';
 import type { LookupRequest } from './types';
 import { validLookup } from '../test/fixtures';
 import { defaultEngineSettings } from '../settings/engines';
@@ -22,6 +22,40 @@ const request: LookupRequest = {
 };
 
 describe('lookup service offline cache', () => {
+  it('deduplicates equivalent web definitions in favor of local sense metadata', () => {
+    const localSense = { id: 'local', pos: 'noun', definitionEn: 'A distant star.', meaningsVi: ['sao'], source: 'local' as const,
+      contextScore: 0, contextMatch: false, pairingState: 'paired' as const };
+    const dictionary = { word: 'star', surfaceForm: 'star', lemma: 'star', pronunciation: null, contextConfidence: 0, senses: [localSense] };
+    const merged = mergeDictionaryResult({ ...validLookup, dictionary }, { ...dictionary, senses: [
+      { ...localSense, id: 'web-duplicate', definitionEn: 'a distant star', meaningsVi: [], source: 'wiktionary' },
+      { ...localSense, id: 'web-other', definitionEn: 'a famous performer', meaningsVi: [], source: 'wiktionary' }
+    ] });
+    expect(merged.dictionary?.senses.map(sense => sense.id)).toEqual(['local', 'web-other']);
+    expect(merged.dictionary?.senses[0].meaningsVi).toEqual(['sao']);
+    expect(merged.source).toBe('web');
+  });
+  it('publishes one reranked web snapshot with matching lens diagnostics', async () => {
+    const sentence = 'The glorp measured several distant stars in the observatory.';
+    const webPayload = { en: [{ partOfSpeech: 'noun', definitions: [
+      { definition: 'an observatory instrument that measured distant stars' },
+      { definition: 'a garden tool' }
+    ] }] };
+    const fetch = vi.fn(async (url: string) => new Response(String(url).includes('wiktionary.org') ? JSON.stringify(webPayload) : '',
+      { status: String(url).includes('wiktionary.org') ? 200 : 404 }));
+    vi.stubGlobal('fetch', fetch);
+    const snapshots: import('./types').LookupResponse[] = [];
+    const result = await new LookupService().quick({ ...request, selection: 'glorp', sentence, selection_start: 4 },
+      { ...defaultEngineSettings, browserTranslation: false, googleProvider: false, managedTranslation: false },
+      undefined, snapshot => snapshots.push(snapshot));
+    const webSnapshots = snapshots.filter(snapshot => snapshot.source === 'web');
+    expect(webSnapshots).toHaveLength(1);
+    expect(webSnapshots[0].dictionary?.senses[0]).toMatchObject({ source: 'wiktionary', contextMatch: true, pairingState: 'missing' });
+    expect(webSnapshots[0].lens?.sense?.diagnostics?.map(item => item.senseId)).toEqual(webSnapshots[0].dictionary?.senses.map(item => item.id));
+    expect(webSnapshots[0].quick.definition_en).toBe(webSnapshots[0].dictionary?.senses[0].definitionEn);
+    expect(webSnapshots[0].quick.meaning_vi).toEqual([]);
+    expect(fetch.mock.calls.filter(([url]) => String(url).includes('wiktionary.org'))).toHaveLength(1);
+    expect(result.dictionary?.senses[0].source).toBe('wiktionary');
+  });
   afterEach(async () => { vi.restoreAllMocks(); vi.unstubAllGlobals(); await Promise.all([db.lookups.clear(), db.contexts.clear(), db.translations.clear(), db.sentenceAnalyses.clear()]); });
   it('reuses explicit browser sentence translations for later local selections', async () => {
     const translate = vi.fn().mockResolvedValue('Đào tạo là điều kiện tiên quyết.');

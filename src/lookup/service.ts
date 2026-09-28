@@ -136,7 +136,11 @@ export class LookupService {
         checkAbort(signal);
         if (web) {
           recordDiagnostic('wiktionary', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'wiktionary', mode: request.selection_type, status: 'used' });
-          base = mergeDictionaryResult(base, web);
+          const merged = mergeDictionaryResult(base, web);
+          const reranked = await this.local.analyzeSelection(selectionInput(request, settings.sourceLang, settings.targetLang), merged.dictionary!.senses);
+          checkAbort(signal);
+          base = applyWebRerank(merged, reranked);
+          if (web.webCached) base = { ...base, engine: { ...base.engine!, cached: true } };
           publish();
           if (base.quick.definition_en && base.quick.meaning_vi.length) return base;
         }
@@ -207,17 +211,43 @@ export class LookupService {
 }
 export const lookupService = new LookupService();
 
-function mergeDictionaryResult(base: LookupResponse, web: NonNullable<LookupResponse['dictionary']>): LookupResponse {
+export function mergeDictionaryResult(base: LookupResponse, web: NonNullable<LookupResponse['dictionary']>): LookupResponse {
   const local = base.dictionary;
+  const seen = new Set<string>();
   const senses = [...(local?.senses ?? []), ...web.senses].map(sense => ({ ...sense,
-    meaningsVi: uniqueMeanings(sense.meaningsVi) })).filter(sense => sense.definitionEn || sense.meaningsVi.length);
+    meaningsVi: uniqueMeanings(sense.meaningsVi) })).filter(sense => {
+      if (!sense.definitionEn && !sense.meaningsVi.length) return false;
+      const key = `${sense.pos.trim().toLocaleLowerCase()}|${sense.definitionEn.normalize('NFC').toLocaleLowerCase().replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim()}`;
+      if (seen.has(key)) return false;
+      seen.add(key); return true;
+    });
   const unpairedMeaningsVi = uniqueMeanings([...(local?.unpairedMeaningsVi ?? []), ...(web.unpairedMeaningsVi ?? [])]);
   const dictionary = { ...web, ...local, surfaceForm: base.selection.surface, senses, unpairedMeaningsVi };
   const first = senses[0];
   const meanings = [...senses.flatMap(sense => sense.meaningsVi), ...unpairedMeaningsVi];
-  return { ...base, dictionary, source: 'translation', engine: { provider: 'wiktionary-web', cached: false },
+  return { ...base, dictionary, source: 'web', engine: { provider: 'wiktionary-web', cached: false },
     quick: { ...base.quick, definition_en: base.quick.definition_en || first?.definitionEn || '', meaning_vi: base.quick.meaning_vi.length ? base.quick.meaning_vi : meanings.slice(0, 4) },
     difficulty: { ...base.difficulty, worth_learning: Boolean(first?.definitionEn || meanings.length) } };
+}
+
+function applyWebRerank(base: LookupResponse, lens: NonNullable<LookupResponse['lens']>): LookupResponse {
+  const dictionary = lens.dictionary ? { ...lens.dictionary,
+    unpairedMeaningsVi: base.dictionary?.unpairedMeaningsVi,
+    vietnameseReferences: base.dictionary?.vietnameseReferences,
+    pronunciation: base.dictionary?.pronunciation ?? lens.dictionary.pronunciation } : base.dictionary;
+  const selected = dictionary?.senses[0];
+  const selectedMeaning = selected ? senseVietnameseMeanings(selected) : [];
+  const contextualDefinition = selected?.contextMatch ? selected.definitionEn : undefined;
+  const nextLens = { ...lens, dictionary,
+    english: selected?.definitionEn ? { ...lens.english, definition: selected.definitionEn, contextualDefinition } : lens.english,
+    vietnamese: selectedMeaning.length ? { meaning: selectedMeaning.join(' / '), contextualMeaning: selected?.contextMatch ? selectedMeaning.join(' / ') : undefined, senseAligned: true }
+      : base.lens?.vietnamese?.senseAligned === false ? base.lens.vietnamese : undefined };
+  return { ...base, lens: nextLens, dictionary, confidence: lens.confidence,
+    selection: { ...base.selection, part_of_speech: dictionary?.contextPos ?? base.selection.part_of_speech },
+    quick: base.quick.lexical_unit ? base.quick : { ...base.quick, definition_en: selected?.definitionEn ?? base.quick.definition_en,
+      meaning_vi: selectedMeaning.length ? selectedMeaning : selected?.contextMatch ? (dictionary?.unpairedMeaningsVi ?? []) : base.quick.meaning_vi },
+    deep: { ...base.deep, context_explanation_en: contextualDefinition ?? '',
+      context_explanation_vi: selected?.contextMatch ? selectedMeaning.join(' / ') : '' } };
 }
 
 function addUnpairedTranslations(dictionary: LookupResponse['dictionary'], meaningsVi: string[]): LookupResponse['dictionary'] {

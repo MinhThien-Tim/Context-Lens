@@ -5,7 +5,8 @@ import { ContextWindowBuilder, SentenceEngine } from './sentence-engine';
 import { SenseResolver } from './sense-resolver';
 import { occurrencePos } from './pos-arbitration';
 import { senseVietnameseMeanings } from './sense-meanings';
-import type { LensResult, SelectionInput } from './types';
+import type { LensResult, SelectionInput, LexicalSense } from './types';
+import type { DictionarySenseResult } from '../../lookup/types';
 import { compoundCandidates, isPartialSelection, normalizeSelection, phraseCandidates, reconstructToken } from '../../lookup/normalization';
 import { dictionaryRegistry } from '../../lookup/dictionary/registry';
 
@@ -17,7 +18,7 @@ export class LocalLanguageEngine {
     private sentences = new SentenceEngine(lexical, phrases),
     private resolver = new SenseResolver(lexical)
   ) {}
-  async analyzeSelection(input: SelectionInput): Promise<LensResult> {
+  async analyzeSelection(input: SelectionInput, candidateSenses?: DictionarySenseResult[]): Promise<LensResult> {
     const initial = normalizeSelection(input.selectedText).normalized;
     const repair = reconstructToken(initial, input.sentence, input.selectionStart);
     const lookupText = repair?.token ?? initial;
@@ -48,15 +49,19 @@ export class LocalLanguageEngine {
     // Keep the surface lookup first so morphology metadata is not lost when a base candidate also matches.
     const directEntry = this.lexical.lookup(lookupText);
     const candidateMatch = candidates.map(candidate => ({ candidate, entry: this.lexical.lookup(candidate) })).find(match => match.entry);
-    const entry = phraseEntry ?? directEntry ?? candidateMatch?.entry;
-    if (entry) this.lexical.remember(lookupText, entry);
-    const lexicalPos = [...new Set([...(entry?.pos ?? []), ...(entry?.senses ?? []).map(sense => sense.pos).filter((pos): pos is string => Boolean(pos))])];
+    const lexicalEntry = phraseEntry ?? directEntry ?? candidateMatch?.entry;
+    const entry = lexicalEntry ?? (candidateSenses?.length ? { lemma: normalized, pos: [...new Set(candidateSenses.map(sense => sense.pos))], senses: [] as LexicalSense[] } : undefined);
+    if (lexicalEntry) this.lexical.remember(lookupText, lexicalEntry);
+    const senses = candidateSenses ? candidateSenses.map(sense => ({ ...entry?.senses.find(item => item.id === sense.id),
+      id: sense.id, pos: sense.pos, definitionEn: sense.definitionEn, meaningsVi: sense.meaningsVi,
+      alignment: sense.alignment, source: sense.source })) : entry?.senses ?? [];
+    const lexicalPos = [...new Set([...(entry?.pos ?? []), ...senses.map(sense => sense.pos).filter((pos): pos is string => Boolean(pos))])];
     const rulePos = occurrencePos(analysis, occurrence ? analysis.tokens.indexOf(occurrence) : -1, lexicalPos);
     const preferredSensePos = rulePos === 'adjective' && entry?.morphology?.inflection === 'past-participle' ? 'verb' : rulePos;
     const resolved = this.resolver.resolve({ selection: lookupText, lemma: entry?.lemma ?? normalized,
       canonicalPhrase: phraseEntry?.lemma, sentence: analysis.normalizedText, sentenceAnalysis: analysis,
       selectionStart: occurrence?.start, pos: preferredSensePos, sentenceTranslationVi: analysis.translationVi,
-      candidateSenses: entry?.senses ?? [] });
+      candidateSenses: senses });
     const sense = resolved.selectedSense;
     const hasEnglish = Boolean(sense?.definitionEn);
     const senseMeanings = sense ? senseVietnameseMeanings(sense) : [];
@@ -69,7 +74,7 @@ export class LocalLanguageEngine {
     const matchedText = phraseEntry?.lemma ?? (directEntry ? lookupText : candidateMatch?.candidate);
     const matchType = phraseEntry ? 'phrase' : directEntry ? (directEntry.morphology ? 'lemma' : 'exact')
       : matchedText?.includes(' ') ? (matchedText === canonical ? 'phrase' : 'subphrase') : entry ? 'head' : undefined;
-    const orderedSenses = entry ? [sense, ...resolved.alternatives, ...entry.senses].filter((item, index, all): item is NonNullable<typeof item> => Boolean(item) && all.findIndex(other => other?.id === item!.id) === index) : [];
+    const orderedSenses = entry ? [sense, ...resolved.alternatives, ...senses].filter((item, index, all): item is NonNullable<typeof item> => Boolean(item) && all.findIndex(other => other?.id === item!.id) === index) : [];
     const contextPos = (resolved.contextMatch && sense?.pos) || rulePos || (lexicalPos.length === 1 ? lexicalPos[0] : undefined);
     const contextOrderedSenses = preferredSensePos ? [...orderedSenses].sort((left, right) => Number(right.pos === preferredSensePos) - Number(left.pos === preferredSensePos)) : orderedSenses;
     const degreeMeaning = (meaning: string) => entry?.morphology?.inflection === 'comparative' && (sense?.pos ?? entry?.pos[0]) === 'adjective' && /^(?:thÃ´ng minh|sÃ¡ng suá»‘t|khÃ´n ngoan)$/.test(meaning) ? `${meaning} hÆ¡n` : meaning;

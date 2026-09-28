@@ -100,6 +100,6 @@ export interface LookupResponse {
   };
   difficulty: { cefr: string; worth_learning: boolean };
   confidence: number;
-  source?: 'ai' | 'cache' | 'offline' | 'browser' | 'translation';
+  source?: 'ai' | 'cache' | 'offline' | 'browser' | 'translation' | 'web';
   engine?: { provider: string; model?: string; cached?: boolean; latencyMs?: number; status?: string };
 }

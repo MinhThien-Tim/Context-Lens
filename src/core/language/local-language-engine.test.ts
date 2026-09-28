@@ -22,6 +22,24 @@ function input(selectedText: string, sentence = selectedText): SelectionInput { 
 afterEach(async () => { await Promise.all(databases.splice(0).map(database => database.delete())); });
 
 describe('local language foundation', () => {
+  it('reranks supplemental senses with cached analysis and synchronized diagnostics', async () => {
+    const { engine, sentences } = setup();
+    const analyze = vi.spyOn(sentences, 'analyze');
+    const selection = input('glorp', 'The glorp measured several distant stars in the observatory.');
+    const local = await engine.analyzeSelection(selection);
+    expect(local.dictionary).toBeUndefined();
+    const reranked = await engine.analyzeSelection(selection, [
+      { id: 'local', pos: 'noun', definitionEn: 'a garden tool', meaningsVi: ['dụng cụ'], source: 'local', contextScore: 0, contextMatch: false },
+      { id: 'wiktionary:glorp:0:0', pos: 'noun', definitionEn: 'an observatory instrument that measured distant stars', meaningsVi: [], source: 'wiktionary', contextScore: 0, contextMatch: false }
+    ]);
+    expect(analyze).toHaveBeenCalledTimes(2);
+    expect(reranked.cached).toBe(true);
+    expect(reranked.dictionary?.senseStatus).toBe('context');
+    expect(reranked.dictionary?.senses[0]).toMatchObject({ id: 'wiktionary:glorp:0:0', contextMatch: true, pairingState: 'missing' });
+    expect(reranked.sense?.diagnostics?.map(item => item.senseId)).toEqual(reranked.dictionary?.senses.map(item => item.id));
+    expect(reranked.vietnamese?.senseAligned).not.toBe(true);
+    expect((await engine.analyzeSelection(selection)).dictionary).toBeUndefined();
+  });
   it.each([
     ['increasingly', 'An increasingly important problem.', 'adverb'],
     ['highly', 'The highly complex system.', 'adverb'],
