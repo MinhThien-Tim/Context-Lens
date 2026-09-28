@@ -505,6 +505,8 @@ it.each([false, true])('shares Simple languages and preserves result, scroll and
     for (const label of ['Pronounce word', 'Save word', 'Add note', 'Show more']) expect(host.querySelector(`[aria-label="${label}"]`)).not.toBeNull();
     expect(host.querySelector('.inspector-word-title strong')?.textContent).toBe(result.selection.surface);
     expect(host.querySelector('.pos-chip')?.textContent).toBe('verb');
+    expect(host.querySelector('.quick-mode-toggle')?.textContent).toBe('Simple');
+    expect(host.querySelector('.quick-mode-chevron')).not.toBeNull();
     expect(host.querySelector('.language-cycle')?.closest('details')).not.toBeNull();
     for (const expected of ['bilingual', 'en', 'vi'] as const) {
       expect(mode).toBe(expected);

@@ -1,5 +1,38 @@
 import { test, expect } from '@playwright/test';
 
+test('Quick mode defaults to Simple and switches without toolbar clipping', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(async () => {
+    const { h, render } = await import(/* @vite-ignore */ '/node_modules/.vite/deps/preact.js');
+    const { LookupBottomSheet } = await import(/* @vite-ignore */ '/src/components/LookupBottomSheet.tsx');
+    const { defaultPreferences } = await import(/* @vite-ignore */ '/src/db/database.ts');
+    const { validLookup } = await import(/* @vite-ignore */ '/src/test/fixtures.ts');
+    await import(/* @vite-ignore */ '/src/reader-layout.css');
+    const root = document.createElement('div'); root.id = 'quick-default-fixture'; root.className = 'reader-shell'; document.body.append(root);
+    let quickMode = defaultPreferences.lookupQuickMode;
+    let displayMode = 'popup';
+    const noop = () => {};
+    const draw = () => render(h(LookupBottomSheet, { open: true, result: validLookup, quickMode, displayMode, loading: false, error: null, saved: false, mode: 'bilingual',
+      onQuickModeChange: (next: typeof quickMode) => { quickMode = next; draw(); }, onDisplayModeChange: (next: string) => { displayMode = next; draw(); },
+      onModeChange: noop, onSpeak: noop, onToggleSave: noop, onAddNote: noop, onClose: noop, onOpenSettings: noop }), root);
+    draw();
+  });
+  const sheet = page.locator('#quick-default-fixture .lookup-sheet');
+  for (const width of [320, 390, 1024, 1366]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(sheet).toHaveAttribute('data-quick-mode', 'simple');
+    await expect(sheet.locator('.quick-mode-chevron')).toBeVisible();
+    expect(await sheet.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    await sheet.getByRole('button', { name: 'Use Standard Quick card' }).click();
+    await expect(sheet).toHaveAttribute('data-quick-mode', 'standard');
+    await sheet.getByRole('button', { name: 'Use Simple Quick card' }).click();
+    await sheet.getByRole('button', { name: 'Show more' }).click();
+    await expect(sheet).toHaveClass(/expanded/);
+    await sheet.getByRole('button', { name: 'Show less' }).click();
+    await expect(sheet).toHaveAttribute('data-quick-mode', 'simple');
+  }
+});
+
 test('Simple Quick responsive languages, height and Full return', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(async () => {

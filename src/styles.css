@@ -670,6 +670,8 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
   color: color-mix(in srgb, var(--advanced-green) 88%, var(--primary-text));
   background: color-mix(in srgb, var(--advanced-green-soft) 80%, transparent);
 }
+.reader-shell.reader-shell .quick-mode-toggle { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.reader-shell.reader-shell .quick-mode-chevron { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; opacity: .7; flex: none; }
 .reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .inspector-lookup-tools .language-tabs,
 .reader-shell.reader-shell .lookup-sheet.quick[data-quick-mode="standard"] .quick-mode-toggle {
   background: color-mix(in srgb, var(--advanced-blue-soft) 72%, var(--surface));

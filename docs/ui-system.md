@@ -276,10 +276,10 @@ The body scrolls within the remaining viewport height. Full, closing, selection 
 preserve the preference; mobile ignores it. Placement never invokes lookup providers.
 
 ### Quick presentation
-`AppPreferences.lookupQuickMode` independently selects Standard (default) or Simple inside Quick,
-persisted in `reader-preferences`; absent/invalid values normalize to Standard without a schema change.
+`AppPreferences.lookupQuickMode` independently selects Simple (default) or Standard inside Quick,
+persisted in `reader-preferences`; absent/invalid values normalize to Simple without a schema change.
 App passes the preference and change callback to the existing `LookupBottomSheet`. Its compact header
-button switches presentation immediately without replacing the result or invoking lookup services.
+button, marked with a small chevron, switches presentation immediately without replacing the result or invoking lookup services.
 Simple moves the shared language cycle into More, retaining the same EN/VI/bilingual preference.
 `QuickExplain` retains existing sense ordering and source-linked pairs. Simple selects 3–6 nonempty
 meanings according to average visible text length, including confirmed context. Exact duplicate

@@ -69,6 +69,8 @@ test('visible PDF text, mode return and selection-to-card keep the reading posit
   await expect(sheet.locator('.sense-definition,.sense-vi,.entry-glosses li').first()).toBeVisible();
   const quickHeight = (await sheet.boundingBox())!.height;
   await expect.poll(() => page.evaluate(() => (window as any).readerP0.quickCalls)).toBe(1);
+  await sheet.getByRole('button', { name: 'Use Standard Quick card' }).click();
+  await expect(sheet).toHaveAttribute('data-quick-mode', 'standard');
   await sheet.getByRole('button', { name: 'Use Simple Quick card' }).click();
   const simpleHeight = (await sheet.boundingBox())!.height;
   await sheet.getByRole('button', { name: 'Show more', exact: true }).click();

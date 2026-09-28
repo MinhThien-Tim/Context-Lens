@@ -14,6 +14,7 @@ const NOTE_ICON = <svg class="header-icon" aria-hidden="true" viewBox="0 0 16 16
 const SAVE_ICON = <svg class="header-icon" aria-hidden="true" viewBox="0 0 16 16"><path d="M4.5 2.5h7a.5.5 0 0 1 .5.5v10L8 10.3 4 13V3a.5.5 0 0 1 .5-.5z" /></svg>;
 const CLOSE_ICON = <svg class="header-icon" aria-hidden="true" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" /></svg>;
 const DRAG_GRIP_ICON = <svg class="lookup-drag-grip" aria-hidden="true" viewBox="0 0 8 14" fill="currentColor"><circle cx="2" cy="2.5" r="1.2" /><circle cx="6" cy="2.5" r="1.2" /><circle cx="2" cy="7" r="1.2" /><circle cx="6" cy="7" r="1.2" /><circle cx="2" cy="11.5" r="1.2" /><circle cx="6" cy="11.5" r="1.2" /></svg>;
+const MODE_CHEVRON_ICON = <svg class="quick-mode-chevron" aria-hidden="true" viewBox="0 0 12 12"><path d="m3 4.5 3 3 3-3" /></svg>;
 
 interface Props {
   quickMode?: 'simple' | 'standard';
@@ -182,7 +183,7 @@ export function LookupBottomSheet(props: Props) {
         </div>}
         {result && <div class="inspector-lookup-tools">
             {!simple && <LanguageTabs value={props.mode} onChange={props.onModeChange} compact />}
-            {!deepOpen && props.onQuickModeChange && <button class="quick-mode-toggle" aria-pressed={simple} aria-label={simple ? 'Use Standard Quick card' : 'Use Simple Quick card'} onClick={() => props.onQuickModeChange?.(simple ? 'standard' : 'simple')}>{simple ? 'Simple' : 'Standard'}</button>}
+            {!deepOpen && props.onQuickModeChange && <button class="quick-mode-toggle" aria-pressed={simple} aria-label={simple ? 'Use Standard Quick card' : 'Use Simple Quick card'} onClick={() => props.onQuickModeChange?.(simple ? 'standard' : 'simple')}>{simple ? 'Simple' : 'Standard'}{MODE_CHEVRON_ICON}</button>}
             <details class="explain-more-actions"><summary aria-label="More actions" title="More actions">⋯</summary><div>
               {simple && <LanguageTabs value={props.mode} onChange={props.onModeChange} compact />}
               {props.onDisplayModeChange && <label class="lookup-view-preference">Default view<select aria-label="Default lookup view" value={props.preferredView ?? (deepOpen ? 'full' : 'quick')} onChange={event => changeDisplay(event.currentTarget.value === 'full')}><option value="quick">Quick</option><option value="full">Show more</option></select><small>Saved for new lookups.</small></label>}

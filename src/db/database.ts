@@ -270,7 +270,7 @@ export const defaultPreferences: AppPreferences = {
   interfaceMode: 'simple',
   languageMode: 'bilingual',
   lookupViewMode: 'quick',
-  lookupQuickMode: 'standard',
+  lookupQuickMode: 'simple',
   lookupPopupPlacement: { mode: 'auto' },
   fontSize: 19,
   lineHeight: 1.75,
@@ -301,7 +301,7 @@ export async function loadPreferences(): Promise<AppPreferences> {
   const lookupViewMode: AppPreferences['lookupViewMode'] = stored.lookupViewMode === 'full' ? 'full' : 'quick';
   const pdfCustomScale = typeof stored.pdfCustomScale === 'number' && Number.isFinite(stored.pdfCustomScale) ? Math.min(6, Math.max(.1, stored.pdfCustomScale)) : 1;
   const pdfZoomMode = ['natural', 'fit-width', 'fit-page', 'custom'].includes(stored.pdfZoomMode ?? '') ? stored.pdfZoomMode! : defaultPreferences.pdfZoomMode;
-  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, fontSize, lineHeight, fontFamily, readingMargin, lookupViewMode, pdfZoomMode, pdfCustomScale, lookupQuickMode: stored.lookupQuickMode === 'simple' ? 'simple' as const : 'standard' as const, lookupPopupPlacement: normalizePopupPlacement(stored.lookupPopupPlacement) };
+  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, fontSize, lineHeight, fontFamily, readingMargin, lookupViewMode, pdfZoomMode, pdfCustomScale, lookupQuickMode: stored.lookupQuickMode === 'standard' ? 'standard' as const : 'simple' as const, lookupPopupPlacement: normalizePopupPlacement(stored.lookupPopupPlacement) };
   const normalizedChanged = (Object.keys(defaultPreferences) as (keyof AppPreferences)[]).some(key => JSON.stringify(stored[key]) !== JSON.stringify(preferences[key]));
   if (normalizedChanged || legacy) {
     await db.transaction('rw', db.settings, async () => {

@@ -64,12 +64,14 @@ describe('reader interface preferences', () => {
   });
 });
 
-it('persists Simple Quick independently of language and default view', async () => {
-  expect(defaultPreferences.lookupQuickMode).toBe('standard');
-  await savePreferences({ ...defaultPreferences, lookupQuickMode: 'simple', languageMode: 'vi', lookupViewMode: 'full' });
-  expect(await loadPreferences()).toMatchObject({ lookupQuickMode: 'simple', languageMode: 'vi', lookupViewMode: 'full' });
+it('defaults Quick to Simple and preserves explicit Standard independently of other preferences', async () => {
+  expect(defaultPreferences.lookupQuickMode).toBe('simple');
+  await db.settings.clear();
+  expect((await loadPreferences()).lookupQuickMode).toBe('simple');
+  await savePreferences({ ...defaultPreferences, lookupQuickMode: 'standard', languageMode: 'vi', lookupViewMode: 'full' });
+  expect(await loadPreferences()).toMatchObject({ lookupQuickMode: 'standard', languageMode: 'vi', lookupViewMode: 'full' });
 });
 it.each([undefined, 'invalid'])('normalizes invalid Quick presentation (%s)', async lookupQuickMode => {
   await db.settings.put({ key: 'reader-preferences', value: { ...defaultPreferences, lookupQuickMode } });
-  expect((await loadPreferences()).lookupQuickMode).toBe('standard');
+  expect((await loadPreferences()).lookupQuickMode).toBe('simple');
 });
