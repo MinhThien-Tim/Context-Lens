@@ -50,10 +50,12 @@
   .reader-shell.reader-shell .pdf-scroll { padding-top: 48px; padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); }
   .reader-shell.reader-shell .pdf-toolbar { position: absolute; top: 0; left: 0; right: 0; height: 44px; min-height: 44px; padding-block: 0; flex-wrap: nowrap; justify-content: space-between; overflow: visible; }
   .reader-shell.reader-shell .pdf-toolbar > .pdf-more { flex: 0 0 auto; }
-  .reader-shell.reader-shell .pdf-toolbar .pdf-click-toggle { flex: 0 0 auto; min-width: 44px; min-height: 44px; }
-  .reader-shell.reader-shell .pdf-click-toggle[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .reader-shell.reader-shell .pdf-click-toggle[aria-pressed="false"] { opacity: .7; }
+  .reader-shell.reader-shell .reader-progress-status { gap: 6px; }
+  .reader-shell.reader-shell .reader-progress .pdf-click-toggle { flex: 0 0 auto; min-width: 48px; min-height: 44px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--elevated-surface); color: var(--primary-text); font: 600 12px/1 var(--font-ui); touch-action: manipulation; }
+  .reader-shell.reader-shell .reader-progress .pdf-click-toggle[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .reader-shell.reader-shell .reader-progress .pdf-click-toggle[aria-pressed="false"] { opacity: .7; }
   .reader-shell.reader-shell.chrome-quiet .pdf-toolbar { opacity: 0; pointer-events: none; }
+  .reader-shell.reader-shell[data-reader-surface="original"].chrome-quiet .reader-progress { transform: none; opacity: 1; pointer-events: auto; }
   .reader-shell.reader-shell .reader-text { width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding-top: calc(var(--reader-header-height) + 12px); }
   .reader-shell.reader-shell .pdf-reading-page { box-sizing: border-box; width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding: 12px max(var(--reader-page-padding, 18px), env(safe-area-inset-right)) 32px max(var(--reader-page-padding, 18px), env(safe-area-inset-left)); }
   .reader-shell.reader-shell .pdf-reading-page > header { margin-bottom: 12px; }

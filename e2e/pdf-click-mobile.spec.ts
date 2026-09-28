@@ -75,6 +75,8 @@ test('Original mobile Click handles a real touchscreen tap without treating gest
   await expect(sheet).toBeHidden();
   await scroll.evaluate(el => { el.dispatchEvent(new Event('touchmove', { bubbles: true })); el.scrollTop = 65; el.dispatchEvent(new Event('scroll')); });
   await expect(page.locator('.reader-shell')).toHaveClass(/chrome-quiet/);
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   await page.evaluate(() => window.getSelection()?.removeAllRanges());
   const quietSpan = page.locator('.pdf-page-slot[data-pdf-page="1"] .pdf-text-layer span').filter({ hasText: 'Paragraph 3 on page 1' });
   const quietWord = await quietSpan.evaluate(el => {
@@ -111,8 +113,10 @@ test('Original mobile Click handles a real touchscreen tap without treating gest
   await page.setViewportSize({ width: 320, height: 700 });
   await expect.poll(() => sheet.evaluate(el => el.getBoundingClientRect().width)).toBeLessThanOrEqual(322);
   await assertOverlay();
-  const toolbar = await page.locator('.pdf-toolbar').boundingBox();
+  const toolbar = await page.locator('.reader-progress').boundingBox();
   const click = await toggle.boundingBox();
   expect(click!.y).toBeGreaterThanOrEqual(toolbar!.y - 1);
   expect(click!.y + click!.height).toBeLessThanOrEqual(toolbar!.y + toolbar!.height + 1);
+  const percent = await page.locator('.reading-percentage').boundingBox();
+  expect(click!.x).toBeGreaterThan(percent!.x + percent!.width);
 });
