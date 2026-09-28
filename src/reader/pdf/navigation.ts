@@ -1,4 +1,4 @@
-export type PdfZoomMode = 'fit-width' | 'fit-page' | 'custom';
+export type PdfZoomMode = 'natural' | 'fit-width' | 'fit-page' | 'custom';
 
 export function stepPdfScale(currentScale: number, direction: -1 | 1): number {
   return Math.min(3, Math.max(.1, currentScale + direction * .15));
@@ -24,5 +24,6 @@ export function calculatePdfScale(mode: PdfZoomMode, customScale: number, contai
   if (mode === 'custom') return Math.min(3, Math.max(.1, customScale));
   const widthScale = Math.max(.1, (containerWidth - 32) / pageWidth);
   if (mode === 'fit-width') return widthScale;
+  if (mode === 'natural') return Math.max(.1, Math.min(840, Math.max(1, containerWidth - 64)) / pageWidth);
   return Math.max(.1, Math.min(widthScale, (containerHeight - 32) / pageHeight));
 }

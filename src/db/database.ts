@@ -262,7 +262,8 @@ export interface AppPreferences {
   theme: 'light' | 'dark' | 'system';
   pdfViewMode: 'original' | 'reading';
   pdfMobileViewMode: 'original' | 'reading';
-  pdfZoomMode: 'fit-width' | 'fit-page' | 'custom';
+  pdfZoomMode: 'natural' | 'fit-width' | 'fit-page' | 'custom';
+  pdfCustomScale: number;
 }
 
 export const defaultPreferences: AppPreferences = {
@@ -278,7 +279,8 @@ export const defaultPreferences: AppPreferences = {
   theme: 'system',
   pdfViewMode: 'original',
   pdfMobileViewMode: 'reading',
-  pdfZoomMode: 'fit-page'
+  pdfZoomMode: 'natural',
+  pdfCustomScale: 1
 };
 
 export async function loadPreferences(): Promise<AppPreferences> {
@@ -297,7 +299,9 @@ export async function loadPreferences(): Promise<AppPreferences> {
   const readingMargin: AppPreferences['readingMargin'] = ['narrow', 'comfortable', 'wide'].includes(stored.readingMargin ?? '')
     ? stored.readingMargin! : defaultPreferences.readingMargin;
   const lookupViewMode: AppPreferences['lookupViewMode'] = stored.lookupViewMode === 'full' ? 'full' : 'quick';
-  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, fontSize, lineHeight, fontFamily, readingMargin, lookupViewMode, lookupQuickMode: stored.lookupQuickMode === 'simple' ? 'simple' as const : 'standard' as const, lookupPopupPlacement: normalizePopupPlacement(stored.lookupPopupPlacement) };
+  const pdfCustomScale = typeof stored.pdfCustomScale === 'number' && Number.isFinite(stored.pdfCustomScale) ? Math.min(3, Math.max(.1, stored.pdfCustomScale)) : 1;
+  const pdfZoomMode = ['natural', 'fit-width', 'fit-page', 'custom'].includes(stored.pdfZoomMode ?? '') ? stored.pdfZoomMode! : defaultPreferences.pdfZoomMode;
+  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, fontSize, lineHeight, fontFamily, readingMargin, lookupViewMode, pdfZoomMode, pdfCustomScale, lookupQuickMode: stored.lookupQuickMode === 'simple' ? 'simple' as const : 'standard' as const, lookupPopupPlacement: normalizePopupPlacement(stored.lookupPopupPlacement) };
   const normalizedChanged = (Object.keys(defaultPreferences) as (keyof AppPreferences)[]).some(key => JSON.stringify(stored[key]) !== JSON.stringify(preferences[key]));
   if (normalizedChanged || legacy) {
     await db.transaction('rw', db.settings, async () => {
