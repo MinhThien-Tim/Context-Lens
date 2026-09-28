@@ -4,7 +4,7 @@ import { frameCompatibility, occurrenceConstruction, patternEvidence } from '../
 import type { StableGrammarPattern } from '../../core/language/types';
 import { senseVietnameseMeanings } from '../../core/language/sense-meanings';
 
-export const ALIGNMENT_VERSION = 'bilingual-alignment-3';
+export const ALIGNMENT_VERSION = 'bilingual-alignment-4';
 
 const alignmentCache = new Map<string, LexicalSense[]>();
 const normalize = (text: string) => text.normalize('NFC').toLowerCase().replace(/[^\p{L}\p{M}\s]/gu, ' ').replace(/\s+/g, ' ').trim();

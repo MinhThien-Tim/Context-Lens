@@ -56,10 +56,10 @@ command; its default release version is now `2026.09.3`.
 
 WordNet format 2 retains verb frames as `[frameNumber, wordNumber]` tuples on stable synsets.
 Word number 0 applies to all lemmas; loading filters lemma-specific frames. Pointers remain omitted.
-Lexical cache version `local-lexicon-9`, WordNet format identity, and sentence analysis version 3
+Lexical cache version `local-lexicon-10`, WordNet format identity, and sentence analysis version 3
 invalidate stale derived records without a Dexie schema migration.
 
-Stable bilingual alignment version `bilingual-alignment-3` can consume these source examples
+Stable bilingual alignment version `bilingual-alignment-4` can consume these source examples
 and WordNet frames as weak supporting evidence, alongside independent bilingual
 lexical anchors and matching POS. Reader sentences never update permanent EN–VI pairs.
 Unresolved source glosses remain available; provider definition translations retain their
@@ -67,5 +67,14 @@ dependent display-only provenance. Pack format and source tuples are unchanged.
 
 The service-worker per-asset precache limit is 25 MiB, matching the installer budget, so the
 22.48 MiB source-preserving release is included in offline precache.
+
+The separate `context-lens-sense-metadata-reviewed.json` pilot is a small, bundled delta asset.
+It contains stable WordNet IDs, selected Skypedia source sense IDs, reviewed collocations,
+stable grammar patterns, and sparse domains. It is imported into the local language chunk,
+so lookup adds no request. Source definitions, existing WordNet examples and dictionary tuples
+stay in their original packs. A reviewed source-ID link is applied only when the exact bundled
+Skypedia sense exists with matching POS; explicit pairs have priority, and unused Vietnamese
+source meanings remain available. The overlay records AI-assisted review provenance, not
+source-explicit provenance.
 
 Disjoint WordNet frames and mismatching extracted examples are neutral because usage metadata is incomplete. Only clearly contradictory explicit controlled grammar patterns reject an alignment candidate.

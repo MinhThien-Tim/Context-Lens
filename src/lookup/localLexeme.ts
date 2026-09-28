@@ -3,6 +3,7 @@ import { dictionaryRegistry } from './dictionary/registry';
 import type { InflectionType } from './dictionary/types';
 import type { LexicalEntry, LexicalSense } from '../core/language/types';
 import { lookupWordNet, wordNetVersion } from '../core/language/wordnet';
+import { enrichReviewedSenses, applyReviewedLinks } from './reviewedSenseMetadata';
 
 const qualityRank = { reviewed: 0, curated: 1, imported: 2 } as const;
 
@@ -44,7 +45,7 @@ export function lookupLocalLexeme(candidate: string, surface = candidate, curate
   // WordNet and entry-level bilingual dictionaries do not share sense IDs.
   // Keep them independent instead of manufacturing a bilingual pair from
   // definition similarity or source order.
-  const wordNetSenses = (wordnet?.senses ?? []).map(sense => ({ ...sense, source: 'wordnet' as const }));
+  const wordNetSenses = enrichReviewedSenses(lemma, (wordnet?.senses ?? []).map(sense => ({ ...sense, source: 'wordnet' as const })));
   const senses: LexicalSense[] = [
     ...(curated?.senses.map(sense => ({ ...sense, pos: sense.pos ?? (curated.pos.length === 1 ? curated.pos[0] : undefined) })) ?? []),
     ...dictionarySenses,
@@ -72,10 +73,11 @@ export function lookupLocalLexeme(candidate: string, surface = candidate, curate
     glosses: [entry.meaningsVi[gloss]], examples: example ? [example] : [],
     source: bestDictionaryMatches.find(match => match.entry === entry || match.surfaceEntry === entry)?.providerId ?? 'local'
   })));
-  const alignedSenses = alignBilingualSenses(senses, vietnameseSenses, term => {
+  const inferredSenses = alignBilingualSenses(senses, vietnameseSenses, term => {
     const match = dictionaryRegistry.lookup(term);
     return match ? { lemma: match.entry.lemma, pos: normalizePos([match.entry.partOfSpeech]), senses: [], meaningsVi: match.entry.meaningsVi } : undefined;
   }, JSON.stringify([dictionaryRegistry.versions(), wordNetVersion()]));
+  const alignedSenses = applyReviewedLinks(lemma, inferredSenses, vietnameseSenses);
   return {
     lemma, pos, senses: alignedSenses, meaningsVi,
     vietnameseSenses,

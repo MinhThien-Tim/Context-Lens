@@ -1,0 +1,541 @@
+{
+  "version": 1,
+  "reviewStatus": "REVIEWED",
+  "reviewerKind": "ai-assisted",
+  "sources": {
+    "english": "wordnet-3.0",
+    "vietnamese": "context-lens.skypedia.en-vi@2026.09.3"
+  },
+  "entries": {
+    "flush": {
+      "senses": {
+        "wn3:a:02022167": {
+          "collocations": [
+            "flush with cash"
+          ]
+        },
+        "wn3:a:00910542": {
+          "collocations": [
+            "flush with the wall"
+          ]
+        }
+      }
+    },
+    "flip": {
+      "senses": {
+        "wn3:v:01893079": {
+          "collocations": [
+            "flip a coin"
+          ]
+        }
+      }
+    },
+    "upset": {
+      "senses": {
+        "wn3:a:02547217": {
+          "collocations": [
+            "upset stomach"
+          ]
+        }
+      }
+    },
+    "pitch": {
+      "senses": {
+        "wn3:v:01514126": {
+          "collocations": [
+            "pitch a tent"
+          ]
+        }
+      }
+    },
+    "draft": {
+      "senses": {
+        "wn3:n:07883980": {
+          "collocations": [
+            "beer on draft"
+          ]
+        },
+        "wn3:n:06390962": {
+          "collocations": [
+            "final draft of the constitution"
+          ]
+        }
+      }
+    },
+    "lift": {
+      "senses": {
+        "wn3:v:00799798": {
+          "collocations": [
+            "lift an embargo"
+          ]
+        }
+      }
+    },
+    "flight": {
+      "senses": {
+        "wn3:n:05625210": {
+          "collocations": [
+            "flight of fancy"
+          ]
+        }
+      }
+    },
+    "press": {
+      "senses": {
+        "wn3:v:01390833": {
+          "collocations": [
+            "press your shirts"
+          ]
+        }
+      }
+    },
+    "think": {
+      "senses": {
+        "wn3:v:00739082": {
+          "collocations": [
+            "think the matter through"
+          ]
+        }
+      }
+    },
+    "run": {
+      "senses": {
+        "wn3:v:02443849": {
+          "viSenseIds": [
+            "300494"
+          ],
+          "collocations": [
+            "run a relief operation"
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Chỉ huy, điều khiển, quản lý",
+            "wordnet-definition:direct or control projects, businesses"
+          ]
+        },
+        "wn3:v:01094086": {
+          "viSenseIds": [
+            "300485"
+          ],
+          "collocations": [
+            "run for treasurer"
+          ],
+          "grammarPatterns": [
+            {
+              "complement": "prepositional",
+              "preposition": "for"
+            }
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Ứng cử",
+            "wordnet-example:running for treasurer"
+          ]
+        },
+        "wn3:v:02242256": {
+          "viSenseIds": [
+            "82184"
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Buôn lậu",
+            "wordnet-definition:deal in illegally"
+          ]
+        },
+        "wn3:v:02563327": {
+          "collocations": [
+            "run a new program"
+          ],
+          "domains": [
+            "computing"
+          ]
+        }
+      }
+    },
+    "mean": {
+      "senses": {
+        "wn3:v:00708538": {
+          "viSenseIds": [
+            "424715"
+          ],
+          "collocations": [
+            "mean to help"
+          ],
+          "grammarPatterns": [
+            {
+              "complement": "infinitive"
+            }
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Có ý định",
+            "wordnet-example:meant to help"
+          ]
+        },
+        "wn3:n:06023969": {
+          "viSenseIds": [
+            "424702"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Giá trị trung bình",
+            "wordnet-definition:average of n numbers"
+          ]
+        }
+      }
+    },
+    "consider": {
+      "senses": {
+        "wn3:v:00950431": {
+          "viSenseIds": [
+            "145382"
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-example:Please consider the feelings of your coworkers.",
+            "wordnet-definition:take into account"
+          ]
+        },
+        "wn3:v:00690614": {
+          "viSenseIds": [
+            "145383"
+          ],
+          "grammarPatterns": [
+            {
+              "complement": "object-infinitive"
+            }
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Xem như, coi như",
+            "wordnet-definition:deem to be"
+          ]
+        }
+      }
+    },
+    "take": {
+      "senses": {
+        "wn3:v:01156834": {
+          "viSenseIds": [
+            "238197"
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-example:will you take tea or coffee?",
+            "wordnet-definition:consume regularly"
+          ]
+        },
+        "wn3:v:01002740": {
+          "collocations": [
+            "take a scene"
+          ]
+        },
+        "wn3:n:00908133": {
+          "viSenseIds": [
+            "421135"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Cảnh quay vào phim",
+            "wordnet-definition:act of photographing a scene without interruption"
+          ]
+        }
+      }
+    },
+    "hold": {
+      "senses": {
+        "wn3:v:00004492": {
+          "collocations": [
+            "hold your breath"
+          ]
+        },
+        "wn3:v:01733477": {
+          "viSenseIds": [
+            "318827"
+          ],
+          "collocations": [
+            "hold a reception"
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Tổ chức, tiến hành",
+            "wordnet-definition:organize or be responsible for"
+          ]
+        },
+        "wn3:n:02964634": {
+          "viSenseIds": [
+            "318810"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Khoang của tàu thuỷ",
+            "wordnet-definition:space in ship or aircraft for storing cargo"
+          ]
+        }
+      }
+    },
+    "record": {
+      "senses": {
+        "wn3:n:03924069": {
+          "viSenseIds": [
+            "220514"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Đĩa hát, đĩa ghi âm",
+            "wordnet-definition:sound recording on a disk"
+          ]
+        },
+        "wn3:n:00063014": {
+          "viSenseIds": [
+            "220513"
+          ],
+          "collocations": [
+            "Olympic record"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Kỷ lục",
+            "wordnet-example:Olympic record"
+          ]
+        },
+        "wn3:n:06490173": {
+          "collocations": [
+            "criminal record"
+          ],
+          "domains": [
+            "law"
+          ]
+        },
+        "wn3:v:00998399": {
+          "viSenseIds": [
+            "220517"
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Thu, thâu, ghi vào máy ghi âm",
+            "wordnet-definition:register electronically"
+          ]
+        }
+      }
+    },
+    "state": {
+      "senses": {
+        "wn3:n:00024720": {
+          "viSenseIds": [
+            "203012"
+          ],
+          "collocations": [
+            "state of knowledge",
+            "state of health"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Trạng thái, tình trạng",
+            "wordnet-definition:main attributes"
+          ]
+        },
+        "wn3:n:08654360": {
+          "viSenseIds": [
+            "421817"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Tiểu bang, bang",
+            "wordnet-definition:constituent administrative district"
+          ]
+        },
+        "wn3:n:08178547": {
+          "viSenseIds": [
+            "421818"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Nhà nước, chính quyền",
+            "wordnet-definition:group of people comprising government"
+          ]
+        }
+      }
+    },
+    "matter": {
+      "senses": {
+        "wn3:n:00020827": {
+          "viSenseIds": [
+            "161335"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Chất, vật chất",
+            "wordnet-definition:has mass and occupies space"
+          ]
+        },
+        "wn3:v:02645839": {
+          "viSenseIds": [
+            "161343"
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Có ý nghĩa, có tính chất quan trọng",
+            "wordnet-definition:have import"
+          ]
+        }
+      }
+    },
+    "issue": {
+      "senses": {
+        "wn3:n:06596978": {
+          "viSenseIds": [
+            "238856"
+          ],
+          "collocations": [
+            "issue of the magazine"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-example:Did you read the latest issue of this magazine?",
+            "wordnet-definition:series published periodically"
+          ]
+        },
+        "wn3:n:10373998": {
+          "viSenseIds": [
+            "238861"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Dòng dõi, con cái",
+            "wordnet-definition:immediate descendants"
+          ]
+        },
+        "wn3:v:02479323": {
+          "viSenseIds": [
+            "238866"
+          ],
+          "collocations": [
+            "issue a new uniform"
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Phát quần áo, đạn dược",
+            "wordnet-example:issue a new uniform"
+          ]
+        }
+      }
+    },
+    "account": {
+      "senses": {
+        "wn3:n:13929037": {
+          "viSenseIds": [
+            "129344"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Chương mục, tài khoản",
+            "wordnet-definition:formal banking or brokerage relationship"
+          ]
+        },
+        "wn3:n:06514093": {
+          "viSenseIds": [
+            "129348"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Báo cáo, bài tường thuật",
+            "wordnet-definition:narrative description of past events"
+          ]
+        }
+      }
+    },
+    "present": {
+      "senses": {
+        "wn3:n:13268842": {
+          "viSenseIds": [
+            "252817"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Quà biếu, đồ tặng",
+            "wordnet-definition:gift"
+          ]
+        }
+      }
+    },
+    "pass": {
+      "senses": {
+        "wn3:v:02525044": {
+          "viSenseIds": [
+            "94250"
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Thi đỗ",
+            "wordnet-definition:go successfully through a test"
+          ]
+        },
+        "wn3:n:09386842": {
+          "viSenseIds": [
+            "320551"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-gloss:Đèo, hẻm núi",
+            "wordnet-definition:lower location in a mountain range"
+          ]
+        }
+      }
+    },
+    "cut": {
+      "senses": {
+        "wn3:v:02613860": {
+          "viSenseIds": [
+            "391829"
+          ],
+          "collocations": [
+            "cut class"
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Không dự, trốn một buổi họp",
+            "wordnet-definition:intentionally fail to attend"
+          ]
+        },
+        "wn3:v:00429060": {
+          "viSenseIds": [
+            "391821"
+          ],
+          "collocations": [
+            "cut back health benefits"
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Giảm, hạ, cắt bớt",
+            "wordnet-definition:make a reduction"
+          ]
+        }
+      }
+    },
+    "turn": {
+      "senses": {
+        "wn3:n:00457382": {
+          "viSenseIds": [
+            "218744"
+          ],
+          "evidence": [
+            "source-pos:noun",
+            "source-example:It is my turn to lead the team today.",
+            "wordnet-definition:agreed succession"
+          ]
+        },
+        "wn3:v:01584450": {
+          "viSenseIds": [
+            "231972"
+          ],
+          "evidence": [
+            "source-pos:verb",
+            "source-gloss:Tiện",
+            "wordnet-definition:shape by rotating on a lathe"
+          ]
+        }
+      }
+    }
+  }
+}

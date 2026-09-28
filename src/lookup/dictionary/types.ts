@@ -1,6 +1,6 @@
 export type DictionaryQuality = 'reviewed' | 'curated' | 'imported';
 export interface SenseAlignment {
-  kind: 'explicit' | 'identical-gloss' | 'inferred' | 'translated-definition' | 'unresolved';
+  kind: 'explicit' | 'reviewed' | 'identical-gloss' | 'inferred' | 'translated-definition' | 'unresolved';
   confidence: 'high' | 'medium' | 'low';
   evidence: string[];
   /** Derived display translations must never become independent resolver evidence. */

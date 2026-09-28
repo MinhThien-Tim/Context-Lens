@@ -331,7 +331,7 @@ glosses remain available. Results use a bounded versioned memory cache. Unresolv
 and entry glosses remain available. Alignment tiers are heuristic evidence tiers, not calibrated
 probabilities. A broad gloss may remain unresolved across many English senses.
 
-Sense alignment metadata distinguishes `explicit`, `identical-gloss`, `inferred`,
+Sense alignment metadata distinguishes `explicit`, `reviewed`, `identical-gloss`, `inferred`,
 `translated-definition` and `unresolved`; it records a confidence tier and evidence references.
 `fillSelectedSense` marks provider definition translations as low-confidence display assistance
 with `dependsOnSenseId`. Resolver translation scoring and exact-gloss reuse reject dependent
@@ -365,8 +365,8 @@ Explicit pairs are preserved, generated definition translations are excluded fro
 and broad or unsupported source meanings remain unresolved. Multiple supported VI fragments may
 belong to one English sense; shared VI strings never merge English senses.
 
-Alignment memoization is stamped `bilingual-alignment-2`; learned lexical records use
-`local-lexicon-8`. No Dexie migration or dictionary pack format change is required.
+Alignment memoization is stamped `bilingual-alignment-4`; learned lexical records use
+`local-lexicon-10`. No Dexie migration or dictionary pack format change is required.
 
 Cached translation evidence uses the selected token's predicate and source clause span.
 Strong whole-sentence support requires one grammar clause and one punctuation segment on both
@@ -380,7 +380,9 @@ opt-in gates, request counts and translation `localContext` are unchanged.
 
 Frame evidence distinguishes MATCH, UNKNOWN, SOFT_CONFLICT and HARD_CONFLICT. WordNet frame absence or non-intersection is incomplete usage metadata and contributes no penalty. A match remains weak support (at most one point). Only contradictory explicit controlled grammar patterns exclude a candidate before ranking; extracted example mismatches cannot reject it. Every English dictionary sense remains visible.
 
-Construction events are compared across compatible same-POS candidates before scoring: unique support keeps its bounded score, support shared by a minority is capped at one, and support shared by at least half contributes zero. Compatibility diagnostics remain available. Lexical evidence, independent evidence gates and the semantic margin still determine Context. Alignment retains two lexical anchors, POS checks, competitor margin and provenance; disjoint frames alone cannot bypass a competitor. Cache versions are `bilingual-alignment-3` and `local-lexicon-9`. No provider or network route changes.
+Construction events are compared across compatible same-POS candidates before scoring: unique support keeps its bounded score, support shared by a minority is capped at one, and support shared by at least half contributes zero. Compatibility diagnostics remain available. Lexical evidence, independent evidence gates and the semantic margin still determine Context. Alignment retains two lexical anchors, POS checks, competitor margin and provenance; disjoint frames alone cannot bypass a competitor. Current cache versions are `bilingual-alignment-4` and `local-lexicon-10`. No provider or network route changes.
+
+The reviewed pilot overlay is imported with local lexical code. `lookupLocalLexeme` merges its collocations, grammar patterns and domains onto existing WordNet senses by stable ID, runs the conservative inferred aligner, then applies exact Skypedia source-ID links with matching POS. Explicit and identical-gloss links retain precedence. The overlay does not create senses or definitions; unmatched source IDs remain unresolved. Resolver scoring and provider routing are unchanged.
 
 Release-data regression policy: `Think about the consequences.` and `I think highly of her.` have distinct definition argument/modifier evidence; removing the incomplete-frame penalty should preserve that evidence. `They think him foolish.` and `I think him to be honest.` intentionally remain ambiguous: multiple WordNet judgment/belief senses share predicative examples, and frames do not supply independent semantic distinctions. Generic `think that`, bare `think`, and `think of` also require richer lexical context. Broad Vietnamese glosses and overlapping examples cannot resolve WordNet's finer sense granularity. Do not add phrase-specific winners without independent lexical data.
 
