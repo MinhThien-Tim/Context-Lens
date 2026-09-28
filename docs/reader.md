@@ -50,8 +50,10 @@ It renders plain `content` or sanitized `safeHtml` (markdown/article), and reuse
 Both PDF surfaces share the shell bottom `PageNavigation`; the header Original/Reading segment
 contains only the two view choices, with OCR/source controls in a separate Document tools popover.
 Shell height tokens reserve header and footer space without modifying scroll/navigation mapping.
-Phones ≤767 px use a stable full-height PDF scroll surface, offset visually below the compact header.
-Quiet chrome removes that visual offset without resizing the scroll container or changing its scrollTop.
+Phones ≤767 px place the Original PDF scroll surface directly below the compact fixed header.
+Quiet chrome moves it to the top and expands its height to the full viewport without changing scrollTop.
+The mobile Original zoom control lives in the bottom progress bar, so its empty in-viewer toolbar takes no space.
+Reading Mode retains its stable full-height scroll surface and visual header offset.
 Bottom content padding keeps the last page reachable above the overlaid footer.
 
 Mode choice: `pdfViewMode` (desktop) / `pdfMobileViewMode` (mobile) preferences, overridable by

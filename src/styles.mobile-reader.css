@@ -42,13 +42,18 @@
   .reader-shell.reader-shell[data-reader-surface="reading"] .reader-viewport { position: relative; top: var(--reader-header-height); }
   .reader-shell.reader-shell.chrome-quiet[data-reader-surface="original"] .reader-viewport,
   .reader-shell.reader-shell.chrome-quiet[data-reader-surface="reading"] .reader-viewport { top: 0; }
-  .reader-shell.reader-shell.chrome-quiet[data-reader-surface="original"] .reader-viewport { top: var(--reader-header-height); }
+  .reader-shell.reader-shell[data-reader-surface="original"] .reader-viewport { min-height: 0; }
+  .reader-shell.reader-shell[data-reader-surface="original"] .pdf-viewer-wrap { height: calc(100dvh - var(--reader-header-height)); }
+  .reader-shell.reader-shell.chrome-quiet[data-reader-surface="original"] .reader-viewport { top: 0; }
+  .reader-shell.reader-shell.chrome-quiet[data-reader-surface="original"] .pdf-viewer-wrap { height: 100dvh; }
   .reader-shell.reader-shell .reader-viewport:has(.pdf-queue-status) { height: 100dvh; min-height: 0; }
   .reader-shell.reader-shell .reader-viewport:has(.pdf-queue-status) > .pdf-viewer-wrap,
   .reader-shell.reader-shell .reader-viewport:has(.pdf-queue-status) > .pdf-reading-view { height: auto; flex: 1; }
   .reader-shell.reader-shell .pdf-reading-scroll { padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); box-sizing: border-box; }
   .reader-shell.reader-shell .pdf-scroll { padding-top: 48px; padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); }
   .reader-shell.reader-shell .pdf-toolbar { position: absolute; top: 0; left: 0; right: 0; height: 44px; min-height: 44px; padding-block: 0; flex-wrap: nowrap; justify-content: space-between; overflow: visible; }
+  .reader-shell.reader-shell[data-reader-surface="original"] .pdf-toolbar { display: none; }
+  .reader-shell.reader-shell[data-reader-surface="original"] .pdf-scroll { padding-top: 4px; }
   .reader-shell.reader-shell .pdf-toolbar > .pdf-more { flex: 0 0 auto; }
   .reader-shell.reader-shell .pdf-mobile-zoom-host { display: flex; flex: none; }
   .reader-shell.reader-shell .pdf-mobile-zoom-host .pdf-more > button { min-width: 48px; min-height: 44px; padding: 0 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--elevated-surface); color: var(--primary-text); font: 600 12px/1 var(--font-ui); }
