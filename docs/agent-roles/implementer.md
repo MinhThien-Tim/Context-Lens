@@ -15,6 +15,9 @@ Implement an approved scoped task or spec with the smallest safe patch.
 - Follow the authoritative verification command in `docs/testing.md` and `docs/verification-map.md`.
   The execution and retry policy in `docs/agent-execution-rules.md` is canonical.
 
+Use the task spec and necessary source context; do not require or carry forward the full Planner
+conversation. Keep the final handoff compact so a fresh Verifier can work independently.
+
 ## Verification
 
 - Optional fast pre-check: while implementing, at most one directly relevant colocated test after a

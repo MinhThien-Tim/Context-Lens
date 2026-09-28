@@ -24,5 +24,10 @@ Observable conditions for completion.
 
 Relevant files, commit IDs, screenshots, issue links, or approved task spec.
 
-Example flow: `/plan` with the task and acceptance criteria; `/implement` with the approved spec;
-`/verify` with the spec and implementation handoff.
+Keep this artifact to facts and references needed by the next fresh role context. Do not include
+conversation history, reasoning logs, full terminal output, or code already available in the repo.
+
+Invocation conventions: `ROLE: Planner | Implementer | Verifier` or `/plan`, `/implement`, `/verify`.
+These are agent conventions, not application commands. A typical flow is `/plan` with the task and
+acceptance criteria, then a fresh `/implement` context with this task spec, then a fresh `/verify`
+context with the spec and compact implementation handoff.

@@ -85,6 +85,30 @@ optional relevant files, commits, or task-spec path. Start from [`docs/task-temp
 Example: `/plan` with a task and acceptance criteria; then `/implement` with the approved spec path;
 then `/verify` with the spec path and implementation handoff.
 
+### Mixed tasks and context boundaries
+
+If a task combines investigation and implementation, run Planner first and write a compact task spec
+to `docs/tasks/YYYY-MM-DD-short-task-name.md`. Start a fresh Implementer context with that spec,
+not the Planner transcript. When implementation is complete, pass a compact handoff and start a
+fresh Verifier context.
+
+Roles are persistent; conversation context is not. Pass only the minimum artifact each stage needs:
+the task spec, changed files, relevant diff, verification command, known risks, and (if needed) a
+compact failure packet. Do not pass full conversation histories, reasoning logs, terminal transcripts,
+repeated architecture summaries, or scratch work. The Planner transcript is disposable once the task
+spec exists; stop after a confirmed PASS or return a compact failure packet to a fresh Implementer.
+
+Repository-owned role files are the source of truth instead of editor-specific custom modes. This
+keeps reviewable, version-controlled instructions consistent across Cline, Codex, Copilot, Claude Code,
+and similar agents and machines, and lets them evolve with the architecture. It avoids repeating
+1–2k-token role prompts for every task. Store permanent instructions once in `AGENTS.md`,
+`docs/agent-roles/`, and `docs/verification-map.md`; keep task prompts task-specific (roughly 90%
+persistent instructions and 10% task details, as a guideline).
+
+Invocation conventions are `ROLE: Planner | Implementer | Verifier` or `/plan`, `/implement`,
+`/verify`. They are agent conventions, not application commands. Do not copy full role instructions
+into task files; artifacts under `docs/tasks/` contain only what a fresh context needs.
+
 See [`docs/verification-map.md`](docs/verification-map.md) for existing subsystem commands. Execution,
 retry, and reporting rules remain canonical in [`docs/agent-execution-rules.md`](docs/agent-execution-rules.md)
 and [`docs/testing.md`](docs/testing.md).

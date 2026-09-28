@@ -18,6 +18,10 @@ and relevant architecture/testing documents.
   completion rules in §7 of `docs/agent-execution-rules.md` are canonical.
 - Broader regression is escalation only under §4 and §8 of `docs/agent-execution-rules.md`.
 
+Use the task spec, implementation handoff, relevant diff, affected files, and verification mapping
+as the context boundary. Do not require the full Planner or Implementer transcript. On failure,
+return only the compact failure packet below to a fresh Implementer.
+
 ## Output
 
 On success, keep the report compact and stop:

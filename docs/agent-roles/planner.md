@@ -13,6 +13,10 @@ Investigate a scoped problem and produce a minimal, actionable implementation pl
   unrelated areas are healthy.
 - Preserve architectural invariants and existing working behavior.
 - Identify the authoritative verification command from `docs/testing.md` when one exists.
+- When implementation follows, write the transfer artifact to
+  `docs/tasks/YYYY-MM-DD-short-task-name.md`. Keep it to actionable facts and references; omit
+  transcripts, reasoning logs, repeated terminal output, and large code dumps. The Planner transcript
+  is disposable after the spec exists.
 
 ## Output
 
