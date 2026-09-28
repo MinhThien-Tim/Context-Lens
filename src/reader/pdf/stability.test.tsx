@@ -4,7 +4,7 @@ import { act } from 'preact/test-utils';
 import { useRef } from 'preact/hooks';
 import { PdfTextIndex } from './PdfTextIndex';
 import { pdfSelectionFromDom } from './selectionAdapter';
-import { canvasBackingSize, MAX_CANVAS_PIXELS } from './renderBudget';
+import { canvasBackingSize, MAX_CANVAS_PIXELS, NEIGHBOR_CANVAS_PIXELS } from './renderBudget';
 import { createLocationPersistence } from './locationPersistence';
 import { pageAtPosition, usePdfScroll } from './usePdfScroll';
 import type { PdfDocumentLocation } from '../../documents/location';
@@ -66,11 +66,18 @@ describe('canonical PDF selection', () => {
 });
 
 describe('resource budgets', () => {
+  it('renders an ordinary desktop page at device resolution without changing mobile fit width', () => {
+    expect(canvasBackingSize(900, 1165, 2)).toMatchObject({ ratio: 2, width: 1800, height: 2330 });
+    expect(canvasBackingSize(390, 505, 3)).toMatchObject({ ratio: 2, width: 780, height: 1010 });
+    expect(canvasBackingSize(1800, 2330, 2).ratio).toBeGreaterThan(1);
+    expect(canvasBackingSize(1836, 2376, 2)).toMatchObject({ ratio: 2, width: 3672, height: 4752 });
+    expect(MAX_CANVAS_PIXELS + 2 * NEIGHBOR_CANVAS_PIXELS).toBe(24_000_000);
+  });
   it('caps pixel count and longest edge even at high zoom/DPR', () => {
     for (const [width, height, dpr] of [[612, 792, 3], [6000, 10000, 4], [100, 30000, 2]]) {
       const canvas = canvasBackingSize(width, height, dpr);
       expect(canvas.width * canvas.height).toBeLessThanOrEqual(MAX_CANVAS_PIXELS);
-      expect(Math.max(canvas.width, canvas.height)).toBeLessThanOrEqual(4096);
+      expect(Math.max(canvas.width, canvas.height)).toBeLessThanOrEqual(8192);
     }
   });
   it('debounces, deduplicates and flushes the latest location exactly once', () => {

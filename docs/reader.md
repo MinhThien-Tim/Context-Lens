@@ -76,7 +76,9 @@ disabled under the same condition.
 - Scrolling: `usePdfScroll` reports the page crossing the viewport top + its page fraction;
   `PdfViewer` converts that into a document `absoluteOffset` using `pageOffsets`, then persists
   a debounced location. Visibility hysteresis is reported separately for bounded canvas mounting;
-  it does not replace the saved top-of-viewport position.
+  it does not replace the saved top-of-viewport position. Narrow pages stay centered; zoomed
+  pages can scroll to both horizontal edges, and zoom preserves the viewport's relative
+  horizontal point of interest.
 - Password failure, geometry failure, and "still opening" each render a distinct `pdf-state`
   surface in `PdfViewer`.
 
@@ -116,6 +118,10 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 
 - Text reader: caret hit-testing (`rangeFromPoint`) plus native drag / long-press selection.
 - Original Reader: `selectionAdapter.ts` converts a PDF.js text-layer range through `PdfTextIndex`. On mobile, the session-local **Click** control defaults on and lives next to the reading percentage in the bottom progress bar, which stays visible when Original chrome quiets. A short, stationary single-finger tap on an actual text glyph maps the word through the same index and opens Quick directly; turning Click off leaves native selection available without tap lookup. Scroll, long press, multi-touch, links and empty page space do not trigger tap lookup. Quiet chrome does not move the Original PDF viewport during contact.
+- On desktop, double-clicking a single word in the Original text layer keeps native selection
+  and opens Quick through the same indexed lookup handler. Phrase and drag selections keep
+  the action bar for Define, Highlight and Note when no markup tool is active. With Highlight,
+  Pen or Eraser active, completing a text selection applies that tool immediately.
 - Reading Mode: `readingSelectionAdapter.ts` maps rendered blocks back to `documentRecord.content`;
   a 160 ms `selectionchange` debounce produces the selection, and the click that follows a
   selection is ignored once (`ignoreClick`). Define consumes that selection and clears its native
@@ -192,8 +198,8 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
    and jump only through an explicit `pdfNavigationToken`. Never write `location.page` from a
    visibility observer that a `scrollIntoView` effect then reacts to; only the intended scroll
    container may move.
-8. **Canvas rendering stays bounded.** `renderBudget.ts` caps each canvas at `MAX_CANVAS_PIXELS =
-   2_000_000` backing pixels and `MAX_CANVAS_EDGE = 4096` on the longest edge, with device pixel
+8. **Canvas rendering stays bounded.** `renderBudget.ts` caps the visible canvas at 20,000,000
+   backing pixels and each adjacent page at 2,000,000, with an 8192-pixel edge cap and device pixel
    ratio capped at 2. At most three canvas pages stay mounted, and `pageLease` cancellation must
    stop a stale render from cleaning up a page a newer render owns.
 9. **The text layer is per-render and generational.** Each `PdfPage` render owns its own PDF.js

@@ -11,12 +11,12 @@ vi.mock('pdfjs-dist', () => ({
     constructor(private args: { container: HTMLElement }) {}
     cancel = vi.fn();
     render() { return new Promise<void>(resolve => {
-      const layer = { container: this.args.container, cancel: this.cancel, finish: () => { this.args.container.textContent = 'The decision.'; resolve(); } };
+      const layer = { container: this.args.container, cancel: this.cancel, finish: () => { const span = document.createElement('span'); span.textContent = 'The decision.'; this.args.container.replaceChildren(span); resolve(); } };
       state.layers.push(layer);
     }); }
   },
 }));
-afterEach(() => { state.layers = []; document.body.replaceChildren(); vi.useRealTimers(); vi.restoreAllMocks(); });
+afterEach(() => { state.layers = []; document.body.replaceChildren(); vi.useRealTimers(); vi.restoreAllMocks(); Reflect.deleteProperty(document, 'elementFromPoint'); Reflect.deleteProperty(Range.prototype, 'getClientRects'); });
 
 async function mount() {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
@@ -34,7 +34,7 @@ async function mount() {
 it('waits for the text-layer generation and captures selection without clearing Range', async () => {
   const { host, props, onLookup, onAddNote, onHighlight } = await mount();
   await act(async () => state.layers[0].finish());
-  const text = host.querySelector('.pdf-text-layer')!.firstChild!;
+  const text = host.querySelector('.pdf-text-layer span')!.firstChild!;
   const range = document.createRange(); range.setStart(text, 4); range.setEnd(text, 12);
   window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(range);
   vi.useFakeTimers();
@@ -64,9 +64,62 @@ it('scroll does not discard a valid canonical selection', async () => {
   await act(() => render(null, host));
 });
 
+it('opens one lookup for a desktop word double-click while leaving phrase selection pending', async () => {
+  const { host, props, onLookup } = await mount();
+  await act(async () => state.layers[0].finish());
+  await act(() => render(<PdfPage {...props} desktopLookup />, host));
+  const span = host.querySelector<HTMLElement>('.pdf-text-layer span')!;
+  const text = span.firstChild!;
+  Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: () => span });
+  Object.defineProperty(Range.prototype, 'getClientRects', { configurable: true, value: function (this: Range) { return [{ left: this.startOffset * 10, right: (this.startOffset + 1) * 10, top: 0, bottom: 30 }]; } });
+  const range = document.createRange(); range.setStart(text, 4); range.setEnd(text, 12);
+  window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(range);
+  await act(() => { span.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, button: 0, clientX: 55, clientY: 10 })); });
+  await act(async () => new Promise(resolve => setTimeout(resolve, 30)));
+  expect(onLookup).toHaveBeenCalledOnce();
+  expect(onLookup).toHaveBeenCalledWith(expect.objectContaining({ text: 'decision', offset: 4, endOffset: 12 }));
+  expect(document.querySelector('.pdf-original-actions')).toBeNull();
+  range.setStart(text, 0); range.setEnd(text, 12);
+  window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(range);
+  document.dispatchEvent(new Event('selectionchange'));
+  await act(async () => new Promise(resolve => setTimeout(resolve, 30)));
+  expect(document.querySelector('.pdf-original-actions')).not.toBeNull();
+  expect(onLookup).toHaveBeenCalledOnce();
+  await act(() => render(null, host));
+});
+
+it('applies the active Original PDF markup tool on selection completion', async () => {
+  const { host, props, onHighlight, onLookup } = await mount();
+  await act(async () => state.layers[0].finish());
+  const onErase = vi.fn();
+  const span = host.querySelector<HTMLElement>('.pdf-text-layer span')!;
+  const text = span.firstChild!;
+  const select = (start: number, end: number) => {
+    const range = document.createRange(); range.setStart(text, start); range.setEnd(text, end);
+    window.getSelection()!.removeAllRanges(); window.getSelection()!.addRange(range);
+  };
+  const release = async () => {
+    const event = new Event('pointerup', { bubbles: true }) as PointerEvent;
+    Object.assign(event, { pointerType: 'mouse' });
+    await act(() => { span.dispatchEvent(event); });
+    await act(async () => new Promise(resolve => setTimeout(resolve, 30)));
+  };
+  await act(() => render(<PdfPage {...props} activeMarkupTool="underline" activeMarkupColor="blue" onErase={onErase} desktopLookup />, host));
+  select(0, 12); await release();
+  expect(onHighlight).toHaveBeenCalledOnce();
+  expect(onHighlight).toHaveBeenCalledWith(expect.objectContaining({ startOffset: 0, endOffset: 12, style: 'underline', color: 'blue' }));
+  expect(document.querySelector('.pdf-original-actions')).toBeNull();
+  await act(() => render(<PdfPage {...props} activeMarkupTool="eraser" onErase={onErase} desktopLookup />, host));
+  select(4, 12); await release();
+  expect(onErase).toHaveBeenCalledWith(4, 12);
+  expect(onLookup).not.toHaveBeenCalled();
+  expect(document.querySelector('.pdf-original-actions')).toBeNull();
+  await act(() => render(null, host));
+});
+
 it('maps the touch long-press fallback through the canonical index', async () => {
   const { host, onLookup } = await mount(); await act(async () => state.layers[0].finish());
-  const text = host.querySelector('.pdf-text-layer')!.firstChild!;
+  const text = host.querySelector('.pdf-text-layer span')!.firstChild!;
   const caret = document.createRange(); caret.setStart(text, 6); caret.collapse(true);
   Object.defineProperty(document, 'caretRangeFromPoint', { configurable: true, value: vi.fn(() => caret) });
   vi.useFakeTimers();

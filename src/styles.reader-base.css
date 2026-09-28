@@ -27,6 +27,7 @@
 .pdf-toolbar button:disabled { opacity:.45; }
 .pdf-toolbar span { min-width:72px; text-align:center; font-variant-numeric:tabular-nums; }
 .pdf-scroll { flex:1; min-height:0; overflow:auto; padding:18px 16px max(30px,env(safe-area-inset-bottom)); scroll-padding-top:16px; }
+.pdf-pages { width:max-content; min-width:100%; }
 .pdf-ocr-notice,.pdf-ocr-error { position:absolute; z-index:6; top:62px; left:12px; max-width:min(520px,calc(100% - 24px)); margin:0; padding:9px 12px; border-radius:8px; background:#fff; color:#252a2a; box-shadow:0 2px 12px #0004; font-size:13px; }
 .pdf-ocr-error { color:#a02727; }
 .pdf-ocr-error button,.pdf-ocr-warning button { border:0; background:transparent; color:var(--accent); text-decoration:underline; cursor:pointer; }

@@ -8,6 +8,7 @@ import { usePdfDocument } from './usePdfDocument';
 import { usePdfScroll } from './usePdfScroll';
 import { useDesktop } from '../../components/useDesktop';
 import type { MarkupTool } from '../MarkupPalette';
+import { MAX_CANVAS_PIXELS, NEIGHBOR_CANVAS_PIXELS } from './renderBudget';
 
 const DEFAULT_SIZE = { width: 612, height: 792 };
 
@@ -18,7 +19,52 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
   const changeZoom = (mode: PdfZoomMode) => { if (desktop) onZoomMode(mode); else setMobileZoom(mode); };
   const [moreOpen, setMoreOpen] = useState(false);
   const { pdf, error, passwordRequired, password, setPassword, submitPassword } = usePdfDocument(documentRecord.data);
+  const [sizes, setSizes] = useState<Record<number, PdfPageSize>>({});
+  const ready = Boolean(pdf && Object.keys(sizes).length === pdf.numPages);
   const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || !desktop) return;
+    let drag: { x: number; left: number; id: number } | null = null;
+    let spaceHeld = false;
+    const keyDown = (event: KeyboardEvent) => {
+      if (event.code === 'Space' && root.contains(document.activeElement) &&
+        !(document.activeElement as Element)?.closest('button, input, select, textarea')) {
+        spaceHeld = true;
+        event.preventDefault();
+      }
+    };
+    const keyUp = (event: KeyboardEvent) => { if (event.code === 'Space') spaceHeld = false; };
+    const down = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || event.button !== 0 || root.scrollWidth <= root.clientWidth) return;
+      const target = event.target as Element;
+      if (!spaceHeld && target.closest('.pdf-text-layer span, .pdf-annotation-layer a, button, input, select, textarea')) return;
+      drag = { x: event.clientX, left: root.scrollLeft, id: event.pointerId };
+      root.setPointerCapture(event.pointerId);
+      root.style.cursor = 'grabbing';
+      event.preventDefault();
+    };
+    const move = (event: PointerEvent) => {
+      if (drag?.id === event.pointerId) root.scrollLeft = drag.left + drag.x - event.clientX;
+    };
+    const end = (event: PointerEvent) => {
+      if (drag?.id !== event.pointerId) return;
+      drag = null;
+      root.style.cursor = '';
+      if (root.hasPointerCapture(event.pointerId)) root.releasePointerCapture(event.pointerId);
+    };
+    window.addEventListener('keydown', keyDown);
+    window.addEventListener('keyup', keyUp);
+    root.addEventListener('pointerdown', down);
+    root.addEventListener('pointermove', move);
+    root.addEventListener('pointerup', end);
+    root.addEventListener('pointercancel', end);
+    return () => {
+      window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp);
+      root.removeEventListener('pointerdown', down); root.removeEventListener('pointermove', move);
+      root.removeEventListener('pointerup', end); root.removeEventListener('pointercancel', end);
+    };
+  }, [desktop, ready]);
   const zoomMenu = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!moreOpen) return;
@@ -27,7 +73,6 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
     document.addEventListener('pointerdown', dismiss); document.addEventListener('keydown', escape);
     return () => { document.removeEventListener('pointerdown', dismiss); document.removeEventListener('keydown', escape); };
   }, [moreOpen]);
-  const [sizes, setSizes] = useState<Record<number, PdfPageSize>>({});
   const [geometryError, setGeometryError] = useState<string | null>(null);
   const [visible, setVisible] = useState(location.page);
   const [customScale, setCustomScale] = useState(1);
@@ -58,7 +103,6 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
     })().catch(() => { if (!cancelled) setGeometryError('Unable to load PDF page dimensions. Please reopen this document.'); });
     return () => { cancelled = true; };
   }, [pdf]);
-  const ready = Boolean(pdf && Object.keys(sizes).length === pdf.numPages);
   const lastPosition = useRef('');
   const goTo = usePdfScroll(rootRef, '.pdf-page-slot', ready, location, navigationToken, (page, pageOffset, scrollY, visiblePage) => {
     setVisible(visiblePage);
@@ -84,13 +128,15 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
       {desktop && interfaceMode === 'advanced' ? <><button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button><button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button><select aria-label="PDF zoom" value={effectiveZoom} onChange={event => changeZoom(event.currentTarget.value as PdfZoomMode)}><option value="fit-width">Vừa chiều ngang</option><option value="fit-page">Vừa trang</option><option value="custom">Tùy chỉnh</option></select></> : <div class="pdf-more" ref={zoomMenu}><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>Zoom</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => stepZoom(-1)}>Zoom out</button><button onClick={() => stepZoom(1)}>Zoom in</button><button onClick={() => changeZoom('fit-width')}>Fit width</button><button onClick={() => changeZoom('fit-page')}>Fit page</button></div>}</div>}
     </div>
     <div ref={rootRef} class="pdf-scroll" tabIndex={0}>
-      {Array.from({ length: pdf.numPages }, (_, index) => index + 1).map(pageNumber => {
-        const size = sizes[pageNumber] ?? DEFAULT_SIZE;
-        const scale = scaleFor(size);
-        return <div key={pageNumber} class="pdf-page-slot" data-pdf-page={pageNumber} style={{ width: `${size.width * scale}px`, height: `${size.height * scale}px` }}>
-          {(pageNumber === visible || (!ocrBusy && Math.abs(pageNumber - visible) === 1)) && <PdfPage pdf={pdf} pageNumber={pageNumber} scale={scale} active clickLookup={!desktop && clickLookup} documentText={documentRecord.content} pageOffset={pdfOffsetForPage(documentRecord.pageOffsets, pageNumber)} onSize={() => {}} onNavigate={page => goTo(page)} pageEnd={documentRecord.pageOffsets?.[pageNumber] ?? documentRecord.content.length} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={onHighlight} onErase={onErase} onLookup={onLookup} onAddNote={onAddNote} />}
-        </div>;
-      })}
+      <div class="pdf-pages">
+        {Array.from({ length: pdf.numPages }, (_, index) => index + 1).map(pageNumber => {
+          const size = sizes[pageNumber] ?? DEFAULT_SIZE;
+          const scale = scaleFor(size);
+          return <div key={pageNumber} class="pdf-page-slot" data-pdf-page={pageNumber} style={{ width: `${size.width * scale}px`, height: `${size.height * scale}px` }}>
+            {(pageNumber === visible || (!ocrBusy && Math.abs(pageNumber - visible) === 1)) && <PdfPage pdf={pdf} pageNumber={pageNumber} scale={scale} active renderPixels={pageNumber === visible ? MAX_CANVAS_PIXELS : NEIGHBOR_CANVAS_PIXELS} clickLookup={!desktop && clickLookup} desktopLookup={desktop} documentText={documentRecord.content} pageOffset={pdfOffsetForPage(documentRecord.pageOffsets, pageNumber)} onSize={() => {}} onNavigate={page => goTo(page)} pageEnd={documentRecord.pageOffsets?.[pageNumber] ?? documentRecord.content.length} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={onHighlight} onErase={onErase} onLookup={onLookup} onAddNote={onAddNote} />}
+          </div>;
+        })}
+      </div>
     </div>
   </div>;
 }

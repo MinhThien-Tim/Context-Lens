@@ -1,7 +1,7 @@
 import { createPortal } from 'preact/compat';
 import { PdfTextIndex } from './PdfTextIndex';
 import type { ReaderHighlight } from '../../db/database';
-import { canvasBackingSize } from './renderBudget';
+import { canvasBackingSize, MAX_CANVAS_PIXELS } from './renderBudget';
 import { acquirePage } from './pageLease';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist';
@@ -11,7 +11,7 @@ import type { MarkupTool } from '../MarkupPalette';
 
 export interface PdfPageSize { width: number; height: number }
 
-export function PdfPage({ pdf, pageNumber, scale, active, clickLookup = false, documentText, pageOffset, onSize, onNavigate, onLookup, onAddNote, pageEnd, highlights = [], activeMarkupTool, activeMarkupColor = 'yellow', onHighlight, onErase }: { pageEnd?: number; highlights?: ReaderHighlight[]; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: ReaderHighlight['color']; onHighlight?: (highlight: ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; pdf: PDFDocumentProxy; pageNumber: number; scale: number; active: boolean; clickLookup?: boolean; documentText: string; pageOffset: number; onSize: (size: PdfPageSize) => void; onNavigate: (page: number) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void }) {
+export function PdfPage({ pdf, pageNumber, scale, active, renderPixels = MAX_CANVAS_PIXELS, clickLookup = false, desktopLookup = false, documentText, pageOffset, onSize, onNavigate, onLookup, onAddNote, pageEnd, highlights = [], activeMarkupTool, activeMarkupColor = 'yellow', onHighlight, onErase }: { pageEnd?: number; highlights?: ReaderHighlight[]; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: ReaderHighlight['color']; onHighlight?: (highlight: ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; pdf: PDFDocumentProxy; pageNumber: number; scale: number; active: boolean; renderPixels?: number; clickLookup?: boolean; desktopLookup?: boolean; documentText: string; pageOffset: number; onSize: (size: PdfPageSize) => void; onNavigate: (page: number) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void }) {
   const indexRef = useRef<PdfTextIndex | null>(null);
   const [indexVersion, setIndexVersion] = useState(0);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -20,9 +20,11 @@ export function PdfPage({ pdf, pageNumber, scale, active, clickLookup = false, d
   const annotationRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState<PDFPageProxy | null>(null);
   const [pending, setPending] = useState<ReaderSelection | null>(null);
-  const applyMarkup = (selection: ReaderSelection, tool: Exclude<MarkupTool, 'eraser'> = 'highlight') => {
+  const autoLookupRef = useRef<{ offset: number; endOffset?: number } | null>(null);
+  const applyMarkup = (selection: ReaderSelection, tool: MarkupTool = 'highlight') => {
     const endOffset = selection.endOffset ?? selection.offset + selection.text.length;
-    onHighlight?.({ id: crypto.randomUUID(), startOffset: selection.offset, endOffset, color: activeMarkupColor, style: tool, createdAt: Date.now() });
+    if (tool === 'eraser') onErase?.(selection.offset, endOffset);
+    else onHighlight?.({ id: crypto.randomUUID(), startOffset: selection.offset, endOffset, color: activeMarkupColor, style: tool, createdAt: Date.now() });
     setPending(null); window.getSelection()?.removeAllRanges();
   };
 
@@ -48,7 +50,7 @@ export function PdfPage({ pdf, pageNumber, scale, active, clickLookup = false, d
     textContainer.className = 'pdf-text-layer textLayer';
     textHost.replaceChildren(textContainer);
     const viewport = page.getViewport({ scale });
-    const { ratio, width, height } = canvasBackingSize(viewport.width, viewport.height, window.devicePixelRatio || 1);
+    const { ratio, width, height } = canvasBackingSize(viewport.width, viewport.height, window.devicePixelRatio || 1, renderPixels);
     canvas.width = width; canvas.height = height;
     textContainer.style.setProperty('--total-scale-factor', String(scale * (page.userUnit || 1)));
     textContainer.style.setProperty('--scale-factor', String(scale));
@@ -105,42 +107,76 @@ export function PdfPage({ pdf, pageNumber, scale, active, clickLookup = false, d
       if (selection && textContainer.contains(selection.anchorNode)) selection.removeAllRanges();
       textContainer.remove(); annotationRef.current?.replaceChildren(); overlayRef.current?.replaceChildren();
     };
-  }, [page, active, scale, documentText, pageOffset, pageEnd]);
+  }, [page, active, scale, renderPixels, documentText, pageOffset, pageEnd]);
 
-  const capture = (clearInvalid = false) => {
+  const capture = (clearInvalid = false, commitMarkup = false) => {
     if (!textRef.current || !indexRef.current) return false;
     const selection = pdfSelectionFromDom(textRef.current, documentText, pageOffset, indexRef.current);
-    if (selection) setPending(selection);
+    if (selection && autoLookupRef.current?.offset === selection.offset &&
+      autoLookupRef.current.endOffset === selection.endOffset) return true;
+    autoLookupRef.current = null;
+    if (selection && commitMarkup && activeMarkupTool) applyMarkup(selection, activeMarkupTool);
+    else if (selection) setPending(selection);
     else if (clearInvalid) setPending(null);
     return Boolean(selection);
   };
   useEffect(() => {
     let frame = 0;
     let retry: ReturnType<typeof setTimeout> | undefined;
-    const schedule = (clearInvalid = false, retryMobile = false) => {
+    const schedule = (clearInvalid = false, retryMobile = false, commitMarkup = false) => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        const captured = capture(clearInvalid);
-        if (retryMobile && !captured) retry = setTimeout(() => capture(clearInvalid), 80);
+        const captured = capture(clearInvalid, commitMarkup);
+        if (retryMobile && !captured) retry = setTimeout(() => capture(clearInvalid, commitMarkup), 80);
       });
     };
-    const selectionChange = () => schedule(false);
+    const selectionChange = () => { if (!activeMarkupTool) schedule(false); };
     const pointerEnd = (event: PointerEvent) => {
       if (event.target instanceof Element && event.target.closest('.pdf-original-actions')) return;
-      schedule(event.pointerType !== 'touch' && event.pointerType !== 'pen', true);
+      const commitMarkup = Boolean(activeMarkupTool && textRef.current?.contains(event.target as Node));
+      schedule(event.pointerType !== 'touch' && event.pointerType !== 'pen', true, commitMarkup);
     };
-    const touchEnd = () => schedule(false, true);
+    const touchEnd = () => schedule(false, true, Boolean(activeMarkupTool));
+    const keyUp = (event: KeyboardEvent) => { if (activeMarkupTool && event.shiftKey) schedule(false, false, true); };
     document.addEventListener('selectionchange', selectionChange);
     document.addEventListener('pointerup', pointerEnd);
     document.addEventListener('touchend', touchEnd);
+    textRef.current?.addEventListener('keyup', keyUp);
     return () => {
       cancelAnimationFrame(frame); clearTimeout(retry);
       document.removeEventListener('selectionchange', selectionChange);
       document.removeEventListener('pointerup', pointerEnd);
       document.removeEventListener('touchend', touchEnd);
+      textRef.current?.removeEventListener('keyup', keyUp);
     };
-  }, [documentText, pageOffset, pageEnd, indexVersion]);
+  }, [documentText, pageOffset, pageEnd, indexVersion, activeMarkupTool, activeMarkupColor]);
   useEffect(() => { if (indexVersion) capture(false); }, [indexVersion]);
+  useEffect(() => {
+    const host = textRef.current;
+    if (!host || !desktopLookup || activeMarkupTool) return;
+    let frame = 0;
+    const doubleClick = (event: MouseEvent) => {
+      if (event.button !== 0 || !(event.target instanceof Element) ||
+        !event.target.closest('.pdf-text-layer') ||
+        event.target.closest('a, button, input, select, textarea, [role="button"]') ||
+        document.elementFromPoint(event.clientX, event.clientY)?.closest('.pdf-annotation-layer a')) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const index = indexRef.current;
+        if (!index) return;
+        const selected = pdfSelectionFromDom(host, documentText, pageOffset, index);
+        const wordRange = strictWordRangeAtPoint(index.root, event.clientX, event.clientY);
+        const word = wordRange && pdfSelectionFromRange(host, wordRange, documentText, pageOffset, index);
+        if (!selected || selected.type !== 'word' || !word || word.type !== 'word' ||
+          selected.offset !== word.offset || selected.endOffset !== word.endOffset) return;
+        autoLookupRef.current = { offset: selected.offset, endOffset: selected.endOffset };
+        setPending(null);
+        onLookup(selected);
+      });
+    };
+    host.addEventListener('dblclick', doubleClick);
+    return () => { cancelAnimationFrame(frame); host.removeEventListener('dblclick', doubleClick); };
+  }, [desktopLookup, activeMarkupTool, documentText, pageOffset, indexVersion, onLookup]);
   useEffect(() => {
     const host = textRef.current;
     if (!host || !clickLookup) return;
@@ -249,7 +285,7 @@ export function PdfPage({ pdf, pageNumber, scale, active, clickLookup = false, d
     {pending && createPortal(<div class="selection-actions pdf-original-actions" role="toolbar" aria-label="Selected text actions" onPointerDown={event => event.preventDefault()}>
       <button class="selection-lookup" onClick={() => onLookup(pending)}>Define</button>
       {onHighlight && activeMarkupTool !== 'eraser' && <button class="selection-markup" onClick={() => applyMarkup(pending, activeMarkupTool ?? 'highlight')}>{activeMarkupTool === 'underline' ? 'Underline' : 'Highlight'}</button>}
-      {activeMarkupTool === 'eraser' && onErase && <button class="selection-markup" onClick={() => { onErase(pending.offset, pending.endOffset ?? pending.offset + pending.text.length); setPending(null); window.getSelection()?.removeAllRanges(); }}>Erase</button>}
+      {activeMarkupTool === 'eraser' && onErase && <button class="selection-markup" onClick={() => applyMarkup(pending, 'eraser')}>Erase</button>}
       {onAddNote && <button onClick={() => onAddNote(pending)}>Note</button>}
       <details class="selection-more"><summary>More</summary><button onClick={() => void navigator.clipboard?.writeText(pending.text)}>Copy</button></details>
       <button aria-label="Close selection actions" onClick={() => { setPending(null); window.getSelection()?.removeAllRanges(); }}>?</button>

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
 import type { RefObject } from 'preact';
 import type { PdfDocumentLocation } from '../../documents/location';
 
@@ -22,6 +22,7 @@ export function usePdfScroll(rootRef: RefObject<HTMLDivElement>, selector: strin
   const latest = useRef({ location, onVisible });
   latest.current = { location, onVisible };
   const currentPage = useRef(location.page);
+  const horizontalAnchor = useRef(.5);
   const commandedTop = useRef<number | undefined>(undefined);
   const navigate = (page: number, fraction = 0) => {
     const root = rootRef.current;
@@ -48,6 +49,12 @@ export function usePdfScroll(rootRef: RefObject<HTMLDivElement>, selector: strin
       commandedTop.current = undefined;
       if (commanded !== undefined && Math.abs(root.scrollTop - commanded) < 1) return;
       const slots = Array.from(root.querySelectorAll<HTMLElement>(selector));
+      const reference = slots[currentPage.current - 1];
+      if (reference?.offsetWidth) {
+        const viewport = root.getBoundingClientRect();
+        horizontalAnchor.current = Math.max(0, Math.min(1,
+          (viewport.left + root.clientLeft + root.clientWidth / 2 - reference.getBoundingClientRect().left) / reference.offsetWidth));
+      }
       const visiblePage = pageAtPosition(slots, root, currentPage.current);
       // Visibility hysteresis is for rendering. Persist the page crossing the
       // viewport's top so restoring page + fraction cannot skip visible text.
@@ -66,8 +73,14 @@ export function usePdfScroll(rootRef: RefObject<HTMLDivElement>, selector: strin
   }, [ready, selector]);
   // Resize/zoom preserves the current visual fraction, independently of navigation commands.
   const oldGeometry = useRef(geometryKey);
-  useEffect(() => {
-    if (ready && oldGeometry.current !== geometryKey) navigate(latest.current.location.page, latest.current.location.pageOffset ?? 0);
+  useLayoutEffect(() => {
+    if (ready && oldGeometry.current !== geometryKey) {
+      navigate(latest.current.location.page, latest.current.location.pageOffset ?? 0);
+      const root = rootRef.current;
+      const slot = root?.querySelectorAll<HTMLElement>(selector)[latest.current.location.page - 1];
+      if (root && slot) root.scrollLeft += slot.getBoundingClientRect().left - root.getBoundingClientRect().left - root.clientLeft +
+        slot.offsetWidth * horizontalAnchor.current - root.clientWidth / 2;
+    }
     oldGeometry.current = geometryKey;
   }, [ready, geometryKey]);
   return navigate;

@@ -28,3 +28,24 @@ it('keeps the preceding visible page rendered within the three-canvas and OCR bu
   await act(() => render(<PdfViewer {...props} ocrBusy />, host));
   expect(rendered()).toEqual([2]);
 });
+
+it('drags a zoomed PDF horizontally from empty page space', async () => {
+  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+  vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
+  document.body.append(host);
+  const location: PdfDocumentLocation = { kind: 'pdf', page: 1, viewMode: 'original', scrollY: 0, progress: 0, updatedAt: 0 };
+  const documentRecord = { id: 'pdf', kind: 'pdf', content: 'one', pageOffsets: [0], location } as DocumentRecord;
+  await act(async () => render(<PdfViewer documentRecord={documentRecord} location={location} zoomMode="custom" onZoomMode={vi.fn()} onLocation={vi.fn()} onLookup={vi.fn()} />, host));
+  await vi.waitFor(async () => { await act(async () => {}); expect(host.querySelector('.pdf-scroll')).not.toBeNull(); });
+  const scroll = host.querySelector<HTMLElement>('.pdf-scroll')!;
+  Object.defineProperties(scroll, { scrollWidth: { value: 1200 }, clientWidth: { value: 600 } });
+  scroll.setPointerCapture = vi.fn(); scroll.hasPointerCapture = vi.fn(() => true); scroll.releasePointerCapture = vi.fn();
+  const pointer = (type: string, x: number) => {
+    const event = new Event(type, { bubbles: true, cancelable: true }) as PointerEvent;
+    Object.assign(event, { pointerType: 'mouse', button: 0, pointerId: 1, clientX: x });
+    host.querySelector('.pdf-page-slot')!.dispatchEvent(event);
+  };
+  scroll.scrollLeft = 200;
+  pointer('pointerdown', 300); pointer('pointermove', 240); pointer('pointerup', 240);
+  expect(scroll.scrollLeft).toBe(260);
+});
