@@ -1,5 +1,5 @@
 export type LookupPopupPlacement = { mode: 'auto' } | { mode: 'pinned'; xRatio: number; yRatio: number };
-export const DESKTOP_QUICK_WIDTH = 340;
+export const DESKTOP_QUICK_WIDTH = 440;
 export type PopupPoint = { left: number; top: number };
 export type PopupBounds = { minLeft: number; minTop: number; availableX: number; availableY: number };
 const clamp = (value: number, max = 1) => Math.max(0, Math.min(max, value));

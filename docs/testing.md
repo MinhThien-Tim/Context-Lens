@@ -50,6 +50,31 @@ Keep the same arguments and test scope; see the [launcher policy](agent-executio
 | Gateway typecheck / build / dry-run | `npm run gateway:typecheck`, `npm run gateway:build`, `npm run gateway:check` |
 | Dictionary audits | `npm run audit:dictionary`, `npm run audit:en-vi-gaps` |
 
+## Per-subsystem verify commands
+
+Each subsystem has **one command** — typecheck plus its Vitest scope. Agents must pick the
+subsystem command first instead of discovering tests or assembling ad-hoc `vitest run` filters.
+`verify:full` is the escalation gate for shared-contract or bundle changes, not the default.
+
+| Subsystem | Command | Scope |
+| --- | --- | --- |
+| Reader (text surfaces) | `npm run verify:reader` | `src/reader`, excluding `src/reader/pdf/**` and `src/reader/pdf-reading/**` |
+| PDF + OCR | `npm run verify:pdf` | `src/reader/pdf`, `src/documents/pdf` |
+| Import | `npm run verify:import` | `src/documents`, excluding `src/documents/pdf/**` and `src/documents/offline*` |
+| Lookup | `npm run verify:lookup` | `src/lookup` + lookup-sheet components, excluding `src/lookup/normalization/**` and `**/*.offline.test.tsx` |
+| Language engine | `npm run verify:language` | `src/core/language`, `src/lookup/normalization` |
+| Translation / context / AI | `npm run verify:translation` | `src/core/translation`, `src/core/context`, `src/core/{cache,diagnostics,performance}`, `src/ai`, `src/settings`, `src/integration`, `gateway` |
+| Storage | `npm run verify:storage` | `src/db`, `src/storage`, `src/notes/store`, `src/vocabulary` |
+| UI | `npm run verify:ui` | `src/components`, `src/onboarding`, `src/app`, `src/notes/NotesPanel`, excluding lookup/offline components |
+| Offline | `npm run verify:offline` | `src/documents/offline`, `src/components/OfflineBadge`, `src/components/LookupBottomSheet.offline` |
+| Everything | `npm run verify:full` | `typecheck` + full `vitest run` + `build` (bundle budget) |
+
+The nine subsystem buckets partition all colocated Vitest files with no overlaps and no orphans;
+`npm run verify:list` (`vitest list --filesOnly`) re-checks the mapping. Vitest positional filters
+are substring/prefix matches, not globs — scope with directory prefixes plus `--exclude` globs.
+Playwright stays out of these scripts: browser specs remain `npm run test:browser`, and the
+production-only offline spec keeps its one-off command in the table above.
+
 ## Targeted verification strategy
 
 Documentation-only tasks use document/link/diff checks; application tests are unnecessary.

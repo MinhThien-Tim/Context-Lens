@@ -23,7 +23,7 @@ for (const width of [1024, 1280, 1366, 1440]) test(`Quick placement at ${width}p
     (window as any).nextQuick = () => { selectionKey = 'two'; open = true; draw(); }; draw();
   });
   const sheet = page.locator('.lookup-sheet'); const handle = page.locator('.lookup-drag-handle');
-  await expect(sheet).toBeVisible(); expect((await sheet.boundingBox())!.width).toBe(340);
+  await expect(sheet).toBeVisible(); expect((await sheet.boundingBox())!.width).toBe(440);
   const dragTo = async (x: number, y: number) => {
     const box = (await handle.boundingBox())!;
     await page.mouse.move(box.x + 15, box.y + 10); await page.mouse.down();
@@ -47,5 +47,5 @@ for (const width of [1024, 1280, 1366, 1440]) test(`Quick placement at ${width}p
   await dragTo(-50, -50);
   expect((await sheet.boundingBox())!.x).toBe(12); expect((await sheet.boundingBox())!.y).toBeGreaterThanOrEqual(72);
   await page.getByLabel('More actions').click(); await page.getByLabel('Popup position', { exact: true }).selectOption('auto');
-  await expect(sheet).toHaveCSS('left', '652px');
+  await expect(sheet).toHaveCSS('left', '148px');
 });

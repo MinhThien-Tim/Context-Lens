@@ -42,7 +42,8 @@ exhaustion, no hidden cost.
 
 ## 5. Verification proportional to blast radius
 
-Start with the smallest relevant check — usually one `npx vitest run <path>` — and escalate only as far
+Start with the smallest relevant check — usually one `npm run verify:<subsystem>` (the per-subsystem
+command table lives in [`docs/testing.md`](docs/testing.md)) — and escalate only as far
 as the change actually reaches. Test layout and every command live in [`docs/testing.md`](docs/testing.md).
 Browser E2E is conditional, never mandatory. Never watch mode.
 

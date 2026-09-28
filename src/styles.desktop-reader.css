@@ -55,7 +55,7 @@
   .reader-shell.reader-shell .lookup-sheet.side-panel { background: color-mix(in srgb, var(--accent-soft) 12%, var(--elevated-surface)); }
   .reader-shell.reader-shell .lookup-sheet { container-type: inline-size; }
   .reader-shell.reader-shell .lookup-sheet.word-popup {
-    width: var(--desktop-quick-width, 340px); padding: 0; height: auto; min-height: 0;
+    width: var(--desktop-quick-width, 440px); max-width: min(440px, calc(100vw - 24px)); padding: 0; height: auto; min-height: 0;
     max-height: min(520px, calc(100dvh - 84px)); border-radius: 8px;
     box-shadow: 0 5px 18px color-mix(in srgb, var(--primary-text) 14%, transparent);
   }
@@ -147,9 +147,9 @@
 }
 
 @media (min-width: 1024px) {
-  .reader-shell.reader-shell .word-popup .lookup-drag-handle { cursor: grab; touch-action: none; user-select: none; }
+  .reader-shell.reader-shell .word-popup .lookup-drag-handle { display: flex; align-items: center; gap: 6px; cursor: grab; touch-action: none; user-select: none; }
   .reader-shell.reader-shell .word-popup .lookup-drag-handle.is-dragging { cursor: grabbing; }
-  .reader-shell.reader-shell .word-popup .lookup-drag-handle::before { content: '?'; float: left; margin-right: 5px; color: var(--secondary-text); font-size: 13px; }
+  .reader-shell.reader-shell .word-popup .lookup-drag-grip { display: inline-flex; align-items: center; color: var(--secondary-text); opacity: 0.65; flex-shrink: 0; width: 8px; height: 14px; }
   .reader-shell.reader-shell .word-popup .inspector-header { flex-shrink: 0; }
   .reader-shell.reader-shell .word-popup .inspector-body { min-height: 0; overflow: auto; }
 }
