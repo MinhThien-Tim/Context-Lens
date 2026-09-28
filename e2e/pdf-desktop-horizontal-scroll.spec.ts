@@ -5,17 +5,11 @@ test('desktop Original PDF reaches both horizontal edges after zoom', async ({ p
   for (const width of [1024, 1366, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
-    await page.locator('input[type=file]').setInputFiles({ name: `scroll-${width}.pdf`, mimeType: 'application/pdf', buffer: pdfFixture(3, 0, 1) });
+    await page.locator('input[type=file]').setInputFiles({ name: `scroll-${width}.pdf`, mimeType: 'application/pdf', buffer: pdfFixture(3) });
     await page.getByRole('button', { name: 'Original', exact: true }).first().click();
     await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
 
-    await page.getByRole('button', { name: 'PDF options' }).click();
-    for (let attempt = 0; attempt < 20; attempt++) {
-      const overflows = await page.locator('.pdf-scroll').evaluate(root =>
-        root.querySelector('.pdf-page-slot')!.getBoundingClientRect().width > root.clientWidth);
-      if (overflows) break;
-      await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
-    }
+    await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
     const geometry = await page.locator('.pdf-scroll').evaluate(root => {
       const pages = root.querySelector('.pdf-pages')!.getBoundingClientRect();
       const slot = root.querySelector('.pdf-page-slot')!;
@@ -33,6 +27,7 @@ test('desktop Original PDF reaches both horizontal edges after zoom', async ({ p
         beforeTop, afterTop: root.scrollTop };
     });
     expect(geometry.slotWidth).toBeGreaterThan(geometry.clientWidth);
+    expect(geometry.slotWidth).toBeCloseTo((geometry.clientWidth - 64) * 1.25, 0);
     expect(geometry.scrollWidth).toBeGreaterThan(geometry.clientWidth);
     expect(geometry.left).toBeGreaterThanOrEqual(geometry.paddingLeft - 2);
     expect(geometry.left).toBeLessThanOrEqual(geometry.paddingLeft + 2);

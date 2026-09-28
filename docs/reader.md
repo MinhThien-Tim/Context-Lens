@@ -76,7 +76,9 @@ disabled under the same condition.
   clamped to the viewport width with 64 px of horizontal gutters. Explicit desktop zoom
   mode and custom scale persist in reader preferences; stored legacy `fit-page` choices
   remain `fit-page`. Zoom buttons step from the displayed scale of the visible page,
-  including fit modes; custom scale is bounded to 0.1–3. Mobile zoom remains session-local and resets to fit-width
+  including fit modes. The first desktop Zoom In from a fitted page reaches 125% of fit width,
+  exposing horizontal overflow; subsequent steps change by 25% of fit width. Desktop custom scale
+  is bounded to 0.1–6, while mobile custom scale remains bounded to 0.1–3. Mobile zoom remains session-local and resets to fit-width
   when the viewer remounts. Pinch gestures and margin cropping are not implemented.
 - Scrolling: `usePdfScroll` reports the page crossing the viewport top + its page fraction;
   `PdfViewer` converts that into a document `absoluteOffset` using `pageOffsets`, then persists

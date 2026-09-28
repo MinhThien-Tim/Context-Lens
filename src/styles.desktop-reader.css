@@ -37,6 +37,8 @@
   .reader-shell.reader-shell .pdf-toolbar { min-height: 38px; padding-block: 1px; gap: 4px; }
   .reader-shell.reader-shell .pdf-toolbar button,
   .reader-shell.reader-shell .pdf-toolbar select { min-height: 36px; }
+  .reader-shell.reader-shell .pdf-zoom-presets { position: relative; }
+  .reader-shell.reader-shell .pdf-zoom-presets > button { min-width: 64px; font-variant-numeric: tabular-nums; }
   .reader-shell.reader-shell .pdf-queue-status { min-height: 36px; padding-block: 0; }
   .reader-shell.reader-shell .pdf-queue-status button { min-height: 34px; }
   .reader-shell.reader-shell .reader-text { padding-top: clamp(24px, 3vh, 40px); }

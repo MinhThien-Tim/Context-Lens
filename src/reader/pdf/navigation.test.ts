@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculatePdfScale, pdfOffsetForPage, pdfPageForOffset, stepPdfScale } from './navigation';
+import { calculatePdfScale, pdfOffsetForPage, pdfPageForOffset, stepDesktopPdfScale, stepPdfScale } from './navigation';
 
 describe('PDF navigation', () => {
   it('steps from the displayed fit scale on narrow phones', () => {
@@ -7,6 +7,14 @@ describe('PDF navigation', () => {
     expect(stepPdfScale(fitted, -1)).toBeLessThan(fitted);
     expect(stepPdfScale(fitted, 1)).toBeCloseTo(fitted + .15);
     expect(calculatePdfScale('custom', stepPdfScale(fitted, -1), 320, 700, 612, 792)).toBeLessThan(fitted);
+  });
+  it('reaches 125% fit width on the first desktop zoom from default', () => {
+    const fit = calculatePdfScale('fit-width', 1, 1920, 900, 612, 792);
+    const natural = calculatePdfScale('natural', 1, 1920, 900, 612, 792);
+    const zoomed = stepDesktopPdfScale(natural, fit, 1);
+    expect(zoomed).toBeCloseTo(fit * 1.25);
+    expect(calculatePdfScale('custom', zoomed, 1920, 900, 612, 792, 6) * 612).toBeGreaterThan(1920);
+    expect(stepDesktopPdfScale(zoomed, fit, 1)).toBeCloseTo(fit * 1.5);
   });
   it('maps pages and text offsets in both directions, including blank pages', () => {
     const offsets = [0, 12, 12, 40];

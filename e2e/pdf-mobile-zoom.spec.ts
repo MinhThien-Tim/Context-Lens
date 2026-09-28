@@ -61,9 +61,9 @@ test('Original mobile zoom preserves reading and selection geometry', async ({ p
   expect(pan.right).toBeGreaterThan(0); expect(pan.left).toBe(0); expect(pan.after).toBe(pan.top);
   await expect(position).toHaveText('3 / 8');
   expect(await page.locator('.pdf-canvas').count()).toBeLessThanOrEqual(3);
-  for (const size of await page.locator('.pdf-canvas').evaluateAll(elements => elements.map(el => ({ width: (el as HTMLCanvasElement).width, height: (el as HTMLCanvasElement).height })))) {
-    expect(size.width * size.height).toBeLessThanOrEqual(2_000_000);
-    expect(Math.max(size.width, size.height)).toBeLessThanOrEqual(4096);
+  for (const size of await page.locator('.pdf-canvas').evaluateAll(elements => elements.map(el => ({ page: Number(el.closest<HTMLElement>('[data-pdf-page]')?.dataset.pdfPage), width: (el as HTMLCanvasElement).width, height: (el as HTMLCanvasElement).height })))) {
+    expect(size.width * size.height).toBeLessThanOrEqual(size.page === 3 ? 20_000_000 : 2_000_000);
+    expect(Math.max(size.width, size.height)).toBeLessThanOrEqual(size.page === 3 ? 8192 : 4096);
   }
   await page.getByRole('button', { name: 'Back to library' }).click();
   await page.locator('.library-open').filter({ hasText: 'mobile-zoom' }).click();

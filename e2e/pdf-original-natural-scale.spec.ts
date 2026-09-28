@@ -32,11 +32,12 @@ test('desktop natural scale, explicit zoom, canvas resolution and text geometry'
   expect(natural.textHeight).toBeCloseTo(natural.canvasHeight, 0);
   expect(Math.abs(natural.textLeft)).toBeLessThan(1);
 
-  await page.getByRole('button', { name: 'PDF options' }).click();
+  await page.getByRole('button', { name: 'PDF zoom presets' }).click();
   await page.getByRole('button', { name: 'Fit width' }).click();
   await expect.poll(async () => (await measure()).pageWidth).toBeGreaterThan(natural.pageWidth);
   const fitWidth = await measure();
   expect(fitWidth.pageWidth).toBeCloseTo(fitWidth.rootWidth - 64, 0);
+  await page.getByRole('button', { name: 'PDF zoom presets' }).click();
   await page.getByRole('button', { name: 'Fit page' }).click();
   await expect.poll(async () => (await measure()).pageWidth).toBeLessThan(natural.pageWidth);
   const fitPage = await measure();

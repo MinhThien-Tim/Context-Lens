@@ -15,7 +15,7 @@ test('Original PDF keeps the dominant page at display resolution', async ({ page
     const dominant = slots.map(slot => ({ slot, overlap: Math.max(0, Math.min(bottom, slot.getBoundingClientRect().bottom) - Math.max(top, slot.getBoundingClientRect().top)) })).sort((a, b) => b.overlap - a.overlap)[0];
     const canvas = dominant.slot.querySelector<HTMLCanvasElement>('canvas');
     const rect = canvas?.getBoundingClientRect();
-    return { dpr: devicePixelRatio, mode: document.querySelector<HTMLSelectElement>('[aria-label="PDF zoom"]')?.value,
+    return { dpr: devicePixelRatio,
       rootWidth: root.clientWidth, rootHeight: root.clientHeight, scrollTop: root.scrollTop,
       page: Number(dominant.slot.dataset.pdfPage), pageWidth: dominant.slot.getBoundingClientRect().width,
       canvasWidth: rect?.width, canvasHeight: rect?.height, backingWidth: canvas?.width, backingHeight: canvas?.height,
@@ -24,9 +24,9 @@ test('Original PDF keeps the dominant page at display resolution', async ({ page
   });
   const initial = await measure();
   console.log(`${info.project.name} initial`, JSON.stringify(initial));
-  await page.getByRole('button', { name: 'PDF options' }).click();
+  if (info.project.use.isMobile) await page.getByRole('button', { name: 'PDF options' }).click();
   for (let i = 0; i < 8; i++) await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
-  await page.getByRole('button', { name: 'PDF options' }).click();
+  if (info.project.use.isMobile) await page.getByRole('button', { name: 'PDF options' }).click();
   const zoomed = await measure();
   console.log(`${info.project.name} zoomed`, JSON.stringify(zoomed));
   await page.mouse.move(page.viewportSize()!.width / 2, page.viewportSize()!.height / 2);

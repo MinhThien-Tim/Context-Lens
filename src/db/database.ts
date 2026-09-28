@@ -299,7 +299,7 @@ export async function loadPreferences(): Promise<AppPreferences> {
   const readingMargin: AppPreferences['readingMargin'] = ['narrow', 'comfortable', 'wide'].includes(stored.readingMargin ?? '')
     ? stored.readingMargin! : defaultPreferences.readingMargin;
   const lookupViewMode: AppPreferences['lookupViewMode'] = stored.lookupViewMode === 'full' ? 'full' : 'quick';
-  const pdfCustomScale = typeof stored.pdfCustomScale === 'number' && Number.isFinite(stored.pdfCustomScale) ? Math.min(3, Math.max(.1, stored.pdfCustomScale)) : 1;
+  const pdfCustomScale = typeof stored.pdfCustomScale === 'number' && Number.isFinite(stored.pdfCustomScale) ? Math.min(6, Math.max(.1, stored.pdfCustomScale)) : 1;
   const pdfZoomMode = ['natural', 'fit-width', 'fit-page', 'custom'].includes(stored.pdfZoomMode ?? '') ? stored.pdfZoomMode! : defaultPreferences.pdfZoomMode;
   const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, fontSize, lineHeight, fontFamily, readingMargin, lookupViewMode, pdfZoomMode, pdfCustomScale, lookupQuickMode: stored.lookupQuickMode === 'simple' ? 'simple' as const : 'standard' as const, lookupPopupPlacement: normalizePopupPlacement(stored.lookupPopupPlacement) };
   const normalizedChanged = (Object.keys(defaultPreferences) as (keyof AppPreferences)[]).some(key => JSON.stringify(stored[key]) !== JSON.stringify(preferences[key]));

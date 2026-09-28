@@ -3,7 +3,7 @@ import { createPortal } from 'preact/compat';
 import type { DocumentRecord } from '../../db/database';
 import type { PdfDocumentLocation } from '../../documents/location';
 import type { ReaderSelection } from '../TextReader';
-import { calculatePdfScale, pdfOffsetForPage, stepPdfScale, type PdfZoomMode } from './navigation';
+import { calculatePdfScale, pdfOffsetForPage, stepDesktopPdfScale, stepPdfScale, type PdfZoomMode } from './navigation';
 import { PdfPage, type PdfPageSize } from './PdfPage';
 import { usePdfDocument } from './usePdfDocument';
 import { usePdfScroll } from './usePdfScroll';
@@ -13,7 +13,7 @@ import { MAX_CANVAS_PIXELS, NEIGHBOR_CANVAS_PIXELS } from './renderBudget';
 
 const DEFAULT_SIZE = { width: 612, height: 792 };
 
-export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location, zoomMode, onZoomMode, desktopCustomScale = 1, onDesktopCustomScale, clickLookup = true, activeMarkupTool, activeMarkupColor = 'yellow', onLocation, onLookup, onAddNote, navigationToken = 0, onHighlight, onErase, ocrBusy = false }: { interfaceMode?: 'simple' | 'advanced'; navigationToken?: number; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: import('../../db/database').ReaderHighlight['color']; onHighlight?: (highlight: import('../../db/database').ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; documentRecord: DocumentRecord; location: PdfDocumentLocation; zoomMode: PdfZoomMode; onZoomMode: (mode: PdfZoomMode) => void; desktopCustomScale?: number; onDesktopCustomScale?: (scale: number) => void; clickLookup?: boolean; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void; ocrBusy?: boolean }) {
+export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desktopCustomScale = 1, onDesktopCustomScale, clickLookup = true, activeMarkupTool, activeMarkupColor = 'yellow', onLocation, onLookup, onAddNote, navigationToken = 0, onHighlight, onErase, ocrBusy = false }: { interfaceMode?: 'simple' | 'advanced'; navigationToken?: number; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: import('../../db/database').ReaderHighlight['color']; onHighlight?: (highlight: import('../../db/database').ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; documentRecord: DocumentRecord; location: PdfDocumentLocation; zoomMode: PdfZoomMode; onZoomMode: (mode: PdfZoomMode) => void; desktopCustomScale?: number; onDesktopCustomScale?: (scale: number) => void; clickLookup?: boolean; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void; ocrBusy?: boolean }) {
   const desktop = useDesktop();
   const [mobileZoom, setMobileZoom] = useState<PdfZoomMode>('fit-width');
   const effectiveZoom = desktop ? zoomMode : mobileZoom;
@@ -70,9 +70,9 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
   useEffect(() => {
     if (!moreOpen) return;
     const dismiss = (event: PointerEvent) => { if (!zoomMenu.current?.contains(event.target as Node)) setMoreOpen(false); };
-    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); setMoreOpen(false); zoomMenu.current?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true }); } };
-    document.addEventListener('pointerdown', dismiss); document.addEventListener('keydown', escape);
-    return () => { document.removeEventListener('pointerdown', dismiss); document.removeEventListener('keydown', escape); };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); setMoreOpen(false); zoomMenu.current?.querySelector<HTMLButtonElement>('[aria-expanded]')?.focus({ preventScroll: true }); } };
+    document.addEventListener('pointerdown', dismiss); document.addEventListener('keydown', escape, true);
+    return () => { document.removeEventListener('pointerdown', dismiss); document.removeEventListener('keydown', escape, true); };
   }, [moreOpen]);
   const [geometryError, setGeometryError] = useState<string | null>(null);
   const [visible, setVisible] = useState(location.page);
@@ -84,9 +84,12 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
     setMobileZoomHost(document.querySelector<HTMLElement>('.pdf-mobile-zoom-host'));
   }, [desktop, ready]);
   const selectedCustomScale = desktop ? desktopCustomScale : customScale;
-  const scaleFor = (size: PdfPageSize) => calculatePdfScale(effectiveZoom, selectedCustomScale, bounds?.width ?? 0, bounds?.height ?? 0, size.width, size.height);
+  const scaleFor = (size: PdfPageSize) => calculatePdfScale(effectiveZoom, selectedCustomScale, bounds?.width ?? 0, bounds?.height ?? 0, size.width, size.height, desktop ? 6 : 3);
   const stepZoom = (direction: -1 | 1) => {
-    const next = stepPdfScale(scaleFor(sizes[visible] ?? DEFAULT_SIZE), direction);
+    const size = sizes[visible] ?? DEFAULT_SIZE;
+    const current = scaleFor(size);
+    const fitWidth = calculatePdfScale('fit-width', 1, bounds?.width ?? 0, bounds?.height ?? 0, size.width, size.height);
+    const next = desktop ? stepDesktopPdfScale(current, fitWidth, direction) : stepPdfScale(current, direction);
     if (desktop) onDesktopCustomScale?.(next); else setCustomScale(next);
     changeZoom('custom');
   };
@@ -134,7 +137,7 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
   return <div class="pdf-viewer-wrap">
     {(() => {
       const menu = <div class="pdf-more" ref={zoomMenu}><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>Zoom</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => stepZoom(-1)}>Zoom out</button><button onClick={() => stepZoom(1)}>Zoom in</button>{desktop && <button onClick={() => changeZoom('natural')}>Default</button>}<button onClick={() => changeZoom('fit-width')}>Fit width</button><button onClick={() => changeZoom('fit-page')}>Fit page</button></div>}</div>;
-      return <><div class="pdf-toolbar" aria-label="PDF controls">{desktop && interfaceMode === 'advanced' ? <><button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button><button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button><select aria-label="PDF zoom" value={effectiveZoom} onChange={event => changeZoom(event.currentTarget.value as PdfZoomMode)}><option value="natural">Mặc định</option><option value="fit-width">Vừa chiều ngang</option><option value="fit-page">Vừa trang</option><option value="custom">Tùy chỉnh</option></select></> : desktop || !mobileZoomHost ? menu : null}</div>{!desktop && mobileZoomHost && createPortal(menu, mobileZoomHost)}</>;
+      return <><div class="pdf-toolbar" aria-label="PDF controls">{desktop ? <><button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button><div class="pdf-more pdf-zoom-presets" ref={zoomMenu}><button aria-label="PDF zoom presets" aria-expanded={moreOpen} aria-haspopup="true" onClick={() => setMoreOpen(value => !value)}>{Math.round(scaleFor(sizes[visible] ?? DEFAULT_SIZE) * 100)}%</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => { changeZoom('natural'); setMoreOpen(false); }}>Default</button><button onClick={() => { changeZoom('fit-width'); setMoreOpen(false); }}>Fit width</button><button onClick={() => { changeZoom('fit-page'); setMoreOpen(false); }}>Fit page</button></div>}</div><button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button></> : !mobileZoomHost ? menu : null}</div>{!desktop && mobileZoomHost && createPortal(menu, mobileZoomHost)}</>;
     })()}
     <div ref={rootRef} class="pdf-scroll" tabIndex={0}>
       <div class="pdf-pages">

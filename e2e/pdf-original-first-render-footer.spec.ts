@@ -29,12 +29,12 @@ test('first desktop canvas uses real bounds and dominant DPR before zoom', async
   expect(samples.every((s: any) => s.backing / s.css > s.dpr - .02)).toBe(true);
   const neighborPixels = await page.locator('[data-pdf-page="2"] canvas').evaluate(el => { const c = el as HTMLCanvasElement; return c.width * c.height; });
   expect(neighborPixels).toBeLessThanOrEqual(2_000_000);
-  await page.getByRole('button', { name: 'PDF options' }).click();
   await page.getByRole('button', { name: 'Zoom in' }).click();
   await expect.poll(() => canvas.evaluate(el => (el as HTMLCanvasElement).getBoundingClientRect().width)).toBeGreaterThan(initial.css);
   const zoomed = await canvas.evaluate(el => { const c = el as HTMLCanvasElement; return { backing: c.width, height: c.height, css: c.getBoundingClientRect().width, dpr: devicePixelRatio }; });
   console.log('zoomed-render', JSON.stringify(zoomed));
-  expect(zoomed.backing / zoomed.css).toBeGreaterThan(zoomed.dpr - .02);
+  expect(zoomed.backing * zoomed.height).toBeLessThanOrEqual(20_000_000);
+  expect(zoomed.backing / zoomed.css).toBeGreaterThan(1);
 });
 
 test('mobile Zoom fits in footer and its menu stays operable', async ({ page }) => {

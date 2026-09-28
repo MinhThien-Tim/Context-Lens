@@ -83,7 +83,7 @@ Mobile opens one panel at a time with the existing focus trap and Escape behavio
 
 The top PDF control contains only Original/Reading; the adjacent Document tools popover contains
 existing text-source, OCR language, recognition and queue actions. OCR next is also visible in the primary actions group, reusing the same next-six-pages action and busy/completed guards. OCR behavior is unchanged.
-Original keeps a centered PDF canvas with a quiet zoom toolbar (Simple uses its Zoom menu).
+Original keeps a centered PDF canvas with a quiet desktop zoom toolbar in both densities: zoom out, current percentage with Default/Fit width/Fit page presets, and zoom in. Mobile keeps its footer Zoom menu.
 Reading retains the shared structured pages with comfortable margins and no card border per page.
 `ReaderProgress` always reports reading progress separately from optional OCR status. PDF page
 navigation is rendered once at the bottom; non-PDF location opens the existing Go to dialog.
