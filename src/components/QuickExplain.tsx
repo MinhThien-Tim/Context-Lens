@@ -19,7 +19,7 @@ export function QuickExplain({ result, mode, expanded = false, presentation = 's
   const closeMeanings = result.dictionary?.senseStatus === 'ambiguous'
     && scores.filter(item => item.semanticScore >= topScore - 1 && !item.reasons.includes('Explicit grammar pattern: HARD_CONFLICT')).length > 1;
   const ordinary = all.filter(sense => sense !== matched && ((showEn && sense.definitionEn) || (showVi && sense.meaningsVi.length)));
-  const compact = compactDictionarySenses(ordinary, result.dictionary?.contextPos);
+  const compact = compactDictionarySenses(ordinary, result.dictionary?.contextPos, result.dictionary?.senseStatus === 'ambiguous');
   const longMeanings = compact.some(sense => (showEn && sense.definitionEn.length > 180) || (showVi && sense.meaningsVi.join('; ').length > 180));
   const canExpand = ordinary.length > compact.length || longMeanings;
   // Presentation budget only: retain the existing ranked order and source-linked pairs.
@@ -30,7 +30,7 @@ export function QuickExplain({ result, mode, expanded = false, presentation = 's
   const sample = [...(visibleMatched ? [visibleMatched] : []), ...candidates].slice(0, 6);
   const averageLength = sample.reduce((sum, sense) => sum + textLength(sense), 0) / Math.max(1, sample.length);
   const simpleLimit = averageLength > 180 ? 3 : averageLength > 100 ? 4 : averageLength > 60 ? 5 : 6;
-  const visible = expanded ? [] : simple ? candidates.slice(0, simpleLimit - Number(Boolean(visibleMatched))) : more ? ordinary : compact;
+  const visible = expanded ? [] : simple ? candidates.slice(0, result.dictionary?.senseStatus === 'ambiguous' ? Math.max(4, simpleLimit - Number(Boolean(visibleMatched))) : simpleLimit - Number(Boolean(visibleMatched))) : more ? ordinary : compact;
   const allUnpaired = unpairedVietnameseMeanings(result);
   const hasVisibleVi = visible.some(sense => sense.meaningsVi.length) || Boolean(matched?.meaningsVi.length);
   const unpaired = simple ? hasVisibleVi ? [] : allUnpaired.slice(0, allUnpaired.slice(0, 6).some(text => text.length > 100) ? 4 : 6) : allUnpaired;
@@ -44,9 +44,11 @@ export function QuickExplain({ result, mode, expanded = false, presentation = 's
     {result.lens?.selection.status === 'fragment' && <p class="lookup-note">This selection is only part of a longer word.</p>}
     {['subphrase', 'head'].includes(result.lens?.selection.matchType ?? '') && <p class="lookup-note">Meaning shown for: <strong>{result.lens?.selection.matchedText}</strong></p>}
     {closeMeanings && <p class="lookup-note quick-context-ambiguity" role="note"><span class="quick-context-summary" hidden={!simple}>{showEn && 'Context unclear'}{showEn && showVi && ' · '}{showVi && 'Ngữ cảnh chưa đủ rõ'}</span>{!simple && <span class="quick-context-detail">{showEn && <span>Context is not strong enough to distinguish these closely related meanings.</span>}{showEn && showVi && <br />}{showVi && <span>Ngữ cảnh chưa đủ để phân biệt chắc chắn các nghĩa gần nhau.</span>}</span>}</p>}
+    {result.dictionary?.senseStatus === 'ambiguous' && !result.dictionary.contextPos && new Set(all.map(sense => sense.pos)).size > 1 && <p class="lookup-note" role="note">{showEn && 'The part of speech is not clear enough in this sentence; compare the meaning groups below.'}{showEn && showVi && <br />}{showVi && 'Từ loại trong câu chưa đủ rõ; hãy đối chiếu các nhóm nghĩa bên dưới.'}</p>}
+    {matched && !matched.meaningsVi.length && unpaired.length > 0 && <p class="lookup-note" role="note">{showEn && 'The English meaning is identified from context, but the Vietnamese meanings are not confidently aligned.'}{showEn && showVi && <br />}{showVi && 'Đã xác định nghĩa tiếng Anh theo ngữ cảnh, nhưng nghĩa Việt chưa được ghép chắc chắn.'}</p>}
     {matched && ((showEn && matched.definitionEn) || (showVi && matched.meaningsVi.length > 0)) && <section class="inspector-context" aria-label="Context meaning"><h3>Context <span class="sense-pos">{matched.pos}</span></h3>{renderSense(matched)}</section>}
     {!expanded && (visible.length > 0 || (showVi && unpaired.length > 0)) && <section class="inspector-meanings">
-      {matched ? <h3>Other meanings</h3> : <p class="quick-sense-status">{result.dictionary?.senseStatus === 'common' ? 'Common meaning' : 'Multiple possible meanings'}{result.dictionary?.contextPos && <> {'\u00b7'} {result.dictionary.contextPos}</>}</p>}
+      {matched ? <h3>Other meanings</h3> : <p class="quick-sense-status">{result.dictionary?.senseStatus === 'ambiguous' ? 'Multiple possible meanings' : 'Dictionary meaning'}{result.dictionary?.contextPos && <> {'\u00b7'} {result.dictionary.contextPos}</>}</p>}
       <div class={`quick-meaning-table ${entryGlossColumn ? 'has-entry-glosses' : ''} ${showEn && showVi && (visible.some(sense => sense.meaningsVi.length > 0) || unpaired.length > 0) ? 'has-bilingual-content' : ''}`}>
         {visible.length > 0 && <div class="sense-list">{[...new Set(visible.map(sense => sense.pos))].map(pos => <section class="quick-pos-group" key={pos}><h4 class="sense-pos">{pos}</h4>{visible.filter(sense => sense.pos === pos).map(sense => <div class="sense-row" key={sense.id}>{renderSense(sense)}</div>)}</section>)}
           {!simple && canExpand && <button class="quick-more-meanings" aria-expanded={more} onClick={() => setMeaningExpansion({ key: selectionKey, open: !more })}>{more ? 'Fewer meanings' : `More meanings${ordinary.length > compact.length ? ` (${ordinary.length - compact.length})` : ''}`}</button>}

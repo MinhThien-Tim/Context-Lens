@@ -3,6 +3,7 @@ import { LexicalEngine } from './lexicon';
 import { SenseResolver } from './sense-resolver';
 import { analyzeGrammar } from './grammar';
 import type { SentenceAnalysis } from './types';
+import { senseVietnameseMeanings } from './sense-meanings';
 
 const senses = [
   { id: 'zorp.manage', pos: 'verb', definitionEn: 'to manage an organization', meaningVi: 'điều hành', keywords: ['company'] },
@@ -17,6 +18,30 @@ function analysis(sentence: string): SentenceAnalysis {
 }
 
 describe('sense evidence is independent from part-of-speech evidence', () => {
+  it('keeps incompatible senses visible without selecting them', () => {
+    const sentence = 'They zorp it.';
+    const parsed = analysis(sentence);
+    parsed.grammar = analyzeGrammar(parsed.tokens, sentence);
+    const result = new SenseResolver().resolve({ selection: 'zorp', lemma: 'zorp', sentence,
+      sentenceAnalysis: parsed, selectionStart: sentence.indexOf('zorp'), candidateSenses: [
+        { id: 'conflict', pos: 'verb', definitionEn: 'take an infinitive', grammarPatterns: [{ complement: 'infinitive' }] },
+        { id: 'compatible', pos: 'verb', definitionEn: 'act on an object' }
+      ] });
+    expect(result.selectedSense?.id).toBe('compatible');
+    expect(result.alternatives.map(sense => sense.id)).toContain('conflict');
+  });
+
+  it('keeps distinct POS groups ambiguous without occurrence POS', () => {
+    const result = new SenseResolver().resolve({ selection: 'zorp', lemma: 'zorp', sentence: 'Zorp.',
+      candidateSenses: [{ id: 'noun', pos: 'noun', definitionEn: 'a physical object' },
+        { id: 'verb', pos: 'verb', definitionEn: 'perform an action' }] });
+    expect(result).toMatchObject({ status: 'ambiguous', contextMatch: false });
+  });
+
+  it('merges Vietnamese gloss fields without duplicates', () => {
+    expect(senseVietnameseMeanings({ meaningVi: 'chạy / đi', meaningsVi: ['chạy', '  ĐI  ', 'giữ'] }))
+      .toEqual(['chạy', 'ĐI', 'giữ']);
+  });
   it('uses same-POS semantic keywords when the sentence distinguishes the meanings', () => {
     const sentence = 'They zorp the company.';
     const result = new SenseResolver().resolve({ selection: 'zorp', lemma: 'zorp', sentence,

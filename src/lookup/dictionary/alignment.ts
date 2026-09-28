@@ -2,6 +2,7 @@ import type { LexicalEntry, LexicalSense } from '../../core/language/types';
 import type { SenseAlignment } from './types';
 import { frameCompatibility, occurrenceConstruction, patternEvidence } from '../../core/language/constructions';
 import type { StableGrammarPattern } from '../../core/language/types';
+import { senseVietnameseMeanings } from '../../core/language/sense-meanings';
 
 export const ALIGNMENT_VERSION = 'bilingual-alignment-3';
 
@@ -15,14 +16,14 @@ export function alignBilingualSenses(senses: LexicalSense[], vietnamese: SourceS
   const cacheKey = version ? JSON.stringify([ALIGNMENT_VERSION, version, senses, vietnamese]) : undefined;
   if (cacheKey && alignmentCache.has(cacheKey)) return structuredClone(alignmentCache.get(cacheKey)!);
   const exact = senses.map(sense => {
-    if (sense.meaningVi || sense.meaningsVi?.length) return { ...sense, alignment: sense.alignment ?? {
+    if (senseVietnameseMeanings(sense).length) return { ...sense, alignment: sense.alignment ?? {
       kind: 'explicit', confidence: 'high', evidence: [sense.id, sense.source ?? 'local']
     } as SenseAlignment };
-    const matches = senses.filter(other => other.pos && other.pos === sense.pos && other.meaningVi
+    const matches = senses.filter(other => other.pos && other.pos === sense.pos && senseVietnameseMeanings(other).length
       && other.alignment?.kind !== 'translated-definition' && !other.alignment?.dependsOnSenseId
       && normalize(other.definitionEn) === normalize(sense.definitionEn));
-    const meanings = new Set(matches.map(other => normalize(other.meaningVi!)));
-    return meanings.size === 1 ? { ...sense, meaningVi: matches[0].meaningVi, meaningsVi: matches[0].meaningsVi,
+    const meanings = new Set(matches.map(other => senseVietnameseMeanings(other).map(normalize).join('|')));
+    return meanings.size === 1 ? { ...sense, meaningVi: matches[0].meaningVi ?? senseVietnameseMeanings(matches[0]).join(' / '), meaningsVi: senseVietnameseMeanings(matches[0]),
       alignment: { kind: 'identical-gloss', confidence: 'high', evidence: matches.map(other => other.id) } as SenseAlignment }
       : { ...sense, alignment: { kind: 'unresolved', confidence: 'low', evidence: [] } as SenseAlignment };
   });

@@ -11,6 +11,14 @@ it('keeps every POS in Quick while limiting ordinary meanings', () => {
   expect(compact.map(sense => sense.id)).not.toContain('2');
 });
 
+it('shows several candidates from each POS when the occurrence remains ambiguous', () => {
+  const senses = ['noun', 'noun', 'noun', 'verb', 'verb', 'verb'].map((pos, index) => ({
+    id: String(index), pos, definitionEn: `Meaning ${index}`, meaningsVi: [], source: 'local' as const, contextScore: 0, contextMatch: false
+  }));
+  expect(compactDictionarySenses(senses, undefined, true).map(sense => sense.id)).toEqual(['0', '1', '3', '4']);
+  expect(compactDictionarySenses(senses, 'verb', true).map(sense => sense.id)).toEqual(['3', '4', '5', '0', '1', '2']);
+});
+
 it('retains local Vietnamese glosses when context has no dictionary, without inventing pairs', () => {
   const result = { ...validLookup, dictionary: { word: 'maintain', surfaceForm: 'maintain', lemma: 'maintain', pronunciation: null, contextConfidence: 0,
     senses: [{ id: 'paired', pos: 'verb', definitionEn: 'Keep going', meaningsVi: ['duy trì'], source: 'local' as const, contextScore: 0, contextMatch: false }],

@@ -13,6 +13,7 @@ import type { LookupRequest, LookupResponse } from './types';
 import { applyExplanation } from '../core/context/adapter';
 import type { ProviderHealthSnapshot } from '../core/translation/provider-health';
 import { LocalLanguageEngine } from '../core/language/local-language-engine';
+import { senseVietnameseMeanings } from '../core/language/sense-meanings';
 import { applyLocalResult, selectionInput } from '../core/language/adapter';
 import { checkAbort } from '../core/errors';
 import { LexicalEngine } from '../core/language/lexicon';
@@ -123,7 +124,7 @@ export class LookupService {
           const reranked = await this.local.analyzeSelection(selectionInput(request, settings.sourceLang, settings.targetLang));
           base = applyLocalResult(base, reranked);
           publish();
-          if (reranked.dictionary?.senses.some(sense => sense.contextMatch && sense.meaningsVi.length)) {
+          if (reranked.dictionary?.senses.some(sense => sense.contextMatch && senseVietnameseMeanings(sense).length)) {
             recordDiagnostic('googleContextResolved', { provider: translated.provider, mode: request.selection_type });
             return base;
           }
@@ -147,7 +148,7 @@ export class LookupService {
     if (request.selection_type !== 'sentence' && settings.quickEngine === 'auto' && base.quick.meaning_vi.length) return base;
     let translated: TranslationResult;
     try { translated = await (request.selection_type !== 'sentence' && settings.quickEngine === 'auto' ? this.wordFallback! : this.translation!).translate({ text: request.selection, sourceLang: settings.sourceLang, targetLang: settings.targetLang, mode: request.selection_type, signal,
-      localContext: base.dictionary ? { lemma: base.dictionary.lemma, pos: base.dictionary.contextPos, meaningsVi: [...base.dictionary.senses.flatMap(s => s.meaningsVi), ...(base.dictionary.unpairedMeaningsVi ?? [])],
+      localContext: base.dictionary ? { lemma: base.dictionary.lemma, pos: base.dictionary.contextPos, meaningsVi: [...base.dictionary.senses.flatMap(senseVietnameseMeanings), ...(base.dictionary.unpairedMeaningsVi ?? [])],
         contextConfidence: base.dictionary.contextConfidence, senseConfidence: base.dictionary.senseConfidence } : undefined }); }
     catch { checkAbort(signal); return base; }
     const translatedDefinition = settings.sourceLang === 'en' && settings.targetLang === 'en' ? translated.text : '';
@@ -234,7 +235,7 @@ function selectedMissingSense(base: LookupResponse) {
   if (base.selection.selection_type === 'sentence') return undefined;
   const senses = base.dictionary?.senses ?? [];
   const selected = senses.find(sense => sense.contextMatch) ?? (senses.length === 1 ? senses[0] : undefined);
-  return selected?.definitionEn && !selected.meaningsVi.length &&
+  return selected?.definitionEn && !senseVietnameseMeanings(selected).length &&
     !(base.dictionary?.unpairedMeaningsVi ?? []).some(meaning => meaning.trim() &&
       !base.dictionary?.vietnameseReferences?.some(ref => ref.status === 'unresolved' && ref.text.trim() === meaning.trim())) ? selected : undefined;
 }

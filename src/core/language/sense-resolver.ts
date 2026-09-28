@@ -2,6 +2,7 @@ import { LexicalEngine } from './lexicon';
 import { occurrenceConstruction, frameEvidence, patternEvidence } from './constructions';
 import { occurrencePos } from './pos-arbitration';
 import type { LexicalSense, SentenceAnalysis } from './types';
+import { senseVietnameseMeanings } from './sense-meanings';
 
 export interface SenseInput {
   selection: string; lemma: string; canonicalPhrase?: string; sentence: string;
@@ -31,7 +32,7 @@ export class SenseResolver {
     const translationEvidence = alignedTranslationClause(input);
     const translatedClause = translationEvidence?.text;
     const matchingTranslationSenses = translatedClause ? input.candidateSenses.filter(sense =>
-      Boolean(sense.alignment?.kind !== 'translated-definition' && !sense.alignment?.dependsOnSenseId && sense.meaningVi && sense.meaningVi.split(/\s*(?:\/|;)\s*/).some(meaning => containsWords(translatedClause, meaning)))) : [];
+      Boolean(sense.alignment?.kind !== 'translated-definition' && !sense.alignment?.dependsOnSenseId && senseVietnameseMeanings(sense).some(meaning => containsWords(translatedClause, meaning)))) : [];
     const grammarEvidence = input.candidateSenses.map(sense => this.grammarEvidence(input, sense));
     const ranked = input.candidateSenses.map((sense, candidateIndex) => {
       let score = 0, semanticScore = 0;
@@ -63,7 +64,7 @@ export class SenseResolver {
         semanticScore += contribution;
         reasons.push(event.reason, `Grammar ranking contribution: ${contribution}`);
       }
-      const translation = matchingTranslationSenses.length <= 1 ? translationScore(translatedClause, sense.alignment?.kind === 'translated-definition' || sense.alignment?.dependsOnSenseId ? undefined : sense.meaningVi) : { score: 0 };
+      const translation = matchingTranslationSenses.length <= 1 ? translationScore(translatedClause, sense.alignment?.kind === 'translated-definition' || sense.alignment?.dependsOnSenseId ? [] : senseVietnameseMeanings(sense)) : { score: 0 };
       if (translation.score && !translationEvidence?.strong) {
         translation.score = Math.min(1, translation.score);
         translation.reason = 'Weak whole-sentence support from saved sentence translation; clause alignment unverified';
@@ -88,16 +89,19 @@ export class SenseResolver {
     if (!contextMatch) ranked.sort((left, right) =>
       (syntacticRole ? Number(right.sense.pos === syntacticRole) - Number(left.sense.pos === syntacticRole) : 0)
       || input.candidateSenses.indexOf(left.sense) - input.candidateSenses.indexOf(right.sense));
-    if (contextMatch) ranked.sort((a, b) => Number(b === best) - Number(a === best) || b.score - a.score);
-    const selected = contextMatch ? best : ranked[0];
-    const samePos = ranked.filter(item => item.sense.pos === (syntacticRole ?? input.pos ?? best.sense.pos));
-    const materiallyDifferent = samePos.some(item => item !== best && !equivalentMeaning(best.sense, item.sense));
-    const status = contextMatch ? 'context' : materiallyDifferent ? 'ambiguous' : 'common';
+    if (contextMatch) ranked.sort((a, b) => Number(b === best) - Number(a === best)
+      || input.candidateSenses.indexOf(a.sense) - input.candidateSenses.indexOf(b.sense));
+    const selected = contextMatch ? best : ranked.find(item => item.compatible) ?? ranked[0];
+    const viable = compatible.length ? compatible : ranked;
+    const establishedPos = syntacticRole ?? (input.pos && posConfidence > 0 ? input.pos : undefined);
+    const materiallyDifferent = viable.some(item => item !== selected && !equivalentMeaning(selected.sense, item.sense)
+      && (!establishedPos || item.sense.pos === establishedPos));
+    const status = contextMatch ? 'context' : !compatible.length || materiallyDifferent ? 'ambiguous' : 'common';
     const senseConfidence = contextMatch ? Math.min(0.97, 0.68 + Math.min(best.semanticScore, 8) * 0.035
       + Math.min(semanticMargin, 4) * 0.025) : ranked.length === 1 ? 0.62 : 0.4;
     return { selectedSense: selected.sense, senseConfidence, posConfidence, contextMatch, status,
-      alternatives: ranked.slice(1).map(item => item.sense),
-      reasons: [...selected.reasons, `Semantic margin: ${semanticMargin}`, ...(contextMatch ? [] : ['No evidence distinguishing this meaning from the alternatives'])],
+      alternatives: ranked.filter(item => item !== selected).map(item => item.sense),
+      reasons: [...selected.reasons, `Semantic margin: ${semanticMargin}`, ...(compatible.length ? [] : ['No structurally compatible sense; occurrence structure unresolved']), ...(contextMatch ? [] : ['No evidence distinguishing this meaning from the alternatives'])],
       diagnostics: ranked.map(item => ({ senseId: item.sense.id, score: item.score, semanticScore: item.semanticScore, reasons: item.reasons })) };
   }
   private grammarEvidence(input: SenseInput, sense: LexicalSense) {
@@ -208,10 +212,10 @@ function constructionScore(input: SenseInput, sense: LexicalSense): { score: num
   return { score: 0 };
 }
 
-function translationScore(translation: string | undefined, meaning: string | undefined): { score: number; reason?: string } {
-  if (!translation || !meaning) return { score: 0 };
+function translationScore(translation: string | undefined, meanings: string[]): { score: number; reason?: string } {
+  if (!translation || !meanings.length) return { score: 0 };
   const translated = normalizeVietnamese(translation);
-  const alternatives = meaning.split(/\s*(?:\/|;)\s*/).map(normalizeVietnamese).filter(Boolean);
+  const alternatives = meanings.map(normalizeVietnamese).filter(Boolean);
   if (alternatives.some(candidate => containsWords(translated, candidate)))
     return { score: 4, reason: 'Linked dictionary meaning appears in the saved sentence translation' };
   const translatedWords = new Set(words(translated).filter(word => !viStop.has(word)));

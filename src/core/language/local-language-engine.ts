@@ -4,6 +4,7 @@ import { PhraseDetector } from './phrases';
 import { ContextWindowBuilder, SentenceEngine } from './sentence-engine';
 import { SenseResolver } from './sense-resolver';
 import { occurrencePos } from './pos-arbitration';
+import { senseVietnameseMeanings } from './sense-meanings';
 import type { LensResult, SelectionInput } from './types';
 import { compoundCandidates, isPartialSelection, normalizeSelection, phraseCandidates, reconstructToken } from '../../lookup/normalization';
 import { dictionaryRegistry } from '../../lookup/dictionary/registry';
@@ -58,7 +59,8 @@ export class LocalLanguageEngine {
       candidateSenses: entry?.senses ?? [] });
     const sense = resolved.selectedSense;
     const hasEnglish = Boolean(sense?.definitionEn);
-    const hasVietnamese = Boolean(sense?.meaningVi || entry?.meaningsVi?.length);
+    const senseMeanings = sense ? senseVietnameseMeanings(sense) : [];
+    const hasVietnamese = Boolean(senseMeanings.length || entry?.meaningsVi?.length);
     // A complete token that no source knows is an unknown word, not a partial selection.
     const partial = !repair && isPartialSelection(initial, input.sentence, input.selectionStart);
     const status = repair && entry ? 'reconstructed' : !entry ? (partial ? 'fragment' : 'unknown')
@@ -68,14 +70,14 @@ export class LocalLanguageEngine {
     const matchType = phraseEntry ? 'phrase' : directEntry ? (directEntry.morphology ? 'lemma' : 'exact')
       : matchedText?.includes(' ') ? (matchedText === canonical ? 'phrase' : 'subphrase') : entry ? 'head' : undefined;
     const orderedSenses = entry ? [sense, ...resolved.alternatives, ...entry.senses].filter((item, index, all): item is NonNullable<typeof item> => Boolean(item) && all.findIndex(other => other?.id === item!.id) === index) : [];
-    const contextPos = rulePos ?? (lexicalPos.length === 1 ? lexicalPos[0] : undefined);
+    const contextPos = (resolved.contextMatch && sense?.pos) || rulePos || (lexicalPos.length === 1 ? lexicalPos[0] : undefined);
     const contextOrderedSenses = preferredSensePos ? [...orderedSenses].sort((left, right) => Number(right.pos === preferredSensePos) - Number(left.pos === preferredSensePos)) : orderedSenses;
     const degreeMeaning = (meaning: string) => entry?.morphology?.inflection === 'comparative' && (sense?.pos ?? entry?.pos[0]) === 'adjective' && /^(?:thÃ´ng minh|sÃ¡ng suá»‘t|khÃ´n ngoan)$/.test(meaning) ? `${meaning} hÆ¡n` : meaning;
     const senseResults = contextOrderedSenses.map(item => ({ id: item.id, pos: item.pos ?? entry?.pos[0] ?? 'other', definitionEn: item.definitionEn,
-      meaningsVi: (item.meaningsVi ?? (item.meaningVi ? splitMeanings(item.meaningVi) : [])).map(meaning => item.id === sense?.id ? degreeMeaning(meaning) : meaning), alignment: item.alignment, source: item.source ?? 'local' as const,
-      pairingState: item.meaningVi ? 'paired' as const : 'missing' as const,
+      meaningsVi: senseVietnameseMeanings(item).map(meaning => item.id === sense?.id ? degreeMeaning(meaning) : meaning), alignment: item.alignment, source: item.source ?? 'local' as const,
+      pairingState: senseVietnameseMeanings(item).length ? 'paired' as const : 'missing' as const,
       contextScore: item.id === sense?.id ? resolved.senseConfidence : 0, contextMatch: item.id === sense?.id && resolved.contextMatch }));
-    const linkedMeanings = new Set(contextOrderedSenses.flatMap(item => [...(item.meaningsVi ?? []), ...(item.meaningVi ? [item.meaningVi, ...splitMeanings(item.meaningVi)] : [])]).map(normalizeMeaning));
+    const linkedMeanings = new Set(contextOrderedSenses.flatMap(senseVietnameseMeanings).map(normalizeMeaning));
     const unpairedMeaningsVi = (entry?.meaningsVi ?? []).filter(meaning => !linkedMeanings.has(normalizeMeaning(meaning)));
     const dictionary = entry ? {
       word: entry.lemma, surfaceForm: input.selectedText, lemma: entry.lemma,
@@ -86,7 +88,7 @@ export class LocalLanguageEngine {
     return { ...result, dictionary, selection: { ...result.selection, lemma: entry?.lemma ?? normalized, pos: contextPos ?? entry?.pos.join(' / '), status, matchedText, matchType },
       phrase: resolvedPhrase ? { canonical: resolvedPhrase.lemma, type: resolvedPhrase.type } : undefined,
       english: sense?.definitionEn ? { definition: sense.definitionEn, contextualDefinition: resolved.contextMatch ? sense.definitionEn : undefined, synonyms: sense.synonyms, examples: sense.examples } : undefined,
-      vietnamese: sense?.meaningVi ? { meaning: splitMeanings(sense.meaningVi).map(degreeMeaning).join(' / '), contextualMeaning: resolved.contextMatch ? splitMeanings(sense.meaningVi).map(degreeMeaning).join(' / ') : undefined, senseAligned: true }
+      vietnamese: senseMeanings.length ? { meaning: senseMeanings.map(degreeMeaning).join(' / '), contextualMeaning: resolved.contextMatch ? senseMeanings.map(degreeMeaning).join(' / ') : undefined, senseAligned: true }
         : entry?.meaningsVi?.length ? { meaning: entry.meaningsVi.join(' / '), senseAligned: false } : undefined,
       grammar: entry ? { role: contextPos ?? entry.pos.join(' / '), pattern: phraseEntry?.lemma,
         form: entry.morphology ? `${entry.morphology.inflection} of ${entry.morphology.baseLemma}` : undefined } : undefined,
@@ -99,10 +101,6 @@ export class LocalLanguageEngine {
   async rememberSentenceTranslation(sentence: string, translatedText: string): Promise<void> {
     await this.sentences.rememberTranslation(sentence, translatedText);
   }
-}
-
-function splitMeanings(value: string): string[] {
-  return [...new Set(value.split(/\s*(?:\/|;|Â·)\s*/).map(item => item.trim()).filter(Boolean))];
 }
 
 function normalizeMeaning(value: string): string { return value.normalize('NFC').toLocaleLowerCase('vi').replace(/\s+/g, ' ').trim(); }

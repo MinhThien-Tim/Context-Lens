@@ -313,6 +313,12 @@ Multi-clause translations retain weak whole-sentence evidence (at most 1 point);
 are not treated as proof of alignment.
 
 `lookup/dictionary/alignment.ts` runs before occurrence resolution and has no sentence input.
+Sense-linked Vietnamese glosses use one canonical accessor over `meaningVi` and `meaningsVi`.
+Only structurally compatible senses can be selected when any remain; conflicting senses stay
+visible as dictionary alternatives. A confirmed Context sense supplies the occurrence POS.
+Unresolved POS or close compatible meanings remain ambiguous in the cards, with entry-level
+Vietnamese glosses kept separate from stable pairs. Supplemental Wiktionary senses merged after
+local resolution are displayed but are not reranked by the local resolver.
 It preserves explicit links, reuses unique exact English glosses with matching POS, and otherwise
 requires multiple stable bilingual lexical anchors, matching source POS and no equally supported
 English competitor (anchor margin at least 2). It matches exact Vietnamese gloss fragments from local lexical records, never array
