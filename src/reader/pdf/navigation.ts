@@ -24,6 +24,6 @@ export function calculatePdfScale(mode: PdfZoomMode, customScale: number, contai
   if (mode === 'custom') return Math.min(3, Math.max(.1, customScale));
   const widthScale = Math.max(.1, (containerWidth - 32) / pageWidth);
   if (mode === 'fit-width') return widthScale;
-  if (mode === 'natural') return Math.max(.1, Math.min(840, Math.max(1, containerWidth - 64)) / pageWidth);
+  if (mode === 'natural') return Math.max(.1, Math.min(932, Math.max(1, containerWidth - 64)) / pageWidth);
   return Math.max(.1, Math.min(widthScale, (containerHeight - 32) / pageHeight));
 }

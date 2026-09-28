@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { createPortal } from 'preact/compat';
 import type { DocumentRecord } from '../../db/database';
 import type { PdfDocumentLocation } from '../../documents/location';
 import type { ReaderSelection } from '../TextReader';
@@ -76,15 +77,20 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
   const [geometryError, setGeometryError] = useState<string | null>(null);
   const [visible, setVisible] = useState(location.page);
   const [customScale, setCustomScale] = useState(1);
-  const [bounds, setBounds] = useState({ width: window.innerWidth, height: window.innerHeight - 110 });
+  const [bounds, setBounds] = useState<{ width: number; height: number } | null>(null);
+  const [mobileZoomHost, setMobileZoomHost] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (desktop || !ready) { setMobileZoomHost(null); return; }
+    setMobileZoomHost(document.querySelector<HTMLElement>('.pdf-mobile-zoom-host'));
+  }, [desktop, ready]);
   const selectedCustomScale = desktop ? desktopCustomScale : customScale;
-  const scaleFor = (size: PdfPageSize) => calculatePdfScale(effectiveZoom, selectedCustomScale, bounds.width, bounds.height, size.width, size.height);
+  const scaleFor = (size: PdfPageSize) => calculatePdfScale(effectiveZoom, selectedCustomScale, bounds?.width ?? 0, bounds?.height ?? 0, size.width, size.height);
   const stepZoom = (direction: -1 | 1) => {
     const next = stepPdfScale(scaleFor(sizes[visible] ?? DEFAULT_SIZE), direction);
     if (desktop) onDesktopCustomScale?.(next); else setCustomScale(next);
     changeZoom('custom');
   };
-  const geometryKey = `${effectiveZoom}:${selectedCustomScale}:${bounds.width}:${bounds.height}`;
+  const geometryKey = `${effectiveZoom}:${selectedCustomScale}:${bounds?.width}:${bounds?.height}`;
   // The previous page can still be visible when tracking advances. Keep both
   // neighbors within the existing three-canvas budget; OCR keeps only one.
 
@@ -106,7 +112,7 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
     return () => { cancelled = true; };
   }, [pdf]);
   const lastPosition = useRef('');
-  const goTo = usePdfScroll(rootRef, '.pdf-page-slot', ready, location, navigationToken, (page, pageOffset, scrollY, _visiblePage, dominantPage) => {
+  const goTo = usePdfScroll(rootRef, '.pdf-page-slot', ready && Boolean(bounds), location, navigationToken, (page, pageOffset, scrollY, _visiblePage, dominantPage) => {
     setVisible(dominantPage);
     const key = `${page}:${Math.round(pageOffset * 1000)}:${Math.round(scrollY)}`;
     if (lastPosition.current === key || !pdf) return;
@@ -119,19 +125,20 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
-    const resize = new ResizeObserver(entries => { const rect = entries[0]?.contentRect; if (rect) setBounds(current => current.width === rect.width && current.height === rect.height ? current : { width: rect.width, height: rect.height }); });
+    const resize = new ResizeObserver(entries => { const rect = entries[0]?.contentRect; if (rect && rect.width > 0 && rect.height > 0) setBounds(current => current?.width === rect.width && current.height === rect.height ? current : { width: rect.width, height: rect.height }); });
     resize.observe(root); return () => resize.disconnect();
   }, [pdf, ready]);
   if (passwordRequired) return <form class="pdf-state" onSubmit={event => { event.preventDefault(); submitPassword(); }}><h2>Password-protected PDF</h2><label>Password<input type="password" value={password} onInput={event => setPassword(event.currentTarget.value)} autoFocus /></label><button class="primary-button" type="submit">Open PDF</button></form>;
   if (error || geometryError) return <div class="pdf-state" role="alert"><h2>PDF could not be opened</h2><p>{error ?? geometryError}</p></div>;
   if (!pdf || !ready) return <div class="pdf-state" role="status">Opening PDF…</div>;
   return <div class="pdf-viewer-wrap">
-    <div class="pdf-toolbar" aria-label="PDF controls">
-      {desktop && interfaceMode === 'advanced' ? <><button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button><button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button><select aria-label="PDF zoom" value={effectiveZoom} onChange={event => changeZoom(event.currentTarget.value as PdfZoomMode)}><option value="natural">Mặc định</option><option value="fit-width">Vừa chiều ngang</option><option value="fit-page">Vừa trang</option><option value="custom">Tùy chỉnh</option></select></> : <div class="pdf-more" ref={zoomMenu}><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>Zoom</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => stepZoom(-1)}>Zoom out</button><button onClick={() => stepZoom(1)}>Zoom in</button>{desktop && <button onClick={() => changeZoom('natural')}>Default</button>}<button onClick={() => changeZoom('fit-width')}>Fit width</button><button onClick={() => changeZoom('fit-page')}>Fit page</button></div>}</div>}
-    </div>
+    {(() => {
+      const menu = <div class="pdf-more" ref={zoomMenu}><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>Zoom</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => stepZoom(-1)}>Zoom out</button><button onClick={() => stepZoom(1)}>Zoom in</button>{desktop && <button onClick={() => changeZoom('natural')}>Default</button>}<button onClick={() => changeZoom('fit-width')}>Fit width</button><button onClick={() => changeZoom('fit-page')}>Fit page</button></div>}</div>;
+      return <><div class="pdf-toolbar" aria-label="PDF controls">{desktop && interfaceMode === 'advanced' ? <><button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button><button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button><select aria-label="PDF zoom" value={effectiveZoom} onChange={event => changeZoom(event.currentTarget.value as PdfZoomMode)}><option value="natural">Mặc định</option><option value="fit-width">Vừa chiều ngang</option><option value="fit-page">Vừa trang</option><option value="custom">Tùy chỉnh</option></select></> : desktop || !mobileZoomHost ? menu : null}</div>{!desktop && mobileZoomHost && createPortal(menu, mobileZoomHost)}</>;
+    })()}
     <div ref={rootRef} class="pdf-scroll" tabIndex={0}>
       <div class="pdf-pages">
-        {Array.from({ length: pdf.numPages }, (_, index) => index + 1).map(pageNumber => {
+        {bounds && Array.from({ length: pdf.numPages }, (_, index) => index + 1).map(pageNumber => {
           const size = sizes[pageNumber] ?? DEFAULT_SIZE;
           const scale = scaleFor(size);
           return <div key={pageNumber} class="pdf-page-slot" data-pdf-page={pageNumber} style={{ width: `${size.width * scale}px`, height: `${size.height * scale}px` }}>

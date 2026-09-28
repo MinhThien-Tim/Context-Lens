@@ -21,10 +21,10 @@ test('desktop natural scale, explicit zoom, canvas resolution and text geometry'
       textWidth: textRect.width, textHeight: textRect.height, textLeft: textRect.left - canvasRect.left,
     };
   });
-  await expect.poll(async () => (await measure()).backingWidth).toBeGreaterThan(1600);
+  await expect.poll(async () => (await measure()).backingWidth).toBeGreaterThan(1800);
   const natural = await measure();
   console.log('natural', JSON.stringify(natural));
-  expect(natural.pageWidth).toBeCloseTo(840, 0);
+  expect(natural.pageWidth).toBeCloseTo(932, 0);
   expect(Math.abs(natural.leftGap - natural.rightGap)).toBeLessThan(2);
   expect(natural.backingWidth / natural.canvasWidth).toBeGreaterThan(1.99);
   expect(natural.backingWidth * natural.backingHeight).toBeLessThanOrEqual(20_000_000);

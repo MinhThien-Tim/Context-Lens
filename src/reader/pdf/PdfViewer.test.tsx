@@ -16,7 +16,7 @@ const host = document.createElement('div');
 afterEach(() => { act(() => render(null, host)); host.remove(); vi.unstubAllGlobals(); });
 
 it('keeps the preceding visible page rendered within the three-canvas and OCR budgets', async () => {
-  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+  vi.stubGlobal('ResizeObserver', class { constructor(private callback: ResizeObserverCallback) {} observe() { this.callback([{ contentRect: { width: 600, height: 700 } } as ResizeObserverEntry], this as unknown as ResizeObserver); } disconnect() {} });
   document.body.append(host);
   const location: PdfDocumentLocation = { kind: 'pdf', page: 2, viewMode: 'original', scrollY: 350, progress: .1, updatedAt: 0 };
   const documentRecord = { id: 'pdf', kind: 'pdf', content: 'one two three four', pageOffsets: [0, 4, 8, 14], location } as DocumentRecord;
@@ -24,13 +24,13 @@ it('keeps the preceding visible page rendered within the three-canvas and OCR bu
   await act(async () => render(<PdfViewer {...props} />, host));
   await vi.waitFor(async () => { await act(async () => {}); expect(host.querySelector('.pdf-scroll')).not.toBeNull(); });
   const rendered = () => Array.from(host.querySelectorAll<HTMLCanvasElement>('.pdf-canvas')).map(el => Number(el.dataset.page));
-  expect(rendered()).toEqual([1, 2, 3]);
+  await vi.waitFor(async () => { await act(async () => {}); expect(rendered()).toEqual([1, 2, 3]); });
   await act(() => render(<PdfViewer {...props} ocrBusy />, host));
   expect(rendered()).toEqual([2]);
 });
 
 it('drags a zoomed PDF horizontally from empty page space', async () => {
-  vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
+  vi.stubGlobal('ResizeObserver', class { constructor(private callback: ResizeObserverCallback) {} observe() { this.callback([{ contentRect: { width: 600, height: 700 } } as ResizeObserverEntry], this as unknown as ResizeObserver); } disconnect() {} });
   vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
   document.body.append(host);
   const location: PdfDocumentLocation = { kind: 'pdf', page: 1, viewMode: 'original', scrollY: 0, progress: 0, updatedAt: 0 };

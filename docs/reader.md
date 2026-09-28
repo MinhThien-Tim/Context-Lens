@@ -42,7 +42,7 @@ It renders plain `content` or sanitized `safeHtml` (markdown/article), and reuse
 | Rendering | `PdfPage.tsx` canvas + PDF.js text layer | `PdfReadingPage.tsx` / `PdfOcrReadingPage.tsx` DOM blocks |
 | Page model source | PDF.js live document geometry (`PdfViewer` sizes map) | `PdfStructuredPage` from `db.documents.pdfPages` |
 | Selection mapping | `src/reader/pdf/selectionAdapter.ts` + `PdfTextIndex` (PDF.js DOM ↔ canonical offsets) | `src/reader/pdf-reading/readingSelectionAdapter.ts` (DOM ↔ `documentRecord.content`) |
-| Zoom | `calculatePdfScale` natural / fit-width / fit-page / custom; desktop control bar, mobile overflow menu | Reader typography only (`--reader-size`, `--reader-leading`, `--reader-font`) |
+| Zoom | `calculatePdfScale` natural / fit-width / fit-page / custom; desktop control bar, mobile footer menu | Reader typography only (`--reader-size`, `--reader-leading`, `--reader-font`) |
 | OCR display | Never overlays OCR on the original page | Renders OCR text for pages that need it |
 | Extra chrome | Shared top mode switch + Document tools, quiet zoom controls | Shared top mode switch + Document tools, reading typography |
 | Page mounting | Dominant viewport page + immediate previous/next pages, at most three canvases; neighbors skipped while OCR is busy | All pages in one scroll container |
@@ -70,7 +70,7 @@ disabled under the same condition.
   reading keeps working offline.
 - Geometry: `PdfViewer` resolves all page sizes first (`ready` gate) before mounting canvases,
   so restoring a saved location does not allocate canvases at the wrong scale.
-- Desktop default zoom is `natural`: a page-width-derived scale targeting 840 CSS px,
+- Desktop default zoom is `natural`: a page-width-derived scale targeting 932 CSS px,
   clamped to the viewport width with 64 px of horizontal gutters. Explicit desktop zoom
   mode and custom scale persist in reader preferences; stored legacy `fit-page` choices
   remain `fit-page`. Zoom buttons step from the displayed scale of the visible page,

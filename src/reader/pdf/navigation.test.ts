@@ -21,12 +21,12 @@ describe('PDF navigation', () => {
     expect(calculatePdfScale('fit-page', 1, 1000, 432, 600, 800)).toBe(.5);
     expect(calculatePdfScale('custom', 9, 1000, 1000, 600, 800)).toBe(3);
   });
-  it('uses an 840px natural desktop page with gutters and preserves explicit modes', () => {
+  it('uses a 932px natural desktop page with gutters and preserves explicit modes', () => {
     const width = (mode: Parameters<typeof calculatePdfScale>[0], containerWidth: number, containerHeight = 900) =>
       612 * calculatePdfScale(mode, 1.25, containerWidth, containerHeight, 612, 792);
-    expect(width('natural', 1728)).toBe(840);
-    expect(width('natural', 1366)).toBe(840);
-    expect(width('natural', 1024)).toBe(840);
+    expect(width('natural', 1728)).toBe(932);
+    expect(width('natural', 1366)).toBe(932);
+    expect(width('natural', 1024)).toBe(932);
     expect(width('natural', 800)).toBe(736);
     expect(width('fit-width', 1366)).toBeCloseTo(1334);
     expect(width('fit-page', 1366, 700)).toBeCloseTo(612 * 668 / 792);
