@@ -104,8 +104,8 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
     return () => { cancelled = true; };
   }, [pdf]);
   const lastPosition = useRef('');
-  const goTo = usePdfScroll(rootRef, '.pdf-page-slot', ready, location, navigationToken, (page, pageOffset, scrollY, visiblePage) => {
-    setVisible(visiblePage);
+  const goTo = usePdfScroll(rootRef, '.pdf-page-slot', ready, location, navigationToken, (page, pageOffset, scrollY, _visiblePage, dominantPage) => {
+    setVisible(dominantPage);
     const key = `${page}:${Math.round(pageOffset * 1000)}:${Math.round(scrollY)}`;
     if (lastPosition.current === key || !pdf) return;
     lastPosition.current = key;

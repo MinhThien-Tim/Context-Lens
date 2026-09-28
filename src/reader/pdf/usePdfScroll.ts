@@ -15,10 +15,22 @@ export function pageAtPosition(slots: HTMLElement[], root: HTMLElement, previous
   return index < 0 ? slots.length : index + 1;
 }
 
+export function dominantPageAtPosition(slots: HTMLElement[], root: HTMLElement): number {
+  const top = root.getBoundingClientRect().top + root.clientTop;
+  const bottom = top + root.clientHeight;
+  let page = 1, greatestOverlap = -1;
+  slots.forEach((slot, index) => {
+    const rect = slot.getBoundingClientRect();
+    const overlap = Math.max(0, Math.min(rect.bottom, bottom) - Math.max(rect.top, top));
+    if (overlap > greatestOverlap) { page = index + 1; greatestOverlap = overlap; }
+  });
+  return page;
+}
+
 /** Passive tracking cannot navigate. Only a changed command token or initial mount can restore. */
 export function usePdfScroll(rootRef: RefObject<HTMLDivElement>, selector: string, ready: boolean,
   location: PdfDocumentLocation, navigationToken: number,
-  onVisible: (page: number, fraction: number, scrollY: number, visiblePage: number) => void, geometryKey?: unknown) {
+  onVisible: (page: number, fraction: number, scrollY: number, visiblePage: number, dominantPage: number) => void, geometryKey?: unknown) {
   const latest = useRef({ location, onVisible });
   latest.current = { location, onVisible };
   const currentPage = useRef(location.page);
@@ -33,7 +45,7 @@ export function usePdfScroll(rootRef: RefObject<HTMLDivElement>, selector: strin
     currentPage.current = page;
     root.scrollTop = root.scrollTop + slot.getBoundingClientRect().top - root.getBoundingClientRect().top - root.clientTop + slot.offsetHeight * Math.max(0, Math.min(1, fraction));
     commandedTop.current = root.scrollTop;
-    latest.current.onVisible(page, fraction, root.scrollTop, page);
+    latest.current.onVisible(page, fraction, root.scrollTop, page, page);
   };
   useEffect(() => {
     if (!ready) return;
@@ -56,8 +68,9 @@ export function usePdfScroll(rootRef: RefObject<HTMLDivElement>, selector: strin
           (viewport.left + root.clientLeft + root.clientWidth / 2 - reference.getBoundingClientRect().left) / reference.offsetWidth));
       }
       const visiblePage = pageAtPosition(slots, root, currentPage.current);
-      // Visibility hysteresis is for rendering. Persist the page crossing the
-      // viewport's top so restoring page + fraction cannot skip visible text.
+      const dominantPage = dominantPageAtPosition(slots, root);
+      // Keep hysteresis separate from the dominant page and persist the page
+      // crossing the viewport top so restoring cannot skip visible text.
       const top = root.getBoundingClientRect().top + root.clientTop;
       const anchor = slots.findIndex(slot => slot.getBoundingClientRect().bottom > top);
       const page = anchor < 0 ? slots.length : anchor + 1;
@@ -65,7 +78,7 @@ export function usePdfScroll(rootRef: RefObject<HTMLDivElement>, selector: strin
       if (!slot) return;
       currentPage.current = visiblePage;
       const fraction = Math.max(0, Math.min(1, (top - slot.getBoundingClientRect().top) / Math.max(1, slot.offsetHeight)));
-      latest.current.onVisible(page, fraction, root.scrollTop, visiblePage);
+      latest.current.onVisible(page, fraction, root.scrollTop, visiblePage, dominantPage);
     };
     const schedule = () => { if (!raf) raf = requestAnimationFrame(track); };
     root.addEventListener('scroll', schedule, { passive: true });

@@ -6,7 +6,7 @@ import { PdfTextIndex } from './PdfTextIndex';
 import { pdfSelectionFromDom } from './selectionAdapter';
 import { canvasBackingSize, MAX_CANVAS_PIXELS, NEIGHBOR_CANVAS_PIXELS } from './renderBudget';
 import { createLocationPersistence } from './locationPersistence';
-import { pageAtPosition, usePdfScroll } from './usePdfScroll';
+import { dominantPageAtPosition, pageAtPosition, usePdfScroll } from './usePdfScroll';
 import type { PdfDocumentLocation } from '../../documents/location';
 
 afterEach(() => { document.body.replaceChildren(); window.getSelection()?.removeAllRanges(); vi.restoreAllMocks(); vi.useRealTimers(); });
@@ -20,6 +20,18 @@ it('keeps the final PDF page active when the viewport cannot align it to the top
   const second = document.createElement('div');
   second.getBoundingClientRect = () => ({ top: 200, bottom: 800, height: 600 }) as DOMRect;
   expect(pageAtPosition([first, second], root, 2)).toBe(2);
+});
+
+it('prioritizes the page with greatest viewport overlap while hysteresis retains the previous page', () => {
+  const root = document.createElement('div');
+  Object.defineProperty(root, 'clientHeight', { value: 765 });
+  root.getBoundingClientRect = () => ({ top: 0, bottom: 765, height: 765 }) as DOMRect;
+  const first = document.createElement('div');
+  first.getBoundingClientRect = () => ({ top: -1290, bottom: 361, height: 1651 }) as DOMRect;
+  const second = document.createElement('div');
+  second.getBoundingClientRect = () => ({ top: 379, bottom: 2030, height: 1651 }) as DOMRect;
+  expect(pageAtPosition([first, second], root, 1)).toBe(1);
+  expect(dominantPageAtPosition([first, second], root)).toBe(2);
 });
 
 function select(parts: string[], text: string, start: [number, number], end: [number, number], reverse = false) {
@@ -68,7 +80,7 @@ describe('canonical PDF selection', () => {
 describe('resource budgets', () => {
   it('renders an ordinary desktop page at device resolution without changing mobile fit width', () => {
     expect(canvasBackingSize(900, 1165, 2)).toMatchObject({ ratio: 2, width: 1800, height: 2330 });
-    expect(canvasBackingSize(390, 505, 3)).toMatchObject({ ratio: 2, width: 780, height: 1010 });
+    expect(canvasBackingSize(390, 505, 3)).toMatchObject({ ratio: 3, width: 1170, height: 1515 });
     expect(canvasBackingSize(1800, 2330, 2).ratio).toBeGreaterThan(1);
     expect(canvasBackingSize(1836, 2376, 2)).toMatchObject({ ratio: 2, width: 3672, height: 4752 });
     expect(MAX_CANVAS_PIXELS + 2 * NEIGHBOR_CANVAS_PIXELS).toBe(24_000_000);

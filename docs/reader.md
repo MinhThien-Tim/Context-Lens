@@ -45,7 +45,7 @@ It renders plain `content` or sanitized `safeHtml` (markdown/article), and reuse
 | Zoom | `calculatePdfScale` fit-width / fit-page / custom; desktop control bar, mobile overflow menu | Reader typography only (`--reader-size`, `--reader-leading`, `--reader-font`) |
 | OCR display | Never overlays OCR on the original page | Renders OCR text for pages that need it |
 | Extra chrome | Shared top mode switch + Document tools, quiet zoom controls | Shared top mode switch + Document tools, reading typography |
-| Page mounting | Visible page + immediate previous/next pages, at most three canvases; neighbors skipped while OCR is busy | All pages in one scroll container |
+| Page mounting | Dominant viewport page + immediate previous/next pages, at most three canvases; neighbors skipped while OCR is busy | All pages in one scroll container |
 
 Both PDF surfaces share the shell bottom `PageNavigation`; the header Original/Reading segment
 contains only the two view choices, with OCR/source controls in a separate Document tools popover.
@@ -75,8 +75,9 @@ disabled under the same condition.
   when the viewer remounts. Pinch gestures and margin cropping are not implemented.
 - Scrolling: `usePdfScroll` reports the page crossing the viewport top + its page fraction;
   `PdfViewer` converts that into a document `absoluteOffset` using `pageOffsets`, then persists
-  a debounced location. Visibility hysteresis is reported separately for bounded canvas mounting;
-  it does not replace the saved top-of-viewport position. Narrow pages stay centered; zoomed
+  a debounced location. Visibility hysteresis is reported separately. Original PDF canvas mounting
+  and its high-resolution budget follow the page with the greatest viewport overlap, independently
+  of location persistence and hysteresis. Narrow pages stay centered; zoomed
   pages can scroll to both horizontal edges, and zoom preserves the viewport's relative
   horizontal point of interest.
 - Password failure, geometry failure, and "still opening" each render a distinct `pdf-state`
@@ -200,7 +201,7 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
    container may move.
 8. **Canvas rendering stays bounded.** `renderBudget.ts` caps the visible canvas at 20,000,000
    backing pixels and each adjacent page at 2,000,000, with an 8192-pixel edge cap and device pixel
-   ratio capped at 2. At most three canvas pages stay mounted, and `pageLease` cancellation must
+   ratio capped at 3. At most three canvas pages stay mounted, and `pageLease` cancellation must
    stop a stale render from cleaning up a page a newer render owns.
 9. **The text layer is per-render and generational.** Each `PdfPage` render owns its own PDF.js
    text-layer DOM generation; a late completion must not publish a new `PdfTextIndex` or annotations
