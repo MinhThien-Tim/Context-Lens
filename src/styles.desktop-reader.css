@@ -162,3 +162,29 @@
   .reader-shell.reader-shell .quick[data-quick-mode="simple"] .explain-toggle { color: var(--accent); font-weight: 600; }
   .reader-shell.reader-shell .quick[data-quick-mode="simple"] .sense-row { margin-bottom: 6px; }
 }
+
+/* Standard Quick and Full share the same lexical header and control rhythm. */
+@media (min-width: 768px) {
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 12px 14px;
+  }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-word { grid-column: 1; grid-row: 1; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-header-actions { grid-column: 2; grid-row: 1; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-pronunciation { grid-column: 1 / -1; grid-row: 2; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-lookup-tools {
+    grid-column: 1 / -1; grid-row: 3; display: flex; flex: 1 1 auto; flex-wrap: wrap;
+    align-items: center; justify-content: flex-start; gap: 6px 10px; min-width: 0; margin: 0;
+    padding: 4px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .quick-mode-toggle { order: 2; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .explain-more-actions { order: 3; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .explain-toggle { order: 4; margin-left: auto; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-word-meta { grid-column: 1 / -1; grid-row: 4; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-controls { grid-column: 1 / -1; grid-row: 5; justify-content: flex-start; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-header-actions .inspector-note,
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-header-actions .save-inline { min-height: 34px; padding-inline: 8px; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-header-actions .explain-close { min-height: 34px; width: 34px; min-width: 34px; }
+}
