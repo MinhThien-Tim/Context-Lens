@@ -78,24 +78,27 @@ production-only offline spec keeps its one-off command in the table above.
 ## Targeted verification strategy
 
 Documentation-only tasks use document/link/diff checks; application tests are unnecessary.
-Prefer targeted unit, relevant integration, then relevant E2E; full suite only when justified by scope
-or evidence below.
+Use the mapped subsystem command as authoritative final verification. Full regression is escalation
+only when justified by scope or evidence below; browser E2E remains a separate narrow check when
+warranted.
 
-1. Run the tests closest to the change first: one file, one `describe` block, or one `-t` filter.
+1. While iterating, a file, `describe` block, or `-t` filter may be a fast pre-check; once the change lands, run the subsystem `verify:*` command per [§8](agent-execution-rules.md#8-verification-execution-and-reporting) rather than steps 1–3 as separate turns.
 2. Add or update a colocated test next to the module you changed, following the existing
-   `describe` / `it` style and the jsdom + `fake-indexeddb` environment.
-3. Add `npm run typecheck` when types, public signatures, or Dexie records changed.
-4. Only escalate to `npm test` when the change crosses subsystem boundaries or touches shared
-   contracts (cache keys, location shapes, backup schema, provider priority).
-5. Run `npm run build` when bundle boundaries, dynamic imports, or service-worker precache lists
-   changed.
-6. Browser automation is a last resort; see the restrictions below.
+   `describe` / `it` style and the jsdom + `fake-indexeddb` environment; the subsystem command is the
+   authoritative run after implementation.
+3. Typecheck is already included in each `verify:*` command.
+4. Escalate to `npm run verify:full` only when the change crosses subsystem boundaries, touches shared
+   contracts (cache keys, location shapes, backup schema, provider priority), or otherwise meets §4
+   of `agent-execution-rules.md`.
+5. Build is included in `verify:full` for justified bundle, dynamic import, or precache changes.
+6. Browser automation is a separate narrow check only when warranted; see the restrictions below.
 
 ## Execution and retry policy
 
 Follow the canonical [Execution / Test Retry Policy](agent-execution-rules.md#7-execution--test-retry-policy)
 for classification, safe launcher fallback, official sandbox approval, security boundaries, retry
-budgets and unknown completion.
+budgets and unknown completion; follow [§8](agent-execution-rules.md#8-verification-execution-and-reporting)
+for command batching and reporting.
 Do not escalate test scope because a targeted check is blocked.
 
 ## Verification status semantics

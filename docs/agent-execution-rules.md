@@ -78,12 +78,13 @@ decides how many of them are justified.
 
 | Risk | Typical change | Justified verification |
 | --- | --- | --- |
-| **Low** | Copy, token rename, style value, isolated pure function | The one colocated test if one exists, or `npx vitest run <path>`. Nothing else. |
-| **Medium** | Pipeline stage, normalization, provider adapter, cache key, component logic, Dexie record shape | Targeted Vitest file(s) plus `npm run typecheck`. Add a colocated test next to the change. |
-| **High / shared contract** | Dexie schema version, `TRANSLATION_VERSION` / `CONTEXT_VERSION` / `OCR_CONFIG_VERSION`, cache keys, location shapes, backup schema, provider priority, cross-subsystem state | Targeted tests, then `npm test` as the escalation gate. `npm run build` when bundle or service-worker precache boundaries moved. |
+| **Low** | Copy, token rename, style value, isolated pure function | Documentation/link/diff checks for docs-only changes. For code, an optional colocated pre-check; use the subsystem command as authoritative verification when a bucket applies. |
+| **Medium** | Pipeline stage, normalization, provider adapter, cache key, component logic, Dexie record shape | The subsystem `verify:*` command. Add a colocated test next to the change. |
+| **High / shared contract** | Dexie schema version, `TRANSLATION_VERSION` / `CONTEXT_VERSION` / `OCR_CONFIG_VERSION`, cache keys, location shapes, backup schema, provider priority, cross-subsystem state | The subsystem `verify:*` command, escalating to `verify:full` as the gate. |
 | **Browser-observable** | Selection/highlight, PDF canvas or OCR queue, layout/responsive, focus/scroll/panel, PWA install or offline | High-risk checks plus one narrow Playwright spec (§6). |
 
 Documentation-only tasks require document/link/diff checks, not application tests.
+Verification execution and reporting shape follow [§8](agent-execution-rules.md#8-verification-execution-and-reporting).
 
 Two hard exclusions:
 
@@ -94,13 +95,12 @@ Two hard exclusions:
 
 ## 5. Test escalation order
 
-1. **Targeted unit test** — the colocated file next to the change: `npx vitest run src/path/file.test.ts`.
-2. **Narrower still** — a single case: `npx vitest run src/path/file.test.ts -t "name"`.
-3. **Typecheck** — `npm run typecheck` whenever types, public signatures, or Dexie records changed.
-4. **Integration** — `npx vitest run src/integration/languageFlow.test.ts` for cross-pipeline behavior.
-5. **Full suite** — `npm test`, only per §4.
-6. **Build** — `npm run build` (includes the bundle budget) for bundle or precache changes;
-   `npm run check:bundle` when only budgets moved.
+1. **Targeted unit test** — optional iteration pre-check: the colocated file, for example `npx vitest run src/path/file.test.ts`. After implementation, the subsystem command is authoritative when a bucket applies.
+2. **Narrower still** — optional iteration pre-check only: a single case, for example `npx vitest run src/path/file.test.ts -t "name"`.
+3. **Typecheck** — already batched inside the subsystem `verify:*` command whenever a bucket applies; otherwise run `npm run typecheck` only when types, public signatures, or Dexie records changed.
+4. **Integration** — optional pre-check for cross-pipeline behavior; if outside all nine buckets, `npx vitest run src/integration/languageFlow.test.ts` is a fallback.
+5. **Full suite** — already batched in `verify:full`; use only per §4.
+6. **Build** — already batched in `verify:full` for bundle or precache changes; for files outside all nine buckets use `npm run build`. Use `npm run check:bundle` when only budgets moved.
 7. **Browser** — `npx playwright test e2e/<spec>.spec.ts`, only per §6.
 
 Tests must not reach the network. Stub `fetch` (see `src/lookup/webDictionary.test.ts`) and rely on
@@ -274,6 +274,35 @@ large-log reading. This applies especially when context is already large. If ver
 established within these limits, stop and report; do not consume a large context for a minor result.
 A blocked targeted E2E check does not justify full E2E, full unit tests, another server, process
 inspection or log-inspection loops. Record the gap and stop that path.
+
+## 8. Verification execution and reporting
+
+- **Batching:** Verification is command-batched: run one subsystem command per check. Each `verify:*`
+  command chains `typecheck` and its Vitest scope; `verify:full` also adds `build`. When a subsystem
+  command exists, do not split it into separate model-controlled `typecheck` → single-test → `build`
+  turns.
+- **Command selection:** Pick the bucket from the per-subsystem table in [testing.md](testing.md#per-subsystem-verify-commands):
+  `verify:reader`, `verify:pdf`, `verify:import`, `verify:lookup`, `verify:language`,
+  `verify:translation`, `verify:storage`, `verify:ui`, `verify:offline`, or `verify:full`.
+  That table remains the single source of the command list. Use `verify:full` only for the §4
+  “High / shared contract” row.
+- **Authoritative check:** A single colocated `vitest run <file>` is an optional fast pre-check while
+  iterating. The authoritative result is one subsystem command; never report a lone file run as
+  subsystem verification.
+- **No polling:** Never poll a running command across repeated model turns; follow §7 “Completion
+  unknown and long-running commands.”
+- **Reporting contract:**
+  - `PASS`: command · test count from the runner's own summary line · typecheck/build status. Do not
+    include passing test logs or run a separate listing command for the count.
+  - `FAIL`: failing command · failing test/file · relevant error or assertion · at most ~100 lines of
+    surrounding output. Strip successful logs. Identify whether each failure is pre-existing or
+    newly introduced when evidence establishes that distinction.
+  - `BLOCKED` / `UNRESOLVED`: use the §7 field block unchanged.
+- **No rerun of green:** A passing verification is not rerun unless relevant source changed; see
+  §11 “re-running already-passing checks.”
+- **Retry budget:** §7 remains the sole owner of retry semantics. Use at most one normal execution and
+  one known launcher fallback (`npm.ps1` → `npm.cmd`); stop on environment, permission, or
+  completion-observation failure. This section creates no parallel retry budget.
 
 ## 10. Code changes based on evidence
 

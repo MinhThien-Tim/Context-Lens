@@ -43,7 +43,8 @@ exhaustion, no hidden cost.
 ## 5. Verification proportional to blast radius
 
 Start with the smallest relevant check — usually one `npm run verify:<subsystem>` (the per-subsystem
-command table lives in [`docs/testing.md`](docs/testing.md)) — and escalate only as far
+command table lives in [`docs/testing.md`](docs/testing.md)) — and follow [§8](docs/agent-execution-rules.md#8-verification-execution-and-reporting)
+for execution and reporting shape; escalate only as far
 as the change actually reaches. Test layout and every command live in [`docs/testing.md`](docs/testing.md).
 Browser E2E is conditional, never mandatory. Never watch mode.
 
@@ -59,4 +60,32 @@ Never weaken security, request Windows administrator elevation, or poll repeated
 
 Label every check exactly `PASS`, `FAIL`, `BLOCKED`, `UNRESOLVED`, or `NOT RUN`. Never report a
 non-pass as a pass, and never change code because a check was `BLOCKED`, `UNRESOLVED`, or `NOT RUN`.
+
+## Agent roles
+
+For every task, use one fixed role: Planner → [`docs/agent-roles/planner.md`](docs/agent-roles/planner.md),
+Implementer → [`docs/agent-roles/implementer.md`](docs/agent-roles/implementer.md), or Verifier →
+[`docs/agent-roles/verifier.md`](docs/agent-roles/verifier.md). Do not redefine roles in task prompts.
+
+- `/plan` or `ROLE: Planner` → Planner.
+- `/implement` or `ROLE: Implementer` → Implementer.
+- `/verify` or `ROLE: Verifier` → Verifier.
+- Without an explicit route: investigate / assess / diagnose / plan → Planner; implement / fix /
+  modify / change → Implementer; verify / test / review completed work → Verifier.
+- An explicit role or slash command wins over inferred intent. These are agent conventions, not app
+  commands.
+
+Planner → compact task spec → Implementer → implementation + compact handoff → Verifier → PASS or
+compact failure packet. Roles exchange artifacts, relevant diffs/files, and required architecture
+docs; they do not depend on a shared long-running transcript. Do not include chain-of-thought or
+verbose reasoning in handoffs.
+
+Task prompts should normally contain only `TASK`, `SCOPE`, `CONSTRAINTS`, `ACCEPTANCE CRITERIA`, and
+optional relevant files, commits, or task-spec path. Start from [`docs/task-template.md`](docs/task-template.md).
+Example: `/plan` with a task and acceptance criteria; then `/implement` with the approved spec path;
+then `/verify` with the spec path and implementation handoff.
+
+See [`docs/verification-map.md`](docs/verification-map.md) for existing subsystem commands. Execution,
+retry, and reporting rules remain canonical in [`docs/agent-execution-rules.md`](docs/agent-execution-rules.md)
+and [`docs/testing.md`](docs/testing.md).
 
