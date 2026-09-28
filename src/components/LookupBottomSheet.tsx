@@ -33,6 +33,7 @@ interface Props {
   result: LookupResponse | null;
   loading: boolean;
   quickPending?: boolean;
+  offline?: boolean;
   error: string | null;
   mode: LanguageMode;
   onModeChange: (mode: LanguageMode) => void;
@@ -202,7 +203,8 @@ export function LookupBottomSheet(props: Props) {
       <div class="inspector-body" ref={bodyRef}>
       {!result ? <div class="lookup-pending"><strong>{props.selectionText}</strong><span>Finding meaning…</span></div> : <>
         <QuickExplain key={props.selectionKey || result.selection.surface} result={result} mode={props.mode} expanded={deepOpen} presentation={props.quickMode} pending={props.quickPending} />
-        {props.quickPending && Boolean(result.quick.definition_en || result.quick.meaning_vi.length || result.dictionary?.senses.some(sense => sense.definitionEn || sense.meaningsVi.length)) && <p class="lookup-status lookup-enrichment-status" role="status">Finding more meanings…</p>}
+        {props.offline && <p class="lookup-status lookup-enrichment-status" role="status">Offline · Local results</p>}
+        {!props.offline && props.quickPending && Boolean(result.quick.definition_en || result.quick.meaning_vi.length || result.dictionary?.senses.some(sense => sense.definitionEn || sense.meaningsVi.length)) && <p class="lookup-status lookup-enrichment-status" role="status">Finding more meanings…</p>}
         {props.loading && <p class="lookup-status" role="status">Finding context...</p>}
         {props.error && <div class="lookup-error" role="status">{props.error}</div>}
         {deepOpen && <>

@@ -100,6 +100,13 @@ describe('lookup service offline cache', () => {
       bingProvider: false, managedTranslation: false });
     expect(fetch.mock.calls.filter(([url]) => String(url).startsWith('http'))).toHaveLength(0);
   });
+  it('skips remote enrichment when the browser reports offline', async () => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+    const result = await new LookupService().quick({ ...request, selection: 'xyzzy' }, defaultEngineSettings);
+    expect(result).toBeTruthy();
+    expect(fetch.mock.calls.filter(([url]) => String(url).startsWith('http'))).toHaveLength(0);
+  });
   it('publishes local English before a failing fallback and preserves the useful result', async () => {
     const service = new LookupService();
     const local = vi.fn();

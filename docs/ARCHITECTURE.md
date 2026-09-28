@@ -75,6 +75,7 @@ Persistence  db.lookups / db.translations / db.contexts / db.sentenceAnalyses
 | Context / AI | Explicit ContextRouter, heuristics, prompts, Zod schema, providers | `src/core/context/*`, `src/ai/*` |
 | Caching | Bounded memory + Dexie, versioned keys, shared in-flight requests | `src/core/cache.ts`, `src/core/requests.ts` |
 | UI / state | Preact components; state owned by `App.tsx` and per-component hooks | `src/components/*`, `src/styles.css` |
+| Offline mode | App-shell precache, stored-document readiness, offline status surfaces, local-only lookup/providers | `src/documents/offline.ts`, `src/components/OfflineBadge.tsx`, `src/lookup/service.ts`, `src/app/App.tsx` |
 | Persistence / storage | Dexie schema + migrations, backup/restore, quota maintenance | `src/db/database.ts`, `src/storage/*` |
 | Vocabulary / English101 | Save words, collections, CSV + versioned English101 export | `src/vocabulary/*` |
 | Testing | Vitest units/integration, Playwright browser specs | `src/**/*.test.ts`, `e2e/*.spec.ts` |
@@ -147,6 +148,7 @@ These are not default reading. Each is opened only for a task that genuinely nee
 | PDF/OCR/reader | [reader.md](reader.md) |
 | Dictionary/translation/context | [translation-pipeline.md](translation-pipeline.md) |
 | UI/theme/responsive | [ui-system.md](ui-system.md) |
+| Offline mode / PWA shell | [ui-system.md](ui-system.md) + [data-storage.md](data-storage.md) + [translation-pipeline.md](translation-pipeline.md) |
 | Dexie/storage/backup | [data-storage.md](data-storage.md) |
 | Test commands | [testing.md](testing.md) |
 | Complex execution policy | [agent-execution-rules.md](agent-execution-rules.md) |

@@ -27,7 +27,8 @@ Notable colocated suites: `src/reader/TextReader.test.tsx`,
 `src/core/translation/router.test.ts`, `src/core/translation/public-quality.test.ts`,
 `src/lookup/normalization/normalization.test.ts`, `src/db/database.test.ts`,
 `src/storage/backup.test.ts`, `src/vocabulary/export.test.ts`, `src/settings/engines.test.ts`,
-`src/integration/languageFlow.test.ts`.
+`src/integration/languageFlow.test.ts`, `src/documents/offline.test.ts`,
+`src/components/OfflineBadge.test.tsx`, `src/components/LookupBottomSheet.offline.test.tsx`.
 
 ## Commands
 
@@ -44,6 +45,7 @@ Keep the same arguments and test scope; see the [launcher policy](agent-executio
 | Targeted tests | `npx vitest run <path-or-glob>` |
 | Single test by name | `npx vitest run <path> -t "<name>"` |
 | Browser tests | `npm run test:browser` |
+| Offline E2E (production build only) | `$env:QA_PRODUCTION='true'; npx playwright test e2e/offline.spec.ts` |
 | Vocabulary handoff (two repos) | `npx playwright test --config playwright.vocabulary.config.ts` |
 | Gateway typecheck / build / dry-run | `npm run gateway:typecheck`, `npm run gateway:build`, `npm run gateway:check` |
 | Dictionary audits | `npm run audit:dictionary`, `npm run audit:en-vi-gaps` |
@@ -100,7 +102,12 @@ product `FAIL`. Report remaining unverified scope.
 ## Environment notes / known restrictions
 
 - `npm run dev` does not install a service worker, so offline reload behavior is only verifiable
-  against the production build plus `npm run preview`.
+  against the production build plus `npm run preview`. `e2e/offline.spec.ts` therefore skips at
+  collection time unless `QA_PRODUCTION` is set, and needs a completed `npm run build` first:
+  `$env:QA_PRODUCTION='true'; npx playwright test e2e/offline.spec.ts`. Its default `laptop` and
+  `mobile-chromium` projects are the one-desktop/one-mobile pair required by the offline task; the
+  spec drives real offline transitions with `context.setOffline(true)`, so it must not be retried as
+  a flake when it fails.
 - The service worker is active in production builds only; browser AI requests require HTTPS outside
   localhost.
 - The production app precaches a large dictionary/WordNet payload, so the first online visit must

@@ -49,6 +49,11 @@ Related: [ARCHITECTURE.md](ARCHITECTURE.md), [reader.md](reader.md), [data-stora
    the local result is returned. A complete base plus cached selection gloss also stops Auto
    before network (selected-sense translation retains its existing gate). `onLocal` is always called first so the surface can enrich
    progressively rather than block on network.
+   **Device offline state is authoritative.** When `navigator.onLine === false`, `quick` marks the
+   local stage finished and returns the local base immediately, so no remote enrichment request is
+   started. A second identical guard sits after `cachedReady`, before the translation router, so a
+   resolved cache or a late offline transition still cannot reach a provider. The check reads
+   `navigator.onLine` only; no provider, cache entry or settings key is added for it.
 6. **Google sentence pass (optional).** When a Google/`google-web` provider is available, the
    sentence is translated and `analyzeSelection` is re-run so senses can be re-ranked. Success with
    a context-matched sense returns immediately. Otherwise the reranked snapshot is published
@@ -289,6 +294,8 @@ the fastest way to see which branch actually ran. API keys and reader content ar
 4. Cache keys must include normalized text, language pair, mode, and version — a cache hit must
    never return a different context than the one requested.
 5. Every failure path keeps the local/quick result visible; the reading flow never breaks.
+   Browser offline state (`navigator.onLine === false`) is one of those paths: it short-circuits
+   remote enrichment and returns the local result rather than surfacing an error or a timeout.
 6. AI context runs only on explicit Context/Grammar actions and only with user-configured keys.
 7. `COST & QUOTA GUARDRAILS.md` §5 and §6 are binding on any new provider or route.
 

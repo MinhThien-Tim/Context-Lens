@@ -111,6 +111,8 @@ export class LookupService {
       // holding useful local content behind a network fallback.
       publish();
       if (settings.quickEngine === 'offline' || (complete && settings.quickEngine === 'auto' && !selectedMissingSense(base))) { localFinished = true; recordDiagnostic('localStop', { text: request.selection_type === 'sentence' ? undefined : request.selection, provider: 'dictionary', mode: request.selection_type }); return base; }
+      // Device offline state is authoritative: do not start remote enrichment requests.
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) { localFinished = true; return base; }
       await cachedReady;
       checkAbort(signal);
       if (settings.sourceLang === 'en' && settings.targetLang === 'vi' && selectedMissingSense(base) && optionalTranslationEnabled(settings)) return this.fillSelectedSense(base, settings, signal);
@@ -148,6 +150,7 @@ export class LookupService {
     }
     await cachedReady;
     checkAbort(signal);
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return base;
     if (!optionalTranslationEnabled(settings)) return base;
     if (request.selection_type !== 'sentence' && settings.quickEngine === 'auto' && base.quick.meaning_vi.length) return base;
     let translated: TranslationResult;

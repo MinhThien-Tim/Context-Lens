@@ -151,6 +151,34 @@ opening Full have no reveal delay; newly arriving text can animate independently
 sense keys, disclosure state and scrolling body survive enrichment. Abort controllers remain
 owned by App and guard both progressive updates and final completion.
 
+### Offline surface
+
+Offline state is `App.tsx` state (`online`, fed by the browser `online`/`offline` events), never a
+component-local store or a new preference. Three quiet surfaces report it, and none of them
+downloads anything:
+
+- Homepage: the existing `.status-banner` offline notice above the home shell.
+- Reader: a `.reader-offline` status pill in `ReaderShell`, rendered `Offline · Local only`.
+- Lookup: `LookupBottomSheet`'s `offline` prop, passed as `offline={!online}`, replacing the
+  enrichment pending state with `Offline · Local results`. When offline, `quickPending` is not
+  rendered at all.
+
+`OfflineBadge` (`src/components/OfflineBadge.tsx`) is the per-document readiness marker, rendered
+inside library cards, Advanced `DocumentIdentity` and Continue-reading cards. It renders
+`✓ Available offline` only when `isAvailableOffline` (`src/documents/offline.ts`) is true, and
+nothing otherwise. The predicate is pure and storage-backed: a PDF needs its stored `data`, every
+other kind needs stored `content` or `data`. It never triggers a fetch, an import or a download, and
+the current document model gains no new field.
+
+Network-only actions fail fast with a clear message instead of waiting for a timeout: the share-target
+and Import-URL paths in `App.tsx` reject immediately while offline with
+`OFFLINE_ARTICLE_IMPORT_MESSAGE`. Import, translation, AI and context providers remain unchanged
+when online, and local reading, lookup, markup, notes and vocabulary never depend on the network.
+
+The guide documents this flow in both languages. `ContextLensOnboarding` renders a `.guide-offline`
+section with `offlineWorks` / `offlineNeeds` and the `offlineTitle` heading ("Use Context Lens
+offline" / "Dùng Context Lens khi ngoại tuyến"), following the existing `guide-*` section pattern.
+
 ## UI state ownership
 
 There is no global store. Ownership rules:
@@ -201,6 +229,7 @@ There is no global store. Ownership rules:
 | Storage dashboard / backup UI | `src/storage/DataManagement.tsx` + `src/storage/storageService.ts` |
 | Engine and API-key UI | `src/settings/ApiSettings.tsx`, `EngineSettingsForm.tsx` |
 | Onboarding and guide language | `src/onboarding/ContextLensOnboarding.tsx`, `src/onboarding/store.ts` |
+| Offline status and readiness UI | `src/components/OfflineBadge.tsx`, `src/documents/offline.ts`, `src/app/App.tsx` (`online`) |
 
 Both densities expose Contents, Markup and PDF OCR next in the primary actions group; Markup opens the existing tools and Note.
 Titles omit known file extensions and subtitles after a colon, with visual ellipsis and a full-title tooltip.
@@ -233,7 +262,8 @@ Individual CSS declarations are intentionally not documented here; this file rec
 `src/components/useDialog.ts`, `src/notes/NotesPanel.tsx`,
 `src/vocabulary/VocabularyLibrary.tsx`, `src/storage/DataManagement.tsx`,
 `src/settings/ApiSettings.tsx`, `src/settings/EngineSettingsForm.tsx`,
-`src/onboarding/ContextLensOnboarding.tsx`, `src/styles.css`, `index.html`.
+`src/onboarding/ContextLensOnboarding.tsx`, `src/styles.css`, `index.html`,
+`src/components/OfflineBadge.tsx`, `src/documents/offline.ts`.
 
 ### Desktop Quick placement
 `AppPreferences.lookupPopupPlacement` lives in the existing `reader-preferences` settings object.

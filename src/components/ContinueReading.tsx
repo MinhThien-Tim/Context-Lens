@@ -1,5 +1,6 @@
 import type { DocumentRecord } from '../db/database';
 import { DocumentIdentity } from './DocumentIdentity';
+import { OfflineBadge } from './OfflineBadge';
 
 export function ContinueReading({ documents, advanced, onOpen, onDismiss, positionLabel, kindLabel }: {
   documents: DocumentRecord[];
@@ -17,6 +18,7 @@ export function ContinueReading({ documents, advanced, onOpen, onDismiss, positi
           <button class="continue-card" onClick={() => onOpen(doc)}>
             {advanced ? <DocumentIdentity compact document={doc} detail={positionLabel(doc)} kindLabel={kindLabel(doc)} /> : <>
               <span class={`document-badge kind-${doc.kind}`}>{kindLabel(doc)}</span><strong>{doc.title}</strong><small>{positionLabel(doc)}</small>
+              <OfflineBadge document={doc} />
               <span class="mini-progress" role="progressbar" aria-label="Reading progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(doc.location.progress * 100)}><i style={{ width: `${Math.round(doc.location.progress * 100)}%` }} /></span>
               <span class="document-resume">Continue reading →</span>
             </>}

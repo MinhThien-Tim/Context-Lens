@@ -52,6 +52,24 @@ library → queryDocumentLibrary({ query, kind, offset, limit }) — paged, sort
 Deleting a document does not remove caches or vocabulary; the storage dashboard handles those
 separately.
 
+### Offline readiness
+
+Offline availability is a property of already-stored data, not a second copy of it. A document is
+available offline when the reader can open it with no network, which is exactly when its local
+payload is present: PDF/EPUB/DOCX/original-file documents need their stored `data` Blob, while text,
+markdown and article documents need stored `content` (or `data`).
+
+`src/documents/offline.ts` owns that rule as the pure predicate `isAvailableOffline(document)`; it
+reads only `kind`, `data` and `content`. `src/components/OfflineBadge.tsx` consumes it for the
+`✓ Available offline` marker. Because the payload already lives in `db.documents`, no table, index,
+column, schema version or storage estimate is added: offline readiness introduces **no new
+persistence**, no download step, and no change to the import, delete or location paths above.
+
+Import is the only way this data appears. Network-only import (share target, article URL) is refused
+while the browser reports offline, so an offline session cannot create a document whose payload was
+never stored. Local reading, lookup, markup, notes and vocabulary run against `db` and the installed
+dictionary packs, which the service worker precaches (see `docs/testing.md`).
+
 Homepage Continue reading uses `src/app/continueReading.ts` to select up to 16 recent documents
 with progress and without `continueReadingDismissed`. Dismissal updates only this optional,
 unindexed boolean on `DocumentRecord`; no schema migration is needed. It persists across reloads
@@ -108,6 +126,12 @@ files; it includes documents, vocabulary, source metadata, collections (includin
 notes. Restore accepts v1–v4 and is surfaced by `DataManagement` (`src/storage/DataManagement.tsx`),
 which also reports usage/quota/persisted status and triggers cache cleanup.
 
+Backup payloads are unchanged by offline mode. Because export has always excluded original binary
+book files, a restored PDF/EPUB/DOCX document may legitimately come back without its `data` Blob, and
+therefore without the `✓ Available offline` marker; `isAvailableOffline` reports that state instead
+of pretending the document is readable offline. The backup format gains no offline field, and no
+version is added.
+
 ## Vocabulary and English101
 
 - `src/vocabulary/store.ts` — `saveVocabulary` (reuses the record id for identical lemma/sentence
@@ -130,12 +154,15 @@ which also reports usage/quota/persisted status and triggers cache cleanup.
 5. Document deletion removes documents, notes, and OCR rows in one transaction.
 6. Under storage pressure, caches are evicted before user data.
 7. English101 interaction stays behind the versioned export contract.
+8. Offline readiness is derived from stored `data`/`content`, never a duplicated copy, extra column,
+   or separate download step.
 
 ## Important files
 
 `src/db/database.ts`, `src/core/cache.ts`, `src/lookup/cache.ts`, `src/lookup/cacheRepository.ts`,
 `src/storage/backup.ts`, `src/storage/storageService.ts`, `src/storage/DataManagement.tsx`,
 `src/settings/store.ts`, `src/settings/engines.ts`, `src/onboarding/store.ts`,
-`src/documents/pdf/ocrStore.ts`, `src/lookup/webDictionary.ts`, `src/lookup/learnedLexicon.ts`,
+`src/documents/pdf/ocrStore.ts`, `src/documents/offline.ts`, `src/lookup/webDictionary.ts`,
+`src/lookup/learnedLexicon.ts`,
 `src/ai/usage.ts`, `src/vocabulary/store.ts`, `src/vocabulary/export.ts`,
 `src/vocabulary/contract.ts`, `src/notes/store.ts`.
