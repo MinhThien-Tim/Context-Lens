@@ -115,7 +115,7 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 ```
 
 - Text reader: caret hit-testing (`rangeFromPoint`) plus native drag / long-press selection.
-- Original Reader: `selectionAdapter.ts` converts a PDF.js text-layer range through `PdfTextIndex`.
+- Original Reader: `selectionAdapter.ts` converts a PDF.js text-layer range through `PdfTextIndex`. On mobile, the session-local **Click** control defaults on. A short, stationary single-finger tap on an actual text glyph maps the word through the same index and opens Quick directly; turning Click off leaves native selection available without tap lookup. Scroll, long press, multi-touch, links and empty page space do not trigger tap lookup. Quiet chrome does not move the Original PDF viewport during contact.
 - Reading Mode: `readingSelectionAdapter.ts` maps rendered blocks back to `documentRecord.content`;
   a 160 ms `selectionchange` debounce produces the selection, and the click that follows a
   selection is ignored once (`ignoreClick`). Define consumes that selection and clears its native

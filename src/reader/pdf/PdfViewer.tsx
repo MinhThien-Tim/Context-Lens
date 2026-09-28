@@ -14,6 +14,7 @@ const DEFAULT_SIZE = { width: 612, height: 792 };
 export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location, zoomMode, onZoomMode, activeMarkupTool, activeMarkupColor = 'yellow', onLocation, onLookup, onAddNote, navigationToken = 0, onHighlight, onErase, ocrBusy = false }: { interfaceMode?: 'simple' | 'advanced'; navigationToken?: number; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: import('../../db/database').ReaderHighlight['color']; onHighlight?: (highlight: import('../../db/database').ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; documentRecord: DocumentRecord; location: PdfDocumentLocation; zoomMode: PdfZoomMode; onZoomMode: (mode: PdfZoomMode) => void; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void; ocrBusy?: boolean }) {
   const desktop = useDesktop();
   const [mobileZoom, setMobileZoom] = useState<PdfZoomMode>('fit-width');
+  const [clickLookup, setClickLookup] = useState(true);
   const effectiveZoom = desktop ? zoomMode : mobileZoom;
   const changeZoom = (mode: PdfZoomMode) => { if (desktop) onZoomMode(mode); else setMobileZoom(mode); };
   const [moreOpen, setMoreOpen] = useState(false);
@@ -82,13 +83,14 @@ export function PdfViewer({ interfaceMode = 'advanced', documentRecord, location
   return <div class="pdf-viewer-wrap">
     <div class="pdf-toolbar" aria-label="PDF controls">
       {desktop && interfaceMode === 'advanced' ? <><button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button><button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button><select aria-label="PDF zoom" value={effectiveZoom} onChange={event => changeZoom(event.currentTarget.value as PdfZoomMode)}><option value="fit-width">Vừa chiều ngang</option><option value="fit-page">Vừa trang</option><option value="custom">Tùy chỉnh</option></select></> : <div class="pdf-more" ref={zoomMenu}><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>Zoom</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => stepZoom(-1)}>Zoom out</button><button onClick={() => stepZoom(1)}>Zoom in</button><button onClick={() => changeZoom('fit-width')}>Fit width</button><button onClick={() => changeZoom('fit-page')}>Fit page</button></div>}</div>}
+      {!desktop && <button class="pdf-click-toggle" aria-label="Click word lookup" aria-pressed={clickLookup} onClick={() => setClickLookup(value => !value)}>Click</button>}
     </div>
     <div ref={rootRef} class="pdf-scroll" tabIndex={0}>
       {Array.from({ length: pdf.numPages }, (_, index) => index + 1).map(pageNumber => {
         const size = sizes[pageNumber] ?? DEFAULT_SIZE;
         const scale = scaleFor(size);
         return <div key={pageNumber} class="pdf-page-slot" data-pdf-page={pageNumber} style={{ width: `${size.width * scale}px`, height: `${size.height * scale}px` }}>
-          {(pageNumber === visible || (!ocrBusy && Math.abs(pageNumber - visible) === 1)) && <PdfPage pdf={pdf} pageNumber={pageNumber} scale={scale} active documentText={documentRecord.content} pageOffset={pdfOffsetForPage(documentRecord.pageOffsets, pageNumber)} onSize={() => {}} onNavigate={page => goTo(page)} pageEnd={documentRecord.pageOffsets?.[pageNumber] ?? documentRecord.content.length} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={onHighlight} onErase={onErase} onLookup={onLookup} onAddNote={onAddNote} />}
+          {(pageNumber === visible || (!ocrBusy && Math.abs(pageNumber - visible) === 1)) && <PdfPage pdf={pdf} pageNumber={pageNumber} scale={scale} active clickLookup={!desktop && clickLookup} documentText={documentRecord.content} pageOffset={pdfOffsetForPage(documentRecord.pageOffsets, pageNumber)} onSize={() => {}} onNavigate={page => goTo(page)} pageEnd={documentRecord.pageOffsets?.[pageNumber] ?? documentRecord.content.length} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={onHighlight} onErase={onErase} onLookup={onLookup} onAddNote={onAddNote} />}
         </div>;
       })}
     </div>

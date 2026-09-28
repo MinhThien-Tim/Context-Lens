@@ -11,7 +11,7 @@ import type { MarkupTool } from '../MarkupPalette';
 
 export interface PdfPageSize { width: number; height: number }
 
-export function PdfPage({ pdf, pageNumber, scale, active, documentText, pageOffset, onSize, onNavigate, onLookup, onAddNote, pageEnd, highlights = [], activeMarkupTool, activeMarkupColor = 'yellow', onHighlight, onErase }: { pageEnd?: number; highlights?: ReaderHighlight[]; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: ReaderHighlight['color']; onHighlight?: (highlight: ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; pdf: PDFDocumentProxy; pageNumber: number; scale: number; active: boolean; documentText: string; pageOffset: number; onSize: (size: PdfPageSize) => void; onNavigate: (page: number) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void }) {
+export function PdfPage({ pdf, pageNumber, scale, active, clickLookup = false, documentText, pageOffset, onSize, onNavigate, onLookup, onAddNote, pageEnd, highlights = [], activeMarkupTool, activeMarkupColor = 'yellow', onHighlight, onErase }: { pageEnd?: number; highlights?: ReaderHighlight[]; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: ReaderHighlight['color']; onHighlight?: (highlight: ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; pdf: PDFDocumentProxy; pageNumber: number; scale: number; active: boolean; clickLookup?: boolean; documentText: string; pageOffset: number; onSize: (size: PdfPageSize) => void; onNavigate: (page: number) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void }) {
   const indexRef = useRef<PdfTextIndex | null>(null);
   const [indexVersion, setIndexVersion] = useState(0);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -143,6 +143,65 @@ export function PdfPage({ pdf, pageNumber, scale, active, documentText, pageOffs
   useEffect(() => { if (indexVersion) capture(false); }, [indexVersion]);
   useEffect(() => {
     const host = textRef.current;
+    if (!host || !clickLookup) return;
+    type Tap = { id: number; x: number; y: number; at: number; scrollTop: number; index: PdfTextIndex; offset: number };
+    let tap: Tap | null = null;
+    let blocked = false;
+    let frame = 0;
+    const scroll = host.closest('.pdf-scroll');
+    const linkAt = (x: number, y: number) => document.elementFromPoint(x, y)?.closest('.pdf-annotation-layer a');
+    const mappedWord = (x: number, y: number, index: PdfTextIndex) => {
+      if (linkAt(x, y)) return null;
+      const range = strictWordRangeAtPoint(index.root, x, y);
+      return range ? pdfSelectionFromRange(host, range, documentText, pageOffset, index) : null;
+    };
+    const down = (event: PointerEvent) => {
+      if (!host.contains(event.target as Node)) {
+        if (event.pointerType === 'touch' && !event.isPrimary) { tap = null; blocked = true; }
+        return;
+      }
+      if (event.pointerType !== 'touch' || !event.isPrimary || event.button !== 0 || blocked) {
+        if (event.pointerType === 'touch') { tap = null; blocked = true; }
+        return;
+      }
+      const index = indexRef.current;
+      const word = index && mappedWord(event.clientX, event.clientY, index);
+      tap = word && index ? { id: event.pointerId, x: event.clientX, y: event.clientY, at: performance.now(), scrollTop: scroll?.scrollTop ?? 0, index, offset: word.offset } : null;
+    };
+    const move = (event: PointerEvent) => {
+      if (tap?.id === event.pointerId && Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > 10) tap = null;
+    };
+    const end = (event: PointerEvent) => {
+      if (event.pointerType !== 'touch') return;
+      const candidate = tap;
+      tap = null;
+      if (!event.isPrimary) { blocked = false; return; }
+      if (blocked) { blocked = false; return; }
+      if (!candidate || candidate.id !== event.pointerId || event.type !== 'pointerup' ||
+        performance.now() - candidate.at > 450 || Math.hypot(event.clientX - candidate.x, event.clientY - candidate.y) > 10 ||
+        (scroll?.scrollTop ?? 0) !== candidate.scrollTop) return;
+      const x = event.clientX, y = event.clientY;
+      frame = requestAnimationFrame(() => {
+        if (indexRef.current !== candidate.index || !candidate.index.root.isConnected ||
+          window.getSelection()?.toString()) return;
+        const word = mappedWord(x, y, candidate.index);
+        if (word?.offset === candidate.offset && word.type === 'word') { setPending(null); onLookup(word); }
+      });
+    };
+    document.addEventListener('pointerdown', down, true);
+    document.addEventListener('pointermove', move, true);
+    document.addEventListener('pointerup', end, true);
+    document.addEventListener('pointercancel', end, true);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener('pointerdown', down, true);
+      document.removeEventListener('pointermove', move, true);
+      document.removeEventListener('pointerup', end, true);
+      document.removeEventListener('pointercancel', end, true);
+    };
+  }, [clickLookup, documentText, pageOffset, indexVersion, onLookup]);
+  useEffect(() => {
+    const host = textRef.current;
     if (!host) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let origin: { x: number; y: number } | undefined;
@@ -218,6 +277,28 @@ function wordRangeAtPoint(owner: Document, x: number, y: number): Range | null {
   const range = owner.createRange();
   range.setStart(caret.node, start); range.setEnd(caret.node, end);
   return range;
+}
+
+// Require the contact point to intersect an actual character, not a nearby caret
+// position returned for whitespace or the margin around a PDF.js span.
+function strictWordRangeAtPoint(root: HTMLElement, x: number, y: number): Range | null {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!(node.parentElement?.closest('span:not([role="img"])'))) continue;
+    const value = node.textContent ?? '';
+    for (let i = 0; i < value.length; i++) {
+      if (!/[\p{L}\p{M}\p{N}'’-]/u.test(value[i])) continue;
+      const range = document.createRange();
+      range.setStart(node, i); range.setEnd(node, i + 1);
+      if (!Array.from(range.getClientRects()).some(rect => x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom)) continue;
+      let start = i, end = i + 1;
+      while (start > 0 && /[\p{L}\p{M}\p{N}'’-]/u.test(value[start - 1])) start--;
+      while (end < value.length && /[\p{L}\p{M}\p{N}'’-]/u.test(value[end])) end++;
+      range.setStart(node, start); range.setEnd(node, end);
+      return range;
+    }
+  }
+  return null;
 }
 
 async function resolveDestination(pdf: PDFDocumentProxy, destination: unknown): Promise<number> {

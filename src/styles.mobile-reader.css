@@ -42,12 +42,17 @@
   .reader-shell.reader-shell[data-reader-surface="reading"] .reader-viewport { position: relative; top: var(--reader-header-height); }
   .reader-shell.reader-shell.chrome-quiet[data-reader-surface="original"] .reader-viewport,
   .reader-shell.reader-shell.chrome-quiet[data-reader-surface="reading"] .reader-viewport { top: 0; }
+  .reader-shell.reader-shell.chrome-quiet[data-reader-surface="original"] .reader-viewport { top: var(--reader-header-height); }
   .reader-shell.reader-shell .reader-viewport:has(.pdf-queue-status) { height: 100dvh; min-height: 0; }
   .reader-shell.reader-shell .reader-viewport:has(.pdf-queue-status) > .pdf-viewer-wrap,
   .reader-shell.reader-shell .reader-viewport:has(.pdf-queue-status) > .pdf-reading-view { height: auto; flex: 1; }
   .reader-shell.reader-shell .pdf-reading-scroll { padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); box-sizing: border-box; }
   .reader-shell.reader-shell .pdf-scroll { padding-top: 48px; padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); }
-  .reader-shell.reader-shell .pdf-toolbar { position: absolute; top: 0; left: 0; right: 0; height: 44px; min-height: 44px; padding-block: 0; }
+  .reader-shell.reader-shell .pdf-toolbar { position: absolute; top: 0; left: 0; right: 0; height: 44px; min-height: 44px; padding-block: 0; flex-wrap: nowrap; justify-content: space-between; overflow: visible; }
+  .reader-shell.reader-shell .pdf-toolbar > .pdf-more { flex: 0 0 auto; }
+  .reader-shell.reader-shell .pdf-toolbar .pdf-click-toggle { flex: 0 0 auto; min-width: 44px; min-height: 44px; }
+  .reader-shell.reader-shell .pdf-click-toggle[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .reader-shell.reader-shell .pdf-click-toggle[aria-pressed="false"] { opacity: .7; }
   .reader-shell.reader-shell.chrome-quiet .pdf-toolbar { opacity: 0; pointer-events: none; }
   .reader-shell.reader-shell .reader-text { width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding-top: calc(var(--reader-header-height) + 12px); }
   .reader-shell.reader-shell .pdf-reading-page { box-sizing: border-box; width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding: 12px max(var(--reader-page-padding, 18px), env(safe-area-inset-right)) 32px max(var(--reader-page-padding, 18px), env(safe-area-inset-left)); }
@@ -55,9 +60,9 @@
   .reader-shell.reader-shell .reader-progress { padding-top: 0; padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right)); gap: 4px; }
   .reader-shell.reader-shell .reader-reveal { bottom: max(8px, env(safe-area-inset-bottom)); box-shadow: none; }
 
-  .reader-shell.reader-shell .lookup-sheet { left: env(safe-area-inset-left); right: env(safe-area-inset-right); width: auto; max-width: 100%; min-width: 0; padding: 0; box-sizing: border-box; overflow: hidden; }
-  .reader-shell.reader-shell .lookup-sheet.quick { height: auto; min-height: 0; max-height: 72dvh; }
-  .reader-shell.reader-shell .lookup-sheet.expanded { height: auto; min-height: 0; max-height: 88dvh; }
+  .reader-shell.reader-shell .lookup-sheet { position: fixed; left: calc(var(--lookup-vv-left, 0px) + env(safe-area-inset-left)); right: auto; bottom: var(--lookup-vv-bottom, 0px); width: calc(var(--lookup-vv-width, 100vw) - env(safe-area-inset-left) - env(safe-area-inset-right)); max-width: none; min-width: 0; padding: 0; box-sizing: border-box; overflow: hidden; transform: scale(var(--lookup-vv-scale, 1)); transform-origin: bottom left; }
+  .reader-shell.reader-shell .lookup-sheet.quick { height: auto; min-height: 0; max-height: calc(var(--lookup-vv-height, 100dvh) * .72); }
+  .reader-shell.reader-shell .lookup-sheet.expanded { height: auto; min-height: 0; max-height: calc(var(--lookup-vv-height, 100dvh) * .88); }
   .reader-shell.reader-shell .lookup-sheet *,
   .reader-shell.reader-shell .lookup-sheet *::before,
   .reader-shell.reader-shell .lookup-sheet *::after { box-sizing: border-box; min-width: 0; overflow-wrap: anywhere; }

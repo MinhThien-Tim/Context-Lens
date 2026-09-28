@@ -51,6 +51,24 @@ export function LookupBottomSheet(props: Props) {
   const deepOpen = props.displayMode ? props.displayMode === 'panel' : expanded;
   const simple = !deepOpen && props.quickMode === 'simple';
   const desktop = useDesktop();
+  const [visualViewport, setVisualViewport] = useState(() => ({ left: 0, bottom: 0, width: window.innerWidth, height: window.innerHeight, scale: 1 }));
+  useEffect(() => {
+    if (!props.open || desktop) return;
+    const viewport = window.visualViewport;
+    const measure = () => {
+      const next = viewport ? {
+        left: viewport.offsetLeft,
+        bottom: Math.max(0, window.innerHeight - viewport.offsetTop - viewport.height),
+        width: viewport.width, height: viewport.height, scale: viewport.scale,
+      } : { left: 0, bottom: 0, width: window.innerWidth, height: window.innerHeight, scale: 1 };
+      setVisualViewport(previous => Object.keys(next).every(key => next[key as keyof typeof next] === previous[key as keyof typeof next]) ? previous : next);
+    };
+    measure();
+    viewport?.addEventListener('resize', measure);
+    viewport?.addEventListener('scroll', measure);
+    window.addEventListener('resize', measure);
+    return () => { viewport?.removeEventListener('resize', measure); viewport?.removeEventListener('scroll', measure); window.removeEventListener('resize', measure); };
+  }, [props.open, desktop]);
   const bodyRef = useRef<HTMLDivElement>(null);
   const popup = !deepOpen;
   const changeDisplay = (next: boolean) => {
@@ -134,7 +152,13 @@ export function LookupBottomSheet(props: Props) {
     ? props.anchor.right + 12 : Math.max(12, (props.anchor?.left ?? 12) - geometry.popupWidth - 12);
   const autoPosition = { left: popupLeft, top: Math.max(72, Math.min((props.anchor?.top ?? 100) - 28, geometry.height - Math.min(520, geometry.height - 84) - 12)) };
   const position = dragPosition ?? (placement.mode === 'pinned' ? restorePopup(placement, bounds) : autoPosition);
-  const popupStyle = popup && desktop ? {
+  const popupStyle = !desktop ? {
+    '--lookup-vv-left': `${visualViewport.left}px`,
+    '--lookup-vv-bottom': `${visualViewport.bottom}px`,
+    '--lookup-vv-width': `${visualViewport.width * visualViewport.scale}px`,
+    '--lookup-vv-height': `${visualViewport.height * visualViewport.scale}px`,
+    '--lookup-vv-scale': `${1 / visualViewport.scale}`,
+  } : popup ? {
     '--desktop-quick-width': `${DESKTOP_QUICK_WIDTH}px`,
     left: `${position.left}px`, top: `${position.top}px`,
     maxHeight: `${Math.max(0, Math.min(520, geometry.height - bounds.minTop - 12))}px`,

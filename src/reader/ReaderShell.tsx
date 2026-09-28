@@ -42,7 +42,7 @@ export function ReaderShell({ children, contentsOpen, contextOpen, interfaceMode
     };
   }, [desktop, contentsOpen, contextOpen, controlsLocked, surface]);
   return <div data-interface-mode={interfaceMode} data-reader-surface={surface} class={`reader-shell ${contentsOpen ? 'has-contents' : ''} ${contextOpen ? 'has-context' : ''} ${quiet ? 'chrome-quiet' : ''}`}
-    onPointerDownCapture={() => setQuiet(false)} onFocusCapture={() => setQuiet(false)}>
+    onPointerDownCapture={event => { if (surface !== 'original' || !(event.target instanceof Element && event.target.closest('.pdf-page'))) setQuiet(false); }} onFocusCapture={() => setQuiet(false)}>
     {children}
     {quiet && <button class="reader-reveal" aria-label="Show reading controls" onClick={() => setQuiet(false)}>Aa &#183;&#183;&#183;</button>}
   </div>;

@@ -42,8 +42,8 @@ it('waits for the text-layer generation and captures selection without clearing 
   await act(() => { vi.advanceTimersByTime(125); });
   const buttons = () => Array.from(document.querySelectorAll<HTMLButtonElement>('.pdf-original-actions button'));
   expect(window.getSelection()?.toString()).toBe('decision');
-  expect(buttons().map(b => b.textContent)).toContain('Explain');
-  await act(() => buttons().find(b => b.textContent === 'Explain')!.click());
+  expect(buttons().map(b => b.textContent)).toContain('Define');
+  await act(() => buttons().find(b => b.textContent === 'Define')!.click());
   expect(onLookup).toHaveBeenCalledWith(expect.objectContaining({ text: 'decision', offset: 4, endOffset: 12, context: expect.objectContaining({ current: 'The decision.' }) }));
   await act(() => buttons().find(b => b.textContent === 'Note')!.click());
   expect(onAddNote).toHaveBeenCalledWith(expect.objectContaining({ offset: 4, endOffset: 12 }));

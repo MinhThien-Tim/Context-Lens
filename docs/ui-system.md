@@ -132,6 +132,8 @@ At ordinary laptop widths the Context column is approximately 360-400 px, bounde
 When both columns are open, the Document column becomes narrower to preserve reading space.
 Mobile Quick grows with content up to 72dvh; Full uses 88dvh with safe-area padding, an independent
 scrolling body and the existing `useDialog` focus trap. Expansion does not touch document location.
+Browser page zoom moves and scales the visual viewport. The mobile lookup sheet follows its visible
+offset and dimensions while compensating for page scale; PDF control zoom affects only page rendering.
 Selection actions use Define, Highlight and Note first; existing copy/color and translation
 capabilities remain available. `useDialog` (`src/components/useDialog.ts`) owns Escape and focus
 restoration; only mobile surfaces trap focus. Focus traps include disclosure summaries and exclude
