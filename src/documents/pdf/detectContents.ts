@@ -1,8 +1,9 @@
 import type { DocumentSection } from '../sections';
 import type { PdfSourceTextItem, PdfStructuredPage } from './types';
 
-interface SourcePage { number: number; height: number; width: number; items: PdfSourceTextItem[] }
+export interface SourcePage { number: number; height: number; width: number; items: PdfSourceTextItem[] }
 interface Row { text: string; title: string; label: string; y: number; x: number; right: number; page: number }
+export interface PrintedRow extends Row { level: 1 | 2; resolvedPage?: number }
 interface Link { rect: number[]; dest?: string | unknown[] | null }
 
 const CONTENTS_TITLE = /^(?:table of contents|contents|sum[aá]rio|[ií]ndice|sommaire|inhalt(?:sverzeichnis)?|indice|目录|目次|mục lục)\s*$/iu;
@@ -13,15 +14,20 @@ function normalize(value: string): string {
   return value.normalize('NFKD').replace(/\p{M}/gu, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLocaleLowerCase();
 }
 
-function lines(page: SourcePage): Array<{ y: number; parts: Array<{ text: string; x: number; right: number }> }> {
-  const result: ReturnType<typeof lines> = [];
-  for (const item of page.items.filter(item => item.str.trim()).sort((a, b) => (b.transform[5] ?? 0) - (a.transform[5] ?? 0) || (a.transform[4] ?? 0) - (b.transform[4] ?? 0))) {
-    const y = item.transform[5] ?? 0;
-    const x = item.transform[4] ?? 0;
-    const line = result.find(candidate => Math.abs(candidate.y - y) <= Math.max(2, Math.abs(item.transform[3] ?? 12) * .3));
-    const part = { text: item.str.trim(), x, right: x + item.width };
+interface Part { text: string; x: number; right: number; size: number }
+interface VisualLine { y: number; parts: Part[] }
+const leaderOnly = /^[.\u00b7\u2022\u2026]+$/;
+
+function lines(page: SourcePage): VisualLine[] {
+  const result: VisualLine[] = [];
+  const items = page.items.map(item => ({
+    text: item.str.trim(), x: item.transform[4], y: item.transform[5],
+    right: item.transform[4] + item.width, size: Math.abs(item.transform[3]) || item.height
+  })).filter(part => part.text && [part.x, part.y, part.right, part.size].every(Number.isFinite) && part.right >= part.x && part.size > 0);
+  for (const part of items.sort((a, b) => b.y - a.y || a.x - b.x)) {
+    const line = result.find(candidate => Math.abs(candidate.y - part.y) <= Math.max(2, Math.min(part.size, candidate.parts[0].size) * .3));
     if (line) line.parts.push(part);
-    else result.push({ y, parts: [part] });
+    else result.push({ y: part.y, parts: [part] });
   }
   return result.map(line => ({ ...line, parts: line.parts.sort((a, b) => a.x - b.x) }));
 }
@@ -29,28 +35,45 @@ function lines(page: SourcePage): Array<{ y: number; parts: Array<{ text: string
 function rows(page: SourcePage): { rows: Row[]; hasTitle: boolean } {
   const pageLines = lines(page);
   const hasTitle = pageLines.some(line => CONTENTS_TITLE.test(line.parts.map(part => part.text).join(' ').trim()));
+  const rightLabels = pageLines.flatMap(line => line.parts.filter(part => NUMBER.test(part.text) && part.x > page.width * .72));
+  const leftLabels = pageLines.flatMap(line => line.parts.filter(part => NUMBER.test(part.text) && part.x > page.width * .34 && part.x < page.width * .5));
+  const twoColumns = rightLabels.length >= 1 && leftLabels.length >= 1 &&
+    pageLines.some(line => line.parts.some(part => part.x < page.width * .25) && line.parts.some(part => part.x > page.width * .5 && !NUMBER.test(part.text)));
+  const regions = twoColumns ? [[0, page.width * .5], [page.width * .5, page.width]] : [[0, page.width]];
   const entries: Row[] = [];
-  for (const [lineIndex, line] of pageLines.entries()) {
-    const parts = line.parts;
-    if (parts.length < 2) {
-      const match = parts[0]?.text.match(/^(.{3,120}?)\s*(?:[.·•…]{2,}\s*)?(\d{1,4}|[ivxlcdm]{1,12})$/i);
-      if (match && /[.·•…]{2,}|\s{2,}/.test(parts[0].text)) entries.push({ text: parts[0].text, title: match[1].replace(LEADER, '').trim(), label: match[2], y: line.y, x: parts[0].x, right: parts[0].right, page: page.number });
-      continue;
-    }
-    let start = 0;
-    for (let index = 1; index < parts.length; index++) {
-      const numberPart = parts[index];
-      const prior = parts[index - 1];
-      if (!NUMBER.test(numberPart.text) || numberPart.x < page.width * .34 || numberPart.x - prior.right < 12 && !/^[.·•…]+$/.test(prior.text)) continue;
-      const titleParts = parts.slice(start, index);
-      let title = titleParts.map(part => part.text).join(' ').replace(LEADER, '').trim();
-      const preceding = pageLines[lineIndex - 1];
-      if (start === 0 && preceding && line.y < preceding.y && preceding.y - line.y < 28 && Math.abs(preceding.parts[0].x - titleParts[0].x) < 12 && !preceding.parts.some(part => NUMBER.test(part.text) && part.x > page.width * .34)) {
-        const continuation = preceding.parts.map(part => part.text).join(' ').trim();
-        if (!CONTENTS_TITLE.test(continuation) && continuation.length + title.length < 140) title = `${continuation} ${title}`;
+  for (const [minX, maxX] of regions) {
+    const regionLines = pageLines.map(line => ({ y: line.y, parts: line.parts.filter(part => part.x >= minX && part.x < maxX) })).filter(line => line.parts.length);
+    const candidates = regionLines.flatMap(line => {
+      const parts = line.parts;
+      const last = parts.at(-1)!;
+      if (parts.length === 1) {
+        const match = last.text.match(/^(.{3,120}?)\s*(?:[.\u00b7\u2022\u2026]{2,}\s*)?(\d{1,4}|[ivxlcdm]{1,12})$/i);
+        if (!match || !/[.\u00b7\u2022\u2026]{2,}|\s{2,}/.test(last.text)) return [];
+        return [{ line, label: match[2], labelX: last.right, labelRight: last.right, titleParts: [last], title: match[1].replace(LEADER, '').trim(), text: last.text }];
       }
-      if (title.length >= 3 && title.length <= 140 && !/^\d+$/.test(title)) entries.push({ text: titleParts.map(part => part.text).join(' ') + ' ' + numberPart.text, title, label: numberPart.text, y: line.y, x: titleParts[0].x, right: numberPart.right, page: page.number });
-      start = index + 1;
+      if (!NUMBER.test(last.text) || last.x < minX + (maxX - minX) * .55) return [];
+      const before = parts.slice(0, -1).filter(part => !leaderOnly.test(part.text));
+      if (!before.length || last.x - before.at(-1)!.right < 12 && !parts.slice(0, -1).some(part => leaderOnly.test(part.text))) return [];
+      const numbered = before.length > 1 && NUMBER.test(before[0].text) && before[1].x - before[0].right >= 8;
+      const titleParts = numbered ? before.slice(1) : before;
+      const title = titleParts.map(part => part.text).join(' ').replace(LEADER, '').trim();
+      return [{ line, label: last.text, labelX: last.x, labelRight: last.right, titleParts, title, text: parts.map(part => part.text).join(' ') }];
+    }).filter(candidate => candidate.title.length >= 3 && candidate.title.length <= 140 && !/^\d+$/.test(candidate.title));
+    const aligned = candidates.filter(candidate => candidates.filter(peer =>
+      Math.abs(peer.labelX - candidate.labelX) <= 8 || Math.abs(peer.labelRight - candidate.labelRight) <= 8
+    ).length >= (twoColumns ? 1 : hasTitle ? 2 : 5));
+    if (aligned.length < (twoColumns ? 1 : 2)) continue;
+    for (const candidate of aligned) {
+      const first = candidate.titleParts[0];
+      const preceding = regionLines.find(line => line.y > candidate.line.y && line.y - candidate.line.y < 28 &&
+        !aligned.some(peer => peer.line === line) && line.parts.length &&
+        Math.abs(line.parts[0].x - first.x) < 12 &&
+        !line.parts.some(part => NUMBER.test(part.text) && part.x > minX + (maxX - minX) * .55));
+      const continuation = preceding?.parts.map(part => part.text).join(' ').trim();
+      const title = continuation && !CONTENTS_TITLE.test(continuation) && continuation.length + candidate.title.length < 140
+        ? continuation + ' ' + candidate.title : candidate.title;
+      entries.push({ text: continuation && title !== candidate.title ? continuation + ' ' + candidate.text : candidate.text, title, label: candidate.label, y: candidate.line.y,
+        x: first.x, right: candidate.line.parts.at(-1)!.right, page: page.number });
     }
   }
   return { rows: entries, hasTitle };
@@ -74,11 +97,8 @@ function numeric(label: string): number | undefined {
   return /^\d+$/.test(label) ? Number(label) : undefined;
 }
 
-/** Conservative fallback for PDFs without a usable outline. */
-export async function detectPdfContents(
-  sourcePages: SourcePage[], pages: PdfStructuredPage[], offsets: number[], labels: string[] | null,
-  getLinks: (page: number) => Promise<Link[]>, resolve: (destination: string | unknown[]) => Promise<number | undefined>
-): Promise<DocumentSection[]> {
+/** Recognize printed rows without consulting destinations or assuming the whole book is present. */
+export function recognizePdfContents(sourcePages: SourcePage[]): PrintedRow[] {
   const candidates = sourcePages.map(page => ({ page, ...rows(page) }));
   const tocPages = candidates.filter(candidate => candidate.rows.length >= 3 && (candidate.hasTitle || candidate.rows.length >= 6));
   if (!tocPages.length) return [];
@@ -93,23 +113,63 @@ export async function detectPdfContents(
     return twoColumns ? [...candidate.rows].sort((a, b) => Number(a.x > candidate.page.width * .5) - Number(b.x > candidate.page.width * .5) || b.y - a.y) : candidate.rows;
   });
   if (allRows.length < 3) return [];
+  return allRows.map(row => {
+    const column = row.x >= selected.find(candidate => candidate.page.number === row.page)!.page.width * .5 ? 1 : 0;
+    const peers = allRows.filter(peer => peer.page === row.page && Number(peer.x >= selected.find(candidate => candidate.page.number === peer.page)!.page.width * .5) === column);
+    const base = Math.min(...peers.map(peer => peer.x));
+    return { ...row, level: row.x - base >= 14 ? 2 : 1 };
+  });
+}
+
+/** Resolve destinations separately; printed navigation retains its two-target gate. */
+export async function resolvePdfContents(
+  allRows: PrintedRow[], pages: PdfStructuredPage[], offsets: number[], labels: string[] | null,
+  getLinks: (page: number) => Promise<Link[]>, resolve: (destination: string | unknown[]) => Promise<number | undefined>
+): Promise<{ rows: PrintedRow[]; navigation: DocumentSection[] }> {
+  if (!allRows.length) return { rows: [], navigation: [] };
   const matches = allRows.map(row => chapterPage(row.title, row.page, pages));
   const shifts = allRows.map((row, index) => matches[index] && numeric(row.label) !== undefined ? matches[index]! - numeric(row.label)! : undefined).filter((value): value is number => value !== undefined);
   const agreedShift = shifts.length >= 2 && shifts.every(value => value === shifts[0]) ? shifts[0] : undefined;
   const links = new Map<number, Link[]>();
-  for (const candidate of selected) links.set(candidate.page.number, await getLinks(candidate.page.number).catch(() => []));
+  for (const page of new Set(allRows.map(row => row.page))) links.set(page, await getLinks(page).catch(() => []));
   const toc: DocumentSection[] = [];
+  const resolvedRows: PrintedRow[] = [];
   for (const [index, row] of allRows.entries()) {
     const annotation = links.get(row.page)?.find(link => link.dest && link.rect.length >= 4 && row.y >= Math.min(link.rect[1], link.rect[3]) - 5 && row.y <= Math.max(link.rect[1], link.rect[3]) + 5 && row.right >= Math.min(link.rect[0], link.rect[2]) && row.x <= Math.max(link.rect[0], link.rect[2]));
     const linkedPage = annotation?.dest ? await resolve(annotation.dest).catch(() => undefined) : undefined;
     const labelMatches = labels?.flatMap((label, pageIndex) => label.toLowerCase() === row.label.toLowerCase() && pageIndex + 1 > row.page ? [pageIndex + 1] : []) ?? [];
     const page = linkedPage ?? matches[index] ?? (labelMatches.length === 1 ? labelMatches[0] : undefined) ?? (agreedShift !== undefined && numeric(row.label) !== undefined ? numeric(row.label)! + agreedShift : undefined);
-    const validPage = page && page > row.page && page <= offsets.length ? page : undefined;
-    const level = row.x > selected[0].page.width * .08 + (selected[0].rows[0]?.x ?? 0) ? 2 : 1;
-    toc.push({ id: `pdf-printed-${index}`, title: row.title, level, parentId: level === 2 ? [...toc].reverse().find(item => item.level === 1)?.id : undefined, page: validPage, pageLabel: row.label, offset: validPage ? offsets[validPage - 1] : undefined });
+    const validPage = Number.isInteger(page) && page! > row.page && page! <= offsets.length && Number.isFinite(offsets[page! - 1]) ? page : undefined;
+    resolvedRows.push({ ...row, resolvedPage: validPage });
+    toc.push({ id: `pdf-printed-${index}`, title: row.title, level: row.level, parentId: row.level === 2 ? [...toc].reverse().find(item => item.level === 1)?.id : undefined, page: validPage, pageLabel: row.label, offset: validPage ? offsets[validPage - 1] : undefined });
   }
   // A page-number list without corroborated destinations is too easy to mistake for an index.
-  return toc.filter(item => item.offset !== undefined).length >= 2 ? toc : [];
+  return { rows: resolvedRows, navigation: toc.filter(item => item.offset !== undefined).length >= 2 ? toc : [] };
+}
+
+/** Conservative fallback for PDFs without a usable outline. */
+export async function detectPdfContents(
+  sourcePages: SourcePage[], pages: PdfStructuredPage[], offsets: number[], labels: string[] | null,
+  getLinks: (page: number) => Promise<Link[]>, resolve: (destination: string | unknown[]) => Promise<number | undefined>
+): Promise<DocumentSection[]> {
+  return (await resolvePdfContents(recognizePdfContents(sourcePages), pages, offsets, labels, getLinks, resolve)).navigation;
+}
+
+/** Tag only a unique, whole canonical block matching a recognized printed row. */
+export function tagPdfContents(pages: PdfStructuredPage[], rows: PrintedRow[]): PdfStructuredPage[] {
+  const comparable = (text: string) => text.trim().replace(/\s+/g, ' ');
+  return pages.map(page => {
+    const pageRows = rows.filter(row => row.page === page.pageNumber);
+    if (!pageRows.length) return page;
+    const blocks = page.blocks.map(block => {
+      const matches = pageRows.filter(row => comparable(row.text) === comparable(block.text));
+      const matchingBlocks = page.blocks.filter(candidate => comparable(candidate.text) === comparable(block.text));
+      if (matches.length !== 1 || matchingBlocks.length !== 1) return block;
+      const row = matches[0];
+      return { ...block, type: 'toc-entry' as const, title: row.title, printedPageLabel: row.label, resolvedPage: row.resolvedPage, level: row.level };
+    });
+    return { ...page, blocks };
+  });
 }
 
 /** Chapter headings provide a last resort when the file has neither bookmarks nor a printed TOC. */

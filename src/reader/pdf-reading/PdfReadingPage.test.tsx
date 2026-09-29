@@ -56,6 +56,20 @@ describe('paginated PDF reading', () => {
     expect(host.querySelector('h2')?.textContent).toBe('Chapter');
   });
 
+  it('renders an unresolved printed entry as selectable static canonical text', () => {
+    const text = 'First Chapter 101';
+    const host = document.createElement('div'); document.body.append(host);
+    render(<PdfReadingPage page={{ pageNumber: 2, startOffset: 10, endOffset: 10 + text.length, plainText: text, extractionQuality: 'good', blocks: [{ id: 'entry', type: 'toc-entry', title: 'First Chapter', printedPageLabel: '101', text, startOffset: 10, endOffset: 10 + text.length }] }} highlights={[{ id: 'page', startOffset: 24, endOffset: 27, color: 'yellow', createdAt: 1 }]} />, host);
+    const entry = host.querySelector('.pdf-reading-toc-entry')!;
+    expect(entry.textContent).toBe(text);
+    expect(entry.getAttribute('data-offset')).toBe('10');
+    expect(entry.querySelector('mark')?.textContent).toBe('101');
+    expect(entry.querySelector('a, button, [role="link"]')).toBeNull();
+    const range = document.createRange(); range.setStart(entry.firstChild!, 8); range.collapse(true);
+    expect(readingWordFromRange(host, ' '.repeat(10) + text, range)).toEqual(expect.objectContaining({ text: 'Chapter', offset: 16 }));
+    render(null, host); host.remove();
+  });
+
   it('derives page records for legacy imported PDFs without crashing', () => {
     const documentRecord = { id: 'legacy', title: 'Legacy', kind: 'pdf', content: 'First page\n\nSecond page', pageOffsets: [0, 12], createdAt: 0, updatedAt: 0, location: { kind: 'pdf', page: 1, scrollY: 0, progress: 0, updatedAt: 0 } } as DocumentRecord;
     const pages = readingPagesForDocument(documentRecord);

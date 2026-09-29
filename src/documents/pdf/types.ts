@@ -3,13 +3,17 @@ export type PdfTextIntegrity = 'valid' | 'suspect' | 'corrupt';
 
 export type PdfTextBlock = {
   id: string;
-  type: 'heading' | 'paragraph' | 'dialogue' | 'list' | 'quote' | 'footnote';
+  type: 'heading' | 'paragraph' | 'dialogue' | 'list' | 'quote' | 'footnote' | 'toc-entry';
   text: string;
   startOffset: number;
   endOffset: number;
   level?: 1 | 2 | 3;
   speaker?: string;
   items?: string[];
+  /** Present on newly imported, exactly aligned printed Contents rows only. */
+  title?: string;
+  printedPageLabel?: string;
+  resolvedPage?: number;
 };
 
 export interface PdfStructuredPage {

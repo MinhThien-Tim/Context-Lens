@@ -3,7 +3,7 @@ import { initialTextLocation } from '../location';
 import { ImportError, type ImportedDocument, type ImportOptions } from './types';
 import { extractStructuredPage, shiftStructuredPage } from '../pdf/extractStructuredPages';
 import type { PdfSourceTextItem, PdfStructuredPage } from '../pdf/types';
-import { detectPdfContents, inferPdfHeadings } from '../pdf/detectContents';
+import { recognizePdfContents, resolvePdfContents, tagPdfContents, inferPdfHeadings } from '../pdf/detectContents';
 
 const MAX_TEXT_BYTES = 5 * 1024 * 1024;
 const MAX_BOOK_BYTES = 50 * 1024 * 1024;
@@ -55,7 +55,7 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
       const text = await page.getTextContent();
       const viewport = page.getViewport?.({ scale: 1 }) ?? { width: 612, height: 792 };
       const sourceItems = text.items.filter((item): item is Extract<typeof item, { str: string }> => 'str' in item).map((item, index) => ({ str: item.str, transform: item.transform ?? [12, 0, 0, 12, 36, viewport.height - 36 - index * 16], width: item.width ?? item.str.length * 6, height: item.height ?? 12, hasEOL: item.hasEOL, fontName: item.fontName })) as PdfSourceTextItem[];
-      if (!outline.length && pageNumber <= Math.min(40, Math.max(12, Math.ceil(pdf.numPages * .15)))) sourcePages.push({ number: pageNumber, width: viewport.width, height: viewport.height, items: sourceItems });
+      if (pageNumber <= Math.min(40, Math.max(12, Math.ceil(pdf.numPages * .15)))) sourcePages.push({ number: pageNumber, width: viewport.width, height: viewport.height, items: sourceItems });
       const structured = extractStructuredPage(pageNumber, sourceItems, viewport.width, viewport.height);
       if (structured.extractionQuality === 'poor') {
         const operators = await page.getOperatorList();
@@ -77,18 +77,21 @@ async function importPdf(file: File, options: ImportOptions): Promise<ImportedDo
     };
     const outlineToc = await pdfSections(outline, resolveDestination, pageOffsets);
     const pageLabels = !outlineToc.length ? await pdf.getPageLabels?.().catch(() => null) ?? null : null;
-    const printedToc = outlineToc.length ? [] : await detectPdfContents(sourcePages, pdfPages, pageOffsets, pageLabels, async pageNumber => {
+    const printedRows = recognizePdfContents(sourcePages);
+    const printed = outlineToc.length ? { rows: printedRows, navigation: [] } : await resolvePdfContents(printedRows, pdfPages, pageOffsets, pageLabels, async pageNumber => {
       const page = await pdf.getPage(pageNumber);
       try { return await page.getAnnotations({ intent: 'display' }); }
       finally { page.cleanup(); }
     }, resolveDestination);
+    const printedToc = printed.navigation;
+    const taggedPdfPages = tagPdfContents(pdfPages, printed.rows);
     const toc = outlineToc.length ? outlineToc : printedToc.length ? printedToc : inferPdfHeadings(pdfPages, pageOffsets);
     await loadingTask.destroy();
     const content = pages.join('\n\n');
     const info = metadata?.info as { Title?: string } | undefined;
     return {
       title: info?.Title?.trim() || baseName(file.name), kind: 'pdf', content, data: file, pdfHash,
-      pageOffsets, pdfPages, toc, tocSource: outlineToc.length ? 'pdf-outline' : printedToc.length ? 'pdf-printed' : toc.length ? 'pdf-headings' : 'none', tocVersion: 2, location: { kind: 'pdf', page: 1, pageOffset: 0, textOffset: 0, scrollY: 0, progress: 0, updatedAt: Date.now() }
+      pageOffsets, pdfPages: taggedPdfPages, toc, tocSource: outlineToc.length ? 'pdf-outline' : printedToc.length ? 'pdf-printed' : toc.length ? 'pdf-headings' : 'none', tocVersion: 2, location: { kind: 'pdf', page: 1, pageOffset: 0, textOffset: 0, scrollY: 0, progress: 0, updatedAt: Date.now() }
     };
   } catch (error) {
     if (error instanceof ImportError) throw error;

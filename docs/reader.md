@@ -67,6 +67,14 @@ disabled under the same condition.
   `GlobalWorkerOptions.workerSrc` from `new URL(..., import.meta.url)`, and stores the original
   bytes in `DocumentRecord.data` (50 MB limit). It also builds `pageOffsets`, `pdfPages`
   (via `extractStructuredPage`) and TOC (`detectContents`, `inferPdfHeadings`).
+  Printed Contents recognition clusters native text by visual baseline and column, then
+  pairs optional entry numbers, titles, and aligned terminal page labels; it also joins
+  short wrapped titles and infers indentation within each column. Recognition is separate from destination resolution. Recognized rows
+  are tagged as `toc-entry` blocks only when a unique whole extracted block matches the
+  source row; its original text and offsets remain canonical. Reading Mode renders tagged
+  rows as static text, including unresolved rows. Printed navigation still requires two
+  verified destinations; an outline retains navigation priority. Older stored `pdfPages`
+  have no tags and render as before until reimported.
 - Open: `src/reader/pdf/usePdfDocument.ts` loads the Blob into a `pdfjs` document and handles
   password-protected files. The original file and the extracted text are both persisted, so
   reading keeps working offline.
@@ -105,8 +113,11 @@ disabled under the same condition.
   extraction retains top-to-bottom, then left-to-right order. Sparse columns, fragmented items,
   asymmetric layouts and unmarked inset quotations remain limitations; tables/figures are not parsed.
 - Line joining keeps an indented paragraph boundary when the preceding line is short and ends
-  a sentence. Only an explicit soft hyphen is removed across lines; hard hyphens remain because
-  lexical compounds and discretionary breaks cannot reliably be distinguished from geometry.
+  a sentence. Explicit soft hyphens are removed; hard hyphens remain because lexical compounds
+  and discretionary breaks cannot reliably be distinguished from geometry. A narrow set of
+  unmarked word splits is repaired only within a paragraph when repeated lines establish the
+  same right edge and the next line has compatible alignment, font, and spacing. Unknown or
+  ambiguous splits retain the boundary space.
   Header/footer text remains in canonical content until repetition can be established across pages.
   Legacy page fallback preserves whitespace so DOM block offsets still address the stored content.
 - `extractionQuality` (`good` / `partial` / `poor`) determines whether Reading Mode is offered

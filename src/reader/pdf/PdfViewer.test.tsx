@@ -36,7 +36,7 @@ it('drags a zoomed PDF horizontally from empty page space', async () => {
   const location: PdfDocumentLocation = { kind: 'pdf', page: 1, viewMode: 'original', scrollY: 0, progress: 0, updatedAt: 0 };
   const documentRecord = { id: 'pdf', kind: 'pdf', content: 'one', pageOffsets: [0], location } as DocumentRecord;
   await act(async () => render(<PdfViewer documentRecord={documentRecord} location={location} zoomMode="custom" onZoomMode={vi.fn()} onLocation={vi.fn()} onLookup={vi.fn()} />, host));
-  await vi.waitFor(async () => { await act(async () => {}); expect(host.querySelector('.pdf-scroll')).not.toBeNull(); });
+  await vi.waitFor(async () => { await act(async () => {}); expect(host.querySelector('.pdf-page-slot')).not.toBeNull(); });
   const scroll = host.querySelector<HTMLElement>('.pdf-scroll')!;
   Object.defineProperties(scroll, { scrollWidth: { value: 1200 }, clientWidth: { value: 600 } });
   scroll.setPointerCapture = vi.fn(); scroll.hasPointerCapture = vi.fn(() => true); scroll.releasePointerCapture = vi.fn();

@@ -56,6 +56,63 @@ describe('PDF text-run reconstruction', () => {
 });
 
 describe('structured PDF extraction', () => {
+  it('repairs only supported unmarked splits at a repeated paragraph right edge', () => {
+    for (const [before, after, joined] of [
+      ['pres', 'ent', 'present'], ['interpre', 'tation', 'interpretation'], ['pur', 'suit', 'pursuit'],
+    ]) {
+      const source = [
+        item('A full body line supplies the right margin', 40, 740, 12, 260),
+        item('Another full line reaches the same edge', 40, 724, 12, 260),
+        item(`The author describes ${before}`, 40, 708, 12, 260),
+        item(`${after} in this example.`, 40, 692, 12, 150),
+      ];
+      const page = shiftStructuredPage(extractStructuredPage(2, source, 600, 800), 120);
+      expect(page.plainText).toContain(`describes ${joined} in this example.`);
+      expect(page.blocks).toHaveLength(1);
+      expect(page.blocks[0].text).toBe(page.plainText);
+      expect(page.plainText.slice(page.blocks[0].startOffset - 120, page.blocks[0].endOffset - 120)).toBe(page.blocks[0].text);
+      expect(page.endOffset).toBe(120 + page.plainText.length);
+    }
+  });
+
+  it('retains spaces when split evidence or lexical evidence is insufficient', () => {
+    const prefix = [item('First ordinary line at the right edge', 40, 740, 12, 260), item('Second ordinary line at the right edge', 40, 724, 12, 260)];
+    const page = (before: string, after: string, width = 260) => extractStructuredPage(1, [
+      ...prefix, item(before, 40, 708, 12, width), item(after, 40, 692, 12, 120),
+    ], 600, 800).plainText;
+    expect(page('A passage ends with pres', 'ent in context.', 180)).toContain('pres ent');
+    expect(page('A passage ends with unknow', 'nable in context.')).toContain('unknow nable');
+    expect(page('The words are pur', 'suit in context.', 230)).toContain('pur suit');
+    expect(page('A sentence ends here.', 'another begins.')).toContain('here. another');
+    expect(page('Short words are in', 'the next line.')).toContain('in the');
+    expect(page('A well-', 'known example.')).toContain('well-known');
+    expect(page('An inter\u00ad', 'national example.')).toContain('international');
+  });
+
+  it('does not repair across a heading or paragraph block', () => {
+    const page = extractStructuredPage(1, [
+      item('A LARGE HEADING pres', 40, 760, 20, 260),
+      item('ent starts the paragraph.', 40, 720),
+      item('Another line continues the paragraph.', 40, 704),
+    ], 600, 800);
+    expect(page.blocks[0].type).toBe('heading');
+    expect(page.blocks[1].text).toContain('ent starts');
+    expect(page.plainText).not.toContain('present');
+  });
+
+  it('does not repair a supported split across columns', () => {
+    const page = extractStructuredPage(1, [
+      item('Left body line one', 40, 720, 12, 220),
+      item('The next left body line', 40, 704, 12, 220),
+      item('The last line ends in pres', 40, 688, 12, 220),
+      item('ent begins the right column', 330, 720, 12, 220),
+      item('Right body line two', 330, 704, 12, 220),
+      item('Right body line three', 330, 688, 12, 220),
+    ], 600, 800);
+    expect(page.plainText).toContain('pres\n\nent begins');
+    expect(page.plainText).not.toContain('present');
+  });
+
   it('groups lines into paragraphs and preserves canonical offsets', () => {
     const page = shiftStructuredPage(extractStructuredPage(2, [item('A readable paragraph', 40, 700), item('continues on this line.', 40, 684)], 600, 800), 100);
     expect(page.blocks).toHaveLength(1);

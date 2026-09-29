@@ -177,12 +177,42 @@ function classifyLine(line: Line, median: number, pageHeight: number): PdfTextBl
 
 function classifyBlock(lines: Line[], median: number, pageHeight: number, pageNumber: number, index: number): Omit<PdfTextBlock, 'startOffset' | 'endOffset'> {
   const type = classifyLine(lines[0], median, pageHeight);
-  const joined = joinLines(lines.map(line => line.text));
+  const joined = type === 'paragraph' ? joinParagraphLines(lines) : joinLines(lines.map(line => line.text));
   const base = { id: `pdf-${pageNumber}-${index}`, type, text: joined };
   if (type === 'heading') return { ...base, level: lines[0].fontSize >= median * 1.7 ? 1 : lines[0].fontSize >= median * 1.42 ? 2 : 3 };
   if (type === 'dialogue') { const match = joined.match(/^([^:]+):\s*(.*)$/s); return { ...base, speaker: match?.[1] }; }
   if (type === 'list') { const items = lines.map(line => line.text.replace(/^(?:[-•▪‣]|\d+[.)])\s+/, '')); return { ...base, text: items.join('\n'), items }; }
   return base;
+}
+
+// Deliberately small: unfamiliar splits retain their source boundary space.
+const unmarkedSplits = new Set(['pres|ent', 'interpre|tation', 'pur|suit']);
+
+function joinParagraphLines(lines: Line[]): string {
+  const normalLeft = Math.min(...lines.map(line => line.x));
+  const joins = lines.map((line, index) => {
+    if (!index) return false;
+    const previous = lines[index - 1];
+    const tail = previous.text.match(/(?:^|\s)([a-z]+)$/u)?.[1];
+    const head = line.text.match(/^([a-z]+)(?=\s|[.,;:!?]|$)/u)?.[1];
+    if (!tail || !head || !unmarkedSplits.has(`${tail}|${head}`)) return false;
+    if (line.column !== previous.column || Math.abs(line.x - normalLeft) > previous.fontSize * .5 ||
+        Math.abs(line.fontSize - previous.fontSize) > previous.fontSize * .1 ||
+        previous.y - line.y < previous.fontSize * .9 || previous.y - line.y > previous.fontSize * 1.5) return false;
+    const comparable = lines.filter(other => other !== previous && other !== line &&
+      other.column === previous.column && Math.abs(other.x - normalLeft) <= previous.fontSize * .5 &&
+      Math.abs(other.fontSize - previous.fontSize) <= previous.fontSize * .1 &&
+      other.width >= previous.fontSize * 12);
+    const right = previous.x + previous.width;
+    return comparable.filter(other => Math.abs(other.x + other.width - right) <= previous.fontSize * .75).length >= 2;
+  });
+  return lines.reduce((text, line, index) => {
+    if (!index) return line.text.trim();
+    const next = line.text.trim();
+    if (/\p{L}\u00ad$/u.test(text) && /^\p{Ll}/u.test(next)) return text.slice(0, -1) + next;
+    if (/\p{L}-$/u.test(text) && /^\p{Ll}/u.test(next)) return text + next;
+    return text + (joins[index] ? '' : ' ') + next;
+  }, '');
 }
 
 export function joinLines(lines: string[]): string {
