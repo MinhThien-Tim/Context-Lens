@@ -196,3 +196,4 @@
   .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-controls { grid-column: 1 / -1; grid-row: 5; display: flex; align-items: center; justify-content: flex-start; gap: 4px; min-width: 0; margin: 0; padding: 0; border: 0; background: transparent; }
   .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-controls .explain-toolstrip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; }
   .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-controls .explain-toolstrip > button { min-height: 44px; margin: 0; }
+}

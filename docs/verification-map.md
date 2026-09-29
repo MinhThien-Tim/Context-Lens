@@ -2,7 +2,8 @@
 
 Authoritative commands below match the existing scripts and scopes in
 [`testing.md`](testing.md#per-subsystem-verify-commands). Each subsystem `verify:*` command includes
-typecheck and its Vitest scope; `verify:full` also runs contract checks and builds. Choose the
+typecheck and its Vitest scope, and the two UI-facing commands (`verify:lookup`, `verify:ui`) also run
+`check:css` first; `verify:full` also runs contract checks and builds. Choose the
 narrowest applicable bucket; full regression is escalation only under §4 and §8 of
 `agent-execution-rules.md`.
 
@@ -11,11 +12,11 @@ narrowest applicable bucket; full regression is escalation only under §4 and §
 | Text reader | `npm run verify:reader` | `src/reader`, excluding PDF modes |
 | PDF + OCR | `npm run verify:pdf` | `src/reader/pdf`, `src/reader/pdf-reading`, `src/documents/pdf` |
 | Import | `npm run verify:import` | `src/documents`, excluding PDF and offline |
-| Lookup | `npm run verify:lookup` | Lookup modules and lookup-sheet components |
+| Lookup | `npm run verify:lookup` | Lookup modules and lookup-sheet components (runs `check:css` first) |
 | Language engine | `npm run verify:language` | `src/core/language`, lookup normalization |
 | Translation / context / AI | `npm run verify:translation` | Translation, context, AI, integration, gateway |
 | Storage | `npm run verify:storage` | Database, storage, notes store, vocabulary |
-| UI | `npm run verify:ui` | Components, onboarding, app, NotesPanel (script exclusions apply) |
+| UI | `npm run verify:ui` | Components, onboarding, app, NotesPanel (script exclusions apply; runs `check:css` first) |
 | Offline | `npm run verify:offline` | Offline document and status surfaces |
 | Full regression | `npm run verify:full` | Contract checks, full Vitest suite, typecheck, and build |
 
@@ -23,6 +24,7 @@ narrowest applicable bucket; full regression is escalation only under §4 and §
 
 | Purpose | Command | Scope |
 | --- | --- | --- |
+| CSS syntax + import chain | `npm run check:css` | Parse every `src/**/*.css` with PostCSS; unresolved local `@import` also fails |
 | Architecture contracts | `npm run verify:contracts` | Static PWA/Worker/build-script contracts and verify-script map parity |
 | Test partition audit | `npm run verify:partitions` | Assign every Vitest test to one subsystem scope |
 | List test files | `npm run verify:list` | List Vitest test files without running them |

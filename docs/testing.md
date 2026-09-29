@@ -12,6 +12,7 @@ Related: [ARCHITECTURE.md](ARCHITECTURE.md) · [Testing troubleshooting](testing
 | Cross-repository vocabulary handoff | `e2e/vocabulary-handoff.spec.ts` | Playwright, `playwright.vocabulary.config.ts` |
 | Shared setup | `src/test/setup.ts` (`fake-indexeddb/auto`, `vi.restoreAllMocks`), `src/test/fixtures.ts` | — |
 | Bundle budget + precache assets | `scripts/check_bundle_budget.mjs` | Node script, run during `build` |
+| CSS syntax + import chain | `scripts/check_css_syntax.mjs` | Node script, run by `check:css`, `verify:ui`, `verify:lookup` |
 | Static architecture contracts | `scripts/check_architecture_contracts.mjs` | Node script, run by `verify:contracts` |
 
 Vitest config lives in `vite.config.ts` under `test`: `environment: 'jsdom'`,
@@ -45,6 +46,7 @@ Keep the same arguments and test scope; see the [launcher policy](agent-executio
 | Type check | `npm run typecheck` |
 | Production build + bundle budget | `npm run build` |
 | Bundle budget only | `npm run check:bundle` |
+| CSS syntax + import chain only | `npm run check:css` |
 | Targeted tests | `npx vitest run <path-or-glob>` |
 | Single test by name | `npx vitest run <path> -t "<name>"` |
 | Browser tests | `npm run test:browser` |
@@ -88,6 +90,16 @@ merely listing files. `npm run verify:list` only lists files. Vitest positional 
 case-insensitive substring matches, not globs — scope with directory or file prefixes plus
 `--exclude` globs. Playwright stays out of these scripts: browser specs remain `npm run test:browser`,
 and the production-only offline spec keeps its one-off command in the table above.
+
+`npm run verify:ui` and `npm run verify:lookup` start with `npm run check:css`
+(`scripts/check_css_syntax.mjs`). Typecheck and jsdom Vitest do not parse stylesheets — jsdom never
+loads them — so a malformed stylesheet such as an unclosed `@media` block used to pass every narrow
+subsystem check and fail only in `vite build`, as a PostCSS `Unclosed block` error. The guard reuses
+the same PostCSS parser the Vite pipeline uses, fails non-zero on any parse error or unresolved local
+`@import`, and covers every stylesheet under `src/`. It parses the whole `src/**/*.css` set rather
+than one entry point because only `src/styles.css` is imported eagerly: `src/reader-layout.css`
+(with the reader base/mobile/desktop files) and `src/home-advanced.css` are reached through lazy
+`import()` calls in `src/app/App.tsx` and are invisible to an entry-only walk.
 
 ## Targeted verification strategy
 
