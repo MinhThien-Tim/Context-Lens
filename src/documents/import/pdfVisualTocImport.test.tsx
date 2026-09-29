@@ -11,9 +11,9 @@ vi.mock('pdfjs-dist', () => {
   });
   const contents = [
     item('Contents', 60, 740),
-    item('First Chapter', 60, 680), item('101', 210, 680),
-    item('Second Chapter', 60, 640), item('202', 210, 640),
-    item('Third Chapter', 60, 600), item('303', 210, 600)
+    item('First Chapter', 60, 680), item('101', 490, 680),
+    item('Second Chapter', 60, 640), item('202', 490, 640),
+    item('Third Chapter', 60, 600), item('303', 490, 600)
   ];
   return {
     GlobalWorkerOptions: {},
