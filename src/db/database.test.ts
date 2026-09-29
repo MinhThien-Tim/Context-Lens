@@ -1,5 +1,122 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import Dexie from 'dexie';
 import { db, defaultPreferences, loadPreferences, savePreferences, ContextLensDatabase } from './database';
+
+const legacyVocabulary = {
+  id: 'word', lemma: 'read', surface: 'reading', pos: 'verb', ipa: null,
+  contextualMeaning: 'understand text', meaningVi: ['read'], lexicalUnit: null,
+  originalSentence: 'I am reading.',
+  source: { document: 'Book', documentId: 'doc', location: '25%', page: 2 }, createdAt: 3
+};
+
+async function upgradeFrom(version: number, stores: Record<string, string>, seed: (legacy: Dexie) => Promise<void>, check: (current: ContextLensDatabase) => Promise<void>) {
+  const name = `migration-${crypto.randomUUID()}`;
+  const legacy = new Dexie(name);
+  legacy.version(version).stores(stores);
+  let current: ContextLensDatabase | undefined;
+  try {
+    await seed(legacy);
+    legacy.close();
+    current = new ContextLensDatabase(name);
+    await current.open();
+    expect(current.verno).toBe(15);
+    await check(current);
+  } finally {
+    legacy.close();
+    current?.close();
+    await Dexie.delete(name);
+  }
+}
+
+describe('historical database upgrades', () => {
+  it('upgrades v1 positions and vocabulary while preserving other rows', async () => {
+    const document = { id: 'doc', title: 'Book', content: 'Original text', kind: 'text', createdAt: 1, updatedAt: 2, lastPosition: 420, source: { author: 'Author' } };
+    const lookup = { key: 'read', result: { marker: 'cached' }, createdAt: 1, accessedAt: 2 };
+    await upgradeFrom(1, {
+      documents: 'id, updatedAt', lookups: 'key, accessedAt', settings: 'key', vocabulary: 'id, lemma, createdAt'
+    }, async legacy => {
+      await legacy.table('documents').put(document);
+      await legacy.table('lookups').put(lookup);
+      await legacy.table('settings').put({ key: 'custom', value: 'kept' });
+      await legacy.table('vocabulary').put(legacyVocabulary);
+    }, async current => {
+      const stored = await current.documents.get('doc');
+      expect(stored).toMatchObject({ id: 'doc', title: 'Book', content: 'Original text', source: { author: 'Author' }, location: { kind: 'text', scrollY: 420, progress: 0 } });
+      expect(stored?.location.updatedAt).toEqual(expect.any(Number));
+      expect(stored).not.toHaveProperty('lastPosition');
+      expect(await current.lookups.get('read')).toEqual(lookup);
+      expect(await current.settings.get('custom')).toEqual({ key: 'custom', value: 'kept' });
+      expect(await current.vocabularyCollections.get('saved-vocabulary')).toMatchObject({ title: 'Saved vocabulary' });
+      expect(await current.vocabulary.get('word')).toEqual({ ...legacyVocabulary, collectionId: 'saved-vocabulary', collectionTitle: 'Saved vocabulary' });
+      expect((await current.vocabulary.where('collectionId').equals('saved-vocabulary').toArray()).map(row => row.id)).toEqual(['word']);
+      expect((await current.documents.where('title').equals('Book').first())?.id).toBe('doc');
+      expect((await current.documents.where('[kind+updatedAt]').equals(['text', 2]).first())?.id).toBe('doc');
+    });
+  });
+
+  it('upgrades v10 collections and makes modern indexes and tables usable', async () => {
+    const document = { id: 'doc', title: 'Book', content: 'Original text', kind: 'text', createdAt: 1, updatedAt: 2, location: { kind: 'text', scrollY: 42, progress: .25, updatedAt: 2 } };
+    const note = { id: 'note', documentId: 'doc', documentTitle: 'Book', text: 'Keep this', location: '25%', createdAt: 3, updatedAt: 4 };
+    await upgradeFrom(10, {
+      documents: 'id, kind, updatedAt', lookups: 'key, contextKey, accessedAt', settings: 'key', vocabulary: 'id, lemma, createdAt',
+      dictionaryPacks: 'id, installedAt', translations: 'key, lastUsedAt, provider, languagePair, hits',
+      contexts: 'key, lastUsedAt, provider, languagePair, hits', notes: 'id, documentId, updatedAt, [documentId+updatedAt]',
+      sentenceAnalyses: 'key, lastUsedAt, provider, languagePair, hits'
+    }, async legacy => {
+      await legacy.table('documents').put(document);
+      await legacy.table('vocabulary').put(legacyVocabulary);
+      await legacy.table('notes').put(note);
+    }, async current => {
+      expect(await current.documents.get('doc')).toEqual(document);
+      expect(await current.notes.get('note')).toEqual(note);
+      expect(await current.vocabulary.get('word')).toEqual({ ...legacyVocabulary, collectionId: 'saved-vocabulary', collectionTitle: 'Saved vocabulary' });
+      expect((await current.documents.where('title').equals('Book').first())?.id).toBe('doc');
+      expect((await current.documents.where('[kind+updatedAt]').equals(['text', 2]).first())?.id).toBe('doc');
+      const learned = { key: 'read', normalizedKey: 'read', lemma: 'read', surfaceForms: ['reading'], partOfSpeech: ['verb'], meaningsVi: ['read'], source: ['local'], version: 'v1', entry: { lemma: 'read', pos: ['verb'], senses: [] }, updatedAt: 5 };
+      await current.learnedLexicon.put(learned);
+      expect((await current.learnedLexicon.where('normalizedKey').equals('read').first())?.entry).toEqual(learned.entry);
+      const usage = { provider: 'local', model: 'test', task: 'context', latencyMs: 1, cacheHit: true, createdAt: 6 };
+      const usageId = await current.aiUsage.add(usage);
+      expect(await current.aiUsage.get(usageId)).toMatchObject(usage);
+      const ocr = { key: 'doc:1', documentId: 'doc', page: 1, language: 'eng' as const, configVersion: 1, text: 'Words', createdAt: 7 };
+      await current.pdfOcr.put(ocr);
+      expect((await current.pdfOcr.where('documentId').equals('doc').first())?.text).toBe('Words');
+    });
+  });
+
+  it('upgrades v14 PDF data and retains current-era records when OCR is added', async () => {
+    const document = { id: 'doc', title: 'Scan', content: 'Native text', kind: 'pdf', pdfHash: 'hash', pageOffsets: [0], pdfTextSources: { 1: 'pdf' }, createdAt: 1, updatedAt: 2, location: { kind: 'pdf', page: 1, scrollY: 10, progress: .5, updatedAt: 2 } };
+    const collection = { id: 'book', title: 'Book words', createdAt: 1, updatedAt: 2 };
+    const vocabulary = { ...legacyVocabulary, collectionId: 'book', collectionTitle: 'Book words' };
+    const learned = { key: 'read', normalizedKey: 'read', lemma: 'read', surfaceForms: ['reading'], partOfSpeech: ['verb'], meaningsVi: ['read'], source: ['local'], version: 'v1', entry: { lemma: 'read', pos: ['verb'], senses: [] }, updatedAt: 3 };
+    const usage = { id: 1, provider: 'local', model: 'test', task: 'context', latencyMs: 1, cacheHit: true, createdAt: 4 };
+    await upgradeFrom(14, {
+      documents: 'id, kind, title, updatedAt, [kind+updatedAt]', lookups: 'key, contextKey, accessedAt', settings: 'key',
+      vocabulary: 'id, lemma, createdAt, collectionId', vocabularyCollections: 'id, sourceDocumentId, updatedAt',
+      dictionaryPacks: 'id, installedAt', translations: 'key, lastUsedAt, provider, languagePair, hits',
+      contexts: 'key, lastUsedAt, provider, languagePair, hits', notes: 'id, documentId, updatedAt, [documentId+updatedAt]',
+      sentenceAnalyses: 'key, lastUsedAt, provider, languagePair, hits', learnedLexicon: 'key, normalizedKey, lemma, updatedAt',
+      aiUsage: '++id, createdAt, provider, task'
+    }, async legacy => {
+      await legacy.table('documents').put(document);
+      await legacy.table('vocabularyCollections').put(collection);
+      await legacy.table('vocabulary').put(vocabulary);
+      await legacy.table('learnedLexicon').put(learned);
+      await legacy.table('aiUsage').put(usage);
+    }, async current => {
+      expect(await current.documents.get('doc')).toEqual(document);
+      expect(await current.vocabularyCollections.get('book')).toEqual(collection);
+      expect(await current.vocabulary.get('word')).toEqual(vocabulary);
+      expect(await current.learnedLexicon.get('read')).toEqual(learned);
+      expect(await current.aiUsage.get(1)).toEqual(usage);
+      const ocr = { key: 'doc:1', documentId: 'doc', page: 1, language: 'eng' as const, configVersion: 1, text: 'Recognized text', createdAt: 5 };
+      await current.pdfOcr.put(ocr);
+      expect(await current.pdfOcr.where('documentId').equals('doc').toArray()).toEqual([ocr]);
+      expect(await current.pdfOcr.where('[documentId+page]').equals(['doc', 1]).first()).toEqual(ocr);
+      expect(await current.documents.get('doc')).toEqual(document);
+    });
+  });
+});
 
 describe('document storage', () => {
   const database = new ContextLensDatabase(`test-${crypto.randomUUID()}`);

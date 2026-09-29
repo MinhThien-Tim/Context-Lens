@@ -7,7 +7,7 @@ const vocabularyRecord: VocabularyRecord = { id: 'backup-word', lemma: 'read', s
 const noteRecord: NoteRecord = { id: 'note-1', documentId: 'backup-doc', documentTitle: 'Reading', text: 'Private note', selectedText: 'read', sentence: 'I read.', location: '0%', createdAt: 3, updatedAt: 4 };
 
 describe('portable backup', () => {
-  afterEach(async () => { await db.documents.clear(); await db.vocabulary.clear(); await db.notes.clear(); await db.settings.clear(); });
+  afterEach(async () => { await db.documents.clear(); await db.vocabulary.clear(); await db.vocabularyCollections.clear(); await db.notes.clear(); await db.settings.clear(); });
   it('exports user content without binary files, keys, or cache data', async () => {
     await db.documents.put(documentRecord); await db.vocabulary.put(vocabularyRecord); await db.notes.put(noteRecord);
     await db.settings.put({ key: 'ai-settings', value: { apiKey: 'secret-key' } });
@@ -32,6 +32,19 @@ describe('portable backup', () => {
   it('accepts a version 1 backup and restores zero notes', async () => {
     const result = await restoreBackup({ schema: 'context-lens.backup', version: 1, exportedAt: new Date().toISOString(), documents: [], vocabulary: [] });
     expect(result.notes).toBe(0);
+  });
+  it('restores legacy version 2 user data into the current schema', async () => {
+    const { data: _data, ...portableDocument } = documentRecord;
+    const result = await restoreBackup({
+      schema: 'context-lens.backup', version: 2, exportedAt: '',
+      documents: [portableDocument], vocabulary: [vocabularyRecord], notes: [noteRecord]
+    });
+    expect(db.verno).toBe(15);
+    expect(result).toEqual({ documents: 1, vocabulary: 1, notes: 1 });
+    expect(await db.documents.get(documentRecord.id)).toEqual(portableDocument);
+    expect(await db.notes.get(noteRecord.id)).toEqual(noteRecord);
+    expect(await db.vocabulary.get(vocabularyRecord.id)).toEqual({ ...vocabularyRecord, collectionId: 'saved-vocabulary' });
+    expect(await db.vocabularyCollections.get('saved-vocabulary')).toMatchObject({ title: 'Saved vocabulary' });
   });
 });
 
