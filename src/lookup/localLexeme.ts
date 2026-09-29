@@ -30,6 +30,7 @@ export function lookupLocalLexeme(candidate: string, surface = candidate, curate
   const dictionaryLemma = preferred[0]?.entry.lemma;
   const lemma = curated?.lemma ?? dictionaryLemma ?? candidate;
   const wordnet = lookupWordNet(lemma);
+  const surfaceWordNet = surface !== lemma ? lookupWordNet(surface) : undefined;
   // A weak inflected form answers with its lemma. The exact entry is kept, not dropped, so it
   // can still supply what the lemma lacks. It never overrides the lemma: pack inflected forms
   // usually repeat the lemma's meaning list, and merging both would duplicate it.
@@ -46,10 +47,12 @@ export function lookupLocalLexeme(candidate: string, surface = candidate, curate
   // Keep them independent instead of manufacturing a bilingual pair from
   // definition similarity or source order.
   const wordNetSenses = enrichReviewedSenses(lemma, (wordnet?.senses ?? []).map(sense => ({ ...sense, source: 'wordnet' as const })));
+  const surfaceSenses = (surfaceWordNet?.senses ?? []).map(sense => ({ ...sense, source: 'wordnet' as const }));
   const senses: LexicalSense[] = [
     ...(curated?.senses.map(sense => ({ ...sense, pos: sense.pos ?? (curated.pos.length === 1 ? curated.pos[0] : undefined) })) ?? []),
     ...dictionarySenses,
     ...wordNetSenses,
+    ...surfaceSenses,
     ...(dictionaryEnglish && !dictionarySenses.some(sense => sense.definitionEn === dictionaryEnglish) && !curated?.senses.some(sense => sense.definitionEn === dictionaryEnglish) && !wordnet?.senses.some(sense => sense.definitionEn === dictionaryEnglish)
       ? [{ id: `${lemma}.dictionary`, definitionEn: dictionaryEnglish, meaningVi: undefined }] : [])
   // Inheriting lemma data must not repeat a sense the exact form already contributed.
@@ -62,7 +65,7 @@ export function lookupLocalLexeme(candidate: string, surface = candidate, curate
   const meaningOwners = lemmaEntries.some(entry => entry.meaningsVi.length) ? lemmaEntries : exactEntries;
   const meaningsVi = [...new Set([...meaningOwners.flatMap(entry => entry.meaningsVi), ...(curated?.meaningsVi ?? []), ...(curated?.senses.flatMap(sense => sense.meaningVi ? [sense.meaningVi] : []) ?? [])].filter(Boolean))];
   if (!senses.length && !meaningsVi.length) return undefined;
-  const pos = normalizePos([...(curated?.pos ?? []), ...(wordnet?.pos ?? []), ...preferred.map(match => match.entry.partOfSpeech)]);
+  const pos = normalizePos([...(curated?.pos ?? []), ...(wordnet?.pos ?? []), ...(surfaceWordNet?.pos ?? []), ...preferred.map(match => match.entry.partOfSpeech)]);
   const morphologyMatch = preferred.find(match => match.morphology)?.morphology;
   const morphology = morphologyMatch
     ? { surface, ...morphologyMatch }

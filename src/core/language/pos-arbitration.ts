@@ -7,8 +7,10 @@ export function occurrencePos(analysis: SentenceAnalysis | undefined, index: num
   if (!analysis || index < 0) return undefined;
   const allowed = new Set(candidates);
   const tokens = analysis.tokens;
-  const previous = tokens[index - 1]?.normalized;
+  const previousToken = tokens[index - 1];
+  const previous = previousToken?.normalized;
   const next = tokens[index + 1];
+  const nextCanBeNoun = next?.pos === 'noun' || next?.posCandidates?.includes('noun');
   const has = (pos: ContextPos) => allowed.has(pos);
   if (has('verb') && analysis.grammar?.predicates.some(predicate => predicate.tokenIndex === index)) return 'verb';
   if (allowed.size === 1) {
@@ -26,10 +28,12 @@ export function occurrencePos(analysis: SentenceAnalysis | undefined, index: num
   if (has('adverb') && next && (next.pos === 'adjective' || next.pos === 'verb'
     || next.pos === 'adverb') && !/^(?:a|an|the)$/.test(next.normalized)) return 'adverb';
   if (has('verb') && /^(?:to|can|could|may|might|must|shall|should|will|would|do|does|did)$/.test(previous ?? '')) return 'verb';
+  if (has('verb') && /^(?:get|gets|got|getting)$/.test(previous ?? '')) return 'verb';
+  if (has('verb') && previousToken?.pos === 'noun' && next?.pos === 'adverb') return 'verb';
   if (has('noun') && /^(?:a|an|the|this|that|my|our|their|his|her|its)$/.test(previous ?? '')
-    && (!next || next.pos !== 'noun' || !has('adjective'))) return 'noun';
-  if (has('adjective') && next?.pos === 'noun' && /^(?:a|an|the)$/.test(previous ?? '')) return 'adjective';
-  if (has('adjective') && next?.pos === 'noun' && !has('noun')) return 'adjective';
+    && (!next || !nextCanBeNoun || !has('adjective'))) return 'noun';
+  if (has('adjective') && nextCanBeNoun && /^(?:a|an|the|this|that|my|our|their|his|her|its)$/.test(previous ?? '')) return 'adjective';
+  if (has('adjective') && nextCanBeNoun && !has('noun')) return 'adjective';
   if (has('adjective') && /^(?:is|am|are|was|were|be|seem|seems|feel|feels|become|became)$/.test(previous ?? '')
     && !has('noun') && !has('adverb')) return 'adjective';
   return undefined;

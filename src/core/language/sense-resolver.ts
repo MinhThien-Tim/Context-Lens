@@ -58,9 +58,13 @@ export class SenseResolver {
       const grammar = grammarEvidence[candidateIndex];
       reasons.push(...grammar.reasons);
       for (const event of grammar.events) {
-        const peers = grammarEvidence.filter((peer, i) => peer.compatible && input.candidateSenses[i].pos === sense.pos);
-        const supported = peers.filter(peer => peer.events.some(other => other.reason === event.reason)).length;
-        const contribution = !grammar.compatible ? 0 : supported === 1 ? event.score : supported * 2 < peers.length ? Math.min(1, event.score) : 0;
+        const peers = grammarEvidence.map((peer, i) => ({ peer, sense: input.candidateSenses[i] }))
+          .filter(item => item.peer.compatible && item.sense.pos === sense.pos);
+        const supporters = peers.filter(item => item.peer.events.some(other => other.reason === event.reason));
+        const equivalentSupport = supporters.every(item => item.sense === sense
+          || equivalentConstruction({ sense, reasons: [event.reason] }, { sense: item.sense, reasons: [event.reason] }));
+        const contribution = !grammar.compatible ? 0 : supporters.length === 1 || equivalentSupport ? event.score
+          : supporters.length * 2 < peers.length ? Math.min(1, event.score) : 0;
         semanticScore += contribution;
         reasons.push(event.reason, `Grammar ranking contribution: ${contribution}`);
       }

@@ -201,7 +201,7 @@ it('keeps Quick minimal, resets expansion on selection, and handles Escape in tw
     expect(host.querySelector('.context-actions,select')).toBeNull();
     expect(host.querySelector('.inspector-sources')?.hasAttribute('open')).toBe(false);
     expect(host.querySelector('[aria-label="Save word"]')).not.toBeNull();
-    expect(host.querySelector('.inspector-header .inspector-pronunciation .language-cycle')).not.toBeNull();
+    expect(host.querySelector('.inspector-header .inspector-lookup-tools .language-cycle')).not.toBeNull();
     expect(host.querySelector('.inspector-header .explain-button')?.textContent).toContain('Show more');
     expect(host.querySelectorAll('[aria-label="Add note"]')).toHaveLength(1);
     act(() => (host.querySelector('.explain-button') as HTMLButtonElement).click());
@@ -212,12 +212,12 @@ it('keeps Quick minimal, resets expansion on selection, and handles Escape in tw
     expect(host.querySelector('.meaning-en')?.textContent).toBe(validLookup.quick.definition_en);
     act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })); });
     expect(close).not.toHaveBeenCalled();
-    expect(host.querySelector('.inspector-pronunciation .language-cycle')).not.toBeNull();
+    expect(host.querySelector('.inspector-lookup-tools .language-cycle')).not.toBeNull();
     expect(host.querySelector('.lookup-sheet.quick')).not.toBeNull();
     act(() => (host.querySelector('.explain-button') as HTMLButtonElement).click());
     host.querySelector<HTMLSelectElement>('select')?.focus();
     act(() => render(<LookupBottomSheet {...props} selectionKey="second" />, host));
-    expect(host.querySelector('.inspector-pronunciation .language-cycle')).not.toBeNull();
+    expect(host.querySelector('.inspector-lookup-tools .language-cycle')).not.toBeNull();
     expect(host.querySelector('.lookup-sheet.quick')).not.toBeNull();
     expect(document.activeElement).toBe(host.querySelector('.explain-button'));
     act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })); });
@@ -454,7 +454,7 @@ it('pins only on completed handle drag and preserves placement across selections
     const handle = host.querySelector<HTMLElement>('.lookup-drag-handle')!;
     handle.setPointerCapture = vi.fn(); handle.hasPointerCapture = () => true; handle.releasePointerCapture = vi.fn();
     const sheet = host.querySelector<HTMLElement>('.lookup-sheet')!;
-    vi.spyOn(sheet, 'getBoundingClientRect').mockReturnValue({ left: 152, top: 172, width: 340, height: 520 } as DOMRect);
+    vi.spyOn(sheet, 'getBoundingClientRect').mockReturnValue({ left: 152, top: 172, width: 440, height: 520 } as DOMRect);
     pointer(host.querySelector('.save-inline')!, 'pointerdown', 160, 180);
     expect(handle.setPointerCapture).not.toHaveBeenCalled();
     window.getSelection()?.removeAllRanges();
