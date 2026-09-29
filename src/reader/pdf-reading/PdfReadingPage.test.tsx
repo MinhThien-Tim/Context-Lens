@@ -1,8 +1,10 @@
 import { render } from 'preact';
+import { act } from 'preact/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import { PdfReadingPage } from './PdfReadingPage';
+import { PdfReadingView } from './PdfReadingView';
 import { pdfPageNeedsOcr, readingPagesForDocument } from './structuredPages';
-import type { DocumentRecord } from '../../db/database';
+import type { DocumentRecord, PdfOcrRecord } from '../../db/database';
 import { extractStructuredPage, shiftStructuredPage } from '../../documents/pdf/extractStructuredPages';
 import { readingExtractionSamples } from '../../documents/pdf/readingExtraction.fixtures';
 import { readingSelectionFromDom, readingWordFromRange } from './readingSelectionAdapter';
@@ -81,6 +83,68 @@ describe('paginated PDF reading', () => {
     select.value = 'ocr';
     select.dispatchEvent(new Event('change', { bubbles: true }));
     expect(onSource).toHaveBeenCalledWith('ocr');
+  });
+
+  it('shows cached OCR for corrupt text and honors reversible per-page source choices without changing offsets', async () => {
+    const plainText = 'Unreadable PDF glyphs remain the canonical native page text.';
+    const startOffset = 12;
+    const block = { id: 'native', type: 'paragraph' as const, text: plainText, startOffset, endOffset: startOffset + plainText.length };
+    const page = { pageNumber: 1, startOffset, endOffset: block.endOffset, plainText, blocks: [block], extractionQuality: 'good' as const, textIntegrity: 'corrupt' as const };
+    const record = { id: 'corrupt', kind: 'pdf', content: ' '.repeat(startOffset) + plainText, pageOffsets: [startOffset], pdfPages: [page], location: { kind: 'pdf', page: 1, viewMode: 'reading', scrollY: 0, progress: 0, updatedAt: 0 } } as DocumentRecord;
+    const ocr = { key: 'cached', documentId: 'corrupt', page: 1, language: 'eng', configVersion: 2, text: 'Readable OCR text.', createdAt: 0 } as PdfOcrRecord;
+    const nativeBefore = JSON.stringify({ content: record.content, pageOffsets: record.pageOffsets, pdfPages: record.pdfPages });
+    const host = document.createElement('div');
+    document.body.append(host);
+    const onTextSource = vi.fn();
+    const show = async (source?: 'pdf' | 'ocr') => {
+      const documentRecord = source ? { ...record, pdfTextSources: { 1: source } } : record;
+      await act(async () => render(<PdfReadingView documentRecord={documentRecord} location={record.location as Extract<typeof record.location, { kind: 'pdf' }>} style={{}} activeMarkupColor="yellow" onLocation={vi.fn()} onLookup={vi.fn()} onAddNote={vi.fn()} onHighlight={vi.fn()} onErase={vi.fn()} ocrPages={[ocr]} onTextSource={onTextSource} />, host));
+    };
+    try {
+      await show();
+      expect(host.querySelector('.pdf-ocr-page .pdf-reading-content')?.textContent).toBe(ocr.text);
+      expect(host.querySelector<HTMLSelectElement>('select')?.value).toBe('ocr');
+      const choose = (source: 'pdf' | 'ocr') => {
+        const select = host.querySelector<HTMLSelectElement>('select')!;
+        select.value = source;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        expect(onTextSource).toHaveBeenLastCalledWith(1, source);
+      };
+      choose('pdf');
+      await show('pdf');
+      expect(host.querySelector('.pdf-ocr-page')).toBeNull();
+      expect(host.querySelector('.pdf-reading-content')?.textContent).toBe(plainText);
+      expect(host.querySelector<HTMLSelectElement>('select')?.value).toBe('pdf');
+      choose('ocr');
+      await show('ocr');
+      expect(host.querySelector('.pdf-ocr-page .pdf-reading-content')?.textContent).toBe(ocr.text);
+      expect(JSON.stringify({ content: record.content, pageOffsets: record.pageOffsets, pdfPages: record.pdfPages })).toBe(nativeBefore);
+      expect(record.content.slice(block.startOffset, block.endOffset)).toBe(plainText);
+    } finally {
+      await act(async () => render(null, host));
+      host.remove();
+    }
+  });
+
+  it('preserves cached OCR source selection for normal partial and legacy pages', async () => {
+    const native = 'Trustworthy but incomplete PDF text remains available.';
+    const legacy = { id: 'legacy', kind: 'pdf', content: native, pageOffsets: [0], location: { kind: 'pdf', page: 1, viewMode: 'reading', scrollY: 0, progress: 0, updatedAt: 0 } } as DocumentRecord;
+    const partial = { ...legacy, id: 'partial', pdfPages: [{ pageNumber: 1, startOffset: 0, endOffset: native.length, plainText: native, blocks: [{ id: 'p', type: 'paragraph' as const, text: native, startOffset: 0, endOffset: native.length }], extractionQuality: 'partial' as const, textIntegrity: 'valid' as const }] } as DocumentRecord;
+    const host = document.createElement('div');
+    document.body.append(host);
+    try {
+      for (const record of [partial, legacy]) {
+        const ocr = { key: record.id, documentId: record.id, page: 1, language: 'eng', configVersion: 2, text: 'Cached OCR text.', createdAt: 0 } as PdfOcrRecord;
+        const show = async (documentRecord: DocumentRecord) => act(async () => render(<PdfReadingView documentRecord={documentRecord} location={record.location as Extract<typeof record.location, { kind: 'pdf' }>} style={{}} activeMarkupColor="yellow" onLocation={vi.fn()} onLookup={vi.fn()} onAddNote={vi.fn()} onHighlight={vi.fn()} onErase={vi.fn()} ocrPages={[ocr]} />, host));
+        await show(record);
+        expect(host.querySelector('.pdf-ocr-page .pdf-reading-content')?.textContent).toBe(ocr.text);
+        await show({ ...record, pdfTextSources: { 1: 'pdf' } });
+        expect(host.querySelector('.pdf-reading-content')?.textContent).toBe(native);
+      }
+    } finally {
+      await act(async () => render(null, host));
+      host.remove();
+    }
   });
 
   it('renders a saved reading highlight at its canonical offset', () => {
