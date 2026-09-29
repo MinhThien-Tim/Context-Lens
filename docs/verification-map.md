@@ -35,6 +35,10 @@ of `agent-execution-rules.md` for browser-observable changes. No `verify:quickca
 `verify:contracts` is included in `verify:full`; it checks stable config defaults and documentation
 parity. The production build checks emitted service-worker precache contents and bundle budgets.
 
-Run `npm run verify:partitions` to audit all Vitest test files against these nine scopes. The audit
-reports total and assigned files, duplicates, and orphans, and exits unsuccessfully if any file is
-unassigned or assigned more than once.
+Run `npm run verify:partitions` to audit the partition. It enumerates every Vitest test file, derives
+the nine scope definitions directly from the `verify:*` scripts in `package.json`, and applies the
+same matching Vitest uses — case-insensitive positional substrings plus picomatch `--exclude` globs —
+to assign each file to exactly one subsystem. It reports total, assigned, duplicate, orphan, and
+per-subsystem counts, and exits unsuccessfully when a subsystem script is missing or when any test
+file belongs to zero buckets or to more than one. Because it reuses the runner's own filter semantics
+and the authoritative scope definitions, it fails on drift instead of merely listing test files.

@@ -22,7 +22,8 @@ Vitest config lives in `vite.config.ts` under `test`: `environment: 'jsdom'`,
 Notable colocated suites: `src/reader/TextReader.test.tsx`,
 `src/reader/pdf/selectionAdapter.test.ts`, `src/reader/pdf/navigation.test.ts`,
 `src/reader/pdf/stability.test.tsx`, `src/reader/pdf-reading/PdfReadingPage.test.tsx`,
-`src/reader/pdf-reading/highlights.test.ts`, `src/documents/pdf/extractStructuredPages.test.ts`,
+`src/reader/pdf-reading/PdfReadingView.test.tsx`, `src/reader/pdf-reading/highlights.test.ts`,
+`src/reader/pdf-reading/readingSelectionAdapter.test.ts`, `src/documents/pdf/extractStructuredPages.test.ts`,
 `src/documents/pdf/ocrEligibility.test.ts`, `src/documents/pdf/ocrStore.test.ts`,
 `src/core/language/local-language-engine.test.ts`, `src/core/language/sense-resolver.test.ts`,
 `src/core/translation/router.test.ts`, `src/core/translation/public-quality.test.ts`,
@@ -77,12 +78,16 @@ production-build budget hooks, and parity between `package.json` verify scripts 
 stay out of the generated service-worker precache and that required icons, dictionary, and WordNet
 payloads remain precached.
 
-`npm run verify:partitions` enumerates the Vitest test files and applies the nine subsystem scopes;
-it fails on duplicate or orphan assignments and reports totals. `npm run verify:list` only lists
-files. Vitest positional filters
-are substring/prefix matches, not globs — scope with directory prefixes plus `--exclude` globs.
-Playwright stays out of these scripts: browser specs remain `npm run test:browser`, and the
-production-only offline spec keeps its one-off command in the table above.
+`npm run verify:partitions` is the automated partition audit: it enumerates every Vitest test file,
+derives the nine subsystem scopes from the `verify:*` scripts in `package.json`, and applies the same
+matching Vitest uses — case-insensitive positional substrings plus picomatch `--exclude` globs. It
+reports total, assigned, duplicate, orphan, and per-subsystem counts, and exits non-zero if a
+subsystem script is missing, or if any file belongs to zero buckets or to more than one. It reuses the
+runner's own filter semantics and scope definitions, so it fails when the mapping drifts instead of
+merely listing files. `npm run verify:list` only lists files. Vitest positional filters are
+case-insensitive substring matches, not globs — scope with directory or file prefixes plus
+`--exclude` globs. Playwright stays out of these scripts: browser specs remain `npm run test:browser`,
+and the production-only offline spec keeps its one-off command in the table above.
 
 ## Targeted verification strategy
 
