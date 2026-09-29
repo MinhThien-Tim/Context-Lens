@@ -1,138 +1,247 @@
-# Testing troubleshooting
+# Testing Troubleshooting
 
-Use this reference for recurring verification problems. [Testing](testing.md) owns commands and
-scope; [agent execution rules](agent-execution-rules.md#7-execution--test-retry-policy) own
-classification, retry limits, approval, and stop conditions. Follow those rules if an example here
-appears to conflict with them.
+Quick reference for recurring test and verification failures in Context Lens.
 
-## Classify the result first
+This file does not replace:
+- `docs/testing.md` — test commands and verification scope.
+- `docs/agent-execution-rules.md` — retry, classification, and stop policy.
+- `docs/verification-map.md` — subsystem verification mapping.
+Use this file when a known symptom appears and a fast diagnosis path is needed.
 
-| Status | Evidence |
-| --- | --- |
-| `PASS` | The command finished and its passing result is confirmed. |
-| `FAIL` | The test or build ran and reported an assertion, compilation, runtime, or product failure. |
-| `BLOCKED` | A launcher, environment, permission, browser, or other required capability prevented execution. |
-| `UNRESOLVED` | Execution may have occurred, but its final result cannot be confirmed. |
-| `NOT RUN` | The check was intentionally unnecessary or disproportionate. |
+## Failure classification
 
-Do not change product code because a check is `BLOCKED`, `UNRESOLVED`, or `NOT RUN`.
+Before fixing anything, classify the result:
 
-## Launcher and environment
+- `FAIL` — test actually ran and code/test behavior failed.
+- `BLOCKED` — environment, launcher, permission, browser, or capability prevented execution.
+- `UNRESOLVED` — execution happened but final result cannot be confirmed.
+- `NOT RUN` — intentionally not executed.
+- `PASS` — confirmed successful result.
 
-### PowerShell blocks `npm.ps1` or `npx.ps1`
+Never change product code because of `BLOCKED`, `UNRESOLVED`, or `NOT RUN`.
 
-Use `npm.cmd` or `npx.cmd` with the **same target and arguments**, once, if the session permits
-the equivalent command. Prefer the `.cmd` launcher on the first Windows attempt. Do not change
-Execution Policy or switch through multiple shells. A launcher error is not a product failure.
+---
 
-### Vite or esbuild reports `spawn EPERM`
+## Common issues
 
-The test did not start. If the current tool supports approval, request one narrowly scoped retry
-through its official approval mechanism, within the two-attempt limit. If approval is unavailable,
-denied, or execution is still blocked, report `BLOCKED`. Do not alter security settings or product
-code to compensate.
+### PowerShell blocks npm.ps1
 
-### Playwright cannot find Chrome
-
-The configured Chrome channel is unavailable. Report the browser check `BLOCKED`; do not silently
-switch browsers or change application code.
-
-### A command's final result is unknown
-
-Check existing result evidence at most once, as specified in the
-[completion policy](agent-execution-rules.md#completion-unknown-and-long-running-commands).
-If that does not establish the result, report `UNRESOLVED`. Do not restart the command or poll
-processes and logs repeatedly.
-
-## Test selection and results
-
-### Vitest stays running after tests
-
-`vitest` and `npm run test:watch` start watch mode. Agent sessions must use the mapped
-`verify:<subsystem>` command or `vitest run` for an optional, targeted pre-check. Do not start
-watch mode in an agent session.
-
-### A single test passes but subsystem verification fails
-
-The single-file run is an iteration pre-check. The subsystem command also runs typecheck and other
-tests in its scope. Diagnose the first confirmed failure from that command and report the subsystem
-result accurately. A passing single file does not establish a subsystem `PASS`.
-
-### Full verification fails outside the changed subsystem
-
-Classify the specific failure. Compare it with the current diff before calling it pre-existing or
-unrelated. Report an established out-of-scope finding without changing unrelated code. Do not run
-`verify:full` merely because a targeted check was blocked.
-
-### A unit test unexpectedly reaches the network
-
-Unit and integration tests must stub external requests. Use the existing patterns in
-`src/lookup/webDictionary.test.ts` or `src/core/translation/providers/providers.test.ts`.
-Do not make test success depend on a live provider.
-
-### IndexedDB state leaks between tests
-
-Check that `fake-indexeddb` is active through `src/test/setup.ts`, then inspect database cleanup,
-mock restoration, and assumptions about test order. Fix the confirmed isolation issue; do not
-weaken assertions or force serial execution to hide it.
-
-### TypeScript reports an unexpected browser global type
-
-Check whether a local identifier shadows a browser global such as `document`, `window`, or
-`location`. Rename the identifier if shadowing caused the error. Do not change TypeScript
-configuration without evidence that the configuration is wrong.
-
-### Vite emits files but `npm run build` fails
-
-The build also runs `scripts/check_bundle_budget.mjs`. Read the failing diagnostic before
-classifying the result. It can report bundle budgets, missing offline assets, or reader assets
-entering precache. Vite output alone does not establish a build `PASS`.
-
-## Browser-specific checks
-
-### Offline behavior fails under `npm run dev`
-
-The service worker is active only in production builds. Build first, then use the production
-offline command from [testing.md](testing.md#commands). A missing service worker under the dev
-server is not evidence of a product regression.
-
-### Offline assets are unavailable on the first visit
-
-Check that the first online load and precache installation finished before switching the browser
-context offline. If the test itself fails after that, classify its actual assertion or browser
-error; do not assume a cache timing issue.
-
-### Vocabulary handoff cannot reach English101
-
-That spec requires the sibling English101 checkout and its server. If the dependency is absent,
-report the browser check `BLOCKED`. Do not rewrite the integration because the other repository
-is unavailable.
-
-### PDF or OCR browser tests run slowly
-
-These specs render real fixtures and may use OCR. Run only the narrow spec and project warranted
-by the change. A long-running test is not automatically a failure; apply the completion policy
-without starting another copy.
-
-## Retry and reporting
-
-For one launcher or environment problem, allow at most two execution attempts total: the normal
-command and one safe launcher fallback **or** officially approved scoped retry. These are not
-separate budgets. A genuine `FAIL` can be rerun after a meaningful fix or a clearly identified
-reason. See the [canonical policy](agent-execution-rules.md#7-execution--test-retry-policy) for
-the exact decision rules.
-
-Report `PASS` with the command, test count from the runner summary, and typecheck/build status.
-Report `FAIL` with the failing command, test or file, relevant diagnostic, and affected area.
-For `BLOCKED` or `UNRESOLVED`, use the canonical fields:
+**Symptom**
 
 ```text
-STATUS: BLOCKED | UNRESOLVED
-REASON: <confirmed restriction or missing final-result evidence>
-ATTEMPTS: <commands or direct result check and count>
+npm.ps1 cannot be loaded because running scripts is disabled
+
+Classification
+Launcher failure.
+Fast action
+Use:
+npm.cmd run verify:pdf
+
+or:
+npx.cmd vitest run <test-file>
+
+Do not modify Windows execution policy and do not retry through multiple shell wrappers.
+Vitest watch mode does not exit
+Symptom
+The command stays running after tests finish or waits for file changes.
+Cause
+vitest or npm run test:watch was used instead of run mode.
+Fast action
+Use:
+npx.cmd vitest run <test-file>
+
+or the appropriate subsystem command:
+npm.cmd run verify:<subsystem>
+
+Agents must not use watch mode.
+Single test passes but subsystem verification fails
+Symptom
+npx vitest run some-test.ts
+PASS
+
+but:
+npm run verify:<subsystem>
+FAIL
+
+Meaning
+The isolated test is not authoritative. A shared-state, integration, typecheck, or another test in the subsystem may be failing.
+Fast action
+Use the first real failure reported by the subsystem command.
+Do not report the subsystem as PASS based only on the single-file run.
+Full suite fails outside the task scope
+Symptom
+Targeted subsystem verification passes, but verify:full reports unrelated failures.
+Fast action
+Determine whether the failure is:
+- caused by the current diff;
+- pre-existing;
+- environment-related.
+If clearly unrelated, report it as an out-of-scope finding.
+Do not fix unrelated code in the current task.
+Playwright cannot find Chrome
+Symptom
+Browser launch fails because the configured Chrome channel is unavailable.
+Classification
+BLOCKED.
+Fast action
+Stop browser verification and report the missing browser.
+Do not modify product code or switch browsers merely to make the test run.
+Offline test fails when using dev server
+Symptom
+Service worker or offline reload behavior does not work under:
+npm run dev
+
+Cause
+Context Lens service worker is production-build only.
+Correct flow
+npm.cmd run build
+$env:QA_PRODUCTION='true'
+npx.cmd playwright test e2e/offline.spec.ts
+
+Do not treat missing service-worker behavior under the Vite dev server as a product regression.
+Offline test starts before precache completes
+Symptom
+App shell loads but dictionary, WordNet, or other offline assets are unavailable.
+Cause
+The first online installation/cache population was incomplete.
+Fast action
+Allow one complete online load before switching the browser context offline.
+Vocabulary handoff test cannot start
+Symptom
+e2e/vocabulary-handoff.spec.ts cannot reach English101.
+Cause
+The sibling English101 checkout/server is missing.
+Classification
+BLOCKED.
+Do not rewrite the test or Context Lens integration because the second repository is absent.
+Test unexpectedly performs a network request
+Symptom
+Vitest reaches an external provider or fails because network access is unavailable.
+Cause
+A provider/fetch call was not stubbed.
+Fast action
+Stub fetch or the provider using the patterns already present in:
+src/lookup/webDictionary.test.ts
+src/core/translation/providers/providers.test.ts
+
+Unit/integration tests must not depend on live network services.
+IndexedDB state leaks between tests
+Symptom
+Tests pass alone but fail when run together, often with stale records or unexpected database state.
+Fast checks
+- Confirm fake-indexeddb is being used through src/test/setup.ts.
+- Check database cleanup/reset between tests.
+- Check mocks are restored.
+- Check the test does not depend on execution order.
+Do not solve this by weakening assertions or forcing serial execution unless the architecture requires it.
+TypeScript reports document or another browser global incorrectly
+Known Context Lens example
+A module-scope helper named document shadowed the global browser document.
+Fast action
+Check for local identifiers shadowing browser globals such as:
+document
+window
+location
+history
+navigator
+
+Rename the helper rather than changing TypeScript configuration.
+Build succeeds in Vite but final build command fails
+Symptom
+Vite emits files successfully, but:
+npm run build
+
+still returns failure.
+Cause
+Context Lens also runs bundle/precache validation.
+Fast action
+Inspect the failure from:
+scripts/check_bundle_budget.mjs
+
+Possible causes include:
+- JS bundle budget exceeded;
+- CSS budget exceeded;
+- required offline assets missing;
+- heavy reader assets incorrectly entering precache.
+Do not report build PASS just because Vite itself completed.
+PDF/OCR browser tests are slow
+Meaning
+PDF rendering, OCR, real fixtures, and Playwright are intentionally heavier than normal Vitest tests.
+Fast action
+Run only the narrow spec/project required by the task.
+Do not repeatedly restart a legitimate long-running test.
+Test completion is unknown
+Symptom
+A command may have finished, but no reliable final PASS/FAIL result is available.
+Classification
+UNRESOLVED.
+Fast action
+Perform at most one direct result-status check.
+If the final result still cannot be established, stop and report UNRESOLVED.
+Do not repeatedly poll processes, logs, timestamps, or terminals.
+Quick decision path
+Did the test actually run?
+│
+├─ No
+│  ├─ PowerShell launcher problem → npm.cmd / npx.cmd once
+│  ├─ Missing browser / permission / sandbox → BLOCKED
+│  └─ Final state cannot be observed → UNRESOLVED
+│
+└─ Yes
+   ├─ Assertion / compile / runtime failure → FAIL
+   │   └─ diagnose exact failure → targeted fix → rerun affected check
+   │
+   └─ Confirmed successful → PASS
+
+Retry limits
+For launcher/environment problems:
+1. Run the documented command.
+2. Perform one safe fallback or approved retry.
+Maximum: two execution attempts.
+Do not chain shell workarounds or repeatedly rerun unchanged commands.
+For genuine code failures, rerun only after:
+- a meaningful code/config change; or
+- a clearly identified reason requiring another execution.
+Reporting template
+PASS
+STATUS: PASS
+COMMAND: <command>
+RESULT: <test count / build result>
+
+FAIL
+STATUS: FAIL
+COMMAND: <command>
+FAILURE: <test/file>
+ERROR: <relevant assertion or diagnostic>
+SCOPE: <current task or pre-existing/out-of-scope>
+
+BLOCKED
+STATUS: BLOCKED
+REASON: <confirmed restriction>
+ATTEMPTS: <commands and count>
 LAST CONFIRMED SUCCESS: <check or none>
 UNVERIFIED SCOPE: <remaining gap>
-```
 
-Add a new troubleshooting entry only after the issue has occurred, its classification is clear,
-and the corrective action is reusable. Keep chronological incident records elsewhere.
+UNRESOLVED
+STATUS: UNRESOLVED
+REASON: <missing final-result evidence>
+ATTEMPTS: <commands/status check>
+LAST CONFIRMED SUCCESS: <check or none>
+UNVERIFIED SCOPE: <remaining gap>
+
+Maintenance rule
+Only add a troubleshooting entry when:
+1. the issue has actually occurred;
+2. the cause or classification is understood well enough to reuse;
+3. there is a stable fast-action path.
+Do not turn this document into a chronological error log.
+
+### 2. Thêm link vào `docs/testing.md`
+
+Ở đầu `docs/testing.md`, hiện bạn có:
+
+```md
+Related: [ARCHITECTURE.md](ARCHITECTURE.md).
+
+đổi thành:
+Related: [ARCHITECTURE.md](ARCHITECTURE.md) · [Testing troubleshooting](testing-troubleshooting.md).

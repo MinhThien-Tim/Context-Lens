@@ -149,3 +149,50 @@
   .reader-shell.reader-shell .quick[data-quick-mode="simple"] .paired-columns .sense-vi { border-left: 1px solid var(--border); padding-left: 7px; }
 }
 .reader-shell.reader-shell .quick[data-quick-mode="simple"] .entry-glosses { background: transparent; border-radius: 0; box-shadow: none; }
+
+/* Phone Full/Expanded card: five deliberate rows (headword, IPA, primary controls,
+   base form, secondary actions) instead of a desktop toolbar squeezed into 320 px.
+   Phones only - the >=768 px and 1023 px row contracts above keep their own layout,
+   and Simple Quick keeps its own grid, so both are excluded. Every control is reused
+   as-is; this block only places them. Controls stay a painted 44px, matching the
+   phone touch contract already used above; compactness comes from the row structure
+   and gaps, never from shrinking a hit target. */
+@media (max-width: 767px) {
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 8px;
+    padding: 8px 10px;
+  }
+  /* Row 1: headword and POS stay together and may shrink; Note, Save and Close keep
+     their full 44px targets on the right and never wrap. */
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-word { grid-column: 1; grid-row: 1; align-self: center; min-width: 0; padding-left: 0; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-word-title { gap: 4px; min-width: 0; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-word-title > strong { min-width: 0; overflow-wrap: anywhere; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-header-actions { grid-column: 2; grid-row: 1; align-self: center; justify-self: end; flex-direction: row; gap: 0; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-header-actions button { min-width: 44px; min-height: 44px; padding-inline: 6px; font-size: 11px; }
+  /* Row 2: IPA with its pronunciation control; the two never split apart. */
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-pronunciation { grid-column: 1 / -1; grid-row: 2; flex-wrap: nowrap; align-items: center; gap: 0 4px; padding: 0; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-pronunciation .ipa-line { flex: 0 1 auto; min-width: 0; font-size: 11px; overflow-wrap: anywhere; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-pronunciation > button { flex: none; min-width: 44px; min-height: 44px; }
+  /* Row 3: one compact primary group - language, then options, then collapse - left
+     aligned, equal 44px height, small deliberate gaps, nothing floating alone. */
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-lookup-tools {
+    grid-column: 1 / -1; grid-row: 3;
+    display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center; justify-content: flex-start;
+    gap: 0 4px; min-width: 0; margin: 0; padding: 0; border: 0;
+  }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-lookup-tools > * { flex: 0 0 auto; }
+  /* compact LanguageTabs renders one .language-cycle button, not .language-tabs. */
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-lookup-tools .language-cycle { min-width: 44px; min-height: 44px; margin: 0; padding: 0 8px; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-lookup-tools .quick-mode-toggle { min-height: 44px; margin: 0; padding: 0 6px; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-lookup-tools .explain-more-actions { position: static; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-lookup-tools .explain-more-actions > summary { min-width: 44px; min-height: 44px; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-lookup-tools .explain-toggle { width: auto; min-height: 44px; margin: 0; padding: 0 2px; }
+  /* Row 4: base form sits directly below the primary controls. */
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-word-meta { grid-column: 1 / -1; grid-row: 4; margin: 0; min-width: 0; }
+  /* Row 5: secondary actions only, same 44px family and height as row 3, quieter. */
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-controls { grid-column: 1 / -1; grid-row: 5; display: flex; align-items: center; justify-content: flex-start; gap: 4px; min-width: 0; margin: 0; padding: 0; border: 0; background: transparent; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-controls .explain-toolstrip { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-controls .explain-toolstrip > button { min-height: 44px; margin: 0; }
