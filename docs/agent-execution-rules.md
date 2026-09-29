@@ -142,6 +142,27 @@ This section is the canonical owner of retry, execution, environment, completion
 Status meanings live in [testing.md](testing.md#verification-status-semantics).
 Use the **current session's actual capabilities**, never the model or agent name.
 
+### Terminal Loop Guard
+
+The mandatory stop rule for terminal execution. It is binding and normative: when in doubt, stop and
+report rather than retry. It owns the guard; the subsections below own the detail.
+
+**Never repeatedly retry shell commands.** On any failure:
+
+1. **Classify** it as `CODE`, `LAUNCHER`, `ENVIRONMENT`, or `COMPLETION UNKNOWN` (definitions under
+   “Classify before retrying” below) before doing anything else.
+2. **`LAUNCHER` failure** → try at most **one** known-safe fallback (the single equivalent launcher
+   under “Capability and security boundary”), within the same attempt budget.
+3. **`ENVIRONMENT` or `COMPLETION UNKNOWN`** → **stop execution and report**. Do not investigate
+   further.
+4. **Never switch shells or launchers repeatedly.** One documented launcher, at most one safe
+   equivalent, then stop.
+5. **Never use watch mode.** Any non-terminating command is prohibited in an agent session.
+6. **Never rerun an unchanged failing command.** A rerun requires a preceding code/config change or a
+   stated reason.
+7. **Maximum two execution attempts per verification objective.** On reaching the cap, stop the task
+   and report the exact blocker — do not retry.
+
 ### Classify before retrying
 
 - **Code failure:** the test ran and an assertion, compilation, runtime or product behavior failed.

@@ -50,6 +50,7 @@ Browser E2E is conditional, never mandatory. Never watch mode.
 
 ## 6. Stop instead of looping
 
+The [Terminal Loop Guard](docs/agent-execution-rules.md#terminal-loop-guard) is mandatory: never repeatedly retry shell commands — classify each failure once, take at most one safe fallback, then stop and report the blocker.
 Classify failures before retrying. Follow the canonical [Execution / Test Retry Policy](docs/agent-execution-rules.md#7-execution--test-retry-policy): maximum two launcher/environment execution attempts and one direct result check per problem.
 On Windows PowerShell, prefer `npm.cmd` / `npx.cmd` for documented npm/npx commands. A `.ps1`
 Execution Policy error alone does not establish that the equivalent `.cmd` launcher is blocked;
