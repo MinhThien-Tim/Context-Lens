@@ -60,7 +60,10 @@ Never weaken security, request Windows administrator elevation, or poll repeated
 
 Label every check exactly `PASS`, `FAIL`, `BLOCKED`, `UNRESOLVED`, or `NOT RUN`. Never report a
 non-pass as a pass, and never change code because a check was `BLOCKED`, `UNRESOLVED`, or `NOT RUN`.
-
+For recurring test symptoms and fast diagnosis paths, use
+[`docs/testing-troubleshooting.md`](docs/testing-troubleshooting.md).
+Retry and stop semantics remain authoritative in
+[`docs/agent-execution-rules.md`](docs/agent-execution-rules.md).
 ## Agent roles
 
 For every task, use one fixed role: Planner → [`docs/agent-roles/planner.md`](docs/agent-roles/planner.md),
