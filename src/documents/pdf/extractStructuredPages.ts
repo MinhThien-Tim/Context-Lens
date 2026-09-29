@@ -2,6 +2,47 @@ import type { PdfSourceTextItem, PdfStructuredPage, PdfTextBlock, PdfTextIntegri
 
 interface Line { text: string; x: number; y: number; width: number; fontSize: number; column: number; letterSpaced: boolean }
 
+/** Reconstruct only a geometrically consistent run of at least four letter items. */
+export function reconstructTextRuns(sourceItems: PdfSourceTextItem[]): PdfSourceTextItem[] {
+  const result: PdfSourceTextItem[] = [];
+  const isLetter = (item: PdfSourceTextItem) => /^\p{L}$/u.test(item.str);
+  let index = 0;
+  while (index < sourceItems.length) {
+    const first = sourceItems[index];
+    if (!isLetter(first)) { result.push(first); index++; continue; }
+    const run = [first];
+    const gaps: number[] = [];
+    while (index + run.length < sourceItems.length) {
+      const previous = run.at(-1)!;
+      const next = sourceItems[index + run.length];
+      const size = Math.abs(previous.transform[3] ?? previous.height) || previous.height;
+      const nextSize = Math.abs(next.transform[3] ?? next.height) || next.height;
+      const gap = (next.transform[4] ?? 0) - (previous.transform[4] ?? 0) - previous.width;
+      if (!isLetter(next) || previous.hasEOL || !Number.isFinite(size) || size <= 0 ||
+          (previous.transform[0] ?? 0) <= 0 || (next.transform[0] ?? 0) <= 0 ||
+          Math.abs(nextSize - size) > size * .1 ||
+          run.some(part => part.fontName && next.fontName && part.fontName !== next.fontName) ||
+          Math.abs((next.transform[5] ?? 0) - (previous.transform[5] ?? 0)) > Math.max(.75, size * .08) ||
+          previous.width < size * .12 || previous.width > size * 1.1 ||
+          next.width < size * .12 || next.width > size * 1.1 ||
+          gap < 0 || gap > Math.min(size * .4, Math.min(previous.width, next.width) * .65)) break;
+      gaps.push(gap);
+      run.push(next);
+    }
+    // A few independent labels are ambiguous. Require four letters and uniform tracking.
+    const averageGap = gaps.reduce((sum, gap) => sum + gap, 0) / (gaps.length || 1);
+    if (run.length >= 4 && gaps.every(gap => Math.abs(gap - averageGap) <= Math.max(.75, averageGap * .35))) {
+      const right = (run.at(-1)!.transform[4] ?? 0) + run.at(-1)!.width;
+      result.push({ ...first, str: run.map(part => part.str).join(''), width: right - (first.transform[4] ?? 0), hasEOL: run.at(-1)!.hasEOL });
+      index += run.length;
+    } else {
+      result.push(first);
+      index++;
+    }
+  }
+  return result;
+}
+
 export function extractStructuredPage(pageNumber: number, sourceItems: PdfSourceTextItem[], pageWidth: number, pageHeight: number): PdfStructuredPage {
   if (!sourceItems.some(item => item.str.trim())) return { pageNumber, startOffset: 0, endOffset: 0, plainText: '', blocks: [], extractionQuality: 'poor', textIntegrity: 'valid' };
   const lines = groupTextItems(sourceItems, pageWidth);
@@ -84,7 +125,9 @@ function groupTextItems(items: PdfSourceTextItem[], pageWidth: number): Line[] {
       chunks.at(-1)!.push(part);
       right = Math.max(right, part.x + part.item.width);
     }
-    for (const chunk of chunks) {
+    for (const originalChunk of chunks) {
+      // Chunk boundaries already encode large gaps and the detected column gutter.
+      const chunk = reconstructTextRuns(originalChunk.map(part => part.item)).map(item => ({ item, x: item.transform[4] ?? 0, y: item.transform[5] ?? 0, fontSize: Math.abs(item.transform[3] ?? item.height ?? 12) || 12 }));
       let text = '', rightEdge = 0, letterSpaced = false;
       for (const part of chunk) {
         const raw = part.item.str;

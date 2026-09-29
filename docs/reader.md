@@ -94,6 +94,10 @@ disabled under the same condition.
 
 - Extraction happens **at import**, not at render: `src/documents/pdf/extractStructuredPages.ts`
   produces `PdfStructuredPage { pageNumber, startOffset, endOffset, plainText, extractionQuality, blocks }`.
+- Within an existing row chunk, extraction combines runs of at least four separate letter items
+  only when baseline, font, direction, glyph widths and tracking agree. Explicit spaces, line
+  endings, large gaps and detected gutters remain boundaries; ambiguous fragments retain their
+  source spacing.
 - Two-column ordering requires repeated body-sized text regions with comparable font sizes and
   overlapping vertical coverage (at least three right-edge baselines and two left-region baselines).
   A confirmed gutter splits rows before joining. Text crossing the gutter remains in visual order

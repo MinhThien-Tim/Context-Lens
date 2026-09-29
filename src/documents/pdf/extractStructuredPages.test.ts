@@ -1,10 +1,59 @@
 import { describe, expect, it } from 'vitest';
-import { extractStructuredPage, joinLines, shiftStructuredPage } from './extractStructuredPages';
+import { extractStructuredPage, joinLines, reconstructTextRuns, shiftStructuredPage } from './extractStructuredPages';
 import type { PdfSourceTextItem } from './types';
 import { readingExtractionSamples } from './readingExtraction.fixtures';
 import realColumns from './twoColumn.real.fixture.json';
 
 const item = (str: string, x: number, y: number, size = 12, width = str.length * 6): PdfSourceTextItem => ({ str, width, height: size, transform: [size, 0, 0, size, x, y] });
+const letters = (word: string, x: number, y: number, gap = 3, size = 12): PdfSourceTextItem[] => [...word].map((letter, index) => item(letter, x + index * (6 + gap), y, size, 6));
+
+describe('PDF text-run reconstruction', () => {
+  it('joins a tracked heading without mutating source items or neighboring words', () => {
+    const run = letters('CONTENTS', 40, 700);
+    const original = run.map(part => ({ ...part }));
+    expect(reconstructTextRuns(run).map(part => part.str)).toEqual(['CONTENTS']);
+    expect(run).toEqual(original);
+    const page = extractStructuredPage(1, [item('THE', 10, 700, 12, 18), ...run, item('PAGE', 130, 700, 12, 24)], 600, 800);
+    expect(page.plainText).toBe('THE CONTENTS PAGE');
+    expect(page.blocks[0].endOffset).toBe(page.plainText.length);
+  });
+
+  it('keeps separate words and widely spaced or inconsistent labels separate', () => {
+    expect(extractStructuredPage(1, [item('Normal', 40, 700), item('words', 85, 700)], 600, 800).plainText).toBe('Normal words');
+    expect(reconstructTextRuns([item('A', 40, 700), item('B', 54, 700), item('C', 68, 700)]).map(part => part.str)).toEqual(['A', 'B', 'C']);
+    expect(reconstructTextRuns([item('A', 40, 700), item('B', 49, 700), item('C', 61, 700), item('D', 70, 700)]).map(part => part.str)).toEqual(['A', 'B', 'C', 'D']);
+    expect(extractStructuredPage(1, [item('A', 40, 700), item('B', 54, 700), item('C', 68, 700)], 600, 800).plainText).toBe('A B C');
+  });
+
+  it('reconstructs same-baseline glyphs within detected columns and preserves column order', () => {
+    // Three right and two left body baselines establish a gutter at x=300.
+    // The 22-unit gap between LEFT and RIGHT is below the 78-unit large-gap threshold.
+    const items = [
+      item('Right body first', 300, 720, 12, 150),
+      item('Left body first', 40, 710, 12, 180),
+      item('Right body second', 300, 700, 12, 150),
+      item('Left body second', 40, 690, 12, 180),
+      item('Right body third', 300, 680, 12, 150),
+      ...letters('RIGHT', 300, 660),
+      ...letters('LEFT', 245, 660),
+    ];
+    const page = extractStructuredPage(1, items, 600, 800);
+    expect(page.plainText).toBe('Left body first Left body second\n\nLEFT\n\nRight body first Right body second Right body third RIGHT');
+    for (const block of page.blocks) expect(page.plainText.slice(block.startOffset, block.endOffset)).toBe(block.text);
+  });
+
+  it('rejects changed font, size, baseline, EOL and reversed geometry', () => {
+    const base = letters('WORD', 40, 700).map(part => ({ ...part, fontName: 'font-a' }));
+    const variants: PdfSourceTextItem[][] = [
+      base.map((part, i) => i === 2 ? { ...part, fontName: 'font-b' } : part),
+      base.map((part, i) => i === 2 ? { ...part, height: 16, transform: [16, 0, 0, 16, part.transform[4], 700] } : part),
+      base.map((part, i) => i === 2 ? { ...part, transform: [12, 0, 0, 12, part.transform[4], 697] } : part),
+      base.map((part, i) => i === 1 ? { ...part, hasEOL: true } : part),
+      base.map((part, i) => i === 2 ? { ...part, transform: [12, 0, 0, 12, 45, 700] } : part),
+    ];
+    for (const parts of variants) expect(reconstructTextRuns(parts).map(part => part.str)).toEqual(['W', 'O', 'R', 'D']);
+  });
+});
 
 describe('structured PDF extraction', () => {
   it('groups lines into paragraphs and preserves canonical offsets', () => {
