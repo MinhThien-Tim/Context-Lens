@@ -56,6 +56,63 @@ describe('PDF text-run reconstruction', () => {
 });
 
 describe('structured PDF extraction', () => {
+  it('recognizes supported heading styles without promoting ordinary prose', () => {
+    const body = [item('Ordinary body text establishes the page style.', 40, 650, 12, 300), item('Another substantial body line follows here.', 40, 634, 12, 290), item('The same body font continues in a paragraph.', 40, 618, 12, 280)].map(part => ({ ...part, fontName: 'Body-Regular' }));
+    const cases = [
+      { label: 'INTRODUCTION', x: 200, y: 730, size: 20, width: 200, font: 'Title', heading: true },
+      { label: 'Background', x: 40, y: 730, size: 12, width: 100, font: 'Body-Bold', heading: true },
+      { label: 'The Rebel', x: 250, y: 730, size: 12, width: 100, font: 'Title', heading: true },
+      { label: 'T R A C K E D', x: 235, y: 730, size: 18, width: 130, font: 'Title', heading: true },
+      { label: 'Short prose', x: 40, y: 700, size: 12, width: 100, font: 'Body-Regular', heading: false },
+      { label: 'ALL CAPS BODY TEXT', x: 40, y: 700, size: 12, width: 130, font: 'Body-Regular', heading: false },
+      { label: '“A quotation.”', x: 235, y: 730, size: 20, width: 130, font: 'Title', heading: false },
+      { label: 'NARRATOR: Welcome.', x: 200, y: 730, size: 20, width: 200, font: 'Title', heading: false },
+      { label: '1. Listed text', x: 200, y: 730, size: 20, width: 200, font: 'Title', heading: false },
+    ];
+    for (const sample of cases) {
+      const source = { ...item(sample.label, sample.x, sample.y, sample.size, sample.width), fontName: sample.font };
+      const page = extractStructuredPage(1, [source, ...body], 600, 800);
+      expect(page.blocks.find(block => block.text.includes(sample.label === 'T R A C K E D' ? 'TRACKED' : sample.label))?.type === 'heading', sample.label).toBe(sample.heading);
+      for (const block of page.blocks) expect(page.plainText.slice(block.startOffset, block.endOffset)).toBe(block.text);
+    }
+  });
+
+  it('classifies a nearby chapter number and title independently', () => {
+    const source = [item('CHAPTER 4', 235, 750, 17, 130), item('THE MACHINE', 220, 724, 17, 160), item('The first ordinary body line continues here.', 40, 650, 12, 290), item('The second ordinary body line continues here.', 40, 634, 12, 290)];
+    const page = extractStructuredPage(1, source, 600, 800);
+    expect(page.blocks.slice(0, 2).map(block => [block.type, block.text])).toEqual([['heading', 'CHAPTER 4'], ['heading', 'THE MACHINE']]);
+  });
+
+  it('marks only strongly isolated decorations while keeping unusual author content and offsets', () => {
+    const source = [
+      item('PUBLISHER', 220, 760, 18, 160),
+      item('cssao', 460, 690, 7, 28),
+      item('The key QXZ-17 is used by Aethelwyrm.', 40, 570, 12, 280),
+      item('Later QXZ-17 is transformed in this account.', 40, 554, 12, 290),
+      item('The system returned Kx7R and continued normally.', 40, 538, 12, 320),
+      item('E = mc² describes the technical notation.', 40, 522, 12, 270),
+      item('Ordinary prose continues after the ornament.', 40, 506, 12, 280),
+    ];
+    const page = extractStructuredPage(1, source, 600, 800);
+    expect(page.blocks.find(block => block.text === 'cssao')?.contentRole).toBe('decorative');
+    for (const block of page.blocks.filter(block => block.text !== 'cssao')) expect(block.contentRole).not.toBe('decorative');
+    expect(page.plainText).toContain('cssao');
+    expect(page.textIntegrity).toBe('valid');
+    const shifted = shiftStructuredPage(page, 91);
+    expect(shifted.plainText).toBe(page.plainText);
+    for (const block of shifted.blocks) expect(shifted.plainText.slice(block.startOffset - 91, block.endOffset - 91)).toBe(block.text);
+  });
+
+  it('keeps a standalone section label and technical notation while allowing an isolated ornament', () => {
+    const source = [item('§§', 470, 750, 8, 20), item('A', 460, 690, 12, 9),
+      item('The notation E = mc² is retained in this discussion.', 40, 600, 12, 300),
+      item('The discussion continues with ordinary text.', 40, 584, 12, 280)];
+    const page = extractStructuredPage(1, source, 600, 800);
+    expect(page.blocks.find(block => block.text === '§§')?.contentRole).toBe('decorative');
+    expect(page.blocks.find(block => block.text === 'A')?.contentRole).not.toBe('decorative');
+    expect(page.blocks.find(block => block.text.includes('mc²'))?.contentRole).not.toBe('decorative');
+  });
+
   it('repairs only supported unmarked splits at a repeated paragraph right edge', () => {
     for (const [before, after, joined] of [
       ['pres', 'ent', 'present'], ['interpre', 'tation', 'interpretation'], ['pur', 'suit', 'pursuit'],

@@ -102,6 +102,12 @@ disabled under the same condition.
 
 - Extraction happens **at import**, not at render: `src/documents/pdf/extractStructuredPages.ts`
   produces `PdfStructuredPage { pageNumber, startOffset, endOffset, plainText, extractionQuality, blocks }`.
+- Native PDF heading classification uses page-local typography together with layout separation or
+  centering. Optional block `contentRole` marks only strongly isolated decorative fragments;
+  unknown words, codes, and unusual names are not judged through dictionary validity.
+  This is separate from page-level `textIntegrity`. Decorative text stays in canonical
+  `plainText` with unchanged offsets and remains visible, selectable, and subdued in Reading Mode.
+  Legacy blocks without the field render normally.
 - Within an existing row chunk, extraction combines runs of at least four separate letter items
   only when baseline, font, direction, glyph widths and tracking agree. Explicit spaces, line
   endings, large gaps and detected gutters remain boundaries; ambiguous fragments retain their

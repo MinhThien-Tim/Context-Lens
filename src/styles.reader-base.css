@@ -68,6 +68,7 @@
 .pdf-reading-content li+li { margin-top:.4em; }
 .pdf-reading-dialogue strong { font-family:var(--font-ui); font-size:.82em; letter-spacing:.03em; }
 .pdf-reading-footnote { margin-top:1.8em; padding-top:12px; border-top:1px solid var(--border); color:var(--muted); font-size:.86em; }
+.pdf-reading-decorative { color:var(--muted); }
 .pdf-reading-empty { color:var(--muted); font-style:italic; }
 .pdf-reading-selection-wrap { position:fixed; z-index:25; left:50%; bottom:max(18px,calc(env(safe-area-inset-bottom) + 8px)); transform:translateX(-50%); display:grid; justify-items:center; gap:7px; width:max-content; max-width:calc(100vw - 16px); }
 .pdf-reading-selection-actions { display:flex; gap:4px; padding:5px; max-width:100%; overflow-x:auto; border:1px solid var(--border); border-radius:12px; background:var(--elevated-surface); box-shadow:var(--shadow); }

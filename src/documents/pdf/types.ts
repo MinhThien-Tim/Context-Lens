@@ -7,6 +7,8 @@ export type PdfTextBlock = {
   text: string;
   startOffset: number;
   endOffset: number;
+  /** Optional native-PDF presentation hint; absent on legacy blocks. */
+  contentRole?: 'semantic' | 'decorative' | 'uncertain';
   level?: 1 | 2 | 3;
   speaker?: string;
   items?: string[];

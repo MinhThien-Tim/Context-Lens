@@ -1,6 +1,6 @@
 import type { PdfSourceTextItem, PdfStructuredPage, PdfTextBlock, PdfTextIntegrity } from './types';
 
-interface Line { text: string; x: number; y: number; width: number; fontSize: number; column: number; letterSpaced: boolean }
+interface Line { text: string; x: number; y: number; width: number; fontSize: number; fontName?: string; column: number; letterSpaced: boolean }
 
 /** Reconstruct only a geometrically consistent run of at least four letter items. */
 export function reconstructTextRuns(sourceItems: PdfSourceTextItem[]): PdfSourceTextItem[] {
@@ -48,6 +48,7 @@ export function extractStructuredPage(pageNumber: number, sourceItems: PdfSource
   const lines = groupTextItems(sourceItems, pageWidth);
   const fontSizes = lines.map(line => line.fontSize).sort((a, b) => a - b);
   const median = fontSizes[Math.floor(fontSizes.length / 2)] || 12;
+  const headings = headingCandidates(lines, median, pageWidth, pageHeight);
   const groups: Line[][] = [];
   for (const line of lines) {
     const previous = groups.at(-1);
@@ -56,10 +57,11 @@ export function extractStructuredPage(pageNumber: number, sourceItems: PdfSource
     // An indent alone may be alignment. Require a terminal, short preceding line too.
     const paragraphStart = prior && line.x - prior.x >= median && prior.width < pageWidth * .6 && /[.!?]["'”’)]?$/.test(prior.text);
     const changedRole = prior && (Math.max(prior.fontSize, line.fontSize) / Math.max(1, Math.min(prior.fontSize, line.fontSize)) > 1.25 || line.x - prior.x > median * 1.8 && /[.!?]$/.test(prior.text));
-    if (!previous || !prior || paragraphStart || line.column !== prior.column || gap > Math.max(median * 1.65, prior.fontSize * 1.7) || changedRole || classifyLine(line, median, pageHeight) !== classifyLine(prior, median, pageHeight)) groups.push([line]);
+    if (!previous || !prior || paragraphStart || line.column !== prior.column || gap > Math.max(median * 1.65, prior.fontSize * 1.7) || changedRole || headings.has(line) && headings.has(prior) && /^(?:CHAPTER|PART|BOOK|SECTION)\s+[\dIVXLCDM]+$/i.test(prior.text) || classifyLine(line, median, pageHeight, headings) !== classifyLine(prior, median, pageHeight, headings)) groups.push([line]);
     else previous.push(line);
   }
-  const rawBlocks = groups.map((group, index) => classifyBlock(group, median, pageHeight, pageNumber, index));
+  const rawBlocks = groups.map((group, index) => classifyBlock(group, median, pageHeight, pageNumber, index, headings));
+  markDecorativeBlocks(rawBlocks, groups, lines, pageWidth, pageHeight, median);
   let cursor = 0;
   const blocks: PdfTextBlock[] = rawBlocks.map(block => {
     const startOffset = cursor;
@@ -144,7 +146,9 @@ function groupTextItems(items: PdfSourceTextItem[], pageWidth: number): Line[] {
       text = text.trim();
       if (!text || (/^\p{L}$/u.test(text) && chunk.length === 1 && chunk[0].fontSize > 14)) continue;
       const x = chunk[0].x;
-      lines.push({ text, x, y: row.y, width: Math.max(...chunk.map(part => part.x + part.item.width)) - x, fontSize: Math.max(...chunk.map(part => part.fontSize)), column: 0, letterSpaced });
+      const named = chunk.filter(part => part.item.str.trim() && part.item.fontName);
+      const fontName = named.length && named.length === chunk.filter(part => part.item.str.trim()).length && new Set(named.map(part => part.item.fontName)).size === 1 ? named[0].item.fontName : undefined;
+      lines.push({ text, x, y: row.y, width: Math.max(...chunk.map(part => part.x + part.item.width)) - x, fontSize: Math.max(...chunk.map(part => part.fontSize)), fontName, column: 0, letterSpaced });
     }
   }
   const visual = lines.sort((a, b) => b.y - a.y || a.x - b.x);
@@ -166,23 +170,83 @@ function groupTextItems(items: PdfSourceTextItem[], pageWidth: number): Line[] {
   return ordered;
 }
 
-function classifyLine(line: Line, median: number, pageHeight: number): PdfTextBlock['type'] {
-  if (line.fontSize >= median * 1.28 && line.text.length <= 100) return 'heading';
+function headingCandidates(lines: Line[], median: number, pageWidth: number, pageHeight: number): Set<Line> {
+  const body = lines.filter(line => line.text.length >= 24 && line.width >= pageWidth * .22 &&
+    line.fontSize <= median * 1.12 && !/^[“"‘']/.test(line.text));
+  const bodySizes = body.map(line => line.fontSize).sort((a, b) => a - b);
+  const bodyMedian = bodySizes.length >= 2 ? bodySizes[Math.floor((bodySizes.length - 1) / 2)] : median;
+  const named = body.filter(line => line.fontName);
+  const counts = new Map<string, number>();
+  for (const line of named) counts.set(line.fontName!, (counts.get(line.fontName!) ?? 0) + 1);
+  const common = [...counts].sort((a, b) => b[1] - a[1])[0];
+  const bodyFont = common && common[1] >= 2 && common[1] >= named.length * .6 ? common[0] : undefined;
+  const candidates = new Set<Line>();
+  const center = pageWidth / 2;
+  const chapter = (text: string) => /^(?:CHAPTER|PART|BOOK|SECTION)\s+[\dIVXLCDM]+$/i.test(text);
+  lines.forEach((line, index) => {
+    if (line.text.length > 100 || line.text.split(/\s+/).length > 12 || /[.!?][”"']?$/.test(line.text) ||
+        /^(?:[-•▪‣]|\d+[.)])\s+/.test(line.text) || /^[A-Z][A-Z\s.'-]{1,30}:\s+\S/.test(line.text) ||
+        /^[“"‘']/.test(line.text) || line.y < pageHeight * .22 && line.fontSize < median * .88) return;
+    const previous = lines[index - 1], next = lines[index + 1];
+    const large = line.fontSize >= bodyMedian * 1.28;
+    const distinctFont = !!(bodyFont && line.fontName && line.fontName !== bodyFont &&
+      (/(?:bold|black|heavy|semi.?bold|demi)/i.test(line.fontName) || body.length >= 3));
+    if (!large && !distinctFont) return;
+    const centered = Math.abs(line.x + line.width / 2 - center) <= pageWidth * .09 && line.width < pageWidth * .8;
+    const above = previous ? Math.abs(previous.y - line.y) : Infinity;
+    const below = next ? Math.abs(line.y - next.y) : Infinity;
+    const separated = above >= median * 1.8 || below >= median * 1.8;
+    const paired = chapter(line.text) && next && below <= median * 2.5 && next.text.length <= 70 &&
+      (Math.abs(next.x + next.width / 2 - center) <= pageWidth * .12 || Math.abs(next.x - line.x) <= median);
+    if (centered || separated || paired) candidates.add(line);
+  });
+  // A nearby title inherits the chapter marker's relationship, but still needs typography.
+  lines.forEach((line, index) => {
+    const previous = lines[index - 1];
+    if (!previous || !candidates.has(previous) || !chapter(previous.text) || line.text.length > 70) return;
+    if (Math.abs(previous.y - line.y) > median * 2.5 || /[.!?]$/.test(line.text)) return;
+    if (line.fontSize >= bodyMedian * 1.28 || bodyFont && line.fontName && line.fontName !== bodyFont) candidates.add(line);
+  });
+  return candidates;
+}
+
+function classifyLine(line: Line, median: number, pageHeight: number, headings: Set<Line>): PdfTextBlock['type'] {
   if (/^(?:[-•▪‣]|\d+[.)])\s+/.test(line.text)) return 'list';
   if (/^[A-Z][A-Z\s.'-]{1,30}:\s+\S/.test(line.text)) return 'dialogue';
   if (/^[“"‘']/.test(line.text) && /[”"’']$/.test(line.text)) return 'quote';
   if (line.y < pageHeight * .22 && line.fontSize < median * .88 && /^(?:\d+|[*†‡])\s*/.test(line.text)) return 'footnote';
+  if (headings.has(line)) return 'heading';
   return 'paragraph';
 }
 
-function classifyBlock(lines: Line[], median: number, pageHeight: number, pageNumber: number, index: number): Omit<PdfTextBlock, 'startOffset' | 'endOffset'> {
-  const type = classifyLine(lines[0], median, pageHeight);
+function classifyBlock(lines: Line[], median: number, pageHeight: number, pageNumber: number, index: number, headings: Set<Line>): Omit<PdfTextBlock, 'startOffset' | 'endOffset'> {
+  const type = classifyLine(lines[0], median, pageHeight, headings);
   const joined = type === 'paragraph' ? joinParagraphLines(lines) : joinLines(lines.map(line => line.text));
   const base = { id: `pdf-${pageNumber}-${index}`, type, text: joined };
   if (type === 'heading') return { ...base, level: lines[0].fontSize >= median * 1.7 ? 1 : lines[0].fontSize >= median * 1.42 ? 2 : 3 };
   if (type === 'dialogue') { const match = joined.match(/^([^:]+):\s*(.*)$/s); return { ...base, speaker: match?.[1] }; }
   if (type === 'list') { const items = lines.map(line => line.text.replace(/^(?:[-•▪‣]|\d+[.)])\s+/, '')); return { ...base, text: items.join('\n'), items }; }
   return base;
+}
+
+function markDecorativeBlocks(blocks: Array<Omit<PdfTextBlock, 'startOffset' | 'endOffset'>>, groups: Line[][], lines: Line[], pageWidth: number, pageHeight: number, median: number): void {
+  const prose = blocks.filter(block => block.text.length >= 30 && /\s/.test(block.text)).map(block => block.text);
+  const bodyX = lines.filter(line => line.text.length >= 24 && line.width >= pageWidth * .22).map(line => line.x).sort((a, b) => a - b);
+  if (bodyX.length < 2) return;
+  const typicalX = bodyX[Math.floor(bodyX.length / 2)];
+  blocks.forEach((block, index) => {
+    if (block.type !== 'paragraph' || groups[index].length !== 1 || block.text.length > 12 || /^\p{L}$/u.test(block.text) || /[.!?=]/.test(block.text) ||
+        /\d/.test(block.text) ||
+        /^(?:CHAPTER|PART|BOOK|SECTION)\b/i.test(block.text) || prose.some(text => text.includes(block.text))) return;
+    const line = groups[index][0];
+    const prior = groups[index - 1]?.at(-1), next = groups[index + 1]?.[0];
+    const isolated = (!prior || Math.abs(prior.y - line.y) >= median * 2) && (!next || Math.abs(line.y - next.y) >= median * 2);
+    const outOfColumn = Math.abs(line.x - typicalX) >= pageWidth * .18;
+    const titleRegion = line.y >= pageHeight * .55 && (prior || next) && outOfColumn;
+    const abnormal = /^[^\p{L}\p{N}]+$/u.test(block.text) || /[\ufffd\p{Co}\p{Cc}]/u.test(block.text);
+    const styled = line.fontSize <= median * .75 || line.fontSize >= median * 1.5 || line.letterSpaced;
+    if (isolated && outOfColumn && (abnormal || titleRegion && styled)) block.contentRole = 'decorative';
+  });
 }
 
 // Deliberately small: unfamiliar splits retain their source boundary space.

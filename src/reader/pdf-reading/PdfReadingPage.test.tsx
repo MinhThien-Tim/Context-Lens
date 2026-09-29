@@ -11,6 +11,34 @@ import { readingSelectionFromDom, readingWordFromRange } from './readingSelectio
 import realColumns from '../../documents/pdf/twoColumn.real.fixture.json';
 
 describe('paginated PDF reading', () => {
+  it('keeps decorative, uncertain, semantic, legacy and TOC text selectable at canonical offsets', () => {
+    const values = [
+      { id: 'dec', type: 'paragraph' as const, text: '◇', contentRole: 'decorative' as const },
+      { id: 'unc', type: 'paragraph' as const, text: 'QXZ-17', contentRole: 'uncertain' as const },
+      { id: 'sem', type: 'paragraph' as const, text: 'Known text', contentRole: 'semantic' as const },
+      { id: 'old', type: 'paragraph' as const, text: 'Legacy text' },
+      { id: 'toc', type: 'toc-entry' as const, text: 'Chapter 1', contentRole: 'decorative' as const },
+    ];
+    let cursor = 15;
+    const blocks = values.map(value => { const block = { ...value, startOffset: cursor, endOffset: cursor + value.text.length }; cursor = block.endOffset + 2; return block; });
+    const plainText = values.map(value => value.text).join('\n\n');
+    const content = ' '.repeat(15) + plainText;
+    const host = document.createElement('div'); document.body.append(host);
+    render(<PdfReadingPage page={{ pageNumber: 1, startOffset: 15, endOffset: 15 + plainText.length, plainText, extractionQuality: 'good', blocks }} highlights={[{ id: 'dec-mark', startOffset: 15, endOffset: 16, color: 'yellow', createdAt: 1 }, { id: 'after-mark', startOffset: blocks[1].startOffset, endOffset: blocks[1].endOffset, color: 'blue', createdAt: 1 }]} />, host);
+    for (const block of blocks) {
+      const node = host.querySelector(`#${block.id}`)!;
+      expect(node.textContent).toBe(block.text);
+      expect(node.getAttribute('data-offset')).toBe(String(block.startOffset));
+      expect(node.classList.contains('pdf-reading-decorative')).toBe(block.id === 'dec');
+    }
+    expect(host.querySelector('#dec mark')?.textContent).toBe('◇');
+    expect(host.querySelector('#unc mark')?.textContent).toBe('QXZ-17');
+    const range = document.createRange(); range.selectNodeContents(host.querySelector('#unc')!);
+    const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
+    expect(readingSelectionFromDom(host, content)).toEqual(expect.objectContaining({ text: 'QXZ-17', offset: blocks[1].startOffset }));
+    selection.removeAllRanges(); render(null, host); host.remove();
+  });
+
   it('keeps fixture text order, page offsets, selection and highlights aligned', () => {
     let content = '';
     const pageOffsets: number[] = [];

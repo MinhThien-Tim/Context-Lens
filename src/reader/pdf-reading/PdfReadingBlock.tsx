@@ -2,7 +2,7 @@ import type { PdfTextBlock } from '../../documents/pdf/types';
 import type { ReaderHighlight } from '../../db/database';
 
 export function PdfReadingBlock({ block, highlights = [] }: { block: PdfTextBlock; highlights?: ReaderHighlight[] }) {
-  const props = { id: block.id, 'data-offset': block.startOffset };
+  const props = { id: block.id, 'data-offset': block.startOffset, class: block.contentRole === 'decorative' && block.type !== 'toc-entry' ? 'pdf-reading-decorative' : undefined };
   const content = highlightedText(block.text, block.startOffset, highlights);
   if (block.type === 'toc-entry') return <p {...props} class={`pdf-reading-toc-entry pdf-reading-toc-level-${block.level ?? 1}`} data-printed-page-label={block.printedPageLabel}>{content}</p>;
   if (block.type === 'heading') { const Tag = `h${block.level ?? 2}` as 'h1' | 'h2' | 'h3'; return <Tag {...props}>{content}</Tag>; }
