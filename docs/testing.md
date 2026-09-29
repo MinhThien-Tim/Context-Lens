@@ -59,7 +59,7 @@ subsystem command first instead of discovering tests or assembling ad-hoc `vites
 | Subsystem | Command | Scope |
 | --- | --- | --- |
 | Reader (text surfaces) | `npm run verify:reader` | `src/reader`, excluding `src/reader/pdf/**` and `src/reader/pdf-reading/**` |
-| PDF + OCR | `npm run verify:pdf` | `src/reader/pdf`, `src/documents/pdf` |
+| PDF + OCR | `npm run verify:pdf` | `src/reader/pdf`, `src/reader/pdf-reading`, `src/documents/pdf` |
 | Import | `npm run verify:import` | `src/documents`, excluding `src/documents/pdf/**` and `src/documents/offline*` |
 | Lookup | `npm run verify:lookup` | `src/lookup` + lookup-sheet components, excluding `src/lookup/normalization/**` and `**/*.offline.test.tsx` |
 | Language engine | `npm run verify:language` | `src/core/language`, `src/lookup/normalization` |
@@ -69,8 +69,9 @@ subsystem command first instead of discovering tests or assembling ad-hoc `vites
 | Offline | `npm run verify:offline` | `src/documents/offline`, `src/components/OfflineBadge`, `src/components/LookupBottomSheet.offline` |
 | Everything | `npm run verify:full` | `typecheck` + full `vitest run` + `build` (bundle budget) |
 
-The nine subsystem buckets partition all colocated Vitest files with no overlaps and no orphans;
-`npm run verify:list` (`vitest list --filesOnly`) re-checks the mapping. Vitest positional filters
+`npm run verify:partitions` enumerates the Vitest test files and applies the nine subsystem scopes;
+it fails on duplicate or orphan assignments and reports totals. `npm run verify:list` only lists
+files. Vitest positional filters
 are substring/prefix matches, not globs — scope with directory prefixes plus `--exclude` globs.
 Playwright stays out of these scripts: browser specs remain `npm run test:browser`, and the
 production-only offline spec keeps its one-off command in the table above.

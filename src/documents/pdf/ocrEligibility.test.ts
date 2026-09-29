@@ -9,7 +9,7 @@ const document = {
   pdfPages: [
     { pageNumber: 1, startOffset: 0, endOffset: 0, plainText: '', blocks: [], extractionQuality: 'poor', hasImage: false },
     { pageNumber: 2, startOffset: 0, endOffset: 0, plainText: '', blocks: [], extractionQuality: 'poor', hasImage: true },
-    { pageNumber: 3, startOffset: 0, endOffset: 45, plainText: 'Readable text', blocks: [], extractionQuality: 'good', hasImage: true },
+    { pageNumber: 3, startOffset: 0, endOffset: 45, plainText: 'Readable text', blocks: [], extractionQuality: 'good', textIntegrity: 'valid', hasImage: true },
   ],
 } as DocumentRecord;
 
@@ -18,6 +18,10 @@ describe('OCR queue eligibility', () => {
     expect(ocrCandidate(document, 1, 'eng', [])).toBe(false);
     expect(ocrCandidate(document, 2, 'eng', [])).toBe(true);
     expect(ocrCandidate(document, 3, 'eng', [])).toBe(false);
+  });
+  it('does not use integrity metadata to change OCR eligibility', () => {
+    const corrupt = { ...document, pdfPages: document.pdfPages?.map(page => page.pageNumber === 3 ? { ...page, textIntegrity: 'corrupt' as const } : page) } as DocumentRecord;
+    expect(ocrCandidate(corrupt, 3, 'eng', [])).toBe(false);
   });
   it('reuses only OCR for the same page, language and document hash', () => {
     const cached = [{ page: 2, language: 'eng', documentHash: 'one' }] as PdfOcrRecord[];

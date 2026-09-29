@@ -107,6 +107,10 @@ disabled under the same condition.
   Legacy page fallback preserves whitespace so DOM block offsets still address the stored content.
 - `extractionQuality` (`good` / `partial` / `poor`) drives two decisions: whether Reading Mode is
   offered at all (`pdfHasReadableText`) and whether a page is an OCR candidate (`pdfPageNeedsOcr`).
+- Newly extracted pages also record optional `textIntegrity` (`valid` / `suspect` / `corrupt`), a
+  conservative character-mapping assessment separate from text amount and layout quality. It is
+  diagnostic only: OCR eligibility and page-source choice still use `extractionQuality`. Older
+  stored pages have no integrity value (unassessed) and need no migration; reimport assesses them.
 - `PdfTextIndex` (`src/reader/pdf/PdfTextIndex.ts`) maps a DOM `Range` from the PDF.js text layer
   to a canonical offset in `DocumentRecord.content`. It normalizes (NFKC, soft hyphens) **for
   alignment only**, keeps explicit text-node boundaries, and disambiguates repeated phrases with

@@ -59,6 +59,7 @@ describe('paginated PDF reading', () => {
     const pages = readingPagesForDocument(documentRecord);
     expect(pages).toHaveLength(2);
     expect(pages[1]).toEqual(expect.objectContaining({ pageNumber: 2, extractionQuality: 'partial' }));
+    expect(pages[1].textIntegrity).toBeUndefined();
   });
 
   it('renders a saved reading highlight at its canonical offset', () => {

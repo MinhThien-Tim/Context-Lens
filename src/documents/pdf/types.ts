@@ -1,4 +1,5 @@
 export type PdfExtractionQuality = 'good' | 'partial' | 'poor';
+export type PdfTextIntegrity = 'valid' | 'suspect' | 'corrupt';
 
 export type PdfTextBlock = {
   id: string;
@@ -19,6 +20,8 @@ export interface PdfStructuredPage {
   plainText: string;
   blocks: PdfTextBlock[];
   extractionQuality: PdfExtractionQuality;
+  /** Absent on legacy imports: their character integrity has not been assessed. */
+  textIntegrity?: PdfTextIntegrity;
   /** True when PDF operators contain a painted image; absent for older imports. */
   hasImage?: boolean;
 }

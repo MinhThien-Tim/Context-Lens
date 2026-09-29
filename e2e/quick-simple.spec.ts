@@ -3,11 +3,12 @@ import { test, expect } from '@playwright/test';
 test('Quick mode defaults to Simple and switches without toolbar clipping', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(async () => {
-    const { h, render } = await import(/* @vite-ignore */ '/node_modules/.vite/deps/preact.js');
-    const { LookupBottomSheet } = await import(/* @vite-ignore */ '/src/components/LookupBottomSheet.tsx');
-    const { defaultPreferences } = await import(/* @vite-ignore */ '/src/db/database.ts');
-    const { validLookup } = await import(/* @vite-ignore */ '/src/test/fixtures.ts');
-    await import(/* @vite-ignore */ '/src/reader-layout.css');
+    const browserImport = (path: string) => import(/* @vite-ignore */ path);
+    const { h, render } = await browserImport('/node_modules/.vite/deps/preact.js');
+    const { LookupBottomSheet } = await browserImport('/src/components/LookupBottomSheet.tsx');
+    const { defaultPreferences } = await browserImport('/src/db/database.ts');
+    const { validLookup } = await browserImport('/src/test/fixtures.ts');
+    await browserImport('/src/reader-layout.css');
     const root = document.createElement('div'); root.id = 'quick-default-fixture'; root.className = 'reader-shell'; document.body.append(root);
     let quickMode = defaultPreferences.lookupQuickMode;
     let displayMode = 'popup';

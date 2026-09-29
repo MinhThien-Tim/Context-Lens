@@ -1,9 +1,9 @@
-import type { PdfSourceTextItem, PdfStructuredPage, PdfTextBlock } from './types';
+import type { PdfSourceTextItem, PdfStructuredPage, PdfTextBlock, PdfTextIntegrity } from './types';
 
 interface Line { text: string; x: number; y: number; width: number; fontSize: number; column: number; letterSpaced: boolean }
 
 export function extractStructuredPage(pageNumber: number, sourceItems: PdfSourceTextItem[], pageWidth: number, pageHeight: number): PdfStructuredPage {
-  if (!sourceItems.some(item => item.str.trim())) return { pageNumber, startOffset: 0, endOffset: 0, plainText: '', blocks: [], extractionQuality: 'poor' };
+  if (!sourceItems.some(item => item.str.trim())) return { pageNumber, startOffset: 0, endOffset: 0, plainText: '', blocks: [], extractionQuality: 'poor', textIntegrity: 'valid' };
   const lines = groupTextItems(sourceItems, pageWidth);
   const fontSizes = lines.map(line => line.fontSize).sort((a, b) => a - b);
   const median = fontSizes[Math.floor(fontSizes.length / 2)] || 12;
@@ -30,7 +30,32 @@ export function extractStructuredPage(pageNumber: number, sourceItems: PdfSource
   const plainText = blocks.map(block => block.text).join('\n\n');
   const suspicious = lines.some(line => line.letterSpaced || /\b\p{L}{18,}\b/u.test(line.text) || /\s+[,.!?;]/.test(line.text)) || lines.filter(line => /^\p{L}$/u.test(line.text)).length > 1;
   const quality = plainText.length < 24 ? 'poor' : suspicious ? 'partial' : 'good';
-  return { pageNumber, startOffset: 0, endOffset: plainText.length, plainText, blocks, extractionQuality: quality };
+  return { pageNumber, startOffset: 0, endOffset: plainText.length, plainText, blocks, extractionQuality: quality, textIntegrity: assessTextIntegrity(lines) };
+}
+
+/** Character evidence only; quality and OCR eligibility remain separate decisions. */
+function assessTextIntegrity(lines: Line[]): PdfTextIntegrity {
+  const text = lines.map(line => line.text).join(' ');
+  const characters = Array.from(text).filter(char => !/\s/u.test(char));
+  if (!characters.length) return 'valid';
+  const badCharacter = (char: string) => /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\ufffd\p{Co}]/u.test(char);
+  const badCount = characters.filter(badCharacter).length;
+  const badLines = lines.filter(line => Array.from(line.text).some(badCharacter)).length;
+  const badRatio = badCount / characters.length;
+  // Widespread broken mappings are decisive; an isolated glyph is never decisive.
+  if (badCount >= 8 && badRatio >= .04 && badLines >= 2) return 'corrupt';
+
+  const substantive = lines.filter(line => Array.from(line.text).filter(char => /\p{L}/u.test(char)).length >= 12);
+  const symbolHeavy = substantive.filter(line => {
+    const visible = Array.from(line.text).filter(char => !/\s/u.test(char));
+    const symbols = visible.filter(char => /[\p{S}]/u.test(char)).length;
+    // A contents leader is layout, not an encoded word.
+    return symbols >= 5 && symbols / visible.length >= .25 && !/\.{3,}/u.test(line.text);
+  }).length;
+  const mixedTokens = text.split(/\s+/u).filter(token => token.length >= 5 && /\p{L}/u.test(token) && /\p{S}/u.test(token) && Array.from(token).filter(char => /\p{S}/u.test(char)).length >= 2).length;
+  if (badCount >= 4 && badRatio >= .02 && badLines >= 2 && (symbolHeavy >= 2 || mixedTokens >= 3)) return 'corrupt';
+  if (badCount > 0 || symbolHeavy >= 2 && mixedTokens >= 3) return 'suspect';
+  return 'valid';
 }
 
 function groupTextItems(items: PdfSourceTextItem[], pageWidth: number): Line[] {

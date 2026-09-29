@@ -12,6 +12,7 @@ describe('structured PDF extraction', () => {
     expect(page.blocks).toHaveLength(1);
     expect(page.blocks[0]).toEqual(expect.objectContaining({ type: 'paragraph', text: 'A readable paragraph continues on this line.', startOffset: 100 }));
     expect(page.endOffset).toBe(100 + page.plainText.length);
+    expect(page.textIntegrity).toBe('valid');
   });
 
   it('classifies headings, dialogue, lists and footnotes conservatively', () => {
@@ -34,6 +35,7 @@ describe('structured PDF extraction', () => {
     expect(page.plainText).toContain('longer-term dependency, but are limited by a fixed-length context in the setting of language modeling. We propose a novel neural ar-');
     for (const block of page.blocks) expect(page.plainText.slice(block.startOffset - 100, block.endOffset - 100)).toBe(block.text);
     expect(page.endOffset).toBe(100 + page.plainText.length);
+    expect(page.textIntegrity).toBe('valid');
   });
 
   it('places spanning title, quotation and footnote around complete column bands', () => {
@@ -90,7 +92,7 @@ describe('structured PDF extraction', () => {
   });
 
   it('marks blank and scan-only pages as poor without crashing', () => {
-    expect(extractStructuredPage(3, [], 600, 800)).toEqual(expect.objectContaining({ plainText: '', blocks: [], extractionQuality: 'poor' }));
+    expect(extractStructuredPage(3, [], 600, 800)).toEqual(expect.objectContaining({ plainText: '', blocks: [], extractionQuality: 'poor', textIntegrity: 'valid' }));
   });
 
   it('keeps centered title lines together and flags tracked lettering for review', () => {
@@ -105,6 +107,85 @@ describe('structured PDF extraction', () => {
     expect(page.plainText).toContain('“THEY SAY I SAY”');
     expect(page.plainText).not.toMatch(/\n\nH\n\n/);
     expect(page.extractionQuality).toBe('partial');
+    expect(page.textIntegrity).not.toBe('corrupt');
     expect(page.plainText.indexOf('THIRD')).toBeLessThan(page.plainText.indexOf('GERALD'));
+  });
+
+  it('keeps headings, dotted contents, non-English prose and decorative glyphs out of corruption', () => {
+    const page = extractStructuredPage(1, [
+      item('Résumé of Nguyễn and Müller', 40, 730, 20),
+      item('Introduction ........................ 12', 40, 690),
+      item('研究方法と結果を説明します。', 40, 650),
+      item('◆', 40, 610),
+    ], 600, 800);
+    expect(page.textIntegrity).toBe('valid');
+    expect(page.plainText).toContain('Résumé of Nguyễn and Müller');
+  });
+
+  it('detects actual PDF.js control mappings without changing text or offsets', () => {
+    // Escaped getTextContent() items from unfixpages.pdf, with their original page positions.
+    const samples = [
+      { number: 17, width: 423.158, height: 595.128, items: [
+        item('\u0007!\u001e\u0011\u000f$$\u001e!*\u001e\u0011*\u0007\u0014\u0016\u001a\u001e$\u001e\u001f\u0014)*', 146.889, 444.63, 8.1, 85.3882),
+        item('\u001d\u0016(\u0010"$\u0016%)* \u0003\u001e\u001a\u001b\u0013\u000f*\u0003\u001e!\u0018*', 259.45129, 414.28, 8.1, 80.52585),
+      ] },
+      { number: 18, width: 422.075, height: 595.128, items: [
+        item('\u0011E \u001a\u0015\u000e\u001f"\u001e', 172.18273, 514.18, 13.85, 86.70767),
+        item('\u0007\u0010\u0013 \u000f \u000e\u0014\u0015 \u0006', 69.48, 445.59, 20.75, 137.03025),
+        item('\u001c\u001b\u001f&\u001c\u001bM \u0018\'M', 165.46, 407.55, 6.1, 55.29966),
+      ] },
+      { number: 19, width: 422.025, height: 595.043, items: [
+        item('?2\u0005ć \u0004\u0005\u0012ć \u000f\u0004\u0006\u0001\u001eć 2ć \u0007\u0004\u0002\u0001ć \u0001\u001b\u0001 \u0012\u0002\u0007\b\u0005\u0013ć \u0002\u0007\u0004\u0002ć', 52.6, 440.43, 7.75, 158.71655),
+        item('\b \u0001\u000f\u0002\u0010\u0012ć \b\u0005\u001b\b\u0013\u0003 \u0004\u0002\b\u0005\u0013ć', 126.274925, 428.39, 7.75, 84.085175),
+      ] },
+      { number: 20, width: 423, height: 595.08, items: [
+        item('\u0004\u001e\u0015\u000e\u0001Ƿ\u001e\u0012Ƿ\u0010\u001e\u0014\u0014Ƿ \u0003_ů\u0001\u0007Ƿ\u0012\u0003Ƿ', 121.861, 514.11, 7.7, 80.28944),
+        item('\u0012-\u0001Ƿ \u0004\u0002\u001e', 122.221, 502.21, 7.7, 27.17176),
+      ] },
+    ];
+    for (const { number, width, height, items } of samples) {
+      const sourceStrings = items.map(source => source.str);
+      const page = shiftStructuredPage(extractStructuredPage(number, items, width, height), 300);
+      expect(items.map(source => source.str)).toEqual(sourceStrings);
+      expect(page.textIntegrity).toBe('corrupt');
+      expect(page.extractionQuality).not.toBe('poor');
+      expect(page.plainText.replace(/\n\n/g, ' ')).toBe(sourceStrings.join(' '));
+      for (const block of page.blocks) expect(page.plainText.slice(block.startOffset - 300, block.endOffset - 300)).toBe(block.text);
+      expect(page.blocks[0].startOffset).toBe(300);
+      expect(page.endOffset).toBe(300 + page.plainText.length);
+    }
+  });
+
+  it('keeps actual imperfect but readable PDF.js excerpts out of corruption', () => {
+    // getTextContent() lines from unfixpages2.pdf pages 1–3; split words are present in the source.
+    const samples = [
+      { number: 1, width: 278.201045, height: 514.754776, items: [
+        item('[When] I was passing through a severe crisis of seep', 26.7, 379.1, 11, 152.636),
+        item('ticism and doubt... I came across Tolstoy s book', 24.9, 365.4, 11, 140.118),
+      ] },
+      { number: 2, width: 286.476045, height: 551.654776, items: [
+        item('tant for humanity, about the meaning of life and about', 12.5, 526.6, 15, 255.585),
+        item('virtue. ... I would like to create a book ... in which I', 12, 513.1, 15, 256.305),
+      ] },
+      { number: 3, width: 286.476045, height: 551.654776, items: [
+        item('the ignorance, and especially by the cultural, moral igno', 12.7, 500.2, 15, 249.045),
+        item('rance of our society. . . . All our education should be', 12.7, 487, 15, 254.64),
+      ] },
+    ];
+    for (const { number, width, height, items } of samples) {
+      const page = extractStructuredPage(number, items, width, height);
+      expect(page.textIntegrity).not.toBe('corrupt');
+      expect(page.plainText).toBe(items.map(source => source.str).join(' '));
+      for (const block of page.blocks) expect(page.plainText.slice(block.startOffset, block.endOffset)).toBe(block.text);
+    }
+  });
+
+  it('requires distributed damage and retains readable imperfect extraction', () => {
+    const single = extractStructuredPage(1, [item('Readable prose with one \ufffd damaged glyph.', 40, 700)], 600, 800);
+    expect(single.textIntegrity).toBe('suspect');
+    const repeated = extractStructuredPage(1, [item('A \ue000\ue001\ue002\ue003\ue004\ue005\ue006\ue007 passage', 40, 700), item('Another \ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd passage', 40, 684)], 600, 800);
+    expect(repeated.textIntegrity).toBe('corrupt');
+    const imperfect = extractStructuredPage(1, [item('T h e  research  continues  with  readable  text.', 40, 700), item('A second ordinary line remains understandable.', 40, 684)], 600, 800);
+    expect(imperfect.textIntegrity).toBe('valid');
   });
 });

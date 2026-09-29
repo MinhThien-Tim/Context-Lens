@@ -8,7 +8,7 @@ regression is escalation only under §4 and §8 of `agent-execution-rules.md`.
 | Subsystem | Authoritative command | Typical scope |
 | --- | --- | --- |
 | Text reader | `npm run verify:reader` | `src/reader`, excluding PDF modes |
-| PDF + OCR | `npm run verify:pdf` | `src/reader/pdf`, `src/documents/pdf` |
+| PDF + OCR | `npm run verify:pdf` | `src/reader/pdf`, `src/reader/pdf-reading`, `src/documents/pdf` |
 | Import | `npm run verify:import` | `src/documents`, excluding PDF and offline |
 | Lookup | `npm run verify:lookup` | Lookup modules and lookup-sheet components |
 | Language engine | `npm run verify:language` | `src/core/language`, lookup normalization |
@@ -22,3 +22,7 @@ Playwright is separate from these commands. Use the narrow browser spec and proj
 of `agent-execution-rules.md` for browser-observable changes. No `verify:quickcard` or
 `verify:dictionary` scripts exist; dictionary audits are `npm run audit:dictionary` and
 `npm run audit:en-vi-gaps`, not verification gates.
+
+Run `npm run verify:partitions` to audit all Vitest test files against these nine scopes. The audit
+reports total and assigned files, duplicates, and orphans, and exits unsuccessfully if any file is
+unassigned or assigned more than once.
