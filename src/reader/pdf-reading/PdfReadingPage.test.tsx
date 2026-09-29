@@ -1,7 +1,7 @@
 import { render } from 'preact';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { PdfReadingPage } from './PdfReadingPage';
-import { readingPagesForDocument } from './structuredPages';
+import { pdfPageNeedsOcr, readingPagesForDocument } from './structuredPages';
 import type { DocumentRecord } from '../../db/database';
 import { extractStructuredPage, shiftStructuredPage } from '../../documents/pdf/extractStructuredPages';
 import { readingExtractionSamples } from '../../documents/pdf/readingExtraction.fixtures';
@@ -60,6 +60,27 @@ describe('paginated PDF reading', () => {
     expect(pages).toHaveLength(2);
     expect(pages[1]).toEqual(expect.objectContaining({ pageNumber: 2, extractionQuality: 'partial' }));
     expect(pages[1].textIntegrity).toBeUndefined();
+  });
+
+  it('prefers cached OCR for corrupt good text without changing the native page or legacy behavior', () => {
+    const plainText = 'Broken PDF text '.repeat(5);
+    const block = { id: 'p', type: 'paragraph' as const, text: plainText, startOffset: 12, endOffset: 12 + plainText.length };
+    const page = { pageNumber: 1, startOffset: 12, endOffset: block.endOffset, plainText, blocks: [block], extractionQuality: 'good' as const, textIntegrity: 'corrupt' as const };
+    const record = { content: ' '.repeat(12) + plainText, pageOffsets: [12], pdfPages: [page] } as DocumentRecord;
+    expect(pdfPageNeedsOcr(record, 1)).toBe(true);
+    expect(pdfPageNeedsOcr({ ...record, pdfPages: [{ ...page, textIntegrity: 'valid' }] } as DocumentRecord, 1)).toBe(false);
+    expect(pdfPageNeedsOcr({ ...record, pdfPages: [{ ...page, textIntegrity: undefined }] } as DocumentRecord, 1)).toBe(false);
+    expect(readingPagesForDocument(record)[0]).toBe(page);
+    expect(record.content.slice(block.startOffset, block.endOffset)).toBe(plainText);
+    const host = document.createElement('div');
+    const onSource = vi.fn();
+    render(<PdfReadingPage page={page} hasOcr onSource={onSource} />, host);
+    expect(host.querySelector('.pdf-reading-content')?.textContent).toBe(plainText);
+    expect(host.querySelector('select')?.value).toBe('pdf');
+    const select = host.querySelector('select')!;
+    select.value = 'ocr';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(onSource).toHaveBeenCalledWith('ocr');
   });
 
   it('renders a saved reading highlight at its canonical offset', () => {

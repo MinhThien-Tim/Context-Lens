@@ -18,5 +18,6 @@ export function pdfHasReadableText(documentRecord: DocumentRecord): boolean {
 export function pdfPageNeedsOcr(documentRecord: DocumentRecord, pageNumber: number): boolean {
   const page = readingPagesForDocument(documentRecord)[pageNumber - 1];
   if (!page) return true;
+  if (page.textIntegrity === 'corrupt') return true;
   return page.extractionQuality !== 'good' || page.plainText.trim().length < 40;
 }

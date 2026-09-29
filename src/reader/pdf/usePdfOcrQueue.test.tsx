@@ -92,3 +92,33 @@ it('never preloads scans after the first twelve text pages', async () => {
   expect(mocks.recognize).not.toHaveBeenCalled();
   expect(mocks.getPage).not.toHaveBeenCalled();
 });
+
+it('selects nonempty corrupt text for OCR next only when the page has ink', async () => {
+  const record = doc('corrupt', 2);
+  record.pdfPages = [
+    { pageNumber: 1, plainText: 'corrupt text'.repeat(20), startOffset: 0, endOffset: 240, blocks: [], extractionQuality: 'good', textIntegrity: 'corrupt', hasImage: false },
+    { pageNumber: 2, plainText: 'more corrupt text', startOffset: 240, endOffset: 257, blocks: [], extractionQuality: 'good', textIntegrity: 'corrupt', hasImage: false },
+  ];
+  await setup(record);
+  mocks.ink.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+  await act(() => queue.startNextUnprocessed());
+  expect(mocks.getPage.mock.calls.map(call => call[0])).toEqual([1, 2]);
+  expect(mocks.recognize.mock.calls.map(call => call[1])).toEqual([2]);
+});
+
+it('does not recognize a visually blank current page', async () => {
+  await setup();
+  mocks.ink.mockResolvedValue(false);
+  await act(() => queue.startCurrent(1));
+  expect(mocks.getPage).toHaveBeenCalledWith(1);
+  expect(mocks.recognize).not.toHaveBeenCalled();
+});
+
+it('does not preload a corrupt page that already has extracted text', async () => {
+  const record = doc('corrupt', 1);
+  record.pdfPages = [{ pageNumber: 1, plainText: 'corrupt text', startOffset: 0, endOffset: 12, blocks: [], extractionQuality: 'good', textIntegrity: 'corrupt' }];
+  await setup(record);
+  await act(() => queue.preloadFirstTwelve());
+  expect(mocks.getPage).not.toHaveBeenCalled();
+  expect(mocks.recognize).not.toHaveBeenCalled();
+});

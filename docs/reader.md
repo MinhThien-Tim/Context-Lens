@@ -105,12 +105,13 @@ disabled under the same condition.
   lexical compounds and discretionary breaks cannot reliably be distinguished from geometry.
   Header/footer text remains in canonical content until repetition can be established across pages.
   Legacy page fallback preserves whitespace so DOM block offsets still address the stored content.
-- `extractionQuality` (`good` / `partial` / `poor`) drives two decisions: whether Reading Mode is
-  offered at all (`pdfHasReadableText`) and whether a page is an OCR candidate (`pdfPageNeedsOcr`).
+- `extractionQuality` (`good` / `partial` / `poor`) determines whether Reading Mode is offered
+  (`pdfHasReadableText`) and contributes to OCR eligibility and default page-source choice.
 - Newly extracted pages also record optional `textIntegrity` (`valid` / `suspect` / `corrupt`), a
   conservative character-mapping assessment separate from text amount and layout quality. It is
-  diagnostic only: OCR eligibility and page-source choice still use `extractionQuality`. Older
-  stored pages have no integrity value (unassessed) and need no migration; reimport assesses them.
+  used for OCR eligibility and default page-source choice only when `corrupt`. Older stored pages
+  have no integrity value (unassessed), retain the quality-based behavior, and need no migration;
+  reimport assesses them.
 - `PdfTextIndex` (`src/reader/pdf/PdfTextIndex.ts`) maps a DOM `Range` from the PDF.js text layer
   to a canonical offset in `DocumentRecord.content`. It normalizes (NFKC, soft hyphens) **for
   alignment only**, keeps explicit text-node boundaries, and disambiguates repeated phrases with
@@ -158,8 +159,11 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 
 - Worker: `src/documents/pdf/ocrWorker.ts` (`recognizePdfPage`, `terminateOcrWorker`), lazy
   `tesseract.js` chunk.
-- Eligibility: `src/documents/pdf/ocrEligibility.ts` (`ocrCandidate`, `pageHasInk`) — skips pages
-  with readable text, already-cached OCR, or no ink.
+- Eligibility: `src/documents/pdf/ocrEligibility.ts` (`ocrCandidate`, `pageHasInk`) — admits
+  poor extracted text with image evidence or explicitly corrupt extracted text, even when long
+  or painted as vector glyphs. A cached result for the same page, language and hash is skipped;
+  every recognition path checks for visible ink first. Valid and suspect partial pages do not
+  gain eligibility.
 - Cache: `src/documents/pdf/ocrStore.ts` → `db.pdfOcr`, key
   `documentId:documentHash:page:language:configVersion:renderParameters`.
   `OCR_CONFIG_VERSION` is `2`. `OCR_RENDER_PIXELS` defaults to `3_000_000` and accepts only
@@ -176,7 +180,10 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
   one job at a time, abort on document change. `preloadFirstTwelve` scans at most the first 12 pages
   on open, recognizes at most 6 candidates per run, and skips pages that already carry PDF text; `App.tsx` only triggers it when a page in
   that window has empty `plainText` and passes `ocrCandidate`. `startCurrent(page)` and
-  `startNextUnprocessed(limit)` are explicit user actions, and `limit` is clamped to 1–6.
+  `startNextUnprocessed(limit)` are explicit user actions; the latter may include nonempty corrupt
+  pages, and `limit` is clamped to 1–6. A cached result on a corrupt page becomes the default
+  Reading Mode source unless `pdfTextSources` explicitly selects PDF text; the original PDF text
+  and per-page source switch remain available.
 - Per-page text source choice: `DocumentRecord.pdfTextSources[page] = 'pdf' | 'ocr'`, toggled by
   `PdfModeSwitch.onSource` and honored by `PdfReadingView.selectedOcr`.
 - Active OCR progress is a secondary status in `ReaderProgress` (`activeOcrProgress` in `App.tsx`),

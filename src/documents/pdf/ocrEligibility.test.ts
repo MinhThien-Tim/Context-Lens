@@ -19,9 +19,17 @@ describe('OCR queue eligibility', () => {
     expect(ocrCandidate(document, 2, 'eng', [])).toBe(true);
     expect(ocrCandidate(document, 3, 'eng', [])).toBe(false);
   });
-  it('does not use integrity metadata to change OCR eligibility', () => {
-    const corrupt = { ...document, pdfPages: document.pdfPages?.map(page => page.pageNumber === 3 ? { ...page, textIntegrity: 'corrupt' as const } : page) } as DocumentRecord;
-    expect(ocrCandidate(corrupt, 3, 'eng', [])).toBe(false);
+  it('accepts corrupt long text, including vector glyph pages, without admitting normal partial text', () => {
+    const pages = [
+      { ...document.pdfPages![2], plainText: 'Broken mappings '.repeat(20), extractionQuality: 'good' as const, textIntegrity: 'corrupt' as const, hasImage: false },
+      { ...document.pdfPages![2], pageNumber: 2, extractionQuality: 'partial' as const, textIntegrity: 'valid' as const },
+      { ...document.pdfPages![2], pageNumber: 3, extractionQuality: 'partial' as const, textIntegrity: 'suspect' as const },
+      { ...document.pdfPages![2], pageNumber: 4, extractionQuality: 'partial' as const, textIntegrity: undefined },
+    ];
+    const doc = { ...document, pdfPages: pages } as DocumentRecord;
+    expect(ocrCandidate(doc, 1, 'eng', [])).toBe(true);
+    for (const page of [2, 3, 4]) expect(ocrCandidate(doc, page, 'eng', [])).toBe(false);
+    expect(ocrCandidate(document, 3, 'eng', [])).toBe(false);
   });
   it('reuses only OCR for the same page, language and document hash', () => {
     const cached = [{ page: 2, language: 'eng', documentHash: 'one' }] as PdfOcrRecord[];

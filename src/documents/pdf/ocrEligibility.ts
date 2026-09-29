@@ -5,7 +5,7 @@ import type { OcrLanguage } from './ocrStore';
 /** Preflight uses import metadata. A tiny render later excludes white scans. */
 export function ocrCandidate(document: DocumentRecord, page: number, language: OcrLanguage, cached: PdfOcrRecord[], hash?: string): boolean {
   const model = document.pdfPages?.[page - 1];
-  if (model && (model.extractionQuality !== 'poor' || model.hasImage === false)) return false;
+  if (model && model.textIntegrity !== 'corrupt' && (model.extractionQuality !== 'poor' || model.hasImage === false)) return false;
   return !cached.some(item => item.page === page && item.language === language && (!hash || item.documentHash === hash));
 }
 

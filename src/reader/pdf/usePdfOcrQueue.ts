@@ -10,7 +10,7 @@ export interface OcrQueueStatus { state: 'preparing' | 'running' | 'paused' | 'd
 export async function findNextOcrCandidates(doc: DocumentRecord, language: OcrLanguage, cached: PdfOcrRecord[], hash: string, limit: number, hasInk: (page: number) => Promise<boolean>): Promise<number[]> {
   const result: number[] = [];
   for (let page = 1; page <= (doc.pageOffsets?.length ?? 0) && result.length < limit; page++) {
-    if (doc.pdfPages?.[page - 1]?.plainText.trim() || !ocrCandidate(doc, page, language, cached, hash)) continue;
+    if (!ocrCandidate(doc, page, language, cached, hash)) continue;
     if (cached.some(item => item.page === page && item.language === language && item.documentHash === hash)) continue;
     if (await hasInk(page)) result.push(page);
   }
@@ -64,12 +64,10 @@ export function usePdfOcrQueue(documentRecord: DocumentRecord | null, language: 
           if (mode === 'preload' && doc.pdfPages?.[pageNumber - 1]?.plainText.trim()) continue;
           if (!ocrCandidate(doc, pageNumber, selectedLanguage, latest.current.cached, hash)) continue;
           if (latest.current.cached.some(item => item.page === pageNumber && item.language === selectedLanguage && item.documentHash === hash)) continue;
-          if (mode !== 'current') {
-            const page = await pdf.getPage(pageNumber);
-            let ink: boolean;
-            try { ink = await pageHasInk(page, taskController.signal); } finally { page.cleanup(); }
-            if (!ink) continue;
-          }
+          const page = await pdf.getPage(pageNumber);
+          let ink: boolean;
+          try { ink = await pageHasInk(page, taskController.signal); } finally { page.cleanup(); }
+          if (!ink) continue;
           pending.push(pageNumber);
           if (mode === 'preload' && pending.length >= 6) break;
         }
