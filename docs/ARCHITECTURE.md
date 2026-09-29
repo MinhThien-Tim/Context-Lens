@@ -132,6 +132,7 @@ Default path: `AGENTS.md` → this file → **one** matching domain doc → the 
 
 ### Supporting references — read only when needed
 
+- [runtime-manifests.md](runtime-manifests.md) — PWA manifest/service-worker and Worker configuration ownership
 - [testing.md](testing.md) — test layout, commands, selection strategy and verification status semantics
 - [agent-execution-rules.md](agent-execution-rules.md) — canonical Execution / Test Retry Policy, scope, verification and stop rules
 - `COST & QUOTA GUARDRAILS.md` (repository root) — network/API/quota/cost behavior

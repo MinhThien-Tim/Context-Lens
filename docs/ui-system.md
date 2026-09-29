@@ -183,10 +183,13 @@ offline" / "Dùng Context Lens khi ngoại tuyến"), following the existing `gu
 
 There is no global store. Ownership rules:
 
+- `src/app/useLibrary.ts` owns the Library list session: title query, kind filter, paged documents,
+  loading state, and first-page refresh. `App.tsx` renders both Library variants and owns document
+  opening, transactional deletion, and Continue reading.
 - `src/app/App.tsx` owns all cross-component reader state: open document, `currentLocation`,
   `contentsOpen` / `contextPanelOpen`, `lookupOpen` / `lookupDisplay` / `activeSelection`, `lookup` / `contextResult` / `loading` /
   `error`, the OCR page list and queue, PDF view mode, preferences, engine settings, AI settings,
-  library/continue lists, and modal visibility flags. The abort controllers for lookup, context,
+  Continue reading list, and modal visibility flags. The abort controllers for lookup, context,
   and import live here as refs.
 - `lookupService` (`src/lookup/service.ts`) is a module singleton, created once and reconfigured
   from settings.

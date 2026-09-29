@@ -46,11 +46,13 @@ open    → db.documents.get(id) → App.tsx state → reader surface
 scroll  → location(page/offset/scrollY/progress) → debounced db.documents.update
 markup  → db.documents.update({ highlights })
 delete  → one rw transaction over documents + notes + pdfOcr
-library → queryDocumentLibrary({ query, kind, offset, limit }) — paged, sorted by updatedAt
+library → useLibrary() → queryDocumentLibrary({ query, kind, offset, limit }) — paged, sorted by updatedAt
 ```
 
 Deleting a document does not remove caches or vocabulary; the storage dashboard handles those
 separately.
+`src/app/useLibrary.ts` owns the Library list query/filter, paging, loading, and refresh state.
+`App.tsx` retains the document deletion transaction and Continue reading updates.
 
 ### Offline readiness
 

@@ -11,7 +11,7 @@ import type { DocumentLocation } from '../documents/location';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { LookupBottomSheet } from '../components/LookupBottomSheet';
 import { ReaderSettings } from '../components/ReaderSettings';
-import { db, defaultPreferences, loadPreferences, queryDocumentLibrary, savePreferences, type AppPreferences, type DocumentRecord, type PdfOcrRecord } from '../db/database';
+import { db, defaultPreferences, loadPreferences, savePreferences, type AppPreferences, type DocumentRecord, type PdfOcrRecord } from '../db/database';
 import { TextReader, type ReaderSelection } from '../reader/TextReader';
 import { createLocationPersistence } from '../reader/pdf/locationPersistence';
 import { PdfViewer } from '../reader/pdf/PdfViewer';
@@ -50,6 +50,7 @@ import { ContextLensOnboarding, LanguageToggle, OnboardingCard } from '../onboar
 import { hasSeenContextLensOnboarding, loadGuideLanguage, markContextLensOnboardingSeen, saveGuideLanguage, type GuideLanguage } from '../onboarding/store';
 import { ContinueReading } from '../components/ContinueReading';
 import { dismissContinueReading, queryContinueReading } from './continueReading';
+import { useLibrary } from './useLibrary';
 import { DocumentIdentity } from '../components/DocumentIdentity';
 import { OfflineBadge } from '../components/OfflineBadge';
 import { PasteComposer } from '../components/PasteComposer';
@@ -74,11 +75,7 @@ export function App() {
   const [ocrCacheReadyId, setOcrCacheReadyId] = useState<string | null>(null);
   const [sharedDraft, setSharedDraft] = useState('');
   const [continueDocs, setContinueDocs] = useState<DocumentRecord[]>([]);
-  const [libraryDocs, setLibraryDocs] = useState<DocumentRecord[]>([]);
-  const [libraryQuery, setLibraryQuery] = useState('');
-  const [libraryKind, setLibraryKind] = useState<DocumentRecord['kind'] | 'all'>('all');
-  const [libraryHasMore, setLibraryHasMore] = useState(false);
-  const [libraryLoading, setLibraryLoading] = useState(false);
+  const { documents: libraryDocs, query: libraryQuery, setQuery: setLibraryQuery, kind: libraryKind, setKind: setLibraryKind, hasMore: libraryHasMore, loading: libraryLoading, refresh: refreshLibrary, loadMore: loadMoreLibrary } = useLibrary();
   const [preferences, setPreferences] = useState<AppPreferences>(defaultPreferences);
   const [aiSettings, setAiSettings] = useState<AiSettings>(defaultAiSettings);
   const [geminiVerified, setGeminiVerified] = useState(false);
@@ -175,18 +172,6 @@ export function App() {
     }
     else if (sharedText) setSharedDraft(sharedText);
   }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLibraryLoading(true);
-    const timer = window.setTimeout(() => {
-      void queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, limit: 18 }).then(result => {
-        if (cancelled) return;
-        setLibraryDocs(result.items); setLibraryHasMore(result.hasMore);
-      }).finally(() => { if (!cancelled) setLibraryLoading(false); });
-    }, 120);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [libraryQuery, libraryKind]);
 
   useEffect(() => {
     void queryContinueReading().then(setContinueDocs);
@@ -334,8 +319,7 @@ export function App() {
     if (documentRecord?.kind === 'pdf') pdfPersistence.flush();
     else if (documentRecord) await saveDocumentLocation(documentRecord);
     setDocumentRecord(null); setContextPanelOpen(false); setLookupOpen(false); setShowNotes(false); setContentsOpen(false); setGoToOpen(false); setActiveSelection(null);
-    const result = await queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, limit: 18 });
-    setLibraryDocs(result.items); setLibraryHasMore(result.hasMore);
+    await refreshLibrary();
   };
 
   const runLookup = (selection: ReaderSelection, mode = preferences.languageMode, engines = engineSettings) => {
@@ -550,8 +534,8 @@ export function App() {
       <section class="library-section">
         <div class="section-heading"><div><p class="eyebrow">Library</p><h2>All documents</h2></div></div>
         <div class="library-tools"><label class="library-search"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input value={libraryQuery} onInput={event => setLibraryQuery(event.currentTarget.value)} placeholder="Search by title" aria-label="Search library" /></label><select aria-label="Filter document type" value={libraryKind} onChange={event => setLibraryKind(event.currentTarget.value as typeof libraryKind)}><option value="all">All types</option><option value="pdf">PDF</option><option value="epub">EPUB</option><option value="docx">DOCX</option><option value="article">Articles</option><option value="text">Text</option><option value="markdown">Markdown</option></select></div>
-        {libraryLoading && !libraryDocs.length ? <p class="section-empty" role="status">Loading your library…</p> : libraryDocs.length ? <div class="library-grid">{libraryDocs.map(doc => <article class="library-card"><button class="library-open" onClick={() => void openDocument(doc)}><span class={`document-badge kind-${doc.kind}`}>{documentKindLabel(doc)}</span><strong>{doc.title}</strong><small>{documentPositionDetail(doc)}</small><OfflineBadge document={doc} /><span class="mini-progress"><i style={{ width: `${Math.round(doc.location.progress * 100)}%` }} /></span></button><button class="icon-button library-delete" aria-label={`Delete ${doc.title}`} onClick={() => { if (confirm(`Delete “${doc.title}” and its notes from this device?`)) { void db.transaction('rw', [db.documents, db.notes, db.pdfOcr], async () => { await db.documents.delete(doc.id); await db.notes.where('documentId').equals(doc.id).delete(); await db.pdfOcr.where('documentId').equals(doc.id).delete(); }).then(async () => { const result = await queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, limit: 18 }); setLibraryDocs(result.items); setLibraryHasMore(result.hasMore); setContinueDocs(items => items.filter(item => item.id !== doc.id)); }); } }}>×</button></article>)}</div> : <p class="section-empty">{libraryQuery || libraryKind !== 'all' ? 'No documents match this search.' : 'Your imported documents will appear here.'}</p>}
-        {libraryHasMore && <button class="secondary-button load-more" disabled={libraryLoading} onClick={() => { setLibraryLoading(true); void queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, offset: libraryDocs.length, limit: 18 }).then(result => { setLibraryDocs(items => [...items, ...result.items]); setLibraryHasMore(result.hasMore); }).finally(() => setLibraryLoading(false)); }}>Load more</button>}
+        {libraryLoading && !libraryDocs.length ? <p class="section-empty" role="status">Loading your library…</p> : libraryDocs.length ? <div class="library-grid">{libraryDocs.map(doc => <article class="library-card"><button class="library-open" onClick={() => void openDocument(doc)}><span class={`document-badge kind-${doc.kind}`}>{documentKindLabel(doc)}</span><strong>{doc.title}</strong><small>{documentPositionDetail(doc)}</small><OfflineBadge document={doc} /><span class="mini-progress"><i style={{ width: `${Math.round(doc.location.progress * 100)}%` }} /></span></button><button class="icon-button library-delete" aria-label={`Delete ${doc.title}`} onClick={() => { if (confirm(`Delete “${doc.title}” and its notes from this device?`)) { void db.transaction('rw', [db.documents, db.notes, db.pdfOcr], async () => { await db.documents.delete(doc.id); await db.notes.where('documentId').equals(doc.id).delete(); await db.pdfOcr.where('documentId').equals(doc.id).delete(); }).then(async () => { await refreshLibrary(); setContinueDocs(items => items.filter(item => item.id !== doc.id)); }); } }}>×</button></article>)}</div> : <p class="section-empty">{libraryQuery || libraryKind !== 'all' ? 'No documents match this search.' : 'Your imported documents will appear here.'}</p>}
+        {libraryHasMore && <button class="secondary-button load-more" disabled={libraryLoading} onClick={() => { void loadMoreLibrary(); }}>Load more</button>}
       </section>
       {showOnboardingCard && <OnboardingCard language={guideLanguage} onOpen={openOnboarding} onDismiss={dismissOnboarding} />}
       <p class="home-note">Documents stay on this device. For offline use, wait for the first online load to finish and open each book once.</p>
@@ -588,8 +572,8 @@ export function App() {
       <section id="library" class="library-section">
         <div class="section-heading"><div><p class="eyebrow">Library</p><h2>All documents</h2></div></div>
         <div class="library-tools"><label class="library-search"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input value={libraryQuery} onInput={event => setLibraryQuery(event.currentTarget.value)} placeholder="Search by title" aria-label="Search library" /></label><select aria-label="Filter document type" value={libraryKind} onChange={event => setLibraryKind(event.currentTarget.value as typeof libraryKind)}><option value="all">All types</option><option value="pdf">PDF</option><option value="epub">EPUB</option><option value="docx">DOCX</option><option value="article">Articles</option><option value="text">Text</option><option value="markdown">Markdown</option></select></div>
-        {libraryLoading && !libraryDocs.length ? <p class="section-empty" role="status">Loading your library…</p> : libraryDocs.length ? <div class="library-grid">{libraryDocs.map(doc => <article class="library-card"><button class="library-open" onClick={() => void openDocument(doc)}><DocumentIdentity document={doc} detail={documentPositionDetail(doc)} kindLabel={documentKindLabel(doc)} /></button><button title={`Delete ${doc.title}`} class="icon-button library-delete" aria-label={`Delete ${doc.title}`} onClick={() => { if (confirm(`Delete “${doc.title}” and its notes from this device?`)) { void db.transaction('rw', [db.documents, db.notes, db.pdfOcr], async () => { await db.documents.delete(doc.id); await db.notes.where('documentId').equals(doc.id).delete(); await db.pdfOcr.where('documentId').equals(doc.id).delete(); }).then(async () => { const result = await queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, limit: 18 }); setLibraryDocs(result.items); setLibraryHasMore(result.hasMore); setContinueDocs(items => items.filter(item => item.id !== doc.id)); }); } }}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7"/></svg></button></article>)}</div> : <p class="section-empty">{libraryQuery || libraryKind !== 'all' ? 'No documents match this search.' : 'Your imported documents will appear here.'}</p>}
-        {libraryHasMore && <button class="secondary-button load-more" disabled={libraryLoading} onClick={() => { setLibraryLoading(true); void queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, offset: libraryDocs.length, limit: 18 }).then(result => { setLibraryDocs(items => [...items, ...result.items]); setLibraryHasMore(result.hasMore); }).finally(() => setLibraryLoading(false)); }}>Load more</button>}
+        {libraryLoading && !libraryDocs.length ? <p class="section-empty" role="status">Loading your library…</p> : libraryDocs.length ? <div class="library-grid">{libraryDocs.map(doc => <article class="library-card"><button class="library-open" onClick={() => void openDocument(doc)}><DocumentIdentity document={doc} detail={documentPositionDetail(doc)} kindLabel={documentKindLabel(doc)} /></button><button title={`Delete ${doc.title}`} class="icon-button library-delete" aria-label={`Delete ${doc.title}`} onClick={() => { if (confirm(`Delete “${doc.title}” and its notes from this device?`)) { void db.transaction('rw', [db.documents, db.notes, db.pdfOcr], async () => { await db.documents.delete(doc.id); await db.notes.where('documentId').equals(doc.id).delete(); await db.pdfOcr.where('documentId').equals(doc.id).delete(); }).then(async () => { await refreshLibrary(); setContinueDocs(items => items.filter(item => item.id !== doc.id)); }); } }}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7"/></svg></button></article>)}</div> : <p class="section-empty">{libraryQuery || libraryKind !== 'all' ? 'No documents match this search.' : 'Your imported documents will appear here.'}</p>}
+        {libraryHasMore && <button class="secondary-button load-more" disabled={libraryLoading} onClick={() => { void loadMoreLibrary(); }}>Load more</button>}
       </section>
       {showOnboardingCard && <OnboardingCard language={guideLanguage} onOpen={openOnboarding} onDismiss={dismissOnboarding} />}
       <p class="home-note">Documents stay on this device. For offline use, wait for the first online load to finish and open each book once.</p>
@@ -598,7 +582,7 @@ export function App() {
       {showOnboarding && <ContextLensOnboarding language={guideLanguage} onLanguageChange={changeGuideLanguage} onClose={() => setShowOnboarding(false)} />}
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} initialVerified={geminiVerified} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
       {showVocabulary && <VocabularyLibrary records={vocabulary} onClose={() => setShowVocabulary(false)} onDelete={(id) => { void db.vocabulary.delete(id); setVocabulary((items) => items.filter((item) => item.id !== id)); }} />}
-      {showDataManagement && <DataManagement onClose={() => setShowDataManagement(false)} onRestored={() => { void queryDocumentLibrary({ query: libraryQuery, kind: libraryKind, limit: 18 }).then(result => { setLibraryDocs(result.items); setLibraryHasMore(result.hasMore); }); void queryContinueReading().then(setContinueDocs); void db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray().then(setVocabulary); }} />}
+      {showDataManagement && <DataManagement onClose={() => setShowDataManagement(false)} onRestored={() => { void refreshLibrary(); void queryContinueReading().then(setContinueDocs); void db.vocabulary.orderBy('createdAt').reverse().limit(20).toArray().then(setVocabulary); }} />}
     </main>
   );
 
