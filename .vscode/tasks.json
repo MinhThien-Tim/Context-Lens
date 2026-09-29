@@ -1,0 +1,54 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "mobile-full-card-verify",
+			"type": "shell",
+			"command": "npx.cmd",
+			"args": [
+				"playwright",
+				"test",
+				"e2e/ui-interactions.spec.ts",
+				"--project=mobile-chromium",
+				"-g",
+				"phase 3 context Quick and Full at (320|360|390|430)px",
+				"--reporter=list"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "dev-server-verify",
+			"type": "shell",
+			"command": "npm.cmd",
+			"args": [
+				"run",
+				"dev",
+				"--",
+				"--host",
+				"127.0.0.1",
+				"--port",
+				"5173"
+			],
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "quick-simple-mobile-verify",
+			"type": "shell",
+			"command": "npx.cmd",
+			"args": [
+				"playwright",
+				"test",
+				"e2e/quick-simple.spec.ts",
+				"--project=mobile-chromium",
+				"--reporter=list"
+			],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "none"
+		}
+	]
+}
