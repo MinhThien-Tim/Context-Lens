@@ -1,6 +1,6 @@
 # Testing & Verification
 
-Related: [ARCHITECTURE.md](ARCHITECTURE.md).
+Related: [ARCHITECTURE.md](ARCHITECTURE.md) · [Testing troubleshooting](testing-troubleshooting.md).
 
 ## Test layout
 

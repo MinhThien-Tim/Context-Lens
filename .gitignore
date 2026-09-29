@@ -23,5 +23,6 @@ tmp/
 .wrangler/
 test-results/
 playwright-report/
+.vitest/
 release/Context-Lens-pdf-stability.bundle
 release/Context-Lens-pdf-stability-handoff.txt
