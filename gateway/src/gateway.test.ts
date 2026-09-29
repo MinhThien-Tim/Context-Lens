@@ -184,3 +184,11 @@ it('rejects other origins and respects the kill switch before using the object',
   expect((await worker.fetch(new Request('https://app/api/translate', { method: 'POST', headers: { Origin: 'https://app' } }), env)).status).toBe(503);
   expect(env.QUOTA.get).not.toHaveBeenCalled();
 });
+it('returns 404 for unapproved API routes without entering quota or asset handling', async () => {
+  const env = { ONLINE_ENABLED: 'true', IP_HASH_SECRET: 'a'.repeat(32), ASSETS: { fetch: vi.fn() }, QUOTA: { idFromName: vi.fn(), get: vi.fn() } };
+  const response = await worker.fetch(new Request('https://app/api/other', { method: 'POST' }), env);
+  expect(response.status).toBe(404);
+  expect(env.QUOTA.idFromName).not.toHaveBeenCalled();
+  expect(env.QUOTA.get).not.toHaveBeenCalled();
+  expect(env.ASSETS.fetch).not.toHaveBeenCalled();
+});

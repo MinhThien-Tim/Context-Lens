@@ -22,6 +22,7 @@
     "test:browser": "playwright test",
     "verify:list": "vitest list --filesOnly",
     "verify:partitions": "node scripts/audit_test_partitions.mjs",
+    "verify:contracts": "node scripts/check_architecture_contracts.mjs",
     "verify:reader": "npm run typecheck && vitest run src/reader --exclude \"src/reader/pdf/**\" --exclude \"src/reader/pdf-reading/**\"",
     "verify:pdf": "npm run typecheck && vitest run src/reader/pdf src/reader/pdf-reading src/documents/pdf",
     "verify:import": "npm run typecheck && vitest run src/documents --exclude \"src/documents/pdf/**\" --exclude \"src/documents/offline*\"",
@@ -31,7 +32,7 @@
     "verify:storage": "npm run typecheck && vitest run src/db src/storage src/notes/store src/vocabulary",
     "verify:ui": "npm run typecheck && vitest run src/components src/onboarding src/app src/notes/NotesPanel --exclude \"**/LookupBottomSheet*\" --exclude \"**/OfflineBadge*\" --exclude \"**/dictionaryDisplay*\" --exclude \"**/lookupPopupPlacement*\"",
     "verify:offline": "npm run typecheck && vitest run src/documents/offline src/components/OfflineBadge src/components/LookupBottomSheet.offline",
-    "verify:full": "npm run typecheck && vitest run && npm run build"
+    "verify:full": "npm run verify:contracts && npm run typecheck && vitest run && npm run build"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",

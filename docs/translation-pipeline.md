@@ -180,9 +180,10 @@ Gating:
 - `quickEngine === 'offline'` keeps only `dictionary` and `vocabulary`.
 - A non-`auto` `quickEngine` pins the chosen provider; if `automaticFallback` is false, the list is
   reduced to that provider alone.
-- `ManagedTranslationProvider` (`/api/translate`) is appended **last** and only when
+- `ManagedTranslationProvider` (`/api/translate`) is appended to the registry and only enabled when
   `settings.managedTranslation` **and** the build flag `VITE_MANAGED_TRANSLATION === 'true'`.
-  Standalone builds therefore never call an undeployed API.
+  In Auto mode its priority follows local, browser, and MyMemory providers, but it may run before
+  configured Google/Bing providers. Standalone builds never call an undeployed API.
 
 | Provider id | File | Network | Notes |
 | --- | --- | --- | --- |
@@ -288,7 +289,8 @@ the fastest way to see which branch actually ran. API keys and reader content ar
 
 ## Invariants
 
-1. Local first, cache second, network last, managed Worker very last.
+1. Local results and caches precede optional network translation; the managed Worker follows local,
+   browser, and MyMemory providers in Auto mode. Google/Bing may run after it when configured.
 2. No new external request when a valid cached or local result exists.
 3. Identical concurrent requests are shared, and cancelling one consumer does not create another.
 4. Cache keys must include normalized text, language pair, mode, and version — a cache hit must

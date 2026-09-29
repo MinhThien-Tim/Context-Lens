@@ -11,7 +11,8 @@ Related: [ARCHITECTURE.md](ARCHITECTURE.md).
 | Browser / E2E | `e2e/*.spec.ts` | Playwright, `playwright.config.ts` |
 | Cross-repository vocabulary handoff | `e2e/vocabulary-handoff.spec.ts` | Playwright, `playwright.vocabulary.config.ts` |
 | Shared setup | `src/test/setup.ts` (`fake-indexeddb/auto`, `vi.restoreAllMocks`), `src/test/fixtures.ts` | — |
-| Bundle budget | `scripts/check_bundle_budget.mjs` | Node script, run during `build` |
+| Bundle budget + precache assets | `scripts/check_bundle_budget.mjs` | Node script, run during `build` |
+| Static architecture contracts | `scripts/check_architecture_contracts.mjs` | Node script, run by `verify:contracts` |
 
 Vitest config lives in `vite.config.ts` under `test`: `environment: 'jsdom'`,
 `include: ['src/**/*.test.{ts,tsx}', 'gateway/**/*.test.{ts,tsx}']`,
@@ -39,6 +40,7 @@ Keep the same arguments and test scope; see the [launcher policy](agent-executio
 | --- | --- |
 | Full unit/integration suite | `npm test` |
 | Watch mode (**avoid in agent sessions**) | `npm run test:watch` |
+| Architecture contract checks | `npm run verify:contracts` |
 | Type check | `npm run typecheck` |
 | Production build + bundle budget | `npm run build` |
 | Bundle budget only | `npm run check:bundle` |
@@ -67,7 +69,13 @@ subsystem command first instead of discovering tests or assembling ad-hoc `vites
 | Storage | `npm run verify:storage` | `src/db`, `src/storage`, `src/notes/store`, `src/vocabulary` |
 | UI | `npm run verify:ui` | `src/components`, `src/onboarding`, `src/app`, `src/notes/NotesPanel`, excluding lookup/offline components |
 | Offline | `npm run verify:offline` | `src/documents/offline`, `src/components/OfflineBadge`, `src/components/LookupBottomSheet.offline` |
-| Everything | `npm run verify:full` | `typecheck` + full `vitest run` + `build` (bundle budget) |
+| Everything | `npm run verify:full` | `verify:contracts` + `typecheck` + full `vitest run` + `build` (bundle and precache checks) |
+
+`npm run verify:contracts` checks PWA update/chunk exclusions, Worker route/default config,
+production-build budget hooks, and parity between `package.json` verify scripts and
+[`verification-map.md`](verification-map.md). The production build checks that heavy reader chunks
+stay out of the generated service-worker precache and that required icons, dictionary, and WordNet
+payloads remain precached.
 
 `npm run verify:partitions` enumerates the Vitest test files and applies the nine subsystem scopes;
 it fails on duplicate or orphan assignments and reports totals. `npm run verify:list` only lists
