@@ -7,8 +7,12 @@ import { validLookup } from '../../test/fixtures';
 
 afterEach(() => vi.unstubAllGlobals());
 
+// The v2 source-preserving pack validates 104,738 entries through the strict schema, so a
+// single full load exceeds the default timeout on a cold run.
+const packLoadTimeout = 20_000;
+
 it('loads the released dictionary once and resolves happened without network access', async () => {
-  const source = readFileSync('release/dictionary/context-lens-en-vi-2026.09.1.json', 'utf8');
+  const source = readFileSync('release/dictionary/context-lens-en-vi-2026.09.3.json', 'utf8');
   const reviewed = readFileSync('release/dictionary/context-lens-wiktionary-en-vi-reviewed-2026.09.2.json', 'utf8');
   const fetchMock = vi.fn(async (url: string) => new Response(url.includes('wiktionary') ? reviewed : source));
   vi.stubGlobal('fetch', fetchMock);
@@ -25,10 +29,10 @@ it('loads the released dictionary once and resolves happened without network acc
   expect(result.quick.meaning_vi.length).toBeGreaterThan(0);
   expect(dictionaryRegistry.lookup('maintain')?.entry.definitionEn).toContain('keep');
   expect(dictionaryRegistry.lookup('counterargument')?.entry.meaningsVi).toContain('lập luận phản biện');
-});
+}, packLoadTimeout);
 
 it('resolves bundled morphology to the base lexical meaning', async () => {
-  const source = readFileSync('release/dictionary/context-lens-en-vi-2026.09.1.json', 'utf8');
+  const source = readFileSync('release/dictionary/context-lens-en-vi-2026.09.3.json', 'utf8');
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(source)));
   await loadBundledDictionary();
   for (const [surface, lemma] of [['indicated', 'indicate'], ['delivered', 'deliver'], ['studied', 'study'], ['interested', 'interest'], ['tired', 'tire'], ['went', 'go']]) {
@@ -37,15 +41,15 @@ it('resolves bundled morphology to the base lexical meaning', async () => {
     expect(match?.morphology?.baseLemma).toBe(lemma);
     expect(match?.entry.meaningsVi.some(meaning => !/quá khứ|phân từ/i.test(meaning))).toBe(true);
   }
-});
+}, packLoadTimeout);
 
 it.each([
   ['abated', 'abate'], ['abducted', 'abduct'], ['allowed', 'allow'], ['attended', 'attend']
 ])('repairs missed or low-quality redirect %s -> %s', async (surface, lemma) => {
-  const source = readFileSync('release/dictionary/context-lens-en-vi-2026.09.1.json', 'utf8');
+  const source = readFileSync('release/dictionary/context-lens-en-vi-2026.09.3.json', 'utf8');
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(source)));
   await loadBundledDictionary();
   const match = dictionaryRegistry.lookup(surface);
   expect(match?.entry.lemma).toBe(lemma);
   expect(match?.morphology?.baseLemma).toBe(lemma);
-});
+}, packLoadTimeout);

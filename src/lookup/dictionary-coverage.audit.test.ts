@@ -31,7 +31,7 @@ const makeRequest = (item: AuditCase): LookupRequest => ({ selection: item.surfa
 const enabled = process.env.RUN_DICTIONARY_AUDIT === '1';
 
 (enabled ? it : it.skip)('audits 800 local entries through the production lookup pipeline', async () => {
-  const pack = JSON.parse(readFileSync('release/dictionary/context-lens-en-vi-2026.09.1.json', 'utf8')) as { entries: PackEntry[] };
+  const pack = JSON.parse(readFileSync('release/dictionary/context-lens-en-vi-2026.09.3.json', 'utf8')) as { entries: PackEntry[] };
   const external = process.env.DICTIONARY_AUDIT_INPUT
     ? readFileSync(process.env.DICTIONARY_AUDIT_INPUT, 'utf8').split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line) as AuditCase) : [];
   const usable = pack.entries.filter(entry => entry.lemma && entry.meaningsVi[0] && /^[a-z'-]+$/.test(entry.lemma)
@@ -79,7 +79,7 @@ beforeAll(async () => {
     const wordnet = url.match(/wordnet-(noun|verb|adj|adv)/)?.[1];
     const path = wordnet ? `release/wordnet/wordnet-${wordnet}.json`
       : url.includes('wiktionary') ? 'release/dictionary/context-lens-wiktionary-en-vi-reviewed-2026.09.2.json'
-        : 'release/dictionary/context-lens-en-vi-2026.09.1.json';
+        : 'release/dictionary/context-lens-en-vi-2026.09.3.json';
     return new Response(readFileSync(path, 'utf8'));
   }));
   await Promise.all([loadWordNet(), loadBundledDictionary()]);
