@@ -183,6 +183,8 @@
   }
   .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .quick-mode-toggle { order: 2; }
   .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .explain-more-actions { order: 3; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-lookup-tools .toolbar-secondary { display: contents; }
+  .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-lookup-tools .toolbar-secondary > button { flex: 0 1 auto; min-width: 0; white-space: nowrap; }
   .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .explain-toggle { order: 4; margin-left: auto; }
   .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-word-meta { grid-column: 1 / -1; grid-row: 4; }
   .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-controls { grid-column: 1 / -1; grid-row: 5; justify-content: flex-start; }

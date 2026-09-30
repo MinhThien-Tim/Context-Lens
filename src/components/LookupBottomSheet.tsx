@@ -194,13 +194,13 @@ export function LookupBottomSheet(props: Props) {
               <button class="secondary-button compact-action" onClick={props.onOpenSettings}>Settings</button>
               {deepOpen && !props.geminiConnected && <select class="compact-select" aria-label="AI explanation type" value="" onChange={event => { if (event.currentTarget.value) props.onExplain?.(event.currentTarget.value as ContextMode); }}><option value="">AI task…</option><option value="grammar">Grammar</option><option value="phrase">Phrase</option><option value="idiom">Idiom</option><option value="simplify">Simplify</option><option value="nuance">Nuance</option><option value="word-sense">Word sense</option><option value="sentence-structure">Sentence structure</option></select>}
             </div></details>
+            {result && deepOpen && (props.onTranslateSentence || !props.geminiConnected) && <span class="toolbar-secondary">
+              {props.onTranslateSentence && <button class="secondary-button compact-action" onClick={props.onTranslateSentence} aria-label="Translate sentence" title="Translate sentence">Translate</button>}
+              {!props.geminiConnected && <button class="ai-explain-button secondary-button compact-action" onClick={() => props.onExplain?.('meaning-in-context')} aria-label="AI Explain" title="AI Explain"><span class="ai-explain-full" aria-hidden="true">AI Explain</span><span class="ai-explain-short" aria-hidden="true">AI</span></button>}
+            </span>}
             <button class="explain-toggle explain-button" aria-expanded={deepOpen} aria-label={deepOpen ? 'Show less' : 'Show more'} title={deepOpen ? 'Show less' : 'Show more'} onClick={toggleFull}>{!deepOpen && 'Show more'} <svg class="explain-direction" aria-hidden="true" viewBox="0 0 16 16"><path d={deepOpen ? "M13 8H3m4-4L3 8l4 4" : "M3 8h10m-4-4 4 4-4 4"} /></svg></button>
         </div>}
         {result && <div class="inspector-word-meta">{result.selection.lemma && result.selection.lemma !== result.selection.surface && <span>{result.selection.lemma.includes(' ') ? 'Meaning for' : 'Base'}: {result.selection.lemma}</span>}{contextual && <span class="context-badge">✓ Context</span>}</div>}
-        {result && deepOpen && (props.onTranslateSentence || !props.geminiConnected) && <div class="inspector-controls"><div class="explain-toolstrip">
-          {props.onTranslateSentence && <button class="secondary-button compact-action" onClick={props.onTranslateSentence} aria-label="Translate sentence" title="Translate sentence">Translate</button>}
-          {!props.geminiConnected && <button class="ai-explain-button secondary-button compact-action" onClick={() => props.onExplain?.('meaning-in-context')}>AI Explain</button>}
-        </div></div>}
       </header>
       <div class="inspector-body" ref={bodyRef}>
       {!result ? <div class="lookup-pending"><strong>{props.selectionText}</strong><span>Finding meaning…</span></div> : <>

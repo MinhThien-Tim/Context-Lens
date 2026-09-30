@@ -392,9 +392,11 @@ it.each(['en', 'vi', 'bilingual'] as const)('preserves linked sense rows in Quic
       expect(full.children[1].textContent).toBe('Vietnamese 0');
     }
     expect(full.textContent).not.toContain('Unmatched gloss');
-    expect(host.querySelector('.inspector-controls .inspector-sources')).toBeNull();
+    expect(host.querySelector('.inspector-header .inspector-sources')).toBeNull();
     expect(host.querySelector('.inspector-body>.inspector-footer .inspector-sources')).not.toBeNull();
-    expect(host.querySelector('.inspector-controls .ai-explain-button')).not.toBeNull();
+    expect(host.querySelector('.inspector-lookup-tools .ai-explain-button')).not.toBeNull();
+    expect(host.querySelector('.inspector-lookup-tools .toolbar-secondary')).not.toBeNull();
+    expect(host.querySelectorAll('.ai-explain-button')).toHaveLength(1);
     expect(host.querySelector('.inspector-header-actions [aria-label="Add note"]')).not.toBeNull();
   } finally { act(() => render(null, host)); host.remove(); }
 });

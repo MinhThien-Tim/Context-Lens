@@ -489,3 +489,22 @@ body:has(.reader-shell) { background:var(--reading-surface); }
 @media (max-width:339px) {
   .reader-shell.reader-shell .quick[data-quick-mode="simple"] .entry-glosses { padding:4px 0 0; border-left:0; border-top:1px solid var(--border); }
 }
+
+/* Full card: Translate / AI live inside the lookup toolbar (no duplicate copies).
+   .toolbar-secondary is display:contents so the buttons participate directly in
+   the toolbar flex layout on every surface; wrapping comes only from width. */
+.lookup-sheet.expanded .inspector-lookup-tools { flex-wrap:wrap; }
+.lookup-sheet.expanded .inspector-lookup-tools .toolbar-secondary { display:contents; }
+.lookup-sheet.expanded .inspector-lookup-tools .toolbar-secondary > button { flex:0 1 auto; min-width:0; white-space:nowrap; }
+.lookup-sheet.expanded .inspector-lookup-tools .ai-explain-button .ai-explain-short { display:none; }
+.lookup-sheet.expanded .inspector-lookup-tools .ai-explain-button .ai-explain-full { display:inline; }
+/* Mobile Full card: one responsive toolbar (Language / More / Translate / AI / Show less). */
+@media (max-width:1023px) {
+  .lookup-sheet.expanded .inspector-lookup-tools { flex:1 1 auto; row-gap:6px; min-width:0; margin-left:0; }
+  .lookup-sheet.expanded .inspector-lookup-tools .toolbar-secondary { display:contents; }
+  .lookup-sheet.expanded .inspector-lookup-tools .toolbar-secondary > button { flex:0 1 auto; min-width:0; min-height:44px; }
+}
+@media (max-width:360px) {
+  .lookup-sheet.expanded .inspector-lookup-tools .ai-explain-button .ai-explain-full { display:none; }
+  .lookup-sheet.expanded .inspector-lookup-tools .ai-explain-button .ai-explain-short { display:inline; }
+}
