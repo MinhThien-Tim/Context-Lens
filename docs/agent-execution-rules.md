@@ -19,7 +19,11 @@ same task.
 
 ## 1. Scope discipline
 
-Establish before the first edit:
+Establish before the first edit. When a Planner handoff exists, its `SCOPE` / `PRESERVE` /
+`OUT OF SCOPE` / `IMPLEMENTATION BOUNDARY` fields are this section, already derived — the Implementer
+consumes them and expands them only by the scope-expansion rule in
+[`docs/agent-roles/implementer.md`](agent-roles/implementer.md). When no handoff exists, establish
+the same facts directly:
 
 ```text
 TASK
@@ -403,10 +407,13 @@ When the implementation is complete and reasonable verification is done or appro
 
 ## 12. Final handoff
 
-Keep it short and factual:
+Keep it short and factual. The scope fields let a Verifier check the boundary without the Planner
+transcript; see [`docs/agent-roles/implementer.md`](agent-roles/implementer.md) for the
+Implementer-facing form of this block.
 
 ```text
 Files changed:         <paths>
+Scope:                 <stayed inside the handoff, or the expansion taken and its evidence>
 Implementation:        <what changed and why, 1–3 lines>
 Architecture docs:     <updated, or "not required — no structural change">
 Tests run:             <command — PASS|FAIL|BLOCKED|UNRESOLVED|NOT RUN>

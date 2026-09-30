@@ -90,10 +90,41 @@ compact failure packet. Roles exchange artifacts, relevant diffs/files, and requ
 docs; they do not depend on a shared long-running transcript. Do not include chain-of-thought or
 verbose reasoning in handoffs.
 
-Task prompts should normally contain only `TASK`, `SCOPE`, `CONSTRAINTS`, `ACCEPTANCE CRITERIA`, and
-optional relevant files, commits, or task-spec path. Start from [`docs/task-template.md`](docs/task-template.md).
+### The Planner owns execution scope
+
+The Planner is the **canonical owner of execution scope**: implementation scope, execution scope,
+verification scope, and out-of-scope boundaries. When a task is planned, its handoff is the
+implementation contract the Implementer follows and the Verifier checks against.
+
+A user prompt normally needs only the problem, the desired result, and any genuinely task-specific
+constraint. The user should **not** repeat common scope restrictions — "do not touch lookup logic",
+"mobile only", "desktop unchanged", "do not modify the PDF reader", "use targeted tests", "do not run
+`verify:full`", "preserve current handlers", "do not change persistence", "follow the Terminal Loop
+Guard" — that the Planner can derive from architecture, classification, and investigation. The
+Planner's rules in [`docs/agent-roles/planner.md`](docs/agent-roles/planner.md) own that derivation;
+user-supplied task-specific constraints still take precedence and are always retained.
+
+Repository-global rules stay in this file, [`docs/agent-execution-rules.md`](docs/agent-execution-rules.md),
+[`docs/testing.md`](docs/testing.md), and the role files. Handoffs **reference** them; they never
+reproduce them.
+
+```text
+# sufficient
+"Mobile Full card still wastes space around Translate and AI. Inspect and make a plan to compact the controls."
+"Change the Advanced theme colors to match this screenshot."
+"Investigate why PDF rendering flashes black before text appears."
+```
+
+**Direct implementation requests:** do not force Planner ceremony on a trivial task. A very small,
+obvious, low-risk task may go straight to Implementer, which derives a narrow scope using the same
+rules and states it in its handoff. Ambiguous, multi-file, architectural, or investigation-heavy tasks
+go to Planner first, and an existing Planner handoff is always used when one is present.
+
+Task prompts should normally contain only the task details, acceptance criteria, and optional relevant
+files, commits, or task-spec path. Start from [`docs/task-template.md`](docs/task-template.md).
 Example: `/plan` with a task and acceptance criteria; then `/implement` with the approved spec path;
-then `/verify` with the spec path and implementation handoff.
+then `/verify` with the spec path and implementation handoff. Carry only the compact handoff or task
+spec into the next context — never the Planner transcript.
 
 ### Mixed tasks and context boundaries
 
