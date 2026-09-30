@@ -1,5 +1,12 @@
 import type { DictionaryEntry, DictionaryMatch, DictionaryProvider } from './types';
 
+/**
+ * An own-key lookup for the bare lookup tables below. `table[key] ?? fallback` also matches
+ * keys inherited from `Object.prototype`, so a surface such as `constructor` resolves to a
+ * built-in instead of missing, which is neither an iterable list of lemmas nor an entry.
+ */
+function own<T>(table: Record<string, T>, key: string): T | undefined { return Object.hasOwn(table, key) ? table[key] : undefined; }
+
 const entries: Record<string, DictionaryEntry> = {
   prerequisite: { lemma: 'prerequisite', partOfSpeech: 'noun', ipa: '/ˌpriːˈrekwɪzɪt/', definitionEn: 'something required before something else can happen', meaningsVi: ['điều kiện tiên quyết'] },
   account: { lemma: 'account', partOfSpeech: 'noun / verb', ipa: '/əˈkaʊnt/', definitionEn: 'a report of an event; or to explain or cause something', meaningsVi: ['lời kể', 'giải thích'] },
@@ -17,7 +24,7 @@ export class SeedDictionary implements DictionaryProvider {
   lookup(surface: string): DictionaryMatch | null {
     const normalized = surface.toLocaleLowerCase().trim().replace(/[^a-z' -]/g, '').replace(/\s+/g, ' ');
     for (const candidate of rankedLemmaCandidates(normalized)) {
-      const entry = entries[candidate];
+      const entry = own(entries, candidate);
       if (entry) return { entry, surface };
     }
     return null;
@@ -122,10 +129,10 @@ const irregularLemmas: Record<string, string[]> = {
 const irregularWordOverlaps: Record<string, string[]> = { saw: ['see'], left: ['leave'], found: ['find'], done: ['do'] };
 
 /** Irregular lemmas that outrank the exact form, because the surface is never a word of its own. */
-export function strictIrregularLemmaCandidates(word: string): string[] { return irregularLemmas[word] ?? []; }
+export function strictIrregularLemmaCandidates(word: string): string[] { return own(irregularLemmas, word) ?? []; }
 
 /** Every irregular lemma for one form, in preference order. */
-export function irregularLemmaCandidates(word: string): string[] { return [...strictIrregularLemmaCandidates(word), ...(irregularWordOverlaps[word] ?? [])]; }
+export function irregularLemmaCandidates(word: string): string[] { return [...strictIrregularLemmaCandidates(word), ...(own(irregularWordOverlaps, word) ?? [])]; }
 
 /** Ordered guesses only. Providers must still require that the candidate exists. */
 export function rankedLemmaCandidates(word: string): string[] {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lemmaCandidates, rankedLemmaCandidates, seedDictionary, strictIrregularLemmaCandidates } from './seedDictionary';
+import { irregularLemmaCandidates, lemmaCandidates, rankedLemmaCandidates, seedDictionary, strictIrregularLemmaCandidates } from './seedDictionary';
 import { dictionaryRegistry } from './registry';
 import type { DictionaryProvider } from './types';
 
@@ -45,6 +45,18 @@ describe('replaceable local dictionary', () => {
   it('keeps the exact form as the first candidate so a real entry is never looked past', () => {
     expect(rankedLemmaCandidates('computer')[0]).toBe('computer');
     expect(seedDictionary.lookup('struggle')?.entry.lemma).toBe('struggle');
+  });
+  it('treats a surface that names an Object.prototype member as an ordinary miss', () => {
+    for (const surface of ['constructor', 'tostring', 'valueof', 'hasownproperty', 'isprototypeof', 'propertyisenumerable', 'tolocalestring', '__proto__', 'proto']) {
+      expect(strictIrregularLemmaCandidates(surface)).toEqual([]);
+      expect(irregularLemmaCandidates(surface)).toEqual([]);
+      expect(Array.isArray(rankedLemmaCandidates(surface))).toBe(true);
+      expect(seedDictionary.lookup(surface)?.entry.lemma ?? null).toBeNull();
+    }
+    expect(strictIrregularLemmaCandidates('better')).toEqual(['good', 'well']);
+    // `saw` is a verb form and a real word at once, so both tables contribute.
+    expect(irregularLemmaCandidates('saw')).toEqual(expect.arrayContaining(['see']));
+    expect(rankedLemmaCandidates('saw')).toContain('saw');
   });
   it('allows a language pack to override the seed provider', () => {
     const pack: DictionaryProvider = { id: 'test-pack', version: '1', lookup: (surface) => surface === 'reader' ? { surface, entry: { lemma: 'reader', partOfSpeech: 'noun', ipa: null, definitionEn: 'a person who reads', meaningsVi: ['người đọc'] } } : null };
