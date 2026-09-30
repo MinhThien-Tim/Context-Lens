@@ -1,7 +1,8 @@
 # Verification map
 
-Authoritative commands below match the existing scripts and scopes in
-[`testing.md`](testing.md#per-subsystem-verify-commands). Each subsystem `verify:*` command includes
+The authoritative command definitions live in
+[`testing.md`](testing.md#per-subsystem-verify-commands); the table below only selects among those
+existing scripts and scopes. Each subsystem `verify:*` command includes
 typecheck and its Vitest scope, and the two UI-facing commands (`verify:lookup`, `verify:ui`) also run
 `check:css` first; `verify:full` also runs contract checks and builds. First classify the diff with
 [Change classes](#change-classes) below ([canonical rules](agent-execution-rules.md#4-verification-proportionality)),

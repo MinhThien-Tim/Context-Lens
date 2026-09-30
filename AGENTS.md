@@ -43,44 +43,41 @@ exhaustion, no hidden cost.
 ## 5. Verification proportional to blast radius
 
 Classify the diff first — `PRESENTATION_ONLY`, `LOCAL_UI`, `SUBSYSTEM_LOGIC`, or `SHARED_CONTRACT` —
-using the canonical [change classes](docs/verification-map.md#change-classes) and the
-[§4 proportional verification policy](docs/agent-execution-rules.md#4-verification-proportionality),
-then start with the smallest relevant check and follow [§8](docs/agent-execution-rules.md#8-verification-execution-and-reporting)
-for execution and reporting shape; escalate only as far
-as the change actually reaches. A `PRESENTATION_ONLY` CSS diff runs `npm run check:css` and stops —
-no `typecheck`, no subsystem Vitest, no `verify:full`. A `LOCAL_UI` diff may use targeted
-verification without a mandatory whole-subsystem run. Subsystem `verify:*` commands stay
-authoritative for `SUBSYSTEM_LOGIC`, and `verify:full` remains escalation-only. The per-subsystem
-command table, test layout and every command live in [`docs/testing.md`](docs/testing.md).
-Browser E2E is conditional, narrow and never mandatory. Never watch mode.
+then start with the smallest relevant check and escalate only as far as the change actually reaches.
+Invariants:
+
+- A `PRESENTATION_ONLY` CSS diff stops at `npm run check:css` — no `typecheck`, no subsystem Vitest, no `verify:full`.
+- A `LOCAL_UI` diff may stop at targeted verification plus `typecheck`.
+- Subsystem `verify:*` commands stay authoritative for `SUBSYSTEM_LOGIC`; `verify:full` is escalation-only.
+- Browser E2E is conditional, narrow and never mandatory. Never watch mode.
+- The per-subsystem command table, test layout and every command live in [`docs/testing.md`](docs/testing.md).
+
+Canonical policy: [§4](docs/agent-execution-rules.md#4-verification-proportionality) and
+[§8](docs/agent-execution-rules.md#8-verification-execution-and-reporting); change classes:
+[docs/verification-map.md](docs/verification-map.md#change-classes).
 
 ## 6. Stop instead of looping
 
 The [Terminal Loop Guard](docs/agent-execution-rules.md#terminal-loop-guard) is mandatory: never repeatedly retry shell commands — classify each failure once, take at most one safe fallback, then stop and report the blocker.
-Classify failures before retrying. Follow the canonical [Execution / Test Retry Policy](docs/agent-execution-rules.md#7-execution--test-retry-policy): maximum two launcher/environment execution attempts and one direct result check per problem.
-On Windows PowerShell, prefer `npm.cmd` / `npx.cmd` for documented npm/npx commands. A `.ps1`
-Execution Policy error alone does not establish that the equivalent `.cmd` launcher is blocked;
-use the one safe fallback when available within session permissions. Full access is not required.
-For a sandbox execution denial, use the tool's official approval mechanism for one narrowly scoped
-retry when permitted, within the same attempt budget. Stop if approval is denied or unavailable.
-Never weaken security, request Windows administrator elevation, or poll repeatedly.
+Launcher preference (`.ps1` → `.cmd`), the two-attempt execution budget, one direct result check,
+and sandbox approval mechanics are owned by the canonical
+[Execution / Test Retry Policy §7](docs/agent-execution-rules.md#7-execution--test-retry-policy);
+follow it exactly — never weaken security, request Windows administrator elevation, or poll
+repeatedly.
 
 Label every check exactly `PASS`, `FAIL`, `BLOCKED`, `UNRESOLVED`, or `NOT RUN`. Never report a
 non-pass as a pass, and never change code because a check was `BLOCKED`, `UNRESOLVED`, or `NOT RUN`.
 For recurring test symptoms and fast diagnosis paths, use
 [`docs/testing-troubleshooting.md`](docs/testing-troubleshooting.md).
-Retry and stop semantics remain authoritative in
-[`docs/agent-execution-rules.md`](docs/agent-execution-rules.md).
 
 ## 7. Minimize redundant requests
 
 **Spend requests on new information, not on re-reading, re-searching, or re-verifying information that
-has not changed.** Batch independent reads and searches when the tool supports it; never repeat an
-equivalent search, re-read an unchanged file, poll, retry a failed command, or rerun a passing check
-without a reason. Do not scan unrelated subsystems for completeness and do not broaden verification
-without evidence. Efficiency never weakens source verification — a cited file is still checked once
-against the source. There is deliberately **no numeric request budget**: complex tasks may legitimately
-need more requests, so no hard per-task or per-role cap exists. Canonical rules for all three roles:
+has not changed.** Batch independent reads, never repeat an equivalent search or rerun a passing
+check without a reason, and never scan unrelated subsystems or broaden verification without
+evidence — efficiency never weakens source verification. There is deliberately **no numeric request
+budget**: complex tasks may legitimately need more requests, so no hard per-task or per-role cap
+exists. Canonical rules for all three roles:
 [§3](docs/agent-execution-rules.md#3-request-and-context-efficiency).
 
 ## Agent roles
@@ -104,20 +101,18 @@ verbose reasoning in handoffs.
 
 ### The Planner owns execution scope
 
-The Planner is **read-only for product implementation** and the **canonical owner of execution
-scope**: implementation scope, execution scope, verification scope, and out-of-scope boundaries. It
-inspects source, tests, docs, config, and git state; it never edits code, tests, or config, never
-applies patches, never runs a script that modifies repository files, and never "tries the fix" to
-validate its own plan. A discovered defect is reported, not patched. When a task is planned, its
-handoff is the implementation contract the Implementer follows and the Verifier checks against.
+The Planner is **read-only for product implementation** and the canonical owner of execution scope:
+it inspects source, tests, docs, config, and git state, but never edits, patches, or "tries the fix"
+to validate its own plan — a discovered defect is reported, not patched. Its handoff is the
+implementation contract the Implementer follows and the Verifier checks against. The full
+read-only contract and all scope-derivation rules live in
+[`docs/agent-roles/planner.md`](docs/agent-roles/planner.md).
 
 A user prompt normally needs only the problem, the desired result, and any genuinely task-specific
-constraint. The user should **not** repeat common scope restrictions — "do not touch lookup logic",
-"mobile only", "desktop unchanged", "do not modify the PDF reader", "use targeted tests", "do not run
-`verify:full`", "preserve current handlers", "do not change persistence", "follow the Terminal Loop
-Guard" — that the Planner can derive from architecture, classification, and investigation. The
-Planner's rules in [`docs/agent-roles/planner.md`](docs/agent-roles/planner.md) own that derivation;
-user-supplied task-specific constraints still take precedence and are always retained.
+constraint. Common scope restrictions — "do not touch lookup logic", "use targeted tests", "follow
+the Terminal Loop Guard" — are derived by the Planner from architecture, classification, and
+investigation rather than repeated in every prompt; user-supplied task-specific constraints still
+take precedence and are always retained.
 
 Repository-global rules stay in this file, [`docs/agent-execution-rules.md`](docs/agent-execution-rules.md),
 [`docs/testing.md`](docs/testing.md), and the role files. Handoffs **reference** them; they never

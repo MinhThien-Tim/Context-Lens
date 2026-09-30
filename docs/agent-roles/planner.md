@@ -143,8 +143,7 @@ the user's phrasing, and the Implementer consumes them rather than re-deriving t
 The handoff stays compact. It names task-specific facts and references; it does **not** restate
 repository-global policy (retry policy, Terminal Loop Guard, no watch mode, verification
 proportionality, doc-update policy). Those live in `AGENTS.md`, `docs/agent-execution-rules.md`,
-`docs/testing.md`, and are referenced. A handoff that reproduces global policy is a bad handoff; a
-handoff that omits a real task-specific boundary is also a bad handoff.
+`docs/testing.md`, and are referenced. See [Compactness](#compactness) for the full A/B distinction.
 
 ## Compactness
 

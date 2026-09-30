@@ -73,7 +73,7 @@ planning.
   build turns.
 - Broader regression is escalation only: shared infrastructure, crossed subsystem boundaries,
   build/configuration infrastructure, evidence from the authoritative check, or an explicit release
-  requirement. Do not rerun a passing verification unless relevant code changed.
+  requirement.
 - A docs-only change needs document/link/diff checks, not application tests, per §4 and §8 of
   `docs/agent-execution-rules.md`.
 - Do not poll a running command through repeated model turns. Keep successful output compact; for

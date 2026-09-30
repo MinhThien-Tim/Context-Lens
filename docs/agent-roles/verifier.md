@@ -42,7 +42,6 @@ and relevant architecture/testing documents.
 - Check `DOC IMPACT` against `AGENTS.md` §3 when the handoff claims no doc update is required.
 - Allow at most one known launcher fallback. Do not poll repeatedly. Retry, environment, and
   completion rules in §7 of `docs/agent-execution-rules.md` are canonical.
-- Broader regression is escalation only under §4 and §8 of `docs/agent-execution-rules.md`.
 - **Stop when the acceptance criteria and the required verification are satisfied.** Do not repeat a
   passing check without a reason, and do not scan unrelated subsystems. Re-run a check only when
   something relevant changed or this session needs the result for its own verification objective.
