@@ -19,18 +19,19 @@ same task.
 
 ## 1. Scope discipline
 
-Establish before the first edit. When a Planner handoff exists, its `SCOPE` / `PRESERVE` /
-`OUT OF SCOPE` / `IMPLEMENTATION BOUNDARY` fields are this section, already derived — the Implementer
-consumes them and expands them only by the scope-expansion rule in
+Establish before the first edit. When a Planner handoff exists, its `SCOPE` / `RELEVANT FILES` /
+`PRESERVE / INVARIANTS` / `OUT OF SCOPE` / `IMPLEMENTATION DIRECTION` fields are this section, already
+derived — the Implementer consumes them and expands them only by the scope-expansion rule in
 [`docs/agent-roles/implementer.md`](agent-roles/implementer.md). When no handoff exists, establish
 the same facts directly:
 
 ```text
 TASK
 AFFECTED SUBSYSTEM   (one domain doc from the ARCHITECTURE.md routing table)
-LIKELY FILES
+RELEVANT FILES
 ARCHITECTURAL INVARIANTS AT RISK   (docs/ARCHITECTURE.md; COST & QUOTA GUARDRAILS.md)
-TESTS REQUIRED
+CHANGE CLASS
+VERIFICATION REQUIRED
 ```
 
 - Change only the subsystem named in the task. Adjacent code is not an invitation.
@@ -64,16 +65,59 @@ Do **not** update architecture docs for: copy, naming, style values, test-only a
 bug fixes. Architecture docs describe current structure, not task history.
 
 
-## 3. Token and context efficiency
+## 3. Request and context efficiency
 
-- Search exact filenames, symbols, and config keys first; read the matching range second.
+This section is the **canonical owner of request-efficiency rules** for every role. Role files keep
+only their role-specific application of it.
+
+### Core principle
+
+> **Spend requests on new information, not on re-reading, re-searching, or re-verifying information
+> that has not changed.**
+
+Efficiency never weakens correctness. The source is still the authority, and a handoff claim is still
+verified against the file it names — verifying a cited file once is a necessary check, repeating that
+check without a change is waste.
+
+### Rules for all roles
+
+- Batch independent reads and searches into a single call when the available tool supports batching.
+  Parallel or multi-file requests cost the same round trip as one.
+- Do not repeat an equivalent search. If a symbol, file, or concept is already established, reuse the
+  finding.
+- Do not re-read an unchanged file when the required evidence is already in hand. Read a range, not
+  the whole file, when only one region is unknown.
+- Do not poll. Repeated status checks on a running command, process, or server are prohibited; §7 owns
+  that rule.
+- Never repeatedly retry a failed command. §7 owns retry semantics and the two-attempt budget.
+- Do not rerun a command that already passed unless relevant code/config changed, or a later stage
+  (e.g. a Verifier confirming the same objective) needs the result.
+- Do not scan unrelated subsystems for completeness. Scope is a boundary, not a suggestion.
+- Do not broaden verification without evidence of a wider dependency; §4 owns that decision.
+- Prefer the smallest set of calls that establishes source truth and completion.
 - Do not load large data assets into context: the `release/dictionary` and `release/wordnet` packs,
   `tmp/` fixtures, lockfiles, build output, and captured JSON reports.
 - `release/` assets and `tmp/pdf-baseline` are build inputs, not code to refactor.
-- Reuse what an earlier read already established instead of re-reading it.
+- Search exact filenames, symbols, and config keys first; read the matching range second.
 - When context is already large and the implementation is stable, stop expanding it and produce a
   handoff rather than carrying the session forward.
-- Run targeted searches with a narrow question; avoid queries that return whole directories.
+
+**No numeric request budget.** There is deliberately no global cap on the number of tool or API
+requests. A complex investigation, a regression hunt, or a cross-subsystem change can legitimately
+need many requests; the rule above targets *redundant* requests, not total volume. Never introduce a
+hard per-task or per-role request limit.
+
+### Per-role application
+
+| Role | Request behavior |
+| --- | --- |
+| **Planner** | Start from a compact batched repository inspection; inspect only files relevant to the reported problem; batch independent source/test/doc reads; reuse findings established earlier in the same planning phase; stop once scope, invariants, change class, and verification are established; do not keep searching for a concept already answered. |
+| **Implementer** | Use the Planner handoff as the initial scope; verify only the files the handoff cites, plus files new evidence requires; do not repeat the Planner's discovery; do not re-inspect unchanged source; do not rerun checks that already passed. |
+| **Verifier** | Inspect the final diff first; select checks from the handoff's change class and acceptance criteria; run only what establishes correctness; do not repeat passing checks without a reason; do not scan unrelated subsystems; stop when acceptance criteria and required verification are satisfied. |
+
+The detailed role rules live in [`docs/agent-roles/planner.md`](agent-roles/planner.md),
+[`docs/agent-roles/implementer.md`](agent-roles/implementer.md) and
+[`docs/agent-roles/verifier.md`](agent-roles/verifier.md).
 
 ## 4. Verification proportionality
 

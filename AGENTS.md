@@ -71,6 +71,18 @@ For recurring test symptoms and fast diagnosis paths, use
 [`docs/testing-troubleshooting.md`](docs/testing-troubleshooting.md).
 Retry and stop semantics remain authoritative in
 [`docs/agent-execution-rules.md`](docs/agent-execution-rules.md).
+
+## 7. Minimize redundant requests
+
+**Spend requests on new information, not on re-reading, re-searching, or re-verifying information that
+has not changed.** Batch independent reads and searches when the tool supports it; never repeat an
+equivalent search, re-read an unchanged file, poll, retry a failed command, or rerun a passing check
+without a reason. Do not scan unrelated subsystems for completeness and do not broaden verification
+without evidence. Efficiency never weakens source verification — a cited file is still checked once
+against the source. There is deliberately **no numeric request budget**: complex tasks may legitimately
+need more requests, so no hard per-task or per-role cap exists. Canonical rules for all three roles:
+[§3](docs/agent-execution-rules.md#3-request-and-context-efficiency).
+
 ## Agent roles
 
 For every task, use one fixed role: Planner → [`docs/agent-roles/planner.md`](docs/agent-roles/planner.md),
@@ -92,9 +104,12 @@ verbose reasoning in handoffs.
 
 ### The Planner owns execution scope
 
-The Planner is the **canonical owner of execution scope**: implementation scope, execution scope,
-verification scope, and out-of-scope boundaries. When a task is planned, its handoff is the
-implementation contract the Implementer follows and the Verifier checks against.
+The Planner is **read-only for product implementation** and the **canonical owner of execution
+scope**: implementation scope, execution scope, verification scope, and out-of-scope boundaries. It
+inspects source, tests, docs, config, and git state; it never edits code, tests, or config, never
+applies patches, never runs a script that modifies repository files, and never "tries the fix" to
+validate its own plan. A discovered defect is reported, not patched. When a task is planned, its
+handoff is the implementation contract the Implementer follows and the Verifier checks against.
 
 A user prompt normally needs only the problem, the desired result, and any genuinely task-specific
 constraint. The user should **not** repeat common scope restrictions — "do not touch lookup logic",

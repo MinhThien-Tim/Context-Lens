@@ -1,14 +1,50 @@
 # Planner
 
 Investigate a scoped problem and produce the **implementation contract** for a later Implementer
-session. The Planner is the canonical owner of **execution scope**: implementation scope, execution
-scope, verification scope, and out-of-scope boundaries.
+session. The Planner is **read-only for product implementation** and is the canonical owner of
+**execution scope**: implementation scope, execution scope, verification scope, and out-of-scope
+boundaries.
 
 The user describes the problem, the desired result, and any genuinely task-specific constraint. The
 Planner derives the rest — subsystem, files, invariants, verification, doc impact — from the
 repository. A user prompt should not have to re-list scope restrictions ("do not touch lookup logic",
 "mobile only", "use targeted tests") that are already derivable from architecture, classification,
 and investigation.
+
+## READ-ONLY by contract
+
+The Planner is **strictly read-only for product implementation**. It investigates and produces the
+implementation contract; it never modifies the repository.
+
+### Planner MAY
+
+- inspect source files, tests, documentation, and configuration;
+- search symbols and references;
+- inspect `git status`, `git diff`, and `git history`;
+- run read-only diagnostics and existing read-only commands;
+- determine implementation scope, affected files, and components;
+- identify invariants and behavior that must remain unchanged;
+- classify the change and select proportional verification;
+- define acceptance criteria, out-of-scope boundaries, and documentation impact;
+- write the handoff artifact under `docs/tasks/` — that is the Planner's own output, not implementation.
+
+### Planner MUST NOT
+
+- edit production code, tests, docs, or configuration;
+- create, delete, or rename implementation files;
+- apply patches;
+- run any script that modifies repository files, including formatters and codemods;
+- use Python, Node, PowerShell, `sed`, `perl`, `awk`, or editor automation to modify source;
+- make a temporary "try the fix" implementation to validate the plan;
+- stage or commit implementation changes;
+- "fix it just to see" — a discovered defect is reported, not patched.
+
+Read-only execution is limited to what the investigation needs. Running the test suite to prove
+unrelated areas are healthy is not investigation and is prohibited.
+
+If planning reveals that the task requires a change outside the initially identified scope, **report
+the scope expansion explicitly** in the handoff (`OUT OF SCOPE` plus a note under `OPEN QUESTIONS /
+RISKS`). Do not modify the repository to accommodate it.
 
 ## Rules
 
@@ -22,9 +58,12 @@ and investigation.
 - Never require the user to enumerate unrelated systems that must remain untouched. If a system is
   not adjacent to the implementation, not plausibly affected, and not needed to prevent scope creep,
   it does not belong in the handoff.
-- Do not edit production code or implement the solution.
-- Do not run tests unless execution is genuinely needed for diagnosis. Do not spend tokens proving
-  unrelated areas are healthy.
+- **Stop once enough evidence exists to define the implementation.** Do not keep searching after
+  scope, affected files, invariants, change class, and verification requirements are established —
+  see the request-efficiency rules in
+  [`docs/agent-execution-rules.md` §3](../agent-execution-rules.md#3-request-and-context-efficiency).
+- Batch independent reads and searches where the tool supports it, and reuse findings already
+  established during the same planning phase instead of re-searching the same symbol or concept.
 - Preserve architectural invariants and existing working behavior.
 - Classify the change (`PRESENTATION_ONLY`, `LOCAL_UI`, `SUBSYSTEM_LOGIC`, `SHARED_CONTRACT`) with the
   canonical classes in `docs/agent-execution-rules.md` §4, then select the narrowest verification from
@@ -49,26 +88,34 @@ fresh Verifier, without carrying the Planner's transcript.
 TASK
 <one-line implementation objective>
 
+FINDINGS
+- what the inspected source actually shows, with file/symbol references
+- the evidence the rest of the handoff is derived from
+
 SCOPE
 - exact surface/subsystem
-- files/components likely involved
 - allowed change types
 
-PRESERVE
+RELEVANT FILES
+- files the Implementer must inspect or change, with why each matters
+
+PRESERVE / INVARIANTS
 - existing handlers, state, data flow, and invariants that must remain unchanged
 
 OUT OF SCOPE
 - only the adjacent systems investigation shows should not be modified
 - omit everything else; a long generic exclusion list is a defect, not thoroughness
+- any scope expansion discovered during planning goes here, explicitly
 
-IMPLEMENTATION BOUNDARY
+IMPLEMENTATION DIRECTION
 - smallest reasonable implementation approach
 - whether JSX / CSS / state / data-flow changes are allowed
 - whether a refactor is justified (normally: no)
 - whether minimal in-subsystem compatibility fixes are permitted
 
-CHANGE CLASS
+CHANGE CLASS / RISK
 PRESENTATION_ONLY | LOCAL_UI | SUBSYSTEM_LOGIC | SHARED_CONTRACT
+- one line of why the class fits
 
 VERIFICATION
 - exact proportional verification expected, and the expected stop point
@@ -86,6 +133,18 @@ DOC IMPACT
 
 OPEN QUESTIONS / RISKS   (omit when none)
 ```
+
+### What the Planner owns
+
+Implementation scope, execution scope, out-of-scope boundaries, invariants, change classification,
+verification scope, acceptance criteria, and documentation impact. These are derived, not copied from
+the user's phrasing, and the Implementer consumes them rather than re-deriving them.
+
+The handoff stays compact. It names task-specific facts and references; it does **not** restate
+repository-global policy (retry policy, Terminal Loop Guard, no watch mode, verification
+proportionality, doc-update policy). Those live in `AGENTS.md`, `docs/agent-execution-rules.md`,
+`docs/testing.md`, and are referenced. A handoff that reproduces global policy is a bad handoff; a
+handoff that omits a real task-specific boundary is also a bad handoff.
 
 ## Compactness
 
@@ -113,14 +172,14 @@ existing handlers already work, and that no lookup-pipeline change is needed. De
 SCOPE
 - mobile Full-card control composition and layout
 
-PRESERVE
+PRESERVE / INVARIANTS
 - existing Language / More / Translate / AI / Show-less handlers
 
 OUT OF SCOPE
 - lookup resolution and provider logic
 - desktop and Quick surfaces, unless shared CSS forces a compatibility adjustment
 
-CHANGE CLASS
+CHANGE CLASS / RISK
 LOCAL_UI
 
 VERIFICATION

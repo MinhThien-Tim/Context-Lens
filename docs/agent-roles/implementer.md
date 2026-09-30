@@ -5,16 +5,20 @@ Implement an approved scoped task or spec with the smallest safe patch.
 ## Rules
 
 - Read `AGENTS.md`, this role file, and the supplied task spec.
-- **Treat the Planner handoff as the implementation contract.** Its `SCOPE`, `PRESERVE`,
-  `OUT OF SCOPE`, `IMPLEMENTATION BOUNDARY`, `CHANGE CLASS`, `VERIFICATION`, `ACCEPTANCE CRITERIA`
-  and `DOC IMPACT` fields are the work definition. Follow the change classification and the
-  verification profile it specifies; do not re-derive a broader plan, and do not reinterpret the
-  user's request into a redesign.
-- Read only the repo areas the handoff identifies, plus their necessary direct dependencies. Do not
-  repeat broad planning or rescan the repository.
+- **Treat the Planner handoff as the implementation contract.** Its `TASK`, `FINDINGS`, `SCOPE`,
+  `RELEVANT FILES`, `PRESERVE / INVARIANTS`, `OUT OF SCOPE`, `IMPLEMENTATION DIRECTION`,
+  `CHANGE CLASS / RISK`, `VERIFICATION`, `ACCEPTANCE CRITERIA` and `DOC IMPACT` fields are the work
+  definition. Follow the change classification and the verification profile it specifies; do not
+  re-derive a broader plan, and do not reinterpret the user's request into a redesign.
+- **Do not repeat the Planner's discovery.** Inspect the files named in `RELEVANT FILES` to verify
+  current source truth, plus any additional file that new evidence requires. Do not re-scan the
+  repository, re-read architecture docs the handoff already applied, or re-derive scope the handoff
+  already owns. Do not re-plan the task unless the source contradicts the handoff.
 - **Source code remains truth.** The handoff is not permission to follow a stale file path or an
   incorrect assumption. Verify handoff claims against the source; if the code contradicts the spec,
   follow the code and report the discrepancy.
+- Implement the **smallest coherent change** that satisfies the handoff and its acceptance criteria.
+  Preserve every stated invariant, and do not silently expand scope.
 - Follow the existing architecture. Reopen architecture decisions only if implementation proves the
   approved plan invalid; if materially invalid, stop and report the specific conflict.
 - Prefer minimal patches. Do not perform unrelated cleanup or refactors; preserve behavior outside
@@ -46,7 +50,7 @@ handoff:
 2. Identify the concrete dependency or evidence that forces it (file, symbol, contract).
 3. Report the proposed scope expansion and wait for re-planning or review.
 
-Never silently expand the task.
+Never silently expand the task, and never proceed with unrelated work while waiting.
 
 One exception: a **trivial compatibility adjustment** directly required by the approved change may
 proceed only when all three hold — it does not alter behavior outside the task, it stays within the
@@ -75,6 +79,9 @@ planning.
 - Do not poll a running command through repeated model turns. Keep successful output compact; for
   failures retain only the failing command, test/file, relevant assertion/error, and small excerpt.
   Retry limits and failure classification remain governed by §7 of `docs/agent-execution-rules.md`.
+- Do not rerun a command that already passed unless relevant code changed, and do not re-inspect
+  source already verified this session. General request-efficiency rules:
+  [`docs/agent-execution-rules.md` §3](../agent-execution-rules.md#3-request-and-context-efficiency).
 
 ## Handoff
 
