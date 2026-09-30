@@ -51,7 +51,8 @@ VERIFICATION REQUIRED
 - Docs are a navigation aid, not truth. When a documented path or contract looks wrong against the
   source, verify the source and correct the doc.
 - Do not re-verify the whole documentation set. Check only the subsystem being changed.
-- Do not re-read a large unchanged file when only one unknown region is needed; read the range.
+- Do not re-read a large unchanged file when only one unknown region is needed; read the range. The
+  pre-edit obligation form of this rule is Rule 3 in §3.
 - Anything under `docs/archive/` is historical background, not current architecture, and is never
   part of the default reading path. Read a file there only when the task explicitly asks about that
   history, a past regression, or an old measurement. Code, config and the active docs override it.
@@ -106,6 +107,29 @@ check without a change is waste.
 requests. A complex investigation, a regression hunt, or a cross-subsystem change can legitimately
 need many requests; the rule above targets *redundant* requests, not total volume. Never introduce a
 hard per-task or per-role request limit.
+
+### Execution-control rules
+
+Rule 1 — **Request efficiency is not "batch everything."** Batch only reads that are genuinely
+independent and equally needed now; batching unrelated or not-yet-needed reads trades one round trip
+for an extra mapping step and a higher token cost. This qualifies the batching bullet above; it does
+not weaken batching of independent reads.
+
+Rule 2 — **Read control-flow files sequentially.** `AGENTS.md`, this document, and
+`docs/agent-roles/*.md` define role and policy, so the agent must resolve them before acting on them.
+Read in order: role file → `AGENTS.md` → the canonical policy sections → the target files. This is the
+one exception to Rule 1's batching, and it applies to control-flow files only.
+
+Rule 3 — **Narrow read before edit.** Before editing a file, read the exact range being changed;
+section-level context is sufficient, a whole-file read is not required. This generalizes the
+narrow-read bullet in §2.
+
+Rule 4 — **Associate each tool result with its call.** Results belong to calls in submission order;
+never infer reordering from content. On doubt, re-read the one file whose result looks wrong, once —
+never alternate between read and re-read.
+
+Rule 5 — **Recover from a no-match by re-reading.** A failed exact match means re-read the exact
+target text; never reconstruct the search string from memory or retry whitespace or variant guesses.
 
 ### Per-role application
 
@@ -328,6 +352,9 @@ If the budget is already exhausted, report the gap; resume only after an explici
 authorizes a new scoped attempt. Do not reset the budget merely because a new turn begins.
 Once execution succeeds, classify its actual test results as `PASS` or `FAIL`.
 
+Never raise an approval request after the user has stopped, cancelled, or interrupted the task; the
+interruption rule in §11 outranks this subsection.
+
 ### Strict execution budget
 
 For **each launcher/environment problem**, maximum **2 execution attempts total**:
@@ -448,6 +475,17 @@ When the implementation is complete and reasonable verification is done or appro
 - speculative future-proofing;
 - re-running already-passing checks without a concrete reason;
 - heavier tests merely because they exist.
+
+### Interruption is terminal
+
+Rule 6 — **When the user stops, cancels, interrupts, or requests a handoff, terminate the current
+execution loop.** The interruption signal ends the task's execution loop: no retry, no fresh approach,
+no resumption, no further tool call, and no new terminal request. Resume only on a new explicit user
+instruction.
+
+Pending confirmation at interruption: leave the pending tool confirmation untouched, or cancel it.
+Never resolve it by issuing another command. §7's approval path must not be used to continue after an
+interruption.
 
 ## 12. Final handoff
 

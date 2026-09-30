@@ -70,12 +70,19 @@ non-pass as a pass, and never change code because a check was `BLOCKED`, `UNRESO
 For recurring test symptoms and fast diagnosis paths, use
 [`docs/testing-troubleshooting.md`](docs/testing-troubleshooting.md).
 
+A user stop, cancel, interrupt, or handoff request is terminal: end the execution loop immediately —
+no retry, no new approach, no further tool call — and never resolve a pending confirmation with
+another command. Canonical rule:
+[§11](docs/agent-execution-rules.md#11-stop-condition).
+
 ## 7. Minimize redundant requests
 
 **Spend requests on new information, not on re-reading, re-searching, or re-verifying information that
 has not changed.** Batch independent reads, never repeat an equivalent search or rerun a passing
 check without a reason, and never scan unrelated subsystems or broaden verification without
-evidence — efficiency never weakens source verification. There is deliberately **no numeric request
+evidence — efficiency never weakens source verification. Batch only genuinely independent reads that
+are needed now; see the execution-control rules in
+[§3](docs/agent-execution-rules.md#3-request-and-context-efficiency). There is deliberately **no numeric request
 budget**: complex tasks may legitimately need more requests, so no hard per-task or per-role cap
 exists. Canonical rules for all three roles:
 [§3](docs/agent-execution-rules.md#3-request-and-context-efficiency).

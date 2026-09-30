@@ -60,8 +60,9 @@ RISKS`). Do not modify the repository to accommodate it.
   it does not belong in the handoff.
 - **Stop once enough evidence exists to define the implementation.** Do not keep searching after
   scope, affected files, invariants, change class, and verification requirements are established —
-  see the request-efficiency rules in
-  [`docs/agent-execution-rules.md` §3](../agent-execution-rules.md#3-request-and-context-efficiency).
+  see the request-efficiency and execution-control rules in
+  [`docs/agent-execution-rules.md` §3](../agent-execution-rules.md#3-request-and-context-efficiency);
+  a user stop or interruption is terminal per §11.
 - Batch independent reads and searches where the tool supports it, and reuse findings already
   established during the same planning phase instead of re-searching the same symbol or concept.
 - Preserve architectural invariants and existing working behavior.

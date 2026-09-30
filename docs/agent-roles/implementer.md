@@ -80,8 +80,10 @@ planning.
   failures retain only the failing command, test/file, relevant assertion/error, and small excerpt.
   Retry limits and failure classification remain governed by §7 of `docs/agent-execution-rules.md`.
 - Do not rerun a command that already passed unless relevant code changed, and do not re-inspect
-  source already verified this session. General request-efficiency rules:
-  [`docs/agent-execution-rules.md` §3](../agent-execution-rules.md#3-request-and-context-efficiency).
+  source already verified this session. General request-efficiency rules and the §3 execution-control
+  rules (narrow read before edit, no-match recovery):
+  [`docs/agent-execution-rules.md` §3](../agent-execution-rules.md#3-request-and-context-efficiency);
+  a user stop or interruption is terminal per §11.
 
 ## Handoff
 

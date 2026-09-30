@@ -45,8 +45,9 @@ and relevant architecture/testing documents.
 - **Stop when the acceptance criteria and the required verification are satisfied.** Do not repeat a
   passing check without a reason, and do not scan unrelated subsystems. Re-run a check only when
   something relevant changed or this session needs the result for its own verification objective.
-  General request-efficiency rules:
-  [`docs/agent-execution-rules.md` §3](../agent-execution-rules.md#3-request-and-context-efficiency).
+  General request-efficiency and execution-control rules:
+  [`docs/agent-execution-rules.md` §3](../agent-execution-rules.md#3-request-and-context-efficiency);
+  a user stop or interruption is terminal per §11.
 
 Use the task spec, implementation handoff, relevant diff, affected files, and verification mapping
 as the context boundary. Do not require the full Planner or Implementer transcript. On failure,
