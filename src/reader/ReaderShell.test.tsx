@@ -9,12 +9,24 @@ import { ContentsPanel } from './ContentsPanel';
 
 let host: HTMLDivElement;
 afterEach(() => { if (host) act(() => render(null, host)); document.body.replaceChildren(); vi.unstubAllGlobals(); });
-function mount(desktop = false, locked = false) {
+function mount(desktop = false, locked = false, surface: 'text' | 'original' | 'reading' = 'reading') {
   vi.stubGlobal('matchMedia', vi.fn(() => ({ matches: desktop, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
   host = document.createElement('div'); document.body.append(host);
-  act(() => render(<ReaderShell interfaceMode="simple" surface="reading" contentsOpen={false} contextOpen={false} controlsLocked={locked}><div class="pdf-reading-scroll"><button>Reading control</button></div></ReaderShell>, host));
-  return host.querySelector<HTMLDivElement>('.pdf-reading-scroll')!;
+  const body = surface === 'original'
+    ? <div class="pdf-scroll"><div class="pdf-page"><button>Page control</button></div></div>
+    : <div class="pdf-reading-scroll"><button>Reading control</button></div>;
+  act(() => render(<ReaderShell interfaceMode="simple" surface={surface} contentsOpen={false} contextOpen={false} controlsLocked={locked}><button class="reader-chrome-control">Chrome control</button>{body}</ReaderShell>, host));
+  return host.querySelector<HTMLDivElement>(surface === 'original' ? '.pdf-scroll' : '.pdf-reading-scroll')!;
 }
+// jsdom never dispatches real PointerEvents, so synthesise them with the same shape the listeners read.
+function pointer(type: string, target: Element, props: Record<string, number | boolean> = {}) {
+  const event = Object.assign(new Event(type, { bubbles: true }), { pointerType: 'touch', button: 0, pointerId: 1, isPrimary: true, clientX: 0, clientY: 0 }, props) as unknown as PointerEvent;
+  act(() => { target.dispatchEvent(event); });
+}
+function scrollTo(scroll: HTMLElement, top: number) {
+  act(() => { scroll.scrollTop = top; scroll.dispatchEvent(new Event('wheel', { bubbles: true })); scroll.dispatchEvent(new Event('scroll')); });
+}
+const isQuiet = () => host.querySelector('.chrome-quiet') !== null;
 it('quiets mobile chrome on reading scroll and restores it on interaction without moving content', () => {
   const scroll = mount();
   act(() => { scroll.dispatchEvent(new Event('wheel', { bubbles: true })); scroll.scrollTop = 100; scroll.dispatchEvent(new Event('scroll')); });
@@ -85,3 +97,53 @@ it('OCR next invokes the existing action and can be moved into the toolbar witho
   act(() => action.click());
   expect(next).toHaveBeenCalledTimes(2);
 });
+
+it('does not reveal reading chrome for a touch that turns into a scroll flick', () => {
+  const scroll = mount();
+  scrollTo(scroll, 100);
+  expect(isQuiet()).toBe(true);
+  pointer('pointerdown', scroll.querySelector('button')!);
+  expect(isQuiet()).toBe(true);
+  pointer('pointermove', scroll, { clientX: 40, clientY: 90 });
+  pointer('pointerup', scroll, { clientX: 40, clientY: 90 });
+  scrollTo(scroll, 140);
+  expect(isQuiet()).toBe(true);
+});
+
+it('reveals reading chrome again for a confirmed stationary tap', () => {
+  const scroll = mount();
+  scrollTo(scroll, 100);
+  expect(isQuiet()).toBe(true);
+  pointer('pointerdown', scroll, { clientX: 120, clientY: 200 });
+  pointer('pointerup', scroll, { clientX: 121, clientY: 201 });
+  expect(isQuiet()).toBe(false);
+});
+
+it('keeps a tap reveal through a small scroll but re-quiets after real downward travel', () => {
+  const scroll = mount();
+  scrollTo(scroll, 100);
+  pointer('pointerdown', scroll); pointer('pointerup', scroll);
+  expect(isQuiet()).toBe(false);
+  scrollTo(scroll, 108);
+  expect(isQuiet()).toBe(false);
+  scrollTo(scroll, 148);
+  expect(isQuiet()).toBe(true);
+});
+
+it('keeps the Original PDF page exemption while controls outside the page still reveal', () => {
+  const scroll = mount(false, false, 'original');
+  scrollTo(scroll, 100);
+  expect(isQuiet()).toBe(true);
+  pointer('pointerdown', scroll.querySelector('.pdf-page button')!);
+  expect(isQuiet()).toBe(true);
+  pointer('pointerdown', host.querySelector('.reader-chrome-control')!);
+  expect(isQuiet()).toBe(false);
+});
+
+it('keeps reading chrome visible when the OCR selection actions are open', () => {
+  const scroll = mount();
+  act(() => { scroll.appendChild(Object.assign(document.createElement('div'), { className: 'pdf-reading-selection-actions' })); });
+  scrollTo(scroll, 100);
+  expect(isQuiet()).toBe(false);
+});
+

@@ -23,9 +23,15 @@ src/main.tsx
 ```
 
 `ReaderShell` exposes `data-interface-mode` and `data-reader-surface`, plus panel classes.
-It owns only transient mobile chrome visibility: downward reading scroll quiets the header/footer;
-tap, upward scroll or keyboard focus reveals them without changing content geometry. Open panels,
-selection and settings keep controls visible. It observes existing scroll events, never navigation.
+It owns only transient mobile chrome visibility: accumulated downward reading scroll quiets the
+header/footer; upward scroll, top-of-document or a **confirmed tap** reveals them without changing
+content geometry. A confirmed tap is a primary-touch press of at most 450 ms and 10 px movement that
+does not move the scroll position and leaves no active selection — the same classifier `PdfPage` uses
+for Original Mode word lookup — so an ordinary scroll flick never reveals the chrome. The reading
+surface exempt from the reveal rule is `.pdf-page` in Original and `.pdf-reading-scroll` in Reading
+Mode. Open panels, selection, settings and any open reading overlay (including the OCR
+`.pdf-reading-selection-actions` bar) keep controls visible. It observes existing scroll events, never
+navigation.
 
 ## Homepage (`home-shell`)
 

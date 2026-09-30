@@ -52,6 +52,13 @@ contains only the two view choices, with OCR/source controls in a separate Docum
 Shell height tokens reserve header and footer space without modifying scroll/navigation mapping.
 Phones ≤767 px place the Original PDF scroll surface directly below the compact fixed header.
 Quiet chrome moves it to the top and expands its height to the full viewport without changing scrollTop.
+The chrome quiets only after accumulated downward travel on the same scroll surface, and a touch that
+starts inside the reading surface (`.pdf-page` in Original, `.pdf-reading-scroll` in Reading Mode) is
+treated as a scroll candidate rather than a control request: only a confirmed tap (primary touch,
+≤450 ms, ≤10 px, unchanged scroll position, no active selection) reveals it again. Ordinary reading
+flicks therefore leave the header and footer quiet, while an intentional tap still recovers the
+controls. Open reading overlays — including the OCR `.pdf-reading-selection-actions` bar — block
+quieting.
 The mobile Original zoom control lives in the bottom progress bar, so its empty in-viewer toolbar takes no space.
 Reading Mode retains its stable full-height scroll surface and visual header offset.
 Bottom content padding keeps the last page reachable above the overlaid footer.
