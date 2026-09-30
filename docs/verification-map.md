@@ -3,8 +3,9 @@
 Authoritative commands below match the existing scripts and scopes in
 [`testing.md`](testing.md#per-subsystem-verify-commands). Each subsystem `verify:*` command includes
 typecheck and its Vitest scope, and the two UI-facing commands (`verify:lookup`, `verify:ui`) also run
-`check:css` first; `verify:full` also runs contract checks and builds. Choose the
-narrowest applicable bucket; full regression is escalation only under §4 and §8 of
+`check:css` first; `verify:full` also runs contract checks and builds. First classify the diff with
+[Change classes](#change-classes) below ([canonical rules](agent-execution-rules.md#4-verification-proportionality)),
+then choose the narrowest applicable command; full regression is escalation only under §4 and §8 of
 `agent-execution-rules.md`.
 
 | Subsystem | Authoritative command | Typical scope |
@@ -19,6 +20,27 @@ narrowest applicable bucket; full regression is escalation only under §4 and §
 | UI | `npm run verify:ui` | Components, onboarding, app, NotesPanel (script exclusions apply; runs `check:css` first) |
 | Offline | `npm run verify:offline` | Offline document and status surfaces |
 | Full regression | `npm run verify:full` | Contract checks, full Vitest suite, typecheck, and build |
+
+## Change classes
+
+Before choosing a command, classify the diff as **`PRESENTATION_ONLY`**, **`LOCAL_UI`**,
+**`SUBSYSTEM_LOGIC`**, or **`SHARED_CONTRACT`**. The canonical definitions, per-class defaults, the
+presentation-only stop rule and the worked cases live in
+[`agent-execution-rules.md` §4](agent-execution-rules.md#4-verification-proportionality) and are not
+restated here.
+
+| Change class | Then verify with |
+| --- | --- |
+| `PRESENTATION_ONLY` | `npm run check:css` for a CSS diff, then stop |
+| `LOCAL_UI` | Targeted colocated test plus `typecheck`; one narrow browser spec only if needed |
+| `SUBSYSTEM_LOGIC` | The mapped `verify:*` command from the table above |
+| `SHARED_CONTRACT` | The mapped `verify:*` command, escalating to `verify:full` when required |
+
+Verification follows the **changed behavior, not the directory containing the changed file**: a
+CSS-only edit inside a Lookup-owned stylesheet is not a Lookup task. These classes add a selection
+layer *above* the subsystem commands — they never change the scopes above, and they justify no new
+per-area scripts (`verify:theme`, `verify:mobile`, `verify:button` and similar fragments remain
+deliberately absent).
 
 ## Verification helper scripts
 

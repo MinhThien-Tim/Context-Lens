@@ -42,11 +42,17 @@ exhaustion, no hidden cost.
 
 ## 5. Verification proportional to blast radius
 
-Start with the smallest relevant check — usually one `npm run verify:<subsystem>` (the per-subsystem
-command table lives in [`docs/testing.md`](docs/testing.md)) — and follow [§8](docs/agent-execution-rules.md#8-verification-execution-and-reporting)
+Classify the diff first — `PRESENTATION_ONLY`, `LOCAL_UI`, `SUBSYSTEM_LOGIC`, or `SHARED_CONTRACT` —
+using the canonical [change classes](docs/verification-map.md#change-classes) and the
+[§4 proportional verification policy](docs/agent-execution-rules.md#4-verification-proportionality),
+then start with the smallest relevant check and follow [§8](docs/agent-execution-rules.md#8-verification-execution-and-reporting)
 for execution and reporting shape; escalate only as far
-as the change actually reaches. Test layout and every command live in [`docs/testing.md`](docs/testing.md).
-Browser E2E is conditional, never mandatory. Never watch mode.
+as the change actually reaches. A `PRESENTATION_ONLY` CSS diff runs `npm run check:css` and stops —
+no `typecheck`, no subsystem Vitest, no `verify:full`. A `LOCAL_UI` diff may use targeted
+verification without a mandatory whole-subsystem run. Subsystem `verify:*` commands stay
+authoritative for `SUBSYSTEM_LOGIC`, and `verify:full` remains escalation-only. The per-subsystem
+command table, test layout and every command live in [`docs/testing.md`](docs/testing.md).
+Browser E2E is conditional, narrow and never mandatory. Never watch mode.
 
 ## 6. Stop instead of looping
 

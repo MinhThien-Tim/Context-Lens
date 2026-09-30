@@ -226,6 +226,11 @@ There is no global store. Ownership rules:
 
 ## Where to make a change
 
+Classify the change before verifying it; presentation-only edits (CSS color/token, spacing, border,
+radius, typography, layout-only or responsive rules) stop at `npm run check:css` and do not require
+subsystem verification. See the canonical
+[change classes](verification-map.md#change-classes).
+
 | Change | Location |
 | --- | --- |
 | New homepage section, import source, or library control | `src/app/App.tsx` home branch, plus a component in `src/components/` |

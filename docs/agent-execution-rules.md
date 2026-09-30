@@ -73,15 +73,64 @@ bug fixes. Architecture docs describe current structure, not task history.
 
 ## 4. Verification proportionality
 
-Effort tracks **blast radius**, not test availability. `docs/testing.md` has the commands; this table
-decides how many of them are justified.
+This section is the **canonical owner** of change classification and proportional verification.
+Other documents link here and keep only short pointers.
 
-| Risk | Typical change | Justified verification |
+Effort tracks **blast radius**, not test availability, and verification follows the **changed
+behavior, not merely the directory containing the changed file**: a CSS-only change inside a
+Lookup-owned stylesheet is not a subsystem task, and a TSX change that only reorders existing controls
+stays `LOCAL_UI` while its handlers, state and data flow are unchanged. The subsystem commands in
+[`verification-map.md`](verification-map.md) and [`testing.md`](testing.md) are unchanged and remain
+the architectural boundary; this section adds a selection layer above them and justifies no new
+per-area scripts.
+
+### Change classes
+
+| Change class | Typical diff | Default verification | Not required by default |
+| --- | --- | --- | --- |
+| **`PRESENTATION_ONLY`** | CSS color/token values, background, border, border-radius, shadow, typography, spacing, dimensions, layout-only CSS, responsive rules, icon sizing, visual state styling. No JS/TS/TSX behavior change. | CSS: `npm run check:css`; other presentation artifacts: the relevant syntax/static check. One narrow browser check only when the change is genuinely browser-observable. | `typecheck` for CSS-only diffs, any subsystem `verify:*`, repository-wide Vitest, `verify:full` |
+| **`LOCAL_UI`** | JSX reordering, local component composition, moving existing controls, local rendering conditions, component-local presentation state. Handlers, state transitions and data flow unchanged. | Targeted colocated Vitest when one exists; `typecheck` when TS/TSX changed; one narrow Playwright spec only when browser-level layout/responsive/focus/scroll behavior needs proof. | a whole-subsystem `verify:ui` / `verify:lookup` run |
+| **`SUBSYSTEM_LOGIC`** | Component behavior, state transitions, lookup behavior, parser/resolver logic, provider behavior, reader interaction logic, storage behavior — contained inside one existing subsystem. | The mapped subsystem `verify:*` command. Add a colocated test next to the change. | `verify:full` |
+| **`SHARED_CONTRACT`** | Dexie schema/version, shared cache/version keys, provider priority, persisted public state shape, backup schema, cross-subsystem contracts, build/PWA/Worker contracts. | The mapped subsystem `verify:*` command, escalating to `verify:full` when the shared-contract rule requires it. | — |
+
+Browser-observable work adds one narrow Playwright spec (§6) on top of whatever the class requires.
+
+### Presentation-only stop rule
+
+A presentation-only diff stops after its targeted check. All of these must hold:
+
+- every changed production file is presentation-only CSS (no JS/TS/TSX behavior change);
+- no config, build, PWA/Worker, Dexie, or other shared-contract file changed;
+- no behavior change moved the diff into a subsystem `verify:*` scope.
+
+Then:
+
+- run `npm run check:css`;
+- run **one** narrow browser check only if the task itself requires visual or browser proof;
+- do **not** run `typecheck` for a CSS-only diff;
+- do **not** run subsystem Vitest;
+- do **not** run `verify:full`;
+- stop once the targeted verification passes.
+
+Escalate only when evidence shows a wider dependency.
+
+### LOCAL_UI escalation
+
+A `LOCAL_UI` change escalates to the whole-subsystem command only when shared behavior or state
+changed, targeted verification exposes a wider dependency, or the touched component is itself an
+integration boundary. When event handling, a state transition or data flow changes, the diff is
+`SUBSYSTEM_LOGIC`: use the mapped subsystem command. A blocked targeted check never justifies broader
+testing — report it and stop.
+
+### Worked cases
+
+| Change | Class | Verification |
 | --- | --- | --- |
-| **Low** | Copy, token rename, style value, isolated pure function | Documentation/link/diff checks for docs-only changes. For code, an optional colocated pre-check; use the subsystem command as authoritative verification when a bucket applies. |
-| **Medium** | Pipeline stage, normalization, provider adapter, cache key, component logic, Dexie record shape | The subsystem `verify:*` command. Add a colocated test next to the change. |
-| **High / shared contract** | Dexie schema version, `TRANSLATION_VERSION` / `CONTEXT_VERSION` / `OCR_CONFIG_VERSION`, cache keys, location shapes, backup schema, provider priority, cross-subsystem state | The subsystem `verify:*` command, escalating to `verify:full` as the gate. |
-| **Browser-observable** | Selection/highlight, PDF canvas or OCR queue, layout/responsive, focus/scroll/panel, PWA install or offline | High-risk checks plus one narrow Playwright spec (§6). |
+| Only CSS colors in a Quick Card theme | `PRESENTATION_ONLY` | `check:css`, optional narrow visual check, stop. No `verify:lookup`. |
+| Mobile CSS grid/flex layout only | `PRESENTATION_ONLY` | `check:css`, narrow mobile Playwright only if needed, stop. |
+| Existing JSX buttons moved, handlers/state unchanged | `LOCAL_UI` | Targeted component test, `typecheck`, narrow browser check if layout-sensitive. Whole `verify:lookup` / `verify:ui` not mandatory. |
+| Button now changes lookup state differently | `SUBSYSTEM_LOGIC` | The mapped subsystem command (`verify:lookup`). |
+| Dexie schema or cross-subsystem persisted contract | `SHARED_CONTRACT` | Subsystem verification, plus `verify:full` when required. |
 
 Documentation-only tasks require document/link/diff checks, not application tests.
 Verification execution and reporting shape follow [§8](agent-execution-rules.md#8-verification-execution-and-reporting).
@@ -89,15 +138,17 @@ Verification execution and reporting shape follow [§8](agent-execution-rules.md
 Two hard exclusions:
 
 - **No watch mode.** `npm run test:watch` never exits and must not be started in an agent session.
-- **No full-suite reflex.** `npm test` is justified only by the "High / shared contract" row or by a
+- **No full-suite reflex.** `npm test` is justified only by the SHARED_CONTRACT row or by a
   targeted test revealing an unexpected cross-module dependency. Full suite once, at final
   verification, when scope warrants it.
 
 ## 5. Test escalation order
 
-1. **Targeted unit test** — optional iteration pre-check: the colocated file, for example `npx vitest run src/path/file.test.ts`. After implementation, the subsystem command is authoritative when a bucket applies.
+Stop at the step the change class requires; a PRESENTATION_ONLY CSS diff stops before step 3.
+
+1. **Targeted unit test** — optional iteration pre-check: the colocated file, for example `npx vitest run src/path/file.test.ts`. After implementation, the subsystem command is authoritative when a bucket applies; for LOCAL_UI, the targeted run is the class's final check.
 2. **Narrower still** — optional iteration pre-check only: a single case, for example `npx vitest run src/path/file.test.ts -t "name"`.
-3. **Typecheck** — already batched inside the subsystem `verify:*` command whenever a bucket applies; otherwise run `npm run typecheck` only when types, public signatures, or Dexie records changed.
+3. **Typecheck** — already batched inside the subsystem `verify:*` command whenever a bucket applies; otherwise run `npm run typecheck` only when types, public signatures, or Dexie records changed. A CSS-only `PRESENTATION_ONLY` diff skips it; use `npm run check:css` instead.
 4. **Integration** — optional pre-check for cross-pipeline behavior; if outside all nine buckets, `npx vitest run src/integration/languageFlow.test.ts` is a fallback.
 5. **Full suite** — already batched in `verify:full`; use only per §4.
 6. **Build** — already batched in `verify:full` for bundle or precache changes; for files outside all nine buckets use `npm run build`. Use `npm run check:bundle` when only budgets moved.
@@ -135,6 +186,12 @@ npx playwright test e2e/pdf-mode-layout.spec.ts -g "reader chrome"
 `e2e/vocabulary-handoff.spec.ts` is excluded by the default config and needs
 `playwright.vocabulary.config.ts` plus the sibling English101 checkout; without it, that spec is
 `BLOCKED`, not a failure.
+
+For `PRESENTATION_ONLY` and `LOCAL_UI` changes, browser verification stays deliberately small: one
+narrow spec, one relevant project/device where that is sufficient, and an additional viewport only
+when the task itself concerns responsive behavior. Do not run full Playwright, and do not
+automatically run both `laptop` and `mobile-chromium` for every theme or layout task. A blocked
+browser check is reported, never worked around by widening the scope.
 
 ## 7. Execution / Test Retry Policy
 
@@ -302,14 +359,16 @@ inspection or log-inspection loops. Record the gap and stop that path.
   command chains `typecheck` and its Vitest scope; `verify:full` also adds `build`. When a subsystem
   command exists, do not split it into separate model-controlled `typecheck` → single-test → `build`
   turns.
-- **Command selection:** Pick the bucket from the per-subsystem table in [testing.md](testing.md#per-subsystem-verify-commands):
+- **Command selection:** Classify the diff first with §4, then pick the
+  bucket from the per-subsystem table in [testing.md](testing.md#per-subsystem-verify-commands):
   `verify:reader`, `verify:pdf`, `verify:import`, `verify:lookup`, `verify:language`,
   `verify:translation`, `verify:storage`, `verify:ui`, `verify:offline`, or `verify:full`.
-  That table remains the single source of the command list. Use `verify:full` only for the §4
-  “High / shared contract” row.
+  That table remains the single source of the command list. A `PRESENTATION_ONLY` diff stops at
+  `check:css`; a `LOCAL_UI` diff may stop at its targeted check. Use `verify:full` only for the §4
+  SHARED_CONTRACT row.
 - **Authoritative check:** A single colocated `vitest run <file>` is an optional fast pre-check while
-  iterating. The authoritative result is one subsystem command; never report a lone file run as
-  subsystem verification.
+  iterating, and the intended final check for a `LOCAL_UI` diff. Otherwise the authoritative result is
+  one subsystem command; never report a lone file run as subsystem verification.
 - **No polling:** Never poll a running command across repeated model turns; follow §7 “Completion
   unknown and long-running commands.”
 - **Reporting contract:**

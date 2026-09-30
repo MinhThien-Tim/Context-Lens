@@ -57,9 +57,13 @@ Keep the same arguments and test scope; see the [launcher policy](agent-executio
 
 ## Per-subsystem verify commands
 
-Each subsystem has **one command** — typecheck plus its Vitest scope. Agents must pick the
-subsystem command first instead of discovering tests or assembling ad-hoc `vitest run` filters.
-`verify:full` is the escalation gate for shared-contract or bundle changes, not the default.
+Each subsystem has **one command** — typecheck plus its Vitest scope. Classify the diff first with the
+[change classes](verification-map.md#change-classes) and the
+[canonical rules](agent-execution-rules.md#4-verification-proportionality); when it is
+`SUBSYSTEM_LOGIC` or `SHARED_CONTRACT`, pick the subsystem command instead of discovering tests or
+assembling ad-hoc `vitest run` filters. These scopes remain the architectural boundary and are not
+narrowed per change class. `verify:full` is the escalation gate for shared-contract or bundle
+changes, not the default, and the per-class defaults are not duplicated here.
 
 | Subsystem | Command | Scope |
 | --- | --- | --- |
@@ -103,16 +107,25 @@ than one entry point because only `src/styles.css` is imported eagerly: `src/rea
 
 ## Targeted verification strategy
 
+Classify the diff first with the canonical
+[change classes](verification-map.md#change-classes) and the
+[§4 proportional verification policy](agent-execution-rules.md#4-verification-proportionality):
+`PRESENTATION_ONLY` stops at `npm run check:css`, `LOCAL_UI` may stop at its targeted check,
+`SUBSYSTEM_LOGIC` uses the mapped `verify:*` command, and `SHARED_CONTRACT` escalates to
+`verify:full` when justified.
+
 Documentation-only tasks use document/link/diff checks; application tests are unnecessary.
-Use the mapped subsystem command as authoritative final verification. Full regression is escalation
+Use the mapped subsystem command as authoritative final verification when a subsystem bucket applies.
+Full regression is escalation
 only when justified by scope or evidence below; browser E2E remains a separate narrow check when
-warranted.
+warranted, one spec and one project where sufficient.
 
 1. While iterating, a file, `describe` block, or `-t` filter may be a fast pre-check; once the change lands, run the subsystem `verify:*` command per [§8](agent-execution-rules.md#8-verification-execution-and-reporting) rather than steps 1–3 as separate turns.
 2. Add or update a colocated test next to the module you changed, following the existing
    `describe` / `it` style and the jsdom + `fake-indexeddb` environment; the subsystem command is the
-   authoritative run after implementation.
-3. Typecheck is already included in each `verify:*` command.
+   authoritative run after implementation, and is the intended final check for a `LOCAL_UI` change.
+3. Typecheck is already included in each `verify:*` command, and is skipped for a CSS-only
+   `PRESENTATION_ONLY` diff.
 4. Escalate to `npm run verify:full` only when the change crosses subsystem boundaries, touches shared
    contracts (cache keys, location shapes, backup schema, provider priority), or otherwise meets §4
    of `agent-execution-rules.md`.
@@ -125,7 +138,10 @@ Follow the canonical [Execution / Test Retry Policy](agent-execution-rules.md#7-
 for classification, safe launcher fallback, official sandbox approval, security boundaries, retry
 budgets and unknown completion; follow [§8](agent-execution-rules.md#8-verification-execution-and-reporting)
 for command batching and reporting.
-Do not escalate test scope because a targeted check is blocked.
+Use the narrowest target and one relevant project; never the whole directory, and no extra viewport
+unless the task itself concerns responsive or device behavior. Do not use browser checks to
+compensate for a blocked targeted check. A `BLOCKED` browser run is reported, not worked around,
+and does not justify a broader run.
 
 ## Verification status semantics
 

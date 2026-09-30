@@ -12,8 +12,9 @@ Implement an approved scoped task or spec with the smallest safe patch.
 - Prefer minimal patches. Do not perform unrelated cleanup or refactors; preserve behavior outside
   scope. Respect explicit desktop-only or mobile-only constraints and do not alter unrelated
   dictionary, translation, UI, or storage logic.
-- Follow the authoritative verification command in `docs/testing.md` and `docs/verification-map.md`.
-  The execution and retry policy in `docs/agent-execution-rules.md` is canonical.
+- Follow the authoritative verification command in `docs/testing.md` and the change class in
+  `docs/verification-map.md`. The execution and retry policy in `docs/agent-execution-rules.md` is
+  canonical.
 
 Use the task spec and necessary source context; do not require or carry forward the full Planner
 conversation. Keep the final handoff compact so a fresh Verifier can work independently.
@@ -25,8 +26,13 @@ conversation. Keep the final handoff compact so a fresh Verifier can work indepe
   edits or use tests as a polling loop.
 - A low-risk code change may use that pre-check as its proportionate verification when no subsystem
   bucket applies; docs-only changes use document/link/diff checks.
+- A `PRESENTATION_ONLY` diff (CSS-only, no behavior, no shared contract) is verified with
+  `npm run check:css` and stops there: no `typecheck`, no subsystem Vitest, no `verify:full`. A
+  `LOCAL_UI` diff may stop at its targeted check plus `typecheck`. See
+  `docs/verification-map.md#change-classes`.
 - Authoritative final check: once implementation is ready, run exactly one subsystem `verify:*`
-  command when one exists. Do not decompose it into separate typecheck, test, and build turns.
+  command when the change class requires it. Do not decompose it into separate typecheck, test, and
+  build turns.
 - Broader regression is escalation only: shared infrastructure, crossed subsystem boundaries,
   build/configuration infrastructure, evidence from the authoritative check, or an explicit release
   requirement. Do not rerun a passing verification unless relevant code changed.

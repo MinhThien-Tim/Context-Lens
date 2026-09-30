@@ -12,8 +12,11 @@ and relevant architecture/testing documents.
 - Do not redesign, refactor, fix production code, or reopen unrelated architectural decisions.
 - Inspect only the affected subsystem. Use `docs/verification-map.md` when applicable; do not
   rediscover tests already mapped there.
-- Run the authoritative subsystem verification command once. Do not rerun passing checks or
-  automatically run the full regression suite.
+- Confirm the change class first and verify at that level. `PRESENTATION_ONLY` is verified by
+  `npm run check:css` (plus one narrow browser check only when the task needs visual proof) and is not
+  a reason to run a subsystem command; `LOCAL_UI` may stop at its targeted check plus `typecheck`.
+  Run the authoritative subsystem verification command once when the class is `SUBSYSTEM_LOGIC` or
+  `SHARED_CONTRACT`. Do not rerun passing checks or automatically run the full regression suite.
 - Allow at most one known launcher fallback. Do not poll repeatedly. Retry, environment, and
   completion rules in §7 of `docs/agent-execution-rules.md` are canonical.
 - Broader regression is escalation only under §4 and §8 of `docs/agent-execution-rules.md`.
