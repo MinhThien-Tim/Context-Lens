@@ -55,15 +55,24 @@ test('PDF mode toolbar stays aligned across viewport sizes and follows UI langua
     if (width <= 767) {
       const scroll = page.locator('.pdf-reading-scroll');
       await scroll.evaluate(el => { el.scrollTop += 100; });
+      const pageText = await page.getByRole('button', { name: 'Current PDF page', exact: true }).textContent();
       const before = await scroll.evaluate(el => ({ top: el.scrollTop, height: el.clientHeight, y: el.getBoundingClientRect().top }));
-      // Isolate the CSS state contract from gesture timing and navigation.
+      // Stable-viewport contract: quiet chrome slides the chrome away, never the reading box.
       await page.locator('.reader-shell').evaluate(el => el.classList.add('chrome-quiet'));
       const quiet = await scroll.evaluate(el => ({ top: el.scrollTop, height: el.clientHeight, y: el.getBoundingClientRect().top }));
       expect(quiet.top).toBe(before.top);
       expect(quiet.height).toBe(before.height);
-      expect(quiet.y).toBe(0);
-      expect(before.y).toBe(88);
+      expect(quiet.y).toBe(before.y);
+      await expect(page.getByRole('button', { name: 'Current PDF page', exact: true })).toHaveText(pageText!);
+      // Scroll bottom stays reachable while chrome is hidden.
+      const atBottom = await scroll.evaluate(el => { el.scrollTop = el.scrollHeight; return { reached: el.scrollTop + el.clientHeight >= el.scrollHeight - 1, top: el.scrollTop }; });
+      expect(atBottom.reached).toBe(true);
+      await scroll.evaluate((el, top) => { el.scrollTop = top; }, before.top);
       await page.locator('.reader-shell').evaluate(el => el.classList.remove('chrome-quiet'));
+      const restored = await scroll.evaluate(el => ({ top: el.scrollTop, height: el.clientHeight, y: el.getBoundingClientRect().top }));
+      expect(restored.top).toBe(before.top);
+      expect(restored.height).toBe(before.height);
+      expect(restored.y).toBe(before.y);
     }
     await mode.getByRole('button', { name: 'Trang g' }).click();
     await expect(page.getByRole('button', { name: 'Current PDF page', exact: true })).toHaveText('3 / 8');
