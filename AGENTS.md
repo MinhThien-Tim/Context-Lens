@@ -89,22 +89,61 @@ exists. Canonical rules for all three roles:
 
 ## Agent roles
 
-For every task, use one fixed role: Planner → [`docs/agent-roles/planner.md`](docs/agent-roles/planner.md),
+For every task, use one fixed role: Investigator → [`docs/agent-roles/investigator.md`](docs/agent-roles/investigator.md),
+Planner → [`docs/agent-roles/planner.md`](docs/agent-roles/planner.md),
 Implementer → [`docs/agent-roles/implementer.md`](docs/agent-roles/implementer.md), or Verifier →
 [`docs/agent-roles/verifier.md`](docs/agent-roles/verifier.md). Do not redefine roles in task prompts.
 
+- `/investigate` or `ROLE: Investigator` → Investigator.
 - `/plan` or `ROLE: Planner` → Planner.
 - `/implement` or `ROLE: Implementer` → Implementer.
 - `/verify` or `ROLE: Verifier` → Verifier.
-- Without an explicit route: investigate / assess / diagnose / plan → Planner; implement / fix /
+- Without an explicit route: investigate / assess / diagnose / plan → Investigator → Planner; implement / fix /
   modify / change → Implementer; verify / test / review completed work → Verifier.
 - An explicit role or slash command wins over inferred intent. These are agent conventions, not app
   commands.
 
-Planner → compact task spec → Implementer → implementation + compact handoff → Verifier → PASS or
+Investigator → Fact Report → Planner → compact task spec → Implementer → implementation + compact handoff → Verifier → PASS or
 compact failure packet. Roles exchange artifacts, relevant diffs/files, and required architecture
 docs; they do not depend on a shared long-running transcript. Do not include chain-of-thought or
 verbose reasoning in handoffs.
+
+### The Investigator owns evidence gathering
+
+The Investigator is **read-only for product implementation** and the canonical owner of evidence gathering and diagnosis:
+it inspects source, tests, docs, config, and git state, but never edits, patches, or "tries the fix"
+to validate its own plan — a discovered defect is reported, not patched. Its handoff is the
+Fact Report the Planner consumes and the Verifier may reference. The full
+read-only contract and all scope-derivation rules live in
+[`docs/agent-roles/investigator.md`](docs/agent-roles/investigator.md).
+
+A user prompt normally needs only the problem, the desired result, and any genuinely task-specific
+constraint. Common scope restrictions — "do not touch lookup logic", "use targeted tests", "follow
+the Terminal Loop Guard" — are derived by the Investigator from architecture, classification, and
+investigation rather than repeated in every prompt; user-supplied task-specific constraints still
+take precedence and are always retained.
+
+Repository-global rules stay in this file, [`docs/agent-execution-rules.md`](docs/agent-execution-rules.md),
+[`docs/testing.md`](docs/testing.md), and the role files. Handoffs **reference** them; they never
+reproduce them.
+
+```text
+# sufficient
+"Mobile Full card still wastes space around Translate and AI. Inspect and make a plan to compact the controls."
+"Change the Advanced theme colors to match this screenshot."
+"Investigate why PDF rendering flashes black before text appears."
+```
+
+**Direct implementation requests:** do not force Investigator ceremony on a trivial task. A very small,
+obvious, low-risk task may go straight to Implementer, which derives a narrow scope using the same
+rules and states it in its handoff. Ambiguous, multi-file, architectural, or investigation-heavy tasks
+go to Investigator → Planner first, and an existing Planner handoff is always used when one is present.
+
+Task prompts should normally contain only the task details, acceptance criteria, and optional relevant
+files, commits, or task-spec path. Start from [`docs/task-template.md`](docs/task-template.md).
+Example: `/investigate` with the symptom and acceptance criteria; then `/plan` with the approved spec path;
+then `/implement` with the spec path and implementation handoff; then `/verify` with the spec path and implementation handoff. Carry only the compact handoff or task
+spec into the next context — never the Investigator transcript.
 
 ### The Planner owns execution scope
 
@@ -125,36 +164,18 @@ Repository-global rules stay in this file, [`docs/agent-execution-rules.md`](doc
 [`docs/testing.md`](docs/testing.md), and the role files. Handoffs **reference** them; they never
 reproduce them.
 
-```text
-# sufficient
-"Mobile Full card still wastes space around Translate and AI. Inspect and make a plan to compact the controls."
-"Change the Advanced theme colors to match this screenshot."
-"Investigate why PDF rendering flashes black before text appears."
-```
-
-**Direct implementation requests:** do not force Planner ceremony on a trivial task. A very small,
-obvious, low-risk task may go straight to Implementer, which derives a narrow scope using the same
-rules and states it in its handoff. Ambiguous, multi-file, architectural, or investigation-heavy tasks
-go to Planner first, and an existing Planner handoff is always used when one is present.
-
-Task prompts should normally contain only the task details, acceptance criteria, and optional relevant
-files, commits, or task-spec path. Start from [`docs/task-template.md`](docs/task-template.md).
-Example: `/plan` with a task and acceptance criteria; then `/implement` with the approved spec path;
-then `/verify` with the spec path and implementation handoff. Carry only the compact handoff or task
-spec into the next context — never the Planner transcript.
-
 ### Mixed tasks and context boundaries
 
-If a task combines investigation and implementation, run Planner first and write a compact task spec
-to `docs/tasks/YYYY-MM-DD-short-task-name.md`. Start a fresh Implementer context with that spec,
-not the Planner transcript. When implementation is complete, pass a compact handoff and start a
+If a task combines investigation and implementation, run Investigator first and write a Fact Report
+to `docs/tasks/YYYY-MM-DD-short-task-name-investigation.md`. Start a fresh Planner context with that Fact Report,
+not the Investigator transcript. When planning is complete, pass a compact task spec and start a
+fresh Implementer context. When implementation is complete, pass a compact handoff and start a
 fresh Verifier context.
 
 Roles are persistent; conversation context is not. Pass only the minimum artifact each stage needs:
-the task spec, changed files, relevant diff, verification command, known risks, and (if needed) a
+the Fact Report, task spec, changed files, relevant diff, verification command, known risks, and (if needed) a
 compact failure packet. Do not pass full conversation histories, reasoning logs, terminal transcripts,
-repeated architecture summaries, or scratch work. The Planner transcript is disposable once the task
-spec exists; stop after a confirmed PASS or return a compact failure packet to a fresh Implementer.
+repeated architecture summaries, or scratch work. The Investigator transcript is disposable once the Fact Report exists; stop after a confirmed PASS or return a compact failure packet to a fresh Planner.
 
 Repository-owned role files are the source of truth instead of editor-specific custom modes. This
 keeps reviewable, version-controlled instructions consistent across Cline, Codex, Copilot, Claude Code,
@@ -163,8 +184,8 @@ and similar agents and machines, and lets them evolve with the architecture. It 
 `docs/agent-roles/`, and `docs/verification-map.md`; keep task prompts task-specific (roughly 90%
 persistent instructions and 10% task details, as a guideline).
 
-Invocation conventions are `ROLE: Planner | Implementer | Verifier` or `/plan`, `/implement`,
-`/verify`. They are agent conventions, not application commands. Do not copy full role instructions
+Invocation conventions are `ROLE: Investigator | Planner | Implementer | Verifier` or `/investigate`, `/plan`, `/implement`, `/verify`.
+These are agent conventions, not application commands. Do not copy full role instructions
 into task files; artifacts under `docs/tasks/` contain only what a fresh context needs.
 
 See [`docs/verification-map.md`](docs/verification-map.md) for existing subsystem commands. Execution,
