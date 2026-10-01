@@ -156,11 +156,31 @@ describe('reader interface preferences', () => {
     await db.settings.put({ key: 'reader-preferences', value: { ...defaultPreferences, lookupViewMode } });
     expect((await loadPreferences()).lookupViewMode).toBe('quick');
   });
-  it('defaults to Simple and System without legacy settings', async () => {
+  it('defaults to Advanced and System without legacy settings', async () => {
     await db.settings.clear();
     expect(await loadPreferences()).toEqual(defaultPreferences);
   });
-  it.each([['calm', 'simple'], ['bright', 'advanced']])('migrates %s without changing appearance', async (legacy, mode) => {
+  it('does not overwrite an existing persisted Simple choice with the Advanced default', async () => {
+    await db.settings.put({ key: 'reader-preferences', value: { ...defaultPreferences, interfaceMode: 'simple' } });
+    const loaded = await loadPreferences();
+    expect(loaded.interfaceMode).toBe('simple');
+    expect((await db.settings.get('reader-preferences'))?.value).toMatchObject({ interfaceMode: 'simple' });
+  });
+  it('does not overwrite an existing persisted Advanced choice with the Advanced default', async () => {
+    await db.settings.put({ key: 'reader-preferences', value: { ...defaultPreferences, interfaceMode: 'advanced' } });
+    const loaded = await loadPreferences();
+    expect(loaded.interfaceMode).toBe('advanced');
+    expect((await db.settings.get('reader-preferences'))?.value).toMatchObject({ interfaceMode: 'advanced' });
+  });
+  it('round-trips Simple through savePreferences and reload', async () => {
+    await savePreferences({ ...defaultPreferences, interfaceMode: 'simple' });
+    expect((await loadPreferences()).interfaceMode).toBe('simple');
+  });
+  it('round-trips Advanced through savePreferences and reload', async () => {
+    await savePreferences({ ...defaultPreferences, interfaceMode: 'advanced' });
+    expect((await loadPreferences()).interfaceMode).toBe('advanced');
+  });
+  it.each([['calm', 'advanced'], ['bright', 'advanced']])('migrates %s without changing appearance', async (legacy, mode) => {
     await db.settings.put({ key: 'homepage.theme', value: legacy });
     const { interfaceMode: _, ...oldPreferences } = defaultPreferences;
     await db.settings.put({ key: 'reader-preferences', value: { ...oldPreferences, theme: 'dark', fontSize: 23 } });

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { useInterfaceMode } from './interfaceMode';
 
-for (const mode of ['simple', 'advanced']) {
+for (const mode of ['simple', 'advanced'] as const) {
   test(`Continue reading disclosure and safe dismissal (${mode})`, async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('button', { name: 'Advanced', exact: true })).toBeEnabled();
@@ -17,7 +18,7 @@ for (const mode of ['simple', 'advanced']) {
       database.close();
     });
     await page.reload();
-    if (mode === 'advanced') await page.getByRole('button', { name: 'Advanced', exact: true }).click();
+    await useInterfaceMode(page, mode);
     const disclosure = page.locator('.continue-disclosure');
     await expect(disclosure.locator('.continue-count')).toHaveText('10');
     await expect(disclosure.locator('.continue-card').first()).not.toBeVisible();

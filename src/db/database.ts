@@ -267,7 +267,7 @@ export interface AppPreferences {
 }
 
 export const defaultPreferences: AppPreferences = {
-  interfaceMode: 'simple',
+  interfaceMode: 'advanced',
   languageMode: 'bilingual',
   lookupViewMode: 'quick',
   lookupQuickMode: 'simple',
@@ -289,7 +289,7 @@ export async function loadPreferences(): Promise<AppPreferences> {
   const legacy = await db.settings.get('homepage.theme');
   const rawMode = stored.interfaceMode as string | undefined;
   const interfaceMode: AppPreferences['interfaceMode'] = rawMode === 'simple' || rawMode === 'advanced' ? rawMode
-    : (rawMode ?? legacy?.value) === 'bright' ? 'advanced' : 'simple';
+    : (rawMode ?? legacy?.value) === 'bright' ? 'advanced' : 'advanced';
   const theme = ['system', 'light', 'dark'].includes(stored.theme ?? '') ? stored.theme! : 'system';
   const fontSize = typeof stored.fontSize === 'number' && Number.isFinite(stored.fontSize)
     ? Math.min(26, Math.max(16, Math.round(stored.fontSize))) : defaultPreferences.fontSize;

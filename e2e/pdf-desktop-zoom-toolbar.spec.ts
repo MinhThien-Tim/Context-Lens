@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
+import { useInterfaceMode } from './interfaceMode';
 
 for (const mode of ['simple', 'advanced'] as const) test(`desktop ${mode} exposes direct PDF zoom controls`, async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 800 });
   await page.goto('/');
-  if (mode === 'advanced') await page.getByRole('button', { name: 'Advanced', exact: true }).click();
+  await useInterfaceMode(page, mode);
   await page.locator('input[type=file]').setInputFiles({ name: 'zoom-toolbar.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
   await page.getByRole('button', { name: 'Original', exact: true }).first().click();
   await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();

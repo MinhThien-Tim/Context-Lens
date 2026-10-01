@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { useInterfaceMode } from './interfaceMode';
 
 test('desktop Quick stays contained at selection edges with long bilingual content', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 850 });
@@ -189,7 +190,7 @@ test('interface density and appearance remain independent and persist', async ({
   await page.goto('/');
   const advanced = page.getByRole('button', { name: 'Advanced', exact: true });
   await expect(advanced).toBeEnabled();
-  await advanced.click();
+    await useInterfaceMode(page, 'advanced');
   await page.getByLabel('Appearance', { exact: true }).selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill('A quiet reader helps people understand a difficult passage.');
@@ -198,7 +199,7 @@ test('interface density and appearance remain independent and persist', async ({
   await page.reload();
   await expect(advanced).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('Appearance', { exact: true })).toHaveValue('dark');
-  await page.getByRole('button', { name: 'Simple', exact: true }).click();
+    await page.getByRole('group', { name: 'Interface density' }).getByRole('button', { name: 'Simple', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.getByLabel('Appearance', { exact: true }).selectOption('system');

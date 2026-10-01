@@ -36,6 +36,10 @@ describe('engine settings', () => {
     await db.settings.put({ key: 'language-engines', value: { ...defaultEngineSettings, publicTranslation: false } });
     expect((await loadEngineSettings()).publicTranslation).toBe(false);
   });
+  it('preserves an explicit web lookup opt-in saved after the defaults migration', async () => {
+    await db.settings.put({ key: 'language-engines', value: { ...defaultEngineSettings, publicTranslation: true } });
+    expect((await loadEngineSettings()).publicTranslation).toBe(true);
+  });
   it('keeps local context isolated from all network AI even with automatic fallback', () => {
     const providers = contextProviders({ ...defaultEngineSettings, contextEngine: 'local', hostedAiLite: true, hostedEndpoint: 'https://example.com' }, { ...defaultAiSettings, provider: 'gemini', apiKey: 'test' });
     expect(providers.every(provider => !provider.network)).toBe(true);
