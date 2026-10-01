@@ -87,6 +87,20 @@ disabled under the same condition.
   reading keeps working offline.
 - Geometry: `PdfViewer` resolves all page sizes first (`ready` gate) before mounting canvases,
   so restoring a saved location does not allocate canvases at the wrong scale.
+- Render lifecycle: a mounted `PdfPage` keeps its instance and its committed canvas frame across a
+  role or `renderPixels` transition whenever the computed backing geometry is unchanged. The page
+  resolves a *frame target* (page, viewport, backing `width`/`height` from `canvasBackingSize`, and
+  the index inputs); an identical target reuses the previous object, so the render effect is not torn
+  down and the committed bitmap, page lease, text layer and saved-highlight overlay all survive
+  without a second `page.render()`.
+  A genuine scale or geometry change is different: the mounted canvas keeps showing the previous
+  frame while the replacement renders into a bounded transient canvas sized from the same
+  `canvasBackingSize(...)` result. Once the replacement completes, the mounted canvas is resized and
+  the finished bitmap is drawn in a single commit, then the transient buffer is released. The buffer
+  is transient and released on commit, error, cancellation and unmount; it never widens the mounted
+  canvas bound or any configured pixel budget, and its peak is bounded by the same
+  `renderBudget.ts` limits. The `1x1` memory release belongs to the `PdfPage` unmount, not to a
+  lifecycle transition.
 - Desktop default zoom is `natural`: a page-width-derived scale targeting 932 CSS px,
   clamped to the viewport width with 64 px of horizontal gutters. Explicit desktop zoom
   mode and custom scale persist in reader preferences; stored legacy `fit-page` choices
@@ -248,7 +262,10 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 8. **Canvas rendering stays bounded.** `renderBudget.ts` caps the visible canvas at 20,000,000
    backing pixels and each adjacent page at 2,000,000, with an 8192-pixel edge cap and device pixel
    ratio capped at 3. At most three canvas pages stay mounted, and `pageLease` cancellation must
-   stop a stale render from cleaning up a page a newer render owns.
+   stop a stale render from cleaning up a page a newer render owns. A role or budget transition that
+   computes identical backing geometry must not tear down or re-render a mounted page; a genuine
+   geometry change renders into one bounded transient buffer and commits it atomically, so the
+   committed frame is never cleared to make room for a replacement.
 9. **The text layer is per-render and generational.** Each `PdfPage` render owns its own PDF.js
    text-layer DOM generation; a late completion must not publish a new `PdfTextIndex` or annotations
    over a newer one. The stylesheet must supply the TextLayer font-height, scale-X, rotation,

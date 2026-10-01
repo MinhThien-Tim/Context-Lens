@@ -11,6 +11,35 @@ import type { MarkupTool } from '../MarkupPalette';
 
 export interface PdfPageSize { width: number; height: number }
 
+type PdfViewport = ReturnType<PDFPageProxy['getViewport']>;
+
+/** Backing geometry plus the inputs that determine which frame a page commits. */
+interface FrameTarget {
+  page: PDFPageProxy;
+  viewport: PdfViewport;
+  scale: number;
+  ratio: number;
+  width: number;
+  height: number;
+  documentText: string;
+  pageOffset: number;
+  pageEnd?: number;
+}
+
+function frameTargetFor(page: PDFPageProxy, scale: number, renderPixels: number, documentText: string, pageOffset: number, pageEnd?: number): FrameTarget {
+  const viewport = page.getViewport({ scale });
+  const { ratio, width, height } = canvasBackingSize(viewport.width, viewport.height, window.devicePixelRatio || 1, renderPixels);
+  return { page, viewport, scale, ratio, width, height, documentText, pageOffset, pageEnd };
+}
+
+/** Two frame targets share a frame when the page, backing geometry and index inputs match. */
+function sameFrameTarget(committed: FrameTarget, next: FrameTarget) {
+  return committed.page === next.page && committed.width === next.width && committed.height === next.height &&
+    committed.scale === next.scale &&
+    committed.viewport.width === next.viewport.width && committed.viewport.height === next.viewport.height &&
+    committed.documentText === next.documentText && committed.pageOffset === next.pageOffset && committed.pageEnd === next.pageEnd;
+}
+
 export function PdfPage({ pdf, pageNumber, scale, active, renderPixels = MAX_CANVAS_PIXELS, clickLookup = false, desktopLookup = false, documentText, pageOffset, onSize, onNavigate, onLookup, onAddNote, pageEnd, highlights = [], activeMarkupTool, activeMarkupColor = 'yellow', onHighlight, onErase }: { pageEnd?: number; highlights?: ReaderHighlight[]; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: ReaderHighlight['color']; onHighlight?: (highlight: ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; pdf: PDFDocumentProxy; pageNumber: number; scale: number; active: boolean; renderPixels?: number; clickLookup?: boolean; desktopLookup?: boolean; documentText: string; pageOffset: number; onSize: (size: PdfPageSize) => void; onNavigate: (page: number) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void }) {
   const indexRef = useRef<PdfTextIndex | null>(null);
   const [indexVersion, setIndexVersion] = useState(0);
@@ -18,6 +47,14 @@ export function PdfPage({ pdf, pageNumber, scale, active, renderPixels = MAX_CAN
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const annotationRef = useRef<HTMLDivElement>(null);
+  // Backing geometry of the frame currently painted on the mounted canvas, set only
+  // after a render task resolves so an in-flight render is never treated as committed.
+  const committedRef = useRef<FrameTarget | null>(null);
+  // Identity of the frame the render effect should be producing. A role/budget change
+  // that resolves to the same frame keeps this referentially stable, so the effect is
+  // not torn down and the committed bitmap, lease, text layer and overlay all survive.
+  const targetRef = useRef<FrameTarget | null>(null);
+  const [frameTarget, setFrameTarget] = useState<FrameTarget | null>(null);
   const [page, setPage] = useState<PDFPageProxy | null>(null);
   const [pending, setPending] = useState<ReaderSelection | null>(null);
   const autoLookupRef = useRef<{ offset: number; endOffset?: number } | null>(null);
@@ -39,8 +76,21 @@ export function PdfPage({ pdf, pageNumber, scale, active, renderPixels = MAX_CAN
     return () => { cancelled = true; };
   }, [pdf, pageNumber]);
 
+  // Resolve the frame the page should show. A budget or role transition that computes
+  // the same geometry and the same index inputs reuses the previous target object, so the
+  // render effect below does not re-run and the committed frame is left untouched.
   useEffect(() => {
-    if (!page || !active || !canvasRef.current || !textRef.current) return;
+    if (!page) { setFrameTarget(null); return; }
+    const next = frameTargetFor(page, scale, renderPixels, documentText, pageOffset, pageEnd);
+    const previous = targetRef.current;
+    if (previous && sameFrameTarget(previous, next)) return;
+    targetRef.current = next;
+    setFrameTarget(next);
+  }, [page, scale, renderPixels, documentText, pageOffset, pageEnd]);
+
+  useEffect(() => {
+    if (!frameTarget || !active || !canvasRef.current || !textRef.current) return;
+    const { page, viewport, scale, ratio, width, height, documentText, pageOffset, pageEnd } = frameTarget;
     let disposed = false;
     const releasePage = acquirePage(page);
     let renderTask: RenderTask | undefined;
@@ -49,9 +99,16 @@ export function PdfPage({ pdf, pageNumber, scale, active, renderPixels = MAX_CAN
     const textContainer = document.createElement('div');
     textContainer.className = 'pdf-text-layer textLayer';
     textHost.replaceChildren(textContainer);
-    const viewport = page.getViewport({ scale });
-    const { ratio, width, height } = canvasBackingSize(viewport.width, viewport.height, window.devicePixelRatio || 1, renderPixels);
-    canvas.width = width; canvas.height = height;
+    // With a frame already committed, render the replacement into a bounded transient
+    // buffer so the committed bitmap stays visible until the new one is ready to swap in.
+    const replaceCommitted = Boolean(committedRef.current);
+    const renderCanvas = replaceCommitted ? document.createElement('canvas') : canvas;
+    const releaseBuffer = () => {
+      if (!replaceCommitted) return;
+      renderCanvas.width = 1; renderCanvas.height = 1;
+    };
+    if (replaceCommitted) { renderCanvas.width = width; renderCanvas.height = height; }
+    else { canvas.width = width; canvas.height = height; }
     textContainer.style.setProperty('--total-scale-factor', String(scale * (page.userUnit || 1)));
     textContainer.style.setProperty('--scale-factor', String(scale));
     indexRef.current = null;
@@ -59,23 +116,30 @@ export function PdfPage({ pdf, pageNumber, scale, active, renderPixels = MAX_CAN
     textContainer.replaceChildren();
     void (async () => {
       const pdfjs = await import('pdfjs-dist');
-      if (disposed) return;
-      const context = canvas.getContext('2d', { alpha: false });
-      if (!context) return;
-      renderTask = page.render({ canvas, canvasContext: context, viewport, transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0] });
+      if (disposed) { releaseBuffer(); return; }
+      const context = renderCanvas.getContext('2d', { alpha: false });
+      if (!context) { releaseBuffer(); return; }
+      renderTask = page.render({ canvas: renderCanvas, canvasContext: context, viewport, transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0] });
       // Attach cancellation handling immediately, before another await can reject.
       let renderError: unknown;
       const rendered = renderTask.promise.catch(reason => { if (!disposed && reason?.name !== 'RenderingCancelledException') renderError = reason; });
       const content = await page.getTextContent();
-      if (disposed) return;
+      if (disposed) { releaseBuffer(); return; }
       textLayer = new pdfjs.TextLayer({ textContentSource: content, container: textContainer, viewport });
       await textLayer.render();
-      if (disposed) return;
+      if (disposed) { releaseBuffer(); return; }
       indexRef.current = new PdfTextIndex(textContainer, documentText, pageOffset, pageEnd);
       setIndexVersion(value => value + 1);
       await rendered;
-      if (disposed) return;
-      if (renderError) throw renderError;
+      if (disposed) { releaseBuffer(); return; }
+      if (renderError) { releaseBuffer(); throw renderError; }
+      // Commit: publish the committed geometry, then swap the completed bitmap in one step.
+      if (replaceCommitted) {
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d', { alpha: false })?.drawImage(renderCanvas, 0, 0);
+      }
+      committedRef.current = frameTarget;
+      releaseBuffer();
       if (annotationRef.current) {
         annotationRef.current.replaceChildren();
         const annotations = await page.getAnnotations({ intent: 'display' });
@@ -98,16 +162,25 @@ export function PdfPage({ pdf, pageNumber, scale, active, renderPixels = MAX_CAN
           annotationRef.current.append(link);
         }
       }
-    })().catch(reason => { if (!disposed && reason?.name !== 'RenderingCancelledException') console.warn('PDF page render failed'); });
+    })().catch(reason => { releaseBuffer(); if (!disposed && reason?.name !== 'RenderingCancelledException') console.warn('PDF page render failed'); });
     return () => {
       disposed = true; indexRef.current = null; renderTask?.cancel(); textLayer?.cancel();
       releasePage(renderTask?.promise);
-      canvas.width = 1; canvas.height = 1;
+      releaseBuffer();
+      // The mounted canvas keeps its committed frame; the unmount-only effect releases it.
       const selection = window.getSelection();
       if (selection && textContainer.contains(selection.anchorNode)) selection.removeAllRanges();
-      textContainer.remove(); annotationRef.current?.replaceChildren(); overlayRef.current?.replaceChildren();
+      textContainer.remove(); annotationRef.current?.replaceChildren();
     };
-  }, [page, active, scale, renderPixels, documentText, pageOffset, pageEnd]);
+  }, [frameTarget, active]);
+
+  // The 1x1 memory release belongs to the PdfPage lifetime, not to a lifecycle
+  // transition: a role or budget change must never shrink a mounted page canvas.
+  useEffect(() => () => {
+    const canvas = canvasRef.current;
+    if (canvas) { canvas.width = 1; canvas.height = 1; }
+    committedRef.current = null;
+  }, []);
 
   const capture = (clearInvalid = false, commitMarkup = false) => {
     if (!textRef.current || !indexRef.current) return false;
