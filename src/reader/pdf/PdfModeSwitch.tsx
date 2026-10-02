@@ -33,7 +33,7 @@ export function PdfModeSwitch({ showNext = true, mode, uiLanguage, canRead, hasP
       <button aria-pressed={mode === 'original'} onClick={() => { setOpen(false); onOriginal(); }}>{uiLanguage === 'vi' ? 'Trang gốc' : 'Original'}</button>
       <button aria-pressed={mode === 'reading'} disabled={!canRead} onClick={() => { setOpen(false); onReading(); }}>{uiLanguage === 'vi' ? 'Đọc chữ' : 'Reading'}</button>
     </div>
-    {showNext && <button class="toolbar-button ocr-next-button" aria-label="OCR next" title="Find and OCR the next 6 unprocessed scanned pages" disabled={busy || done} onClick={onRecognizeNext}><span aria-hidden="true">✧</span> OCR next</button>}
+    {showNext && <button class="toolbar-button ocr-next-button" aria-label="OCR next" title="Find and OCR the remaining scanned pages, 12 at a time" disabled={busy || done} onClick={onRecognizeNext}><span aria-hidden="true">✧</span> OCR next</button>}
     <div class="pdf-tools">
       <button ref={trigger} class="icon-button pdf-reading-options-toggle" aria-label={uiLanguage === 'vi' ? 'Công cụ tài liệu' : 'Document tools'} title={uiLanguage === 'vi' ? 'Chữ PDF, OCR và nguồn văn bản' : 'PDF text, OCR and text sources'} aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(value => !value)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zM15 3v5h5M8 12h8M8 16h8" /></svg>{busy && <span class="pdf-tools-busy" />}</button>
       {open && <>
@@ -45,7 +45,7 @@ export function PdfModeSwitch({ showNext = true, mode, uiLanguage, canRead, hasP
       <div class="pdf-reading-options-divider" />
       <label>Ngôn ngữ OCR <select aria-label="OCR language" value={language} onChange={event => onLanguage(event.currentTarget.value as OcrLanguage)}><option value="eng">English</option><option value="eng+vie">English + Vietnamese</option></select></label>
       <button disabled={hasOcr || busy} onClick={() => { setOpen(false); onRecognizeCurrent(); }}>Nhận dạng chữ trang này</button>
-      <button disabled={busy || done} onClick={() => { setOpen(false); onRecognizeNext(); }}>{uiLanguage === 'vi' ? 'Tìm và OCR tối đa 6 trang scan tiếp theo chưa được xử lý' : 'Find and OCR the next 6 unprocessed scanned pages'}</button>
+      <button disabled={busy || done} onClick={() => { setOpen(false); onRecognizeNext(); }}>{uiLanguage === 'vi' ? 'Tìm và OCR tối đa 12 trang scan tiếp theo, tiếp tục đến hết tài liệu' : 'Find and OCR the next 12 scanned pages, continuing to the end'}</button>
       {queueStatus?.state === 'running' && <button onClick={onPause}>Tạm dừng OCR</button>}
       {queueStatus?.state === 'paused' && <button onClick={onContinue}>Tiếp tục OCR</button>}
       {queueStatus && <button onClick={onCancel}>Hủy OCR</button>}

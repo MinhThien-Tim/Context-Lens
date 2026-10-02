@@ -221,11 +221,17 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 - Queue: `src/reader/pdf/usePdfOcrQueue.ts`. States `preparing | running | paused | done | error`,
   one job at a time, abort on document change. `preloadFirstTwelve` scans at most the first 12 pages
   on open, recognizes at most 6 candidates per run, and skips pages that already carry PDF text; `App.tsx` only triggers it when a page in
-  that window has empty `plainText` and passes `ocrCandidate`. `startCurrent(page)` and
-  `startNextUnprocessed(limit)` are explicit user actions; the latter may include nonempty corrupt
-  pages, and `limit` is clamped to 1–6. A cached result on a corrupt page becomes the default
-  Reading Mode source unless `pdfTextSources` explicitly selects PDF text; the original PDF text
-  and per-page source switch remain available.
+  that window has empty `plainText` and passes `ocrCandidate`.
+- Explicit runs auto-continue. `startCurrent(page)` and `startNextUnprocessed(fromPage)` are explicit
+  user actions that walk the document once in consecutive `OCR_AUTO_BATCH_SIZE` (12) page windows
+  until the end, so the user never has to click again between batches. `startCurrent(page)` OCRs the
+  selected page first, then continues from `page + 1` and never revisits an earlier page;
+  `startNextUnprocessed(fromPage)` starts at the reading page and may include nonempty corrupt pages.
+  A page whose OCR text is empty (ink-free or unreadable) is skipped without saving a `PdfOcrRecord`
+  and never fails or retries the run. `completed/total` counts the whole run, so a later window does
+  not reset progress. A cached result on a corrupt page becomes the default Reading Mode source
+  unless `pdfTextSources` explicitly selects PDF text; the original PDF text and per-page source
+  switch remain available.
 - Per-page text source choice: `DocumentRecord.pdfTextSources[page] = 'pdf' | 'ocr'`, toggled by
   `PdfModeSwitch.onSource` and honored by `PdfReadingView.selectedOcr`.
 - Active OCR progress is a secondary status in `ReaderProgress` (`activeOcrProgress` in `App.tsx`),
@@ -242,7 +248,8 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 - Accuracy limits: recognition can still be wrong for ligatures or disconnected type, faint scans,
   two-column layouts and Vietnamese diacritics (for example `học` returning `hoc`). The Original
   page always remains openable as the cross-check reference. Peak memory, thermal and battery cost on
-  physical phones is still unmeasured, which is why multi-page batches stay capped at 6.
+    physical phones is still unmeasured, so explicit runs advance one 12-page window at a time and the
+    user can pause or cancel between pages.
 
 ## Invariants
 

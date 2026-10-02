@@ -7,9 +7,19 @@ import { recognizePdfPage, terminateOcrWorker } from '../../documents/pdf/ocrWor
 
 export interface OcrQueueStatus { state: 'preparing' | 'running' | 'paused' | 'done' | 'error'; completed: number; total: number; page?: number; progress: number; message?: string }
 
-export async function findNextOcrCandidates(doc: DocumentRecord, language: OcrLanguage, cached: PdfOcrRecord[], hash: string, limit: number, hasInk: (page: number) => Promise<boolean>): Promise<number[]> {
+/** Logical batch size: consecutive PDF pages examined per window. One run processes every window in order. */
+export const OCR_AUTO_BATCH_SIZE = 12;
+
+/** Eligibility reuse: the page is an OCR candidate and has no cached result for this language and hash. */
+async function shouldOcrPage(doc: DocumentRecord, pageNumber: number, language: OcrLanguage, cached: PdfOcrRecord[], hash: string): Promise<boolean> {
+  if (!ocrCandidate(doc, pageNumber, language, cached, hash)) return false;
+  return !cached.some(item => item.page === pageNumber && item.language === language && item.documentHash === hash);
+}
+
+export async function findNextOcrCandidates(doc: DocumentRecord, language: OcrLanguage, cached: PdfOcrRecord[], hash: string, limit: number, hasInk: (page: number) => Promise<boolean>, fromPage = 1, toPage = doc.pageOffsets?.length ?? 0): Promise<number[]> {
   const result: number[] = [];
-  for (let page = 1; page <= (doc.pageOffsets?.length ?? 0) && result.length < limit; page++) {
+  const lastPage = Math.min(toPage, doc.pageOffsets?.length ?? 0);
+  for (let page = Math.max(1, fromPage); page <= lastPage && result.length < limit; page++) {
     if (!ocrCandidate(doc, page, language, cached, hash)) continue;
     if (cached.some(item => item.page === page && item.language === language && item.documentHash === hash)) continue;
     if (await hasInk(page)) result.push(page);
@@ -28,15 +38,16 @@ export function usePdfOcrQueue(documentRecord: DocumentRecord | null, language: 
   const cancel = () => { generation.current++; controller.current?.abort(); controller.current = null; paused.current = false; resume.current?.(); resume.current = null; setStatus(null); void terminateOcrWorker(); };
   useEffect(() => () => cancel(), [documentRecord?.id]);
 
-  const start = async (firstPage: number, mode: 'current' | 'next' | 'preload', batchLimit = 6) => {
+  const start = async (firstPage: number, mode: 'current' | 'next' | 'preload') => {
     const { documentRecord: doc, language: selectedLanguage } = latest.current;
     if (!doc?.data || doc.kind !== 'pdf' || controller.current) return;
-    const selected = mode === 'current' ? [firstPage] : Array.from({ length: mode === 'preload' ? Math.min(12, doc.pageOffsets?.length ?? 0) : doc.pageOffsets?.length ?? 0 }, (_, index) => index + 1);
-    if (!selected.length) return;
+    const pageCount = doc.pageOffsets?.length ?? 0;
+    if (!pageCount) return;
     const taskController = new AbortController(); controller.current = taskController;
     const run = ++generation.current;
     const isCurrent = () => !taskController.signal.aborted && run === generation.current && latest.current.documentRecord?.id === doc.id;
-    setStatus({ state: 'preparing', completed: 0, total: mode === 'next' ? batchLimit : selected.length, progress: 0 });
+    let plannedTotal = 0;
+    setStatus({ state: 'preparing', completed: 0, total: 0, progress: 0 });
     let loadingTask: ReturnType<typeof import('pdfjs-dist')['getDocument']> | undefined;
     try {
       const bytes = new Uint8Array(await doc.data.arrayBuffer());
@@ -51,29 +62,36 @@ export function usePdfOcrQueue(documentRecord: DocumentRecord | null, language: 
       pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
       loadingTask = pdfjs.getDocument({ data: bytes });
       const pdf = await loadingTask.promise;
-      let pending: number[];
-      if (mode === 'next') pending = await findNextOcrCandidates(doc, selectedLanguage, latest.current.cached, hash, batchLimit, async pageNumber => {
+      const hasInkOnPage = async (pageNumber: number) => {
         if (taskController.signal.aborted || run !== generation.current) return false;
         const page = await pdf.getPage(pageNumber);
         try { return await pageHasInk(page, taskController.signal); } finally { page.cleanup(); }
-      });
-      else {
-        pending = [];
-        for (const pageNumber of selected) {
+      };
+      let pending: number[] = [];
+      if (mode === 'preload') {
+        for (let pageNumber = 1; pageNumber <= Math.min(12, pageCount); pageNumber++) {
           if (taskController.signal.aborted || run !== generation.current) return;
-          if (mode === 'preload' && doc.pdfPages?.[pageNumber - 1]?.plainText.trim()) continue;
-          if (!ocrCandidate(doc, pageNumber, selectedLanguage, latest.current.cached, hash)) continue;
-          if (latest.current.cached.some(item => item.page === pageNumber && item.language === selectedLanguage && item.documentHash === hash)) continue;
-          const page = await pdf.getPage(pageNumber);
-          let ink: boolean;
-          try { ink = await pageHasInk(page, taskController.signal); } finally { page.cleanup(); }
-          if (!ink) continue;
+          if (doc.pdfPages?.[pageNumber - 1]?.plainText.trim()) continue;
+          if (!(await shouldOcrPage(doc, pageNumber, selectedLanguage, latest.current.cached, hash))) continue;
+          if (!(await hasInkOnPage(pageNumber))) continue;
           pending.push(pageNumber);
-          if (mode === 'preload' && pending.length >= 6) break;
+          if (pending.length >= 6) break;
+        }
+      } else {
+        // An explicit run walks the whole document once in consecutive 12-page windows, so no window needs another click.
+        if (mode === 'current') {
+          if (await shouldOcrPage(doc, firstPage, selectedLanguage, latest.current.cached, hash) && await hasInkOnPage(firstPage)) pending.push(firstPage);
+        }
+        for (let windowStart = mode === 'current' ? firstPage + 1 : 1; windowStart <= pageCount; windowStart += OCR_AUTO_BATCH_SIZE) {
+          if (taskController.signal.aborted || run !== generation.current) return;
+          const windowEnd = Math.min(pageCount, windowStart + OCR_AUTO_BATCH_SIZE - 1);
+          setStatus({ state: 'preparing', completed: 0, total: 0, progress: 0, message: `Trang ${windowStart}/${pageCount}` });
+          pending = pending.concat(await findNextOcrCandidates(doc, selectedLanguage, latest.current.cached, hash, OCR_AUTO_BATCH_SIZE, hasInkOnPage, windowStart, windowEnd));
         }
       }
       if (!isCurrent()) return;
       if (!pending.length) { setStatus({ state: 'done', completed: 0, total: 0, progress: 100, message: 'Không còn trang cần OCR.' }); return; }
+      plannedTotal = pending.length;
       setStatus({ state: 'running', completed: 0, total: pending.length, progress: 0, message: `${pending.length} trang cần OCR` });
       let completed = 0;
       for (const pageNumber of pending) {
@@ -86,7 +104,8 @@ export function usePdfOcrQueue(documentRecord: DocumentRecord | null, language: 
           if (!taskController.signal.aborted && run === generation.current) setStatus({ state: paused.current ? 'paused' : 'running', completed, total: pending.length, page: pageNumber, progress: Math.round(progress * 100) });
         }, selectedLanguage);
         if (taskController.signal.aborted) return;
-        if (!text.trim()) throw new Error(`Trang ${pageNumber} không nhận dạng được chữ.`);
+        // An ink-free or unreadable page produces no record and never fails the run; the queue moves on.
+        if (!text.trim()) continue;
         const record = await saveOcrPage(doc.id, pageNumber, text, selectedLanguage, hash);
         if (!isCurrent()) return;
         latest.current.onResult(record);
@@ -95,7 +114,7 @@ export function usePdfOcrQueue(documentRecord: DocumentRecord | null, language: 
       }
       if (run === generation.current) setStatus(null);
     } catch (error) {
-      if (!taskController.signal.aborted && run === generation.current) setStatus({ state: 'error', completed: 0, total: mode === 'next' ? batchLimit : selected.length, progress: 0, message: error instanceof DOMException && error.name === 'QuotaExceededError' ? 'Không đủ dung lượng để lưu kết quả OCR.' : error instanceof Error ? error.message : 'Không thể nhận dạng chữ. Hãy thử lại.' });
+      if (!taskController.signal.aborted && run === generation.current) setStatus({ state: 'error', completed: 0, total: plannedTotal, progress: 0, message: error instanceof DOMException && error.name === 'QuotaExceededError' ? 'Không đủ dung lượng để lưu kết quả OCR.' : error instanceof Error ? error.message : 'Không thể nhận dạng chữ. Hãy thử lại.' });
     } finally {
       if (controller.current === taskController) controller.current = null;
       await loadingTask?.destroy().catch(() => {});
@@ -105,5 +124,5 @@ export function usePdfOcrQueue(documentRecord: DocumentRecord | null, language: 
   const pause = () => { paused.current = true; setStatus(value => value ? { ...value, state: 'paused' } : value); };
   const continueQueue = () => { paused.current = false; resume.current?.(); resume.current = null; setStatus(value => value ? { ...value, state: 'running' } : value); };
   const clear = async () => { const doc = latest.current.documentRecord; if (!doc) return; cancel(); await clearOcrPages(doc.id); latest.current.onClear(); };
-  return { status, startCurrent: (page: number) => start(page, 'current'), startNextUnprocessed: (limit = 6) => start(0, 'next', Math.min(6, Math.max(1, limit))), preloadFirstTwelve: () => start(0, 'preload'), pause, continueQueue, cancel, clear };
+  return { status, startCurrent: (page: number) => start(page, 'current'), startNextUnprocessed: (fromPage = 1) => start(fromPage, 'next'), preloadFirstTwelve: () => start(0, 'preload'), pause, continueQueue, cancel, clear };
 }
