@@ -20,7 +20,8 @@ Bounded structural searches only, anchored on declaration form and assignment sh
 | `Object.keys` / `for..in` | confirm key sets are enumerated statically, not inherited |
 
 Deliberately **not** used: a generic `\[.*\]\s*=` grep. That pattern matches every indexed read in the
-repository, produced a ~280 KB result set, and drove the Terminal Loop Guard breach recorded in §5.
+repository, produced a ~280 KB result set, and drove the Terminal Loop Guard breach documented in
+[Terminal Loop Guard note](#terminal-loop-guard-note--prevention-added).
 
 ### Why the three named keys behave differently
 
@@ -162,13 +163,24 @@ subsystems — the highest-exposure key-input surfaces — are fully guarded.
 | `prototype` as a key | PASS — no occurrence; only `Object.getPrototypeOf`-free plain prototypes are used |
 | Code change / data change | NOT RUN — by design, read-only investigation |
 
-## Terminal Loop Guard note
+## Terminal Loop Guard note — prevention added
 
 An earlier pass in this task re-ran the same over-broad `\[.*\].*=` search eight times with reordered
 parameters. That is a retry, not new information, and is a guard breach: the pattern was too broad
 (it matches every indexed read), the result set was ~280 KB, and the tool auto-offloaded it to a temp
 file so no useful signal was returned. Classified once; resolved by one safe fallback (the bounded
 structural greps tabulated in §Method) and no further retries.
+
+The gap that allowed it — the guard covered command *execution* but not *search-result overflow* — has
+since been closed at the canonical level:
+
+- [`agent-execution-rules.md` §7 → Search and output overflow](../agent-execution-rules.md#search-and-output-overflow)
+  — new normative rule: never re-run a truncated/offloaded search, change the query *shape* instead,
+  and treat a zero-match result as an answer rather than a failure.
+- [`testing-troubleshooting.md` → Search result overflow or truncated tool output](../testing-troubleshooting.md#search-result-overflow-or-truncated-tool-output)
+  — symptom-to-fix table mapping over-broad patterns to their bounded structural equivalents.
+- [`agent-roles/investigator.md`](../agent-roles/investigator.md#terminal-loop-guard) — role-level
+  pointer so the rule applies to read-only diagnostic work, which is where this occurred.
 
 ---
 

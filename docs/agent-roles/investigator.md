@@ -125,6 +125,9 @@ The Investigator follows the same Terminal Loop Guard as all roles ([`docs/agent
 - At most one safe launcher fallback (`.ps1` → `.cmd`).
 - Stop and report `BLOCKED`/`UNRESOLVED` on environment or completion-unknown failures.
 - Never poll, never repeatedly retry.
+- Never re-run a truncated or auto-offloaded search. Change the query shape (search the construct, not
+  bracket-and-equals syntax) or read the offloaded artifact —
+  [`agent-execution-rules.md` §7](../agent-execution-rules.md#search-and-output-overflow).
 
 ## Request efficiency
 

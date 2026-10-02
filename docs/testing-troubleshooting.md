@@ -24,6 +24,35 @@ Never change product code because of `BLOCKED`, `UNRESOLVED`, or `NOT RUN`.
 
 ## Common issues
 
+### Search result overflow or truncated tool output
+
+**Symptom.** A `grep`/`glob` returns a short preview ending in something like *"result was too large"*
+or *"...copilot-tool-output-<hash>.txt"*, or returns only a truncated head of the matches. The search
+itself did not fail — it succeeded and produced more output than could be returned.
+
+**Do not re-run it.** Re-issuing the same pattern with reordered parameters, a wider `paths` list, or a
+raised `head_limit` is a *retry*, not a new attempt: the result set is unchanged, so no new
+information is possible. That is a Terminal Loop Guard breach regardless of how few attempts it took.
+See [`agent-execution-rules.md` §7](agent-execution-rules.md#search-and-output-overflow) for the
+normative rule.
+
+**Fix: change the query shape, once.**
+
+| Instead of | Search for | Why |
+| --- | --- | --- |
+| `\[.*\].*=`, `\[[^\]]*\]\s*=` | `Object.hasOwn(`, `new Map(`, `Object.create(null)`, `Record<string`, `= {}` | bracket-and-equals matches destructuring, array literals, CSS, JSX attributes and type annotations |
+| bare `=` or `\w+\[` | the specific construct: `= {}`, `name[key] =`, computed-key literals | unanchored alternation returns the whole repository |
+| repo-wide `paths: ['.']` | the files the architecture doc already named | bounded paths shrink the result set by orders of magnitude |
+
+A **zero-match** result is an answer, not a failure — do not broaden and retry it.
+
+**If the broad result is genuinely required**, do not re-run the search. Consume the artifact: the
+tool prints the saved path under `%TEMP%`; run a *bounded* `grep` (with a `^`/`$` anchor or
+`head_limit`) against that file, read the relevant range with `view_range`, and delete the temp file
+before the task ends. Note that JSON tool-output files are often a single enormous line, so piping
+them to another grep may fail — read them with `view_range` or use
+`Get-Content -Raw -LiteralPath <path> | ConvertFrom-Json` in PowerShell.
+
 ### PowerShell blocks npm.ps1
 
 **Symptom**

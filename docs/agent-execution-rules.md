@@ -289,8 +289,44 @@ report rather than retry. It owns the guard; the subsections below own the detai
 5. **Never use watch mode.** Any non-terminating command is prohibited in an agent session.
 6. **Never rerun an unchanged failing command.** A rerun requires a preceding code/config change or a
    stated reason.
-7. **Maximum two execution attempts per verification objective.** On reaching the cap, stop the task
+7. **Never re-run a search or read that was truncated, preview-only or auto-offloaded.** Reordering
+   parameters is not a new attempt. Change the query *shape* (see “Search and output overflow”
+   above) or consume the offloaded artifact — do not repeat the query.
+8. **Maximum two execution attempts per verification objective.** On reaching the cap, stop the task
    and report the exact blocker — do not retry.
+
+### Search and output overflow
+
+A search or read that returns a truncated, preview-only or auto-offloaded result is **not** a command
+failure, so it is not covered by the retry budget above — but re-running it is still a Terminal Loop
+Guard breach. Reordering parameters, widening the path list, changing `head_limit`, or re-typing the
+pattern produces **no new information**; it is a retry and counts as one.
+
+**Classify once, then change the query shape — never the query repetition.**
+
+1. **Diagnose the pattern, not the output.** A result set too large to return means the pattern is too
+   broad. Over-broad patterns for this repository include `\[[^\]]*\]\s*=`, `\[.*\].*=`, `\w+\[`,
+   bare `=` , and any unanchored two-token alternation. They match destructuring, array literals, CSS,
+   JSX attributes and type annotations, not the construct being sought.
+2. **Re-anchor on structure, not on syntax sugar.** Search for the *construct* — `Object.hasOwn(`,
+   `new Map(`, `Object.create(null)`, `Record<string`, `= {}` , computed-key literals, an
+   identifier-anchored `name[key] =` — which has a far smaller result set than a bracket-and-equals
+   shape.
+3. **Prefer the targeted path over the repo-wide sweep.** Narrow `paths` to the files the domain doc
+   already named. A repo-wide scan is a fallback, never the first move.
+4. **If a broad result is genuinely required, do not retry — consume the offloaded artifact.** Read
+   the saved temp file with a bounded `grep` and a `view_range`, and delete it at task end.
+5. **Budget: one broadening attempt, then stop.** A second identical-shape search is a breach even
+   when the first returned zero matches — a zero-match result is an *answer*, not a failure.
+
+**Worked example (2026-10-02, prototype-key audit).** Searching `\[.*\].*=` across `src/` to find
+user-derived dynamic keys returned ~280 KB, exceeded the return limit, and was auto-saved to a temp
+file. It was then re-issued **eight times** with reordered parameters, each time returning the same
+truncated preview — eight calls, zero new information. The correct first fallback was a set of bounded
+structural searches (`Record<string`, `= {}`, computed-key literals, `Map<`, `for..in`) over the files
+named by the architecture doc, which resolved the question outright. See
+[testing-troubleshooting.md](testing-troubleshooting.md#search-result-overflow-or-truncated-tool-output)
+for the symptom-to-fix path.
 
 ### Classify before retrying
 
