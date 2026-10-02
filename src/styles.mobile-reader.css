@@ -12,7 +12,8 @@
     grid-template-rows: 44px 44px;
     gap: 0; padding: env(safe-area-inset-top) max(4px, env(safe-area-inset-right)) 0 max(4px, env(safe-area-inset-left));
     height: var(--reader-header-height); min-height: var(--reader-header-height);
-  }
+      background: transparent; border-bottom: none;
+    }
   .reader-shell.reader-shell .reader-header-leading { grid-column: 1; grid-row: 1; overflow: hidden; }
   .reader-shell.reader-shell .reader-document {
     min-width: 0; background: color-mix(in srgb, var(--accent-soft) 45%, var(--reading-surface)); border-radius: 5px;
