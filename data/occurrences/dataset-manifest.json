@@ -961,7 +961,8 @@
       "sha256": "50d601a7ea7b6721f18321569993fb3cb18b8e5bdc5f03a18d13b2c5d934dcf3"
     },
     "data/occurrences/SOURCE.md": {
-      "sha256": "ed17bb4394616687954c3c860463f32cbe9f71634d8b24ad00481a2d8dfd5798"
+      "sha256": "df51b086e7f28d8e7321a929d228dcba87324f57917abe0838ca22233fb7c9c7",
+      "bytes": 17047
     },
     "data/occurrences/corpus-manifest.json": {
       "sha256": "1423601e5f61b8d87c425f9aebe1a8426e6b9dff23bf49908f32c772eba5c3aa"

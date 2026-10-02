@@ -151,8 +151,10 @@ section; nothing here re-opens the source.
 - **Run:** one deterministic run, `seed = 0x5eed1eaf`, `samplingRuleVersion = 3.0.0`.
 - **Dataset:** [occurrences.jsonl](./occurrences.jsonl) - **543** occurrences
   (diagnostic 45, control 128, Stratum C 370; 2 drawn from the secondary tier).
-- **sha256 of the JSONL:** `0c768ffcd092308ffcebc41ba3cd368cd57646147352aab4d50e53b4d0b39841`
-- Byte-identical across repeated runs - re-running the sampler reproduces this hash.
+- **sha256 of the JSONL:** `63d148b51657c8d325f822782a9eed31a8077f049a9522b3c564554916ef4209`
+  (720,850 bytes, 543 lines)
+- Byte-identical across repeated runs - re-running the sampler reproduces this hash
+  exactly. Verified by rerun, not assumed.
 - Spread: **195 distinct documents**, 177 distinct authors, so occurrences are
   independent of any single author or work.
 

@@ -62,6 +62,44 @@ const ctxOver = rows.filter((r) => r.context.length > Math.max(CTX_CAP, r.senten
 check('context respects the char cap unless the sentence exceeds it',
   ctxOver.length === 0, ctxOver.length + ' rows over cap');
 
+// 8c. Provenance: every context must be a verbatim substring of a paragraph of its
+// OWN source document, after the documented amendment-7 line-unwrapping
+// normalisation. Stronger than the checks above: it also catches a context taken
+// from the wrong document.
+const normBody = (body) => body
+  .replace(/\r\n?/g, '\n')
+  .split(/\n[ \t]*\n+/)
+  .map((p) => p.replace(/[ \t]*\n[ \t]*/g, ' ').replace(/[ \t]{2,}/g, ' ').trim())
+  .filter((p) => p.length > 0);
+const cacheDir = 'tmp/corpus-cache';
+let provOk = 0, provBad = [], provSkip = 0;
+for (const r of rows) {
+  const f = cacheDir + '/' + r.docId + '.txt';
+  if (!fs.existsSync(f)) { provSkip++; continue; }
+  const paras = normBody(fs.readFileSync(f, 'utf8'));
+  if (paras.some((p) => p.includes(r.context) && p.includes(r.sentence))) provOk++;
+  else if (provBad.length < 5) provBad.push(r.id + ' docId=' + r.docId);
+}
+check('context is verbatim from its own source document',
+  provOk === rows.length - provSkip,
+  provOk + '/' + (rows.length - provSkip) + ' verified' +
+  (provSkip ? ', ' + provSkip + ' uncached' : '') +
+  (provBad.length ? '  BAD ' + provBad.join(', ') : ''));
+
+// 8d. docSha256 must equal the sha256 of that document's NORMALISED text, i.e.
+// the value recorded in the corpus manifest (cache files are the raw download).
+const corpusManifests = ['data/occurrences/corpus-manifest.json', 'data/occurrences/corpus-manifest-secondary.json']
+  .filter((p) => fs.existsSync(p))
+  .map((p) => JSON.parse(fs.readFileSync(p, 'utf8')))
+  .map((m) => (Array.isArray(m) ? m : m.documents))
+  .flat();
+const shaById = new Map(corpusManifests.map((d) => [String(d.id), d.sha256]));
+const shaBad = rows.filter((r) => shaById.get(String(r.docId)) !== r.docSha256);
+check('docSha256 matches the corpus manifest for its document',
+  shaBad.length === 0,
+  shaBad.length ? shaBad.length + ' rows, e.g. ' + shaBad.slice(0, 3).map((r) => r.id).join(', ')
+    : rows.length + ' rows across ' + shaById.size + ' manifest docs');
+
 // 9. resolverSeen tri-state only.
 const verdicts = [...new Set(rows.map((r) => String(r.resolverSeen)))].sort();
 check('resolverSeen is false|anchor only',

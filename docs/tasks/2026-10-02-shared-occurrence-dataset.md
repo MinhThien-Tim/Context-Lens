@@ -158,19 +158,39 @@ order; `loadTier` re-verifies each document's body sha256 and aborts on drift.
 
 ## Verification performed
 
+All of the below is re-runnable in one command:
+
+```bash
+node scripts/verify_occurrence_dataset.mjs   # 23 checks, exits non-zero on any FAIL
+```
+
 | Check | Result |
 |---|---|
+| Verifier suite overall | **PASS — 23/23, 0 FAIL** |
 | `--selftest` gate before each run | **PASS** (38/38) |
-| JSONL sha256 recomputed vs manifest | **PASS** — exact match |
 | All 6 artifact sha256 recomputed vs manifest | **PASS** — all match |
-| Manifest parses as JSON | **PASS** |
+| Row count matches manifest | **PASS** — 543 |
 | `goldSense`/`goldPos` empty on all rows | **PASS** (0 non-empty) |
+| No legacy `expected`/`meaningVi`/`definitionEn` keys | **PASS** (0 hits) |
 | `auditExpected` present on all rows | **PASS** |
-| `docSha256` + `retrievedAt` + `context` + `paragraphIndex` present on all rows | **PASS** |
+| POS never from the product pipeline | **PASS** — heuristic shapes only |
+| `docSha256` + `retrievedAt` present on all rows | **PASS** |
+| `context` is verbatim from **its own** source document | **PASS** — 543/543 |
+| `docSha256` matches the corpus manifest for its document | **PASS** — 543 rows / 400 docs |
 | `context` contains its own sentence (all 543) | **PASS** — was 188/543 before the §8.7 fix |
 | `context` respects the 600-char cap | **PASS** — 0 rows over |
 | Accepted set unchanged by the `context` fix | **PASS** — byte-identical lemma/sentence/doc/paragraph keys vs the pre-fix run |
-| Determinism | **PASS** — 2 consecutive runs, identical sha256 |
+| `resolverSeen` tri-state only (`false`/`anchor`) | **PASS** — 538 false, 5 anchor |
+| Seed + rule version frozen | **PASS** — `0x5eed1eaf`, `3.0.0` |
+| Author cap ≤ 2 per lemma per stratum | **PASS** |
+| Per-POS cap ≤ 6 for multi-POS lemmas | **PASS** — 7 multi-POS lemmas, max 6 |
+| No `(lemma, sentence)` repeat anywhere | **PASS** — 0 repeats |
+| Prior `VALID_SENSE_PASS` lemmas in roster | **PASS** — `counterargument`, `attempt`, `account for` |
+| Stratum C n + CI reported | **PASS** — n=200, worst-case half-width 0.0693 |
+| Funnel identity closes (all lemmas, both tiers) | **PASS** — 24 funnels / 21 lemmas |
+| Corpus diversity | **PASS** — 195 documents, 177 authors |
+| `source_tier` tagged on every row | **PASS** — 541 primary / 2 secondary |
+| Determinism | **PASS** — rerun byte-identical, sha256 `63d148b5…` |
 | Recorded `surface` present in its sentence (all 543) | **PASS** |
 | Sampled `pos` within the roster's declared POS | **PASS** — 0 violations |
 | Per-author cap within a stratum | **PASS** — max 2 (the cap) |
