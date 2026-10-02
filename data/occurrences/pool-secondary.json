@@ -1,0 +1,425 @@
+{
+  "tier": "secondary",
+  "eraWindow": [
+    1900,
+    1930
+  ],
+  "declaredBefore": "sampling",
+  "purpose": "Rescue tier only. Used when a diagnostic lemma yields fewer than 5 occurrences from the primary tier. The primary tier (data/occurrences/pool.json) remains frozen and is never replaced.",
+  "eraPredicate": "principal author DEATH year in 1900-1930, parsed from the catalog Authors life-date suffix. The catalog has no publication-year column; Issued is the ebook release date and cannot predate 1971.",
+  "rule": "data/occurrences/SOURCE.md §7",
+  "catalog": "https://www.gutenberg.org/cache/epub/feeds/pg_catalog.csv",
+  "license": "Project Gutenberg License (works in the US public domain)",
+  "selectionRule": {
+    "filter": "Type == \"Text\" && Language == \"en\" && title not matching ^(Images|Music|Sound|Sheet Music|Cartons) && 1900 <= author death year <= 1930",
+    "bucket": "first match in [fiction, science, philosophy, medicine, essays, reference, history]",
+    "sample": "evenly spaced ranks round(k*(n-1)/(quota-1)) after sorting by author death year then Text#",
+    "quotas": {
+      "fiction": 24,
+      "science": 20,
+      "philosophy": 20,
+      "medicine": 12,
+      "essays": 8,
+      "reference": 12,
+      "history": 4
+    }
+  },
+  "documentCount": 56,
+  "emptyBuckets": [
+    "reference"
+  ],
+  "documents": [
+    {
+      "id": 625,
+      "bucket": "essays",
+      "authorDeathYear": 1907,
+      "title": "Ponkapog Papers",
+      "author": "Aldrich, Thomas Bailey, 1836-1907"
+    },
+    {
+      "id": 774,
+      "bucket": "essays",
+      "authorDeathYear": 1900,
+      "title": "Essays and Lectures",
+      "author": "Wilde, Oscar, 1854-1900"
+    },
+    {
+      "id": 3108,
+      "bucket": "essays",
+      "authorDeathYear": 1900,
+      "title": "Nine Short Essays",
+      "author": "Warner, Charles Dudley, 1829-1900"
+    },
+    {
+      "id": 3113,
+      "bucket": "essays",
+      "authorDeathYear": 1900,
+      "title": "Some Causes of the Prevailing Discontent",
+      "author": "Warner, Charles Dudley, 1829-1900"
+    },
+    {
+      "id": 3125,
+      "bucket": "essays",
+      "authorDeathYear": 1900,
+      "title": "The Complete Essays of Charles Dudley Warner",
+      "author": "Warner, Charles Dudley, 1829-1900"
+    },
+    {
+      "id": 4652,
+      "bucket": "essays",
+      "authorDeathYear": 1925,
+      "title": "Escape, and Other Essays",
+      "author": "Benson, Arthur Christopher, 1862-1925"
+    },
+    {
+      "id": 8464,
+      "bucket": "fiction",
+      "authorDeathYear": 1923,
+      "title": "Rest Harrow: A Comedy of Resolution",
+      "author": "Hewlett, Maurice, 1861-1923"
+    },
+    {
+      "id": 8671,
+      "bucket": "fiction",
+      "authorDeathYear": 1918,
+      "title": "The Pagans",
+      "author": "Bates, Arlo, 1850-1918"
+    },
+    {
+      "id": 9996,
+      "bucket": "philosophy",
+      "authorDeathYear": 1915,
+      "title": "\"'Tis Sixty Years Since\"\r\nAddress of Charles Francis Adams; Founders' Day, January 16, 1913",
+      "author": "Adams, Charles Francis, 1835-1915"
+    },
+    {
+      "id": 11100,
+      "bucket": "philosophy",
+      "authorDeathYear": 1920,
+      "title": "History of Modern Philosophy\nFrom Nicolas of Cusa to the Present Time",
+      "author": "Falckenberg, Richard, 1851-1920; Armstrong, Andrew Campbell, 1860-1935 [Translator]"
+    },
+    {
+      "id": 11984,
+      "bucket": "philosophy",
+      "authorDeathYear": 1910,
+      "title": "A Pluralistic Universe\r\nHibbert Lectures at Manchester College on the Present Situation in Philosophy",
+      "author": "James, William, 1842-1910"
+    },
+    {
+      "id": 12935,
+      "bucket": "fiction",
+      "authorDeathYear": 1913,
+      "title": "The Song of the Blood-Red Flower",
+      "author": "Linnankoski, Johannes, 1869-1913"
+    },
+    {
+      "id": 13312,
+      "bucket": "fiction",
+      "authorDeathYear": 1922,
+      "title": "The Light That Lures",
+      "author": "Brebner, Percy James, 1864-1922"
+    },
+    {
+      "id": 13432,
+      "bucket": "fiction",
+      "authorDeathYear": 1920,
+      "title": "Miss Bretherton",
+      "author": "Ward, Humphry, Mrs., 1851-1920"
+    },
+    {
+      "id": 15315,
+      "bucket": "fiction",
+      "authorDeathYear": 1900,
+      "title": "Gladys, the Reaper",
+      "author": "Beale, Anne, 1816-1900"
+    },
+    {
+      "id": 15321,
+      "bucket": "fiction",
+      "authorDeathYear": 1907,
+      "title": "Tracy Park: A Novel",
+      "author": "Holmes, Mary Jane, 1825-1907"
+    },
+    {
+      "id": 16161,
+      "bucket": "history",
+      "authorDeathYear": 1902,
+      "title": "The Seven Great Monarchies Of The Ancient Eastern World, Vol 1: Chaldaea\r\nThe History, Geography, And Antiquities Of Chaldaea, Assyria, Babylon, Media, Persia, Parthia, And Sassanian or New Persian Empire; With Maps and Illustrations.",
+      "author": "Rawlinson, George, 1812-1902"
+    },
+    {
+      "id": 16406,
+      "bucket": "philosophy",
+      "authorDeathYear": 1925,
+      "title": "An Introduction to Philosophy",
+      "author": "Fullerton, George Stuart, 1859-1925"
+    },
+    {
+      "id": 16719,
+      "bucket": "fiction",
+      "authorDeathYear": 1928,
+      "title": "The Husbands of Edith",
+      "author": "McCutcheon, George Barr, 1866-1928; Fisher, Harrison, 1875-1934 [Illustrator]; Hapgood, Theodore B. (Theodore Brown), 1871- [Illustrator]"
+    },
+    {
+      "id": 16993,
+      "bucket": "fiction",
+      "authorDeathYear": 1926,
+      "title": "Miss Dexie",
+      "author": "Eveleth, Stanford, 1854-1926"
+    },
+    {
+      "id": 17321,
+      "bucket": "history",
+      "authorDeathYear": 1930,
+      "title": "History of Egypt, Chaldea, Syria, Babylonia, and Assyria in the Light of Recent Discovery",
+      "author": "King, L. W. (Leonard William), 1869-1919; Hall, H. R. (Harry Reginald), 1873-1930"
+    },
+    {
+      "id": 17326,
+      "bucket": "history",
+      "authorDeathYear": 1916,
+      "title": "History of Egypt, ChaldÃ¦a, Syria, Babylonia, and Assyria, Volume 6 (of 12)",
+      "author": "Maspero, G. (Gaston), 1846-1916; Sayce, A. H. (Archibald Henry), 1845-1933 [Editor]; McClure, M. L., -1918 [Translator]"
+    },
+    {
+      "id": 18022,
+      "bucket": "fiction",
+      "authorDeathYear": 1916,
+      "title": "Betty at Fort Blizzard",
+      "author": "Seawell, Molly Elliot, 1860-1916; Frederick, Edmund, 1870-1949 [Illustrator]"
+    },
+    {
+      "id": 18467,
+      "bucket": "medicine",
+      "authorDeathYear": 1914,
+      "title": "The People's Common Sense Medical Adviser in Plain English\nor, Medicine Simplified, 54th ed., One Million, Six Hundred\nand Fifty Thousand",
+      "author": "Pierce, Ray Vaughn, 1840-1914"
+    },
+    {
+      "id": 18685,
+      "bucket": "history",
+      "authorDeathYear": 1902,
+      "title": "Lectures on Modern history",
+      "author": "Acton, John Emerich Edward Dalberg Acton, Baron, 1834-1902"
+    },
+    {
+      "id": 20500,
+      "bucket": "philosophy",
+      "authorDeathYear": 1915,
+      "title": "A Short History of Greek Philosophy",
+      "author": "Marshall, J. (John), 1845-1915"
+    },
+    {
+      "id": 20953,
+      "bucket": "essays",
+      "authorDeathYear": 1927,
+      "title": "By the Christmas Fire",
+      "author": "Crothers, Samuel McChord, 1857-1927"
+    },
+    {
+      "id": 22275,
+      "bucket": "fiction",
+      "authorDeathYear": 1907,
+      "title": "VC â A Chronicle of Castle Barfield and of the Crimea",
+      "author": "Murray, David Christie, 1847-1907"
+    },
+    {
+      "id": 28925,
+      "bucket": "fiction",
+      "authorDeathYear": 1909,
+      "title": "Lover or Friend",
+      "author": "Carey, Rosa Nouchette, 1840-1909"
+    },
+    {
+      "id": 29274,
+      "bucket": "fiction",
+      "authorDeathYear": 1914,
+      "title": "People of Position",
+      "author": "Hyatt, Stanley Portal, 1877-1914; Boehm, H. Richard, 1871-1914 [Illustrator]"
+    },
+    {
+      "id": 30326,
+      "bucket": "essays",
+      "authorDeathYear": 1925,
+      "title": "The Thread of Gold",
+      "author": "Benson, Arthur Christopher, 1862-1925"
+    },
+    {
+      "id": 33405,
+      "bucket": "science",
+      "authorDeathYear": 1901,
+      "title": "Familiar Talks on Science: World-Building and Life; Earth, Air and Water.",
+      "author": "Gray, Elisha, 1835-1901"
+    },
+    {
+      "id": 34283,
+      "bucket": "philosophy",
+      "authorDeathYear": 1915,
+      "title": "History of Modern Philosophy",
+      "author": "Benn, Alfred William, 1843-1915"
+    },
+    {
+      "id": 34598,
+      "bucket": "fiction",
+      "authorDeathYear": 1911,
+      "title": "Through Night to Light: A Novel",
+      "author": "Spielhagen, Friedrich, 1829-1911; Schele de Vere, M. (Maximilian), 1820-1898 [Translator]"
+    },
+    {
+      "id": 34609,
+      "bucket": "fiction",
+      "authorDeathYear": 1909,
+      "title": "King of the Castle",
+      "author": "Fenn, George Manville, 1831-1909"
+    },
+    {
+      "id": 36926,
+      "bucket": "medicine",
+      "authorDeathYear": 1919,
+      "title": "Man's Redemption of Man: A Lay Sermon",
+      "author": "Osler, William, Sir, 1849-1919"
+    },
+    {
+      "id": 37208,
+      "bucket": "fiction",
+      "authorDeathYear": 1924,
+      "title": "The Wayfarers",
+      "author": "Cutting, Mary Stewart, 1851-1924; Stephens, Alice Barber, 1858-1932 [Illustrator]"
+    },
+    {
+      "id": 38943,
+      "bucket": "philosophy",
+      "authorDeathYear": 1925,
+      "title": "Science and Medieval Thought\nThe Harveian Oration Delivered Before the Royal College of Physicians, October 18, 1900",
+      "author": "Allbutt, T. Clifford (Thomas Clifford), 1836-1925"
+    },
+    {
+      "id": 39879,
+      "bucket": "fiction",
+      "authorDeathYear": 1903,
+      "title": "Miser Farebrother: A Novel (vol. 3 of 3)",
+      "author": "Farjeon, B. L. (Benjamin Leopold), 1833-1903"
+    },
+    {
+      "id": 40452,
+      "bucket": "fiction",
+      "authorDeathYear": 1915,
+      "title": "The Twickenham Peerage",
+      "author": "Marsh, Richard, 1857-1915"
+    },
+    {
+      "id": 44878,
+      "bucket": "fiction",
+      "authorDeathYear": 1929,
+      "title": "A Man's World",
+      "author": "Edwards, Albert, 1879-1929"
+    },
+    {
+      "id": 47282,
+      "bucket": "fiction",
+      "authorDeathYear": 1905,
+      "title": "A Country Sweetheart",
+      "author": "Russell, Dora, 1830-1905"
+    },
+    {
+      "id": 49714,
+      "bucket": "fiction",
+      "authorDeathYear": 1902,
+      "title": "At Bay",
+      "author": "Alexander, Mrs., 1825-1902"
+    },
+    {
+      "id": 50836,
+      "bucket": "fiction",
+      "authorDeathYear": 1908,
+      "title": "Princess Napraxine, Volume 2 (of 3)",
+      "author": "Ouida, 1839-1908"
+    },
+    {
+      "id": 51010,
+      "bucket": "fiction",
+      "authorDeathYear": 1909,
+      "title": "The Novel; what it is",
+      "author": "Crawford, F. Marion (Francis Marion), 1854-1909"
+    },
+    {
+      "id": 51548,
+      "bucket": "philosophy",
+      "authorDeathYear": 1900,
+      "title": "Early Greek Philosophy & Other Essays\nCollected Works, Volume Two",
+      "author": "Nietzsche, Friedrich Wilhelm, 1844-1900; Levy, Oscar, 1867-1946 [Editor]; MÃ¼gge, Maximilian A. (Maximilian August), 1878- [Translator]"
+    },
+    {
+      "id": 52124,
+      "bucket": "philosophy",
+      "authorDeathYear": 1900,
+      "title": "The Joyful Wisdom (\"La Gaya Scienza\")\r\nComplete Works, Volume Ten",
+      "author": "Nietzsche, Friedrich Wilhelm, 1844-1900; Levy, Oscar, 1867-1946 [Editor]; Cohn, Paul V. (Paul Victor) [Translator]; Common, Thomas, 1850-1919 [Translator]; Petre, Maude Dominica, 1863-1942 [Translator]"
+    },
+    {
+      "id": 52263,
+      "bucket": "philosophy",
+      "authorDeathYear": 1900,
+      "title": "The Twilight of the Idols; or, How to Philosophize with the Hammer. The Antichrist\r\nComplete Works, Volume Sixteen",
+      "author": "Nietzsche, Friedrich Wilhelm, 1844-1900; Levy, Oscar, 1867-1946 [Editor]; Ludovici, Anthony M. (Anthony Mario), 1882-1971 [Translator]"
+    },
+    {
+      "id": 52881,
+      "bucket": "philosophy",
+      "authorDeathYear": 1900,
+      "title": "The Joyful Wisdom (\"La Gaya Scienza\")",
+      "author": "Nietzsche, Friedrich Wilhelm, 1844-1900; Levy, Oscar, 1867-1946 [Editor]; Cohn, Paul V. (Paul Victor) [Translator]; Common, Thomas, 1850-1919 [Translator]; Petre, Maude Dominica, 1863-1942 [Translator]"
+    },
+    {
+      "id": 57126,
+      "bucket": "philosophy",
+      "authorDeathYear": 1915,
+      "title": "The Greek Philosophers, Vol. 1 (of 2)",
+      "author": "Benn, Alfred William, 1843-1915"
+    },
+    {
+      "id": 58082,
+      "bucket": "fiction",
+      "authorDeathYear": 1930,
+      "title": "The Adventures of an Ugly Girl",
+      "author": "Corbett, George, Mrs., 1846-1930"
+    },
+    {
+      "id": 58224,
+      "bucket": "philosophy",
+      "authorDeathYear": 1915,
+      "title": "The Greek Philosophers, Vol. 2 (of 2)",
+      "author": "Benn, Alfred William, 1843-1915"
+    },
+    {
+      "id": 63938,
+      "bucket": "medicine",
+      "authorDeathYear": 1920,
+      "title": "Medicine in the Middle Ages\r\nExtracts from \"Le Moyen Age Medical\" by Dr. Edmond Dupouy; translated by T. C. Minor",
+      "author": "Dupouy, Edmond, 1838-1920; Minor, Thomas C. (Thomas Chalmers), 1847?-1912 [Translator]"
+    },
+    {
+      "id": 63958,
+      "bucket": "philosophy",
+      "authorDeathYear": 1901,
+      "title": "Lao-tzu, A Study in Chinese Philosophy",
+      "author": "Watters, Thomas, 1840-1901"
+    },
+    {
+      "id": 66177,
+      "bucket": "science",
+      "authorDeathYear": 1910,
+      "title": "Half Hours With Modern Scientists: Lectures and Essays",
+      "author": "Huxley, Thomas Henry, 1825-1895; Barker, George F. (George Frederick), 1835-1910; Cope, E. D. (Edward Drinker), 1840-1897; Stirling, James Hutchison, 1820-1909; Tyndall, John, 1820-1893; Porter, Noah, 1811-1892 [Author of introduction, etc.]"
+    },
+    {
+      "id": 67097,
+      "bucket": "philosophy",
+      "authorDeathYear": 1928,
+      "title": "Early Greek philosophy",
+      "author": "Burnet, John, 1863-1928"
+    }
+  ]
+}

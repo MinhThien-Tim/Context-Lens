@@ -1,0 +1,979 @@
+{
+  "generatedBy": "scripts/build_occurrence_dataset.mjs",
+  "datasetVersion": "1.0.0",
+  "samplingRuleVersion": "3.0.0",
+  "seed": "0x5eed1eaf",
+  "status": "FROZEN — one run; reuse for T1 Phase 5, T3, T4 and T5",
+  "source": {
+    "primary": {
+      "corpus": "Project Gutenberg",
+      "pool": "pool.json",
+      "manifest": "corpus-manifest.json",
+      "documents": 344,
+      "words": 23676658,
+      "sha256Manifest": "1423601e5f61b8d87c425f9aebe1a8426e6b9dff23bf49908f32c772eba5c3aa"
+    },
+    "secondary": {
+      "corpus": "Project Gutenberg (1900-1930, author death-year proxy)",
+      "pool": "pool-secondary.json",
+      "manifest": "corpus-manifest-secondary.json",
+      "documents": 56,
+      "words": 5123152,
+      "rescueOnly": true
+    },
+    "license": "Public domain in the US; redistributed under the Project Gutenberg License"
+  },
+  "normalisation": {
+    "lineUnwrapping": "Documented normalisation: Project Gutenberg hard-wrapped lines are joined WITHIN a paragraph; blank-line paragraph boundaries are preserved so no sentence spans two paragraphs.",
+    "boilerplate": "PG header/footer outside the START/END markers is never sampled.",
+    "sentenceSplitting": "Abbreviation-aware splitter applied per paragraph.",
+    "hashing": "Per-document sha256 is of the boilerplate-stripped body and is re-verified during sampling; a mismatch aborts the run."
+  },
+  "resolverSeenRule": {
+    "fullMatchMinLength": 20,
+    "anchorMinLength": 12,
+    "behaviour": "full example-sentence match => EXCLUDED and listed in collisions; anchor/collocation/verb-frame substring overlap => MARKED \"anchor\" and kept",
+    "indexedLemmas": 192615,
+    "fullMatchesExcluded": 0,
+    "anchorMarkedKept": 5
+  },
+  "caps": {
+    "perPosRatio": 0.6,
+    "maxPerAuthor": 2,
+    "nearDupJaccard": 0.85,
+    "targetPerLemma": 10,
+    "minPerLemma": 5
+  },
+  "posSource": "Occurrence POS is the surface heuristic `heuristicPos` in scripts/build_occurrence_dataset.mjs, never the product resolver/aligner. Stratum C strata come from release/wordnet/wordnet-*.json (WordNet 3.0) directly. goldPos is empty until T0b.",
+  "occurrences": {
+    "total": 543,
+    "diagnostic": 45,
+    "control": 128,
+    "controlStratumC": 370,
+    "fromSecondaryTier": 2,
+    "resolverSeenAnchor": 5
+  },
+  "diagnosticAcceptance": {
+    "lemmas": 7,
+    "meetingMin": 5,
+    "fraction": "5/7",
+    "rescuedBySecondaryTier": [
+      "lucent",
+      "nescience"
+    ],
+    "acceptance": ">= 5 occurrences for 6/7 diagnostic lemmas"
+  },
+  "shortages": [
+    {
+      "lemma": "counterargument",
+      "stratum": "control",
+      "occurrences": 0,
+      "note": "reported shortage — not filled synthetically"
+    },
+    {
+      "lemma": "nescience",
+      "stratum": "diagnostic",
+      "occurrences": 4,
+      "note": "reported shortage — not filled synthetically"
+    },
+    {
+      "lemma": "sporty",
+      "stratum": "diagnostic",
+      "occurrences": 0,
+      "note": "reported shortage — not filled synthetically"
+    }
+  ],
+  "perLemma": [
+    {
+      "lemma": "abominable",
+      "stratum": "control",
+      "pos": "adjective",
+      "allPos": [
+        "adjective"
+      ],
+      "synsets": 2,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 123,
+        "rawHitsInCorpus": 123,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 4,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 1,
+        "rejectedPosNotInRoster": 0,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 108
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "account for",
+      "stratum": "control",
+      "pos": "verb",
+      "allPos": [
+        "verb"
+      ],
+      "synsets": 2,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 419,
+        "rawHitsInCorpus": 419,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 5,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 0,
+        "rejectedPosNotInRoster": 0,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 404
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "airy",
+      "stratum": "control",
+      "pos": "adjective",
+      "allPos": [
+        "adjective"
+      ],
+      "synsets": 4,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 206,
+        "rawHitsInCorpus": 206,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 11,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 8,
+        "rejectedPosNotInRoster": 3,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 3,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 171
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "ape",
+      "stratum": "control",
+      "pos": "verb",
+      "allPos": [
+        "noun",
+        "verb"
+      ],
+      "synsets": 5,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 8,
+      "primaryFunnel": {
+        "rawCandidates": 248,
+        "rawHitsInCorpus": 248,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 76,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 94,
+        "rejectedPosNotInRoster": 11,
+        "rejectedNearDuplicate": 2,
+        "rejectedAuthorCap": 3,
+        "rejectedPerPosCap": 54,
+        "notExaminedAfterTarget": 0
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 8,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "array",
+      "stratum": "control",
+      "pos": "verb",
+      "allPos": [
+        "noun",
+        "verb"
+      ],
+      "synsets": 6,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 473,
+        "rawHitsInCorpus": 473,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 25,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 25,
+        "rejectedPosNotInRoster": 6,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 1,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 406
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "astonishment",
+      "stratum": "control",
+      "pos": "noun",
+      "allPos": [
+        "noun"
+      ],
+      "synsets": 1,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 440,
+        "rawHitsInCorpus": 440,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 4,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 0,
+        "rejectedPosNotInRoster": 9,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 417
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "attempt",
+      "stratum": "control",
+      "pos": "verb",
+      "allPos": [
+        "noun",
+        "verb"
+      ],
+      "synsets": 4,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 3000,
+        "rawHitsInCorpus": 4749,
+        "candidateCapApplied": true,
+        "rejectedShortSentence": 14,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 13,
+        "rejectedPosNotInRoster": 2,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 2961
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "balsam",
+      "stratum": "control",
+      "pos": "noun",
+      "allPos": [
+        "noun"
+      ],
+      "synsets": 3,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 81,
+        "rawHitsInCorpus": 81,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 23,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 18,
+        "rejectedPosNotInRoster": 0,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 30
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "behalf",
+      "stratum": "control",
+      "pos": "noun",
+      "allPos": [
+        "noun"
+      ],
+      "synsets": 2,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 528,
+        "rawHitsInCorpus": 528,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 3,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 0,
+        "rejectedPosNotInRoster": 1,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 514
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 5
+    },
+    {
+      "lemma": "confiscation",
+      "stratum": "control",
+      "pos": "noun",
+      "allPos": [
+        "noun"
+      ],
+      "synsets": 1,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 109,
+        "rawHitsInCorpus": 109,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 2,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 3,
+        "rejectedPosNotInRoster": 1,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 93
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "counterargument",
+      "stratum": "control",
+      "pos": "noun",
+      "allPos": [
+        "noun"
+      ],
+      "synsets": 1,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 0,
+      "primaryFunnel": {
+        "rawCandidates": 2,
+        "rawHitsInCorpus": 2,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 0,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 1,
+        "rejectedPosNotInRoster": 1,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 0
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 0,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "ecstatic",
+      "stratum": "control",
+      "pos": "adjective",
+      "allPos": [
+        "adjective"
+      ],
+      "synsets": 1,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 71,
+        "rawHitsInCorpus": 71,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 10,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 5,
+        "rejectedPosNotInRoster": 5,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 5,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 36
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "eloquent",
+      "stratum": "control",
+      "pos": "adjective",
+      "allPos": [
+        "adjective"
+      ],
+      "synsets": 1,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 288,
+        "rawHitsInCorpus": 288,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 9,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 8,
+        "rejectedPosNotInRoster": 2,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 259
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "gaily",
+      "stratum": "control",
+      "pos": "adverb",
+      "allPos": [
+        "adverb"
+      ],
+      "synsets": 1,
+      "auditExpected": "VALID_SENSE_PASS",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 196,
+        "rawHitsInCorpus": 196,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 3,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 0,
+        "rejectedPosNotInRoster": 0,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 183
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "light",
+      "stratum": "diagnostic",
+      "pos": "adjective",
+      "allPos": [
+        "noun",
+        "verb",
+        "adjective",
+        "adverb"
+      ],
+      "synsets": 47,
+      "auditExpected": "needs real-context investigation",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 3000,
+        "rawHitsInCorpus": 12564,
+        "candidateCapApplied": true,
+        "rejectedShortSentence": 19,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 15,
+        "rejectedPosNotInRoster": 0,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 9,
+        "rejectedPerPosCap": 10,
+        "notExaminedAfterTarget": 2937
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "lucent",
+      "stratum": "diagnostic",
+      "pos": "adjective",
+      "allPos": [
+        "adjective"
+      ],
+      "synsets": 1,
+      "auditExpected": "needs real-context investigation",
+      "primaryCount": 4,
+      "primaryFunnel": {
+        "rawCandidates": 11,
+        "rawHitsInCorpus": 11,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 2,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 3,
+        "rejectedPosNotInRoster": 2,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 0
+      },
+      "secondaryCount": 1,
+      "secondaryFunnel": {
+        "rawCandidates": 1,
+        "rawHitsInCorpus": 1,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 0,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 0,
+        "rejectedPosNotInRoster": 0,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 0
+      },
+      "total": 5,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "nescience",
+      "stratum": "diagnostic",
+      "pos": "noun",
+      "allPos": [
+        "noun"
+      ],
+      "synsets": 1,
+      "auditExpected": "needs real-context investigation",
+      "primaryCount": 3,
+      "primaryFunnel": {
+        "rawCandidates": 9,
+        "rawHitsInCorpus": 9,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 3,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 0,
+        "rejectedPosNotInRoster": 1,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 2,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 0
+      },
+      "secondaryCount": 1,
+      "secondaryFunnel": {
+        "rawCandidates": 1,
+        "rawHitsInCorpus": 1,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 0,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 0,
+        "rejectedPosNotInRoster": 0,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 0
+      },
+      "total": 4,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "omen",
+      "stratum": "diagnostic",
+      "pos": "noun",
+      "allPos": [
+        "noun",
+        "verb"
+      ],
+      "synsets": 2,
+      "auditExpected": "needs real-context investigation",
+      "primaryCount": 6,
+      "primaryFunnel": {
+        "rawCandidates": 266,
+        "rawHitsInCorpus": 266,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 66,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 71,
+        "rejectedPosNotInRoster": 11,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 3,
+        "rejectedPerPosCap": 109,
+        "notExaminedAfterTarget": 0
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 6,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "sporty",
+      "stratum": "diagnostic",
+      "pos": "adjective",
+      "allPos": [
+        "adjective"
+      ],
+      "synsets": 3,
+      "auditExpected": "needs real-context investigation",
+      "primaryCount": 0,
+      "primaryFunnel": {
+        "rawCandidates": 0,
+        "rawHitsInCorpus": 0,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 0,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 0,
+        "rejectedPosNotInRoster": 0,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 0
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": {
+        "rawCandidates": 0,
+        "rawHitsInCorpus": 0,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 0,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 0,
+        "rejectedPosNotInRoster": 0,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 0
+      },
+      "total": 0,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "withdraw",
+      "stratum": "diagnostic",
+      "pos": "verb",
+      "allPos": [
+        "verb"
+      ],
+      "synsets": 12,
+      "auditExpected": "needs real-context investigation",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 1363,
+        "rawHitsInCorpus": 1363,
+        "candidateCapApplied": false,
+        "rejectedShortSentence": 11,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 10,
+        "rejectedPosNotInRoster": 7,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 0,
+        "rejectedPerPosCap": 0,
+        "notExaminedAfterTarget": 1325
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    },
+    {
+      "lemma": "world",
+      "stratum": "diagnostic",
+      "pos": "noun",
+      "allPos": [
+        "noun",
+        "adjective"
+      ],
+      "synsets": 9,
+      "auditExpected": "needs real-context investigation",
+      "primaryCount": 10,
+      "primaryFunnel": {
+        "rawCandidates": 3000,
+        "rawHitsInCorpus": 15460,
+        "candidateCapApplied": true,
+        "rejectedShortSentence": 43,
+        "rejectedResolverFullMatch": 0,
+        "rejectedPosUncertain": 10,
+        "rejectedPosNotInRoster": 4,
+        "rejectedNearDuplicate": 0,
+        "rejectedAuthorCap": 12,
+        "rejectedPerPosCap": 50,
+        "notExaminedAfterTarget": 2871
+      },
+      "secondaryCount": 0,
+      "secondaryFunnel": null,
+      "total": 10,
+      "resolverFullMatchCollisions": 0,
+      "resolverAnchorMarked": 0
+    }
+  ],
+  "stratumC": {
+    "purpose": "Stratified random sample of the full inventory for binding-precision estimation",
+    "inventorySize": 50986,
+    "posSource": "release/wordnet/wordnet-{noun,verb,adj,adv}.json (WordNet 3.0), not the pack resolver POS codes",
+    "n": 200,
+    "maxOccurrencesPerLemma": 3,
+    "occurrencesSampled": 370,
+    "droppedCrossStratumRepeats": 1,
+    "lemmasWithoutOccurrence": [
+      "achlamydeous",
+      "aconite",
+      "amoralism",
+      "anginous",
+      "balloonist",
+      "catachresis",
+      "catenary",
+      "chauvinism",
+      "chili pepper",
+      "chinked",
+      "cline",
+      "convincingness",
+      "crash-dive",
+      "crematorium",
+      "curiousness",
+      "dashiki",
+      "dogie",
+      "downfield",
+      "elementarily",
+      "expressionism",
+      "extemporization",
+      "forgettable",
+      "fucus",
+      "gametocyte",
+      "glassworks",
+      "hagiography",
+      "hallucinate",
+      "hymenopterous",
+      "insubstantiality",
+      "kaph",
+      "kickshaw",
+      "laryngitis",
+      "leucoma",
+      "luganda",
+      "maiolica",
+      "mantid",
+      "marzipan",
+      "metallurgical",
+      "microbiology",
+      "moronic",
+      "mugging",
+      "neoliberal",
+      "overarm",
+      "pavage",
+      "penologist",
+      "personableness",
+      "photon",
+      "ponderosity",
+      "prancer",
+      "pseudepigrapha",
+      "re-formation",
+      "sceptically",
+      "scoria",
+      "soupspoon",
+      "spirula",
+      "stave in",
+      "surface-active",
+      "sutra",
+      "tee up",
+      "thirdhand",
+      "toddler",
+      "whip-round"
+    ],
+    "design": [
+      {
+        "cell": "adjective|lots",
+        "cellPopulation": 555,
+        "quota": 2,
+        "drawn": 2
+      },
+      {
+        "cell": "adjective|many",
+        "cellPopulation": 4882,
+        "quota": 19,
+        "drawn": 19
+      },
+      {
+        "cell": "adjective|some",
+        "cellPopulation": 7872,
+        "quota": 31,
+        "drawn": 31
+      },
+      {
+        "cell": "adverb|lots",
+        "cellPopulation": 43,
+        "quota": 1,
+        "drawn": 1
+      },
+      {
+        "cell": "adverb|many",
+        "cellPopulation": 537,
+        "quota": 2,
+        "drawn": 2
+      },
+      {
+        "cell": "adverb|some",
+        "cellPopulation": 2235,
+        "quota": 9,
+        "drawn": 9
+      },
+      {
+        "cell": "noun|lots",
+        "cellPopulation": 1932,
+        "quota": 8,
+        "drawn": 8
+      },
+      {
+        "cell": "noun|many",
+        "cellPopulation": 9528,
+        "quota": 37,
+        "drawn": 37
+      },
+      {
+        "cell": "noun|some",
+        "cellPopulation": 17478,
+        "quota": 68,
+        "drawn": 68
+      },
+      {
+        "cell": "verb|lots",
+        "cellPopulation": 1148,
+        "quota": 4,
+        "drawn": 4
+      },
+      {
+        "cell": "verb|many",
+        "cellPopulation": 2479,
+        "quota": 10,
+        "drawn": 10
+      },
+      {
+        "cell": "verb|some",
+        "cellPopulation": 2297,
+        "quota": 9,
+        "drawn": 9
+      }
+    ],
+    "confidenceInterval": {
+      "note": "No binding-precision values are measured in T0 (that is T1/T3). The interval below is the design margin at the worst case p=0.5; substitute the measured p from T3.",
+      "worstCaseHalfWidth95": 0.0693,
+      "perCellHalfWidth95": [
+        {
+          "cell": "adjective|lots",
+          "n": 2,
+          "halfWidth95": 0.693
+        },
+        {
+          "cell": "adjective|many",
+          "n": 19,
+          "halfWidth95": 0.2248
+        },
+        {
+          "cell": "adjective|some",
+          "n": 31,
+          "halfWidth95": 0.176
+        },
+        {
+          "cell": "adverb|lots",
+          "n": 1,
+          "halfWidth95": 0.98
+        },
+        {
+          "cell": "adverb|many",
+          "n": 2,
+          "halfWidth95": 0.693
+        },
+        {
+          "cell": "adverb|some",
+          "n": 9,
+          "halfWidth95": 0.3267
+        },
+        {
+          "cell": "noun|lots",
+          "n": 8,
+          "halfWidth95": 0.3465
+        },
+        {
+          "cell": "noun|many",
+          "n": 37,
+          "halfWidth95": 0.1611
+        },
+        {
+          "cell": "noun|some",
+          "n": 68,
+          "halfWidth95": 0.1188
+        },
+        {
+          "cell": "verb|lots",
+          "n": 4,
+          "halfWidth95": 0.49
+        },
+        {
+          "cell": "verb|many",
+          "n": 10,
+          "halfWidth95": 0.3099
+        },
+        {
+          "cell": "verb|some",
+          "n": 9,
+          "halfWidth95": 0.3267
+        }
+      ]
+    }
+  },
+  "artifacts": {
+    "data/occurrences/occurrences.jsonl": {
+      "sha256": "63d148b51657c8d325f822782a9eed31a8077f049a9522b3c564554916ef4209",
+      "bytes": 720850,
+      "lines": 543
+    },
+    "data/occurrences/roster.json": {
+      "sha256": "50d601a7ea7b6721f18321569993fb3cb18b8e5bdc5f03a18d13b2c5d934dcf3"
+    },
+    "data/occurrences/SOURCE.md": {
+      "sha256": "ed17bb4394616687954c3c860463f32cbe9f71634d8b24ad00481a2d8dfd5798"
+    },
+    "data/occurrences/corpus-manifest.json": {
+      "sha256": "1423601e5f61b8d87c425f9aebe1a8426e6b9dff23bf49908f32c772eba5c3aa"
+    },
+    "data/occurrences/corpus-manifest-secondary.json": {
+      "sha256": "5b35fd06625beb83dd52e8280cd5ae6a059e16aa2f786dbcb9ff5afd531c6c4e"
+    },
+    "data/occurrences/resolver-seen-index.json": {
+      "sha256": "09f7a3ded4654254a2ec70f57e3ec3151d602e61e393dddb3ac978a219647ae5",
+      "committed": false,
+      "reason": "33 MB; rebuild with scripts/build_resolver_seen_index.mjs"
+    }
+  },
+  "outOfScope": "No product dictionary, resolver, alignment or data file is read for POS or modified. No C3/C4 classification is performed."
+}

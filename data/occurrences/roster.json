@@ -1,0 +1,494 @@
+{
+  "rosterVersion": "2.0.0",
+  "corpus": {
+    "documents": 344,
+    "words": 23676658,
+    "tier": "primary",
+    "yieldScope": "primary tier only; see dataset-manifest.json perLemma[].secondaryFunnel for secondary-tier yields"
+  },
+  "derivation": {
+    "diagnostic": "the 7 T1 lemmas from the T0 lemma table requiring real-context investigation",
+    "control": "the 4 prior VALID_SENSE_PASS surfaces + passing lemmas stratified by POS x candidate-count band, each constrained to a usable meaningsVi[0] and >= 60 measured corpus hits",
+    "constraints": [
+      "a control lemma must have a usable meaningsVi[0], otherwise viEvidence is vacuous and it cannot yield VALID_SENSE_PASS",
+      "a control lemma must have >= 60 measured hits in the frozen corpus, otherwise its sample would be under-powered",
+      "diagnostic lemmas are never reused as controls"
+    ]
+  },
+  "lemmas": [
+    {
+      "stratum": "diagnostic",
+      "lemma": "lucent",
+      "pos": "adjective",
+      "band": "adjective|some",
+      "allPos": [
+        "adjective"
+      ],
+      "synsets": 1,
+      "role": "rare adjective",
+      "notes": "audit failure despite clean lexical evidence",
+      "yield": {
+        "hits": 11,
+        "docs": 6,
+        "perMillion": 0.46
+      },
+      "auditExpected": "needs real-context investigation",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "diagnostic",
+      "lemma": "nescience",
+      "pos": "noun",
+      "band": "noun|some",
+      "allPos": [
+        "noun"
+      ],
+      "synsets": 1,
+      "role": "rare noun",
+      "notes": "audit failure despite clean lexical evidence",
+      "yield": {
+        "hits": 9,
+        "docs": 3,
+        "perMillion": 0.38
+      },
+      "auditExpected": "needs real-context investigation",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "diagnostic",
+      "lemma": "omen",
+      "pos": "noun",
+      "band": "noun|many",
+      "allPos": [
+        "noun",
+        "verb"
+      ],
+      "synsets": 2,
+      "role": "noun with verb-adjacent uses",
+      "notes": "audit failure; multiple relevant POS",
+      "yield": {
+        "hits": 174,
+        "docs": 50,
+        "perMillion": 7.35
+      },
+      "auditExpected": "needs real-context investigation",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "diagnostic",
+      "lemma": "sporty",
+      "pos": "adjective",
+      "band": "adjective|many",
+      "allPos": [
+        "adjective"
+      ],
+      "synsets": 3,
+      "role": "modern adjective",
+      "notes": "audit failure; register mismatch",
+      "yield": {
+        "hits": 0,
+        "docs": 0,
+        "perMillion": 0
+      },
+      "auditExpected": "needs real-context investigation",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "diagnostic",
+      "lemma": "world",
+      "pos": "noun",
+      "band": "noun|many",
+      "allPos": [
+        "noun",
+        "adjective"
+      ],
+      "synsets": 9,
+      "role": "high-frequency, many POS",
+      "notes": "audit failure on a high-frequency ambiguous noun",
+      "yield": {
+        "hits": 15230,
+        "docs": 316,
+        "perMillion": 643.25
+      },
+      "auditExpected": "needs real-context investigation",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "diagnostic",
+      "lemma": "light",
+      "pos": "adjective",
+      "band": "adjective|many",
+      "allPos": [
+        "noun",
+        "verb",
+        "adjective",
+        "adverb"
+      ],
+      "synsets": 47,
+      "role": "high-frequency, many POS",
+      "notes": "audit failure on a high-frequency ambiguous noun/verb/adjective",
+      "yield": {
+        "hits": 10007,
+        "docs": 315,
+        "perMillion": 422.65
+      },
+      "auditExpected": "needs real-context investigation",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "diagnostic",
+      "lemma": "withdraw",
+      "pos": "verb",
+      "band": "verb|many",
+      "allPos": [
+        "verb"
+      ],
+      "synsets": 12,
+      "role": "verb",
+      "notes": "audit failure; verb frame binding",
+      "yield": {
+        "hits": 362,
+        "docs": 116,
+        "perMillion": 15.29
+      },
+      "auditExpected": "needs real-context investigation",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "counterargument",
+      "pos": "noun",
+      "band": "noun|some",
+      "allPos": [
+        "noun"
+      ],
+      "synsets": 1,
+      "role": "prior VALID_SENSE_PASS case",
+      "notes": "one of the 4 prior VALID_SENSE_PASS audit surfaces - entry found only in the reviewed metadata pack",
+      "yield": {
+        "hits": 2,
+        "docs": 1,
+        "perMillion": 0.08
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "attempt",
+      "pos": "verb",
+      "band": "verb|many",
+      "allPos": [
+        "noun",
+        "verb"
+      ],
+      "synsets": 4,
+      "role": "prior VALID_SENSE_PASS case",
+      "notes": "one of the 4 prior VALID_SENSE_PASS audit surfaces",
+      "yield": {
+        "hits": 3490,
+        "docs": 281,
+        "perMillion": 147.4
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "account for",
+      "pos": "verb",
+      "band": "verb|many",
+      "allPos": [
+        "verb"
+      ],
+      "synsets": 2,
+      "role": "prior VALID_SENSE_PASS case",
+      "notes": "one of the 4 prior VALID_SENSE_PASS audit surfaces",
+      "yield": {
+        "hits": 411,
+        "docs": 128,
+        "perMillion": 17.36
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "balsam",
+      "pos": "noun",
+      "band": "noun|many",
+      "allPos": [
+        "noun"
+      ],
+      "synsets": 3,
+      "role": "stratified passing control",
+      "notes": "noun|many band, audit-observed passing",
+      "yield": {
+        "hits": 80,
+        "docs": 22,
+        "perMillion": 3.38
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "behalf",
+      "pos": "noun",
+      "band": "noun|many",
+      "allPos": [
+        "noun"
+      ],
+      "synsets": 2,
+      "role": "stratified passing control",
+      "notes": "noun|many band, audit-observed passing",
+      "yield": {
+        "hits": 528,
+        "docs": 136,
+        "perMillion": 22.3
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "astonishment",
+      "pos": "noun",
+      "band": "noun|some",
+      "allPos": [
+        "noun"
+      ],
+      "synsets": 1,
+      "role": "stratified passing control",
+      "notes": "noun|some band, audit-observed passing",
+      "yield": {
+        "hits": 442,
+        "docs": 119,
+        "perMillion": 18.67
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "confiscation",
+      "pos": "noun",
+      "band": "noun|some",
+      "allPos": [
+        "noun"
+      ],
+      "synsets": 1,
+      "role": "stratified passing control",
+      "notes": "noun|some band, audit-observed passing",
+      "yield": {
+        "hits": 89,
+        "docs": 31,
+        "perMillion": 3.76
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "ape",
+      "pos": "verb",
+      "band": "verb|many",
+      "allPos": [
+        "noun",
+        "verb"
+      ],
+      "synsets": 5,
+      "role": "stratified passing control",
+      "notes": "verb|many band, audit-observed passing",
+      "yield": {
+        "hits": 94,
+        "docs": 33,
+        "perMillion": 3.97
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "array",
+      "pos": "verb",
+      "band": "verb|many",
+      "allPos": [
+        "noun",
+        "verb"
+      ],
+      "synsets": 6,
+      "role": "stratified passing control",
+      "notes": "verb|many band, audit-observed passing",
+      "yield": {
+        "hits": 275,
+        "docs": 92,
+        "perMillion": 11.61
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "abominable",
+      "pos": "adjective",
+      "band": "adjective|many",
+      "allPos": [
+        "adjective"
+      ],
+      "synsets": 2,
+      "role": "stratified passing control",
+      "notes": "adjective|many band, audit-observed passing",
+      "yield": {
+        "hits": 124,
+        "docs": 52,
+        "perMillion": 5.24
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "airy",
+      "pos": "adjective",
+      "band": "adjective|many",
+      "allPos": [
+        "adjective"
+      ],
+      "synsets": 4,
+      "role": "stratified passing control",
+      "notes": "adjective|many band, audit-observed passing",
+      "yield": {
+        "hits": 205,
+        "docs": 77,
+        "perMillion": 8.66
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "ecstatic",
+      "pos": "adjective",
+      "band": "adjective|some",
+      "allPos": [
+        "adjective"
+      ],
+      "synsets": 1,
+      "role": "stratified passing control",
+      "notes": "adjective|some band, audit-observed passing",
+      "yield": {
+        "hits": 70,
+        "docs": 32,
+        "perMillion": 2.96
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "eloquent",
+      "pos": "adjective",
+      "band": "adjective|some",
+      "allPos": [
+        "adjective"
+      ],
+      "synsets": 1,
+      "role": "stratified passing control",
+      "notes": "adjective|some band, audit-observed passing",
+      "yield": {
+        "hits": 290,
+        "docs": 107,
+        "perMillion": 12.25
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "control",
+      "lemma": "gaily",
+      "pos": "adverb",
+      "band": "adverb|some",
+      "allPos": [
+        "adverb"
+      ],
+      "synsets": 1,
+      "role": "stratified passing control",
+      "notes": "adverb|some band, audit-observed passing",
+      "yield": {
+        "hits": 113,
+        "docs": 50,
+        "perMillion": 4.77
+      },
+      "auditExpected": "VALID_SENSE_PASS",
+      "goldSense": "",
+      "goldPos": ""
+    },
+    {
+      "stratum": "controlStratumC",
+      "lemma": "bindingPrecisionSample",
+      "pos": "mixed",
+      "band": "inventory",
+      "allPos": [
+        "noun",
+        "verb",
+        "adjective",
+        "adverb"
+      ],
+      "synsets": 0,
+      "role": "stratified random sample of full inventory for binding-precision CI",
+      "notes": "sample size n and CI reported in dataset manifest; not a fixed lemma list",
+      "yield": {
+        "hits": 0,
+        "docs": 0,
+        "perMillion": 0
+      },
+      "auditExpected": "binding-precision estimation",
+      "goldSense": "",
+      "goldPos": ""
+    }
+  ],
+  "samplingRules": {
+    "version": "3.0.0",
+    "seed": "0x5eed1eaf",
+    "seedAuthority": "the seed actually used by the single frozen run of scripts/build_occurrence_dataset.mjs; the roster script only records the rule, it never samples",
+    "oneRunThenFreeze": true,
+    "minPerLemma": 5,
+    "targetPerLemma": 10,
+    "posCapRatio": 0.6,
+    "posSource": "WordNet only - amendment 2 forbids deriving pos from the product pipeline",
+    "goldFields": "goldSense/goldPos stay empty in T0 and are filled by T0b; auditExpected is never gold",
+    "secondaryTier": "pre-declared in SOURCE.md section 7; used only when the primary tier yields < 5 occurrences for a lemma, and tagged source_tier=secondary"
+  },
+  "surfaceVariants": {
+    "counterargument": [
+      "counterarguments",
+      "counter-argument",
+      "counter-arguments"
+    ],
+    "attempt": [
+      "attempted"
+    ],
+    "account for": []
+  }
+}

@@ -1,0 +1,2066 @@
+[
+  {
+    "id": 3,
+    "bucket": "essays",
+    "issued": 1973,
+    "title": "John F. Kennedy's Inaugural Address"
+  },
+  {
+    "id": 10420,
+    "bucket": "essays",
+    "issued": 2003,
+    "title": "The Principles of Success in Literature"
+  },
+  {
+    "id": 7099,
+    "bucket": "essays",
+    "issued": 2004,
+    "title": "A Trip to Manitoba"
+  },
+  {
+    "id": 11911,
+    "bucket": "essays",
+    "issued": 2004,
+    "title": "The Silent Isle"
+  },
+  {
+    "id": 13551,
+    "bucket": "essays",
+    "issued": 2004,
+    "title": "Notes and Queries, Number 50, October 12, 1850"
+  },
+  {
+    "id": 8900,
+    "bucket": "essays",
+    "issued": 2005,
+    "title": "The London and Country Brewer"
+  },
+  {
+    "id": 16623,
+    "bucket": "essays",
+    "issued": 2005,
+    "title": "Letters of a Woman Homesteader"
+  },
+  {
+    "id": 19110,
+    "bucket": "essays",
+    "issued": 2006,
+    "title": "The Arena, Volume 4, No. 19, June, 1891"
+  },
+  {
+    "id": 22264,
+    "bucket": "essays",
+    "issued": 2007,
+    "title": "Irish Books and Irish People"
+  },
+  {
+    "id": 26116,
+    "bucket": "essays",
+    "issued": 2008,
+    "title": "The art of angling"
+  },
+  {
+    "id": 28580,
+    "bucket": "essays",
+    "issued": 2009,
+    "title": "An Ohio woman in the Philippines"
+  },
+  {
+    "id": 31851,
+    "bucket": "essays",
+    "issued": 2010,
+    "title": "McClure's Magazine, Vol. XXXI, No. 4, August 1908"
+  },
+  {
+    "id": 35412,
+    "bucket": "essays",
+    "issued": 2011,
+    "title": "My Unknown Chum: \"Aguecheek\""
+  },
+  {
+    "id": 38180,
+    "bucket": "essays",
+    "issued": 2011,
+    "title": "An American at Oxford"
+  },
+  {
+    "id": 40380,
+    "bucket": "essays",
+    "issued": 2012,
+    "title": "The School System of Norway"
+  },
+  {
+    "id": 42782,
+    "bucket": "essays",
+    "issued": 2013,
+    "title": "Notes and Queries, Number 167, January 8, 1853\r\nA Medium of Inter-communication for Literary Men, Artists, Antiquaries, Genealogists, etc."
+  },
+  {
+    "id": 44968,
+    "bucket": "essays",
+    "issued": 2014,
+    "title": "Peeps at Many LandsâIndia"
+  },
+  {
+    "id": 47463,
+    "bucket": "essays",
+    "issued": 2014,
+    "title": "Wintering in the Riviera\r\nWith Notes of Travel in Italy and France, and Practical Hints to Travellers"
+  },
+  {
+    "id": 49923,
+    "bucket": "essays",
+    "issued": 2015,
+    "title": "The Mentor: Among the Ruins of Rome, Vol. 1, Num. 46, Serial No. 46"
+  },
+  {
+    "id": 52965,
+    "bucket": "essays",
+    "issued": 2016,
+    "title": "Brazil and the River Plate in 1868"
+  },
+  {
+    "id": 55208,
+    "bucket": "essays",
+    "issued": 2017,
+    "title": "The Chautauquan, Vol. 04, July 1884, No. 10"
+  },
+  {
+    "id": 57580,
+    "bucket": "essays",
+    "issued": 2018,
+    "title": "On Sunset Highways: A Book of Motor Rambles in California"
+  },
+  {
+    "id": 59528,
+    "bucket": "essays",
+    "issued": 2019,
+    "title": "A Glance at the Past and Present of the Negro: An Address"
+  },
+  {
+    "id": 62227,
+    "bucket": "essays",
+    "issued": 2020,
+    "title": "Bicycling for Ladies\nThe Common Sense of Bicycling; with Hints as to the Art of WheelingâAdvice to BeginnersâDressâCare of the BicycleâMechanicsâTrainingâExercise, etc., etc."
+  },
+  {
+    "id": 64203,
+    "bucket": "essays",
+    "issued": 2021,
+    "title": "The Pedestrian's Guide through North Wales\r\nA tour performed in 1837"
+  },
+  {
+    "id": 66331,
+    "bucket": "essays",
+    "issued": 2021,
+    "title": "A Treatise on Bread, and Bread-making"
+  },
+  {
+    "id": 68844,
+    "bucket": "essays",
+    "issued": 2022,
+    "title": "Bookbinding for beginners"
+  },
+  {
+    "id": 71651,
+    "bucket": "essays",
+    "issued": 2023,
+    "title": "Cairo to Kisumu"
+  },
+  {
+    "id": 74308,
+    "bucket": "essays",
+    "issued": 2024,
+    "title": "A diplomat's wife in Mexico"
+  },
+  {
+    "id": 77113,
+    "bucket": "essays",
+    "issued": 2025,
+    "title": "The autobiography of Sir Henry Morton Stanley, G.C.B."
+  },
+  {
+    "id": 10,
+    "bucket": "fiction",
+    "issued": 1989,
+    "title": "The King James Version of the Bible"
+  },
+  {
+    "id": 1121,
+    "bucket": "fiction",
+    "issued": 1997,
+    "title": "As You Like It"
+  },
+  {
+    "id": 2039,
+    "bucket": "fiction",
+    "issued": 2000,
+    "title": "Evangeline: A Tale of Acadie"
+  },
+  {
+    "id": 3451,
+    "bucket": "fiction",
+    "issued": 2002,
+    "title": "Marie Antoinette and Her Son"
+  },
+  {
+    "id": 4638,
+    "bucket": "fiction",
+    "issued": 2003,
+    "title": "California, 1849-1913; Or, The Rambling Sketches and Experiences of Sixty-four Years' Residence in that State"
+  },
+  {
+    "id": 3591,
+    "bucket": "fiction",
+    "issued": 2004,
+    "title": "Essays of Michel de Montaigne â Volume 11"
+  },
+  {
+    "id": 5543,
+    "bucket": "fiction",
+    "issued": 2004,
+    "title": "In the Fire of the Forge: A Romance of Old Nuremberg â Volume 01"
+  },
+  {
+    "id": 6317,
+    "bucket": "fiction",
+    "issued": 2004,
+    "title": "Sailing Alone Around the World"
+  },
+  {
+    "id": 9449,
+    "bucket": "fiction",
+    "issued": 2004,
+    "title": "Samantha among the Brethren â Volume 7"
+  },
+  {
+    "id": 11599,
+    "bucket": "fiction",
+    "issued": 2004,
+    "title": "Withered Leaves from Memory's Garland"
+  },
+  {
+    "id": 12835,
+    "bucket": "fiction",
+    "issued": 2004,
+    "title": "'Lena Rivers"
+  },
+  {
+    "id": 14154,
+    "bucket": "fiction",
+    "issued": 2004,
+    "title": "The Tale of Terror: A Study of the Gothic Romance"
+  },
+  {
+    "id": 7835,
+    "bucket": "fiction",
+    "issued": 2005,
+    "title": "Lothair"
+  },
+  {
+    "id": 9377,
+    "bucket": "fiction",
+    "issued": 2005,
+    "title": "London Pride, Or, When the World Was Younger"
+  },
+  {
+    "id": 15585,
+    "bucket": "fiction",
+    "issued": 2005,
+    "title": "Humorous Masterpieces from American Literature"
+  },
+  {
+    "id": 16890,
+    "bucket": "fiction",
+    "issued": 2005,
+    "title": "Hetty Wesley"
+  },
+  {
+    "id": 5228,
+    "bucket": "fiction",
+    "issued": 2006,
+    "title": "Ayesha, the Return of She"
+  },
+  {
+    "id": 18409,
+    "bucket": "fiction",
+    "issued": 2006,
+    "title": "By the Roadside"
+  },
+  {
+    "id": 19763,
+    "bucket": "fiction",
+    "issued": 2006,
+    "title": "Overland Red: A Romance of the Moonstone CaÃ±on Trail"
+  },
+  {
+    "id": 21078,
+    "bucket": "fiction",
+    "issued": 2007,
+    "title": "The tale of Miss Kitty Cat"
+  },
+  {
+    "id": 22087,
+    "bucket": "fiction",
+    "issued": 2007,
+    "title": "Hazel Squirrel and Other Stories"
+  },
+  {
+    "id": 23213,
+    "bucket": "fiction",
+    "issued": 2007,
+    "title": "Uncle Wiggily and Old Mother Hubbard\r\nAdventures of the Rabbit Gentleman with the Mother Goose Characters"
+  },
+  {
+    "id": 24119,
+    "bucket": "fiction",
+    "issued": 2008,
+    "title": "Make Mine Homogenized"
+  },
+  {
+    "id": 25451,
+    "bucket": "fiction",
+    "issued": 2008,
+    "title": "The Sleeping Beauty"
+  },
+  {
+    "id": 26719,
+    "bucket": "fiction",
+    "issued": 2008,
+    "title": "An Anarchist Woman"
+  },
+  {
+    "id": 28196,
+    "bucket": "fiction",
+    "issued": 2009,
+    "title": "Harper's Young People, November 18, 1879\nAn Illustrated Weekly"
+  },
+  {
+    "id": 29407,
+    "bucket": "fiction",
+    "issued": 2009,
+    "title": "The Valley of Silent Men: A Story of the Three River Country"
+  },
+  {
+    "id": 30588,
+    "bucket": "fiction",
+    "issued": 2009,
+    "title": "The Pony Rider Boys in Alaska; Or, The Gold Diggers of Taku Pass"
+  },
+  {
+    "id": 31915,
+    "bucket": "fiction",
+    "issued": 2010,
+    "title": "An Artist in Crime"
+  },
+  {
+    "id": 32919,
+    "bucket": "fiction",
+    "issued": 2010,
+    "title": "Renshaw Fanning's Quest: A Tale of the High Veldt"
+  },
+  {
+    "id": 34163,
+    "bucket": "fiction",
+    "issued": 2010,
+    "title": "The Roman Poets of the Augustan Age: Virgil"
+  },
+  {
+    "id": 35401,
+    "bucket": "fiction",
+    "issued": 2011,
+    "title": "Friend Island"
+  },
+  {
+    "id": 36631,
+    "bucket": "fiction",
+    "issued": 2011,
+    "title": "King Eric and the Outlaws, Vol. 1\r\nor, the Throne, the Church, and the People in the Thirteenth Century."
+  },
+  {
+    "id": 37976,
+    "bucket": "fiction",
+    "issued": 2011,
+    "title": "Dot and Tot of Merryland"
+  },
+  {
+    "id": 39520,
+    "bucket": "fiction",
+    "issued": 2012,
+    "title": "The Huguenot: A Tale of the French Protestants. Volumes I-III"
+  },
+  {
+    "id": 40924,
+    "bucket": "fiction",
+    "issued": 2012,
+    "title": "The Invention of Lithography"
+  },
+  {
+    "id": 42201,
+    "bucket": "fiction",
+    "issued": 2013,
+    "title": "The Irish Penny Journal, Vol. 1 No. 02, July 11, 1840"
+  },
+  {
+    "id": 43638,
+    "bucket": "fiction",
+    "issued": 2013,
+    "title": "Our Little Swedish Cousin"
+  },
+  {
+    "id": 45164,
+    "bucket": "fiction",
+    "issued": 2014,
+    "title": "Village Annals, Containing Austerus and Humanus: A Sympathetic Tale"
+  },
+  {
+    "id": 46738,
+    "bucket": "fiction",
+    "issued": 2014,
+    "title": "Punch, or the London Charivari, Volume 107, September 29, 1894"
+  },
+  {
+    "id": 48473,
+    "bucket": "fiction",
+    "issued": 2015,
+    "title": "Foxglove Manor: A Novel, Volume 3 (of 3)"
+  },
+  {
+    "id": 50147,
+    "bucket": "fiction",
+    "issued": 2015,
+    "title": "Beaver: An Alphabet of Typical Specimens\r\nTogether with Notes and a Terminal Essay on the Manners and Customs of Beavering Men"
+  },
+  {
+    "id": 51579,
+    "bucket": "fiction",
+    "issued": 2016,
+    "title": "A Daughter of the Morning"
+  },
+  {
+    "id": 53086,
+    "bucket": "fiction",
+    "issued": 2016,
+    "title": "The Inventor. Introducing the Wishing Box. A Christmas Play"
+  },
+  {
+    "id": 54771,
+    "bucket": "fiction",
+    "issued": 2017,
+    "title": "A Prince of Swindlers"
+  },
+  {
+    "id": 56338,
+    "bucket": "fiction",
+    "issued": 2018,
+    "title": "Ruth's Marriage in Mars: A Scientific Novel"
+  },
+  {
+    "id": 58013,
+    "bucket": "fiction",
+    "issued": 2018,
+    "title": "The Dreadnought Boys on a Submarine"
+  },
+  {
+    "id": 59545,
+    "bucket": "fiction",
+    "issued": 2019,
+    "title": "Wrong Analogy"
+  },
+  {
+    "id": 60999,
+    "bucket": "fiction",
+    "issued": 2019,
+    "title": "The Seeder"
+  },
+  {
+    "id": 62480,
+    "bucket": "fiction",
+    "issued": 2020,
+    "title": "Above the French Lines\nLetters of Stuart Walcott, American Aviator: July 4, 1917, to December 8, 1917"
+  },
+  {
+    "id": 63987,
+    "bucket": "fiction",
+    "issued": 2020,
+    "title": "Wreck Off Triton"
+  },
+  {
+    "id": 65331,
+    "bucket": "fiction",
+    "issued": 2021,
+    "title": "The Cosmic Looters"
+  },
+  {
+    "id": 66648,
+    "bucket": "fiction",
+    "issued": 2021,
+    "title": "Newshound"
+  },
+  {
+    "id": 68009,
+    "bucket": "fiction",
+    "issued": 2022,
+    "title": "The Last Lady of Mulberry: A Story of Italian New York"
+  },
+  {
+    "id": 69332,
+    "bucket": "fiction",
+    "issued": 2022,
+    "title": "Les beaux messieurs de Bois-DorÃ© Vol. 2 (of 2)"
+  },
+  {
+    "id": 70776,
+    "bucket": "fiction",
+    "issued": 2023,
+    "title": "The curse of Clifton"
+  },
+  {
+    "id": 72219,
+    "bucket": "fiction",
+    "issued": 2023,
+    "title": "Cicely"
+  },
+  {
+    "id": 73649,
+    "bucket": "fiction",
+    "issued": 2024,
+    "title": "Ye butcher, ye baker, ye candlestick-maker"
+  },
+  {
+    "id": 75460,
+    "bucket": "fiction",
+    "issued": 2025,
+    "title": "\"They're a multitoode\" and other stories"
+  },
+  {
+    "id": 77111,
+    "bucket": "fiction",
+    "issued": 2025,
+    "title": "The mother"
+  },
+  {
+    "id": 7,
+    "bucket": "history",
+    "issued": 1977,
+    "title": "The Mayflower Compact"
+  },
+  {
+    "id": 10522,
+    "bucket": "history",
+    "issued": 2003,
+    "title": "Beacon Lights of History, Volume 04: Imperial Antiquity"
+  },
+  {
+    "id": 5715,
+    "bucket": "history",
+    "issued": 2004,
+    "title": "The Campaign of Chancellorsville"
+  },
+  {
+    "id": 11956,
+    "bucket": "history",
+    "issued": 2004,
+    "title": "A Popular History of France from the Earliest Times, Volume 6"
+  },
+  {
+    "id": 8928,
+    "bucket": "history",
+    "issued": 2005,
+    "title": "SimÃ³n BolÃ­var (The Liberator)\r\nPatriot, Warrior, Statesman, Father of Five Nations, a Sketch of His Life and His Work"
+  },
+  {
+    "id": 17329,
+    "bucket": "history",
+    "issued": 2005,
+    "title": "History of Egypt, ChaldÃ¦a, Syria, Babylonia, and Assyria, Volume 9 (of 12)"
+  },
+  {
+    "id": 20298,
+    "bucket": "history",
+    "issued": 2007,
+    "title": "History of the Wars, Books V and VI: The Gothic War"
+  },
+  {
+    "id": 24146,
+    "bucket": "history",
+    "issued": 2008,
+    "title": "A Commentary on Herodotus"
+  },
+  {
+    "id": 27586,
+    "bucket": "history",
+    "issued": 2008,
+    "title": "The Mentor: The War of 1812\nVolume 4, Number 3, Serial Number 103; 15 March, 1916."
+  },
+  {
+    "id": 31572,
+    "bucket": "history",
+    "issued": 2010,
+    "title": "Rulers of India: Akbar"
+  },
+  {
+    "id": 35182,
+    "bucket": "history",
+    "issued": 2011,
+    "title": "Memoir of Queen Adelaide, Consort of King William IV."
+  },
+  {
+    "id": 38167,
+    "bucket": "history",
+    "issued": 2011,
+    "title": "Life Gleanings"
+  },
+  {
+    "id": 41109,
+    "bucket": "history",
+    "issued": 2012,
+    "title": "Admiral Jellicoe"
+  },
+  {
+    "id": 43810,
+    "bucket": "history",
+    "issued": 2013,
+    "title": "Woodstock: An historical sketch"
+  },
+  {
+    "id": 46303,
+    "bucket": "history",
+    "issued": 2014,
+    "title": "South Africa and the Transvaal War, Vol. 6 (of 8)\r\nFrom the Occupation of Pretoria to Mr. Kruger's Departure from South Africa, with a Summarised Account of the Guerilla War to March 1901"
+  },
+  {
+    "id": 48920,
+    "bucket": "history",
+    "issued": 2015,
+    "title": "The Present State of Hayti (Saint Domingo) with Remarks on its Agriculture, Commerce, Laws, Religion, Finances, and Population"
+  },
+  {
+    "id": 50968,
+    "bucket": "history",
+    "issued": 2016,
+    "title": "The Origin of the Red Cross: \"Un souvenir de Solferino\""
+  },
+  {
+    "id": 53625,
+    "bucket": "history",
+    "issued": 2016,
+    "title": "Shakspeare and His Times [Vol. 1 of 2]\r\nIncluding the Biography of the Poet; criticisms on his genius and writings; a new chronology of his plays; a disquisition on the on the object of his sonnets; and a history of the manners, customs, and amusements, superstitions, poetry, and elegant literature of his age"
+  },
+  {
+    "id": 56141,
+    "bucket": "history",
+    "issued": 2017,
+    "title": "The British Interned in Switzerland"
+  },
+  {
+    "id": 58669,
+    "bucket": "history",
+    "issued": 2019,
+    "title": "History of Central America, Volume 2, 1530-1800\r\nThe Works of Hubert Howe Bancroft, Volume 7"
+  },
+  {
+    "id": 61635,
+    "bucket": "history",
+    "issued": 2020,
+    "title": "Americans All, Immigrants All"
+  },
+  {
+    "id": 65337,
+    "bucket": "history",
+    "issued": 2021,
+    "title": "The Age of Justinian and Theodora: A History of the Sixth Century A.D., Volume 1 (of 2)"
+  },
+  {
+    "id": 68895,
+    "bucket": "history",
+    "issued": 2022,
+    "title": "A soldier's mother in France"
+  },
+  {
+    "id": 72202,
+    "bucket": "history",
+    "issued": 2023,
+    "title": "The life, trial and conversations of Robert Emmet, Esq., leader of the Irish insurrection of 1803"
+  },
+  {
+    "id": 77105,
+    "bucket": "history",
+    "issued": 2025,
+    "title": "Chronicles of the house of Borgia"
+  },
+  {
+    "id": 29,
+    "bucket": "medicine",
+    "issued": 1992,
+    "title": "The 1990 United States Census [incomplete]"
+  },
+  {
+    "id": 4343,
+    "bucket": "medicine",
+    "issued": 2003,
+    "title": "How and When to Be Your Own Doctor"
+  },
+  {
+    "id": 10613,
+    "bucket": "medicine",
+    "issued": 2004,
+    "title": "The Theory of Social Revolutions"
+  },
+  {
+    "id": 13161,
+    "bucket": "medicine",
+    "issued": 2004,
+    "title": "Sane Sex Life and Sane Sex Living\r\nSome Things That All Sane People Ought to Know About Sex Nature and Sex Functioning; Its Place in the Economy of Life, Its Proper Training and Righteous Exercise"
+  },
+  {
+    "id": 8642,
+    "bucket": "medicine",
+    "issued": 2005,
+    "title": "Woman in the Nineteenth Century\r\nand Kindred Papers Relating to the Sphere, Condition and Duties, of Woman."
+  },
+  {
+    "id": 15489,
+    "bucket": "medicine",
+    "issued": 2005,
+    "title": "Dream Psychology: Psychoanalysis for Beginners"
+  },
+  {
+    "id": 17815,
+    "bucket": "medicine",
+    "issued": 2006,
+    "title": "Illusions: A Psychological Study"
+  },
+  {
+    "id": 19701,
+    "bucket": "medicine",
+    "issued": 2006,
+    "title": "Health Work in the Public Schools"
+  },
+  {
+    "id": 22090,
+    "bucket": "medicine",
+    "issued": 2007,
+    "title": "The Task of Social Hygiene"
+  },
+  {
+    "id": 24524,
+    "bucket": "medicine",
+    "issued": 2008,
+    "title": "The Young Maiden"
+  },
+  {
+    "id": 26836,
+    "bucket": "medicine",
+    "issued": 2008,
+    "title": "Cases of Organic Diseases of the Heart"
+  },
+  {
+    "id": 28359,
+    "bucket": "medicine",
+    "issued": 2009,
+    "title": "Applied Psychology: Making Your Own World\nBeing the Second of a Series of Twelve Volumes on the\nApplications of Psychology to the Problems of Personal and\nBusiness Efficiency"
+  },
+  {
+    "id": 30152,
+    "bucket": "medicine",
+    "issued": 2009,
+    "title": "Narcissistic and Psychopathic Leaders"
+  },
+  {
+    "id": 32118,
+    "bucket": "medicine",
+    "issued": 2010,
+    "title": "Child Versus Parent: Some Chapters on the Irrepressible Conflict in the Home"
+  },
+  {
+    "id": 33944,
+    "bucket": "medicine",
+    "issued": 2010,
+    "title": "How to Observe: Morals and Manners"
+  },
+  {
+    "id": 36055,
+    "bucket": "medicine",
+    "issued": 2011,
+    "title": "The Impending Crisis of the South: How to Meet It"
+  },
+  {
+    "id": 38831,
+    "bucket": "medicine",
+    "issued": 2012,
+    "title": "The Barb and the Bridle\r\nA Handbook of Equitation for Ladies, and Manual of Instruction in the Science of Riding, from the Preparatory Suppling Exercises"
+  },
+  {
+    "id": 40744,
+    "bucket": "medicine",
+    "issued": 2012,
+    "title": "Psychology and Social Practice"
+  },
+  {
+    "id": 42809,
+    "bucket": "medicine",
+    "issued": 2013,
+    "title": "A Treatise on the Incubus, or Night-Mare, Disturbed Sleep, Terrific Dreams and Nocturnal Visions"
+  },
+  {
+    "id": 45412,
+    "bucket": "medicine",
+    "issued": 2014,
+    "title": "\"Broke,\" The Man Without the Dime"
+  },
+  {
+    "id": 47501,
+    "bucket": "medicine",
+    "issued": 2014,
+    "title": "Married Love: A New Contribution to the Solution of Sex Difficulties"
+  },
+  {
+    "id": 49732,
+    "bucket": "medicine",
+    "issued": 2015,
+    "title": "Florence Nightingale to Her Nurses\r\nA selection from Miss Nightingale's addresses to probationers and nurses of the Nightingale school at St. Thomas's hospital"
+  },
+  {
+    "id": 51926,
+    "bucket": "medicine",
+    "issued": 2016,
+    "title": "The Eighth Year: A Vital Problem of Married Life"
+  },
+  {
+    "id": 53121,
+    "bucket": "medicine",
+    "issued": 2016,
+    "title": "Love: A Treatise on the Science of Sex-attraction\r\nfor the use of Physicians and Students of Medical Jurisprudence"
+  },
+  {
+    "id": 54704,
+    "bucket": "medicine",
+    "issued": 2017,
+    "title": "Marriage as a Trade"
+  },
+  {
+    "id": 56846,
+    "bucket": "medicine",
+    "issued": 2018,
+    "title": "What Every Mother Should Know; or, How Six Little Children Were Taught The Truth"
+  },
+  {
+    "id": 58490,
+    "bucket": "medicine",
+    "issued": 2018,
+    "title": "The Apothecary in Eighteenth-Century Williamsburg\r\nBeing an Account of his medical and chirurgical Services, as well as of his trade Practices as a Chymist"
+  },
+  {
+    "id": 59510,
+    "bucket": "medicine",
+    "issued": 2019,
+    "title": "Dr. Southwood Smith: A Retrospect"
+  },
+  {
+    "id": 60670,
+    "bucket": "medicine",
+    "issued": 2019,
+    "title": "Work of the Colored Law and Order League, Baltimore, Md."
+  },
+  {
+    "id": 62410,
+    "bucket": "medicine",
+    "issued": 2020,
+    "title": "Wintering at Mentone"
+  },
+  {
+    "id": 64056,
+    "bucket": "medicine",
+    "issued": 2020,
+    "title": "The Peril and the Preservation of the Home\nBeing the William L. Bull Lectures for the Year 1903"
+  },
+  {
+    "id": 65443,
+    "bucket": "medicine",
+    "issued": 2021,
+    "title": "Behind the Scenes in a Hotel"
+  },
+  {
+    "id": 67041,
+    "bucket": "medicine",
+    "issued": 2021,
+    "title": "Treatment of Cholera in the Royal Hospital, Haslar\r\nduring the months of July and August, 1849, with remarks on the name and origin of the disease."
+  },
+  {
+    "id": 67954,
+    "bucket": "medicine",
+    "issued": 2022,
+    "title": "The Life of Clara Barton, Founder of the American Red Cross (Vol. 2 of 2)"
+  },
+  {
+    "id": 69400,
+    "bucket": "medicine",
+    "issued": 2022,
+    "title": "Gay life in Paris: how life is enjoyed by the people of that great metropolis"
+  },
+  {
+    "id": 70530,
+    "bucket": "medicine",
+    "issued": 2023,
+    "title": "Physician and patient"
+  },
+  {
+    "id": 71650,
+    "bucket": "medicine",
+    "issued": 2023,
+    "title": "The crisis"
+  },
+  {
+    "id": 73285,
+    "bucket": "medicine",
+    "issued": 2024,
+    "title": "The city"
+  },
+  {
+    "id": 75279,
+    "bucket": "medicine",
+    "issued": 2025,
+    "title": "The ugly-girl papers"
+  },
+  {
+    "id": 77075,
+    "bucket": "medicine",
+    "issued": 2025,
+    "title": "Man's supreme inheritance"
+  },
+  {
+    "id": 1,
+    "bucket": "philosophy",
+    "issued": 1971,
+    "title": "The Declaration of Independence of the United States of America"
+  },
+  {
+    "id": 1722,
+    "bucket": "philosophy",
+    "issued": 1999,
+    "title": "Martin Luther's Large Catechism, translated by Bente and Dau"
+  },
+  {
+    "id": 4323,
+    "bucket": "philosophy",
+    "issued": 2003,
+    "title": "The Heart-Cry of Jesus"
+  },
+  {
+    "id": 5608,
+    "bucket": "philosophy",
+    "issued": 2004,
+    "title": "Trial of the Witnesses of the Resurrection of Jesus"
+  },
+  {
+    "id": 6964,
+    "bucket": "philosophy",
+    "issued": 2004,
+    "title": "Telling Fortunes By Tea Leaves: How to Read Your Fate in a Teacup"
+  },
+  {
+    "id": 11275,
+    "bucket": "philosophy",
+    "issued": 2004,
+    "title": "The Anti-Slavery Examiner, Omnibus"
+  },
+  {
+    "id": 12625,
+    "bucket": "philosophy",
+    "issued": 2004,
+    "title": "Architecture and Democracy"
+  },
+  {
+    "id": 13533,
+    "bucket": "philosophy",
+    "issued": 2004,
+    "title": "The Unfolding Life\r\nA Study of Development with Reference to Religious Training"
+  },
+  {
+    "id": 7452,
+    "bucket": "philosophy",
+    "issued": 2005,
+    "title": "Autobiography of a Yogi"
+  },
+  {
+    "id": 8064,
+    "bucket": "philosophy",
+    "issued": 2005,
+    "title": "The Bible, King James version, Book 64: 3 John"
+  },
+  {
+    "id": 8289,
+    "bucket": "philosophy",
+    "issued": 2005,
+    "title": "The World English Bible (WEB): 1 John"
+  },
+  {
+    "id": 8420,
+    "bucket": "philosophy",
+    "issued": 2005,
+    "title": "Issues in Population and Bioethics"
+  },
+  {
+    "id": 14552,
+    "bucket": "philosophy",
+    "issued": 2005,
+    "title": "A catechism of Christian doctrine, no. 2 : for confirmation classes"
+  },
+  {
+    "id": 15706,
+    "bucket": "philosophy",
+    "issued": 2005,
+    "title": "Winchester"
+  },
+  {
+    "id": 16542,
+    "bucket": "philosophy",
+    "issued": 2005,
+    "title": "\"Imperialism\" and \"The Tracks of Our Forefathers\""
+  },
+  {
+    "id": 1972,
+    "bucket": "philosophy",
+    "issued": 2006,
+    "title": "History of the Britons (Historia Brittonum)"
+  },
+  {
+    "id": 18507,
+    "bucket": "philosophy",
+    "issued": 2006,
+    "title": "Angelic Wisdom about Divine Providence"
+  },
+  {
+    "id": 19299,
+    "bucket": "philosophy",
+    "issued": 2006,
+    "title": "The Will And Testament of âAbdu'l-BahÃ¡"
+  },
+  {
+    "id": 20631,
+    "bucket": "philosophy",
+    "issued": 2007,
+    "title": "Chosen Peoples\nBeing the First \"Arthur Davis Memorial Lecture\" delivered before the Jewish Historical Society at University College on Easter-Passover Sunday, 1918/5678"
+  },
+  {
+    "id": 22127,
+    "bucket": "philosophy",
+    "issued": 2007,
+    "title": "Notes and Queries, Number 34, June 22, 1850\r\nA Medium of Inter-communication for Literary Men, Artists, Antiquaries, Genealogists, etc."
+  },
+  {
+    "id": 24069,
+    "bucket": "philosophy",
+    "issued": 2007,
+    "title": "Heroes in Peace\r\nThe 6th William Penn Lecture, May 9, 1920"
+  },
+  {
+    "id": 25638,
+    "bucket": "philosophy",
+    "issued": 2008,
+    "title": "The Hidden Power, and Other Papers upon Mental Science"
+  },
+  {
+    "id": 26760,
+    "bucket": "philosophy",
+    "issued": 2008,
+    "title": "Memories of Bethany"
+  },
+  {
+    "id": 28208,
+    "bucket": "philosophy",
+    "issued": 2009,
+    "title": "The Gospel Day; Or, the Light of Christianity"
+  },
+  {
+    "id": 29478,
+    "bucket": "philosophy",
+    "issued": 2009,
+    "title": "A Letter to Dion"
+  },
+  {
+    "id": 30459,
+    "bucket": "philosophy",
+    "issued": 2009,
+    "title": "The American Missionary â Volume 39, No. 03, March, 1885"
+  },
+  {
+    "id": 31678,
+    "bucket": "philosophy",
+    "issued": 2010,
+    "title": "In the Border Country"
+  },
+  {
+    "id": 33296,
+    "bucket": "philosophy",
+    "issued": 2010,
+    "title": "Five Young Men: Messages of Yesterday for the Young Men of To-day"
+  },
+  {
+    "id": 34680,
+    "bucket": "philosophy",
+    "issued": 2010,
+    "title": "The Messiah in Moses and the Prophets"
+  },
+  {
+    "id": 35875,
+    "bucket": "philosophy",
+    "issued": 2011,
+    "title": "Reflections on War and Death"
+  },
+  {
+    "id": 36798,
+    "bucket": "philosophy",
+    "issued": 2011,
+    "title": "The Limits of Atheism; Or, Why Should Sceptics Be Outlaws?"
+  },
+  {
+    "id": 37870,
+    "bucket": "philosophy",
+    "issued": 2011,
+    "title": "Ruysbroeck"
+  },
+  {
+    "id": 38682,
+    "bucket": "philosophy",
+    "issued": 2012,
+    "title": "The Life of Saint Columba, Abbot, and Apostle of the Northern Picts"
+  },
+  {
+    "id": 39523,
+    "bucket": "philosophy",
+    "issued": 2012,
+    "title": "The Life of Mohammad, the Prophet of Allah"
+  },
+  {
+    "id": 40575,
+    "bucket": "philosophy",
+    "issued": 2012,
+    "title": "The Great Commission. Miscellaneous Writings of C. H. Mackintosh, vol. IV"
+  },
+  {
+    "id": 37356,
+    "bucket": "philosophy",
+    "issued": 2013,
+    "title": "Sex-Love, and Its Place in a Free Society"
+  },
+  {
+    "id": 42889,
+    "bucket": "philosophy",
+    "issued": 2013,
+    "title": "The influence of the stars"
+  },
+  {
+    "id": 43973,
+    "bucket": "philosophy",
+    "issued": 2013,
+    "title": "Visions and Beliefs in the West of Ireland, First Series"
+  },
+  {
+    "id": 45113,
+    "bucket": "philosophy",
+    "issued": 2014,
+    "title": "Nuggets of the New Thought: Several Things That Have Helped People"
+  },
+  {
+    "id": 46324,
+    "bucket": "philosophy",
+    "issued": 2014,
+    "title": "The Catholic World, Vol. 11, April, 1870 to September, 1870"
+  },
+  {
+    "id": 47658,
+    "bucket": "philosophy",
+    "issued": 2014,
+    "title": "The Problem of Truth"
+  },
+  {
+    "id": 49244,
+    "bucket": "philosophy",
+    "issued": 2015,
+    "title": "Fundamental Philosophy, Vol. 2 (of 2)"
+  },
+  {
+    "id": 51086,
+    "bucket": "philosophy",
+    "issued": 2016,
+    "title": "Raymond; or, Life and Death\r\nWith examples of the evidence for survival of memory and affection after death."
+  },
+  {
+    "id": 52741,
+    "bucket": "philosophy",
+    "issued": 2016,
+    "title": "How to tell fortunes"
+  },
+  {
+    "id": 53931,
+    "bucket": "philosophy",
+    "issued": 2017,
+    "title": "The Gathering of the Nations"
+  },
+  {
+    "id": 54885,
+    "bucket": "philosophy",
+    "issued": 2017,
+    "title": "The American Missionary â Vol. 33, No. 3, March, 1879"
+  },
+  {
+    "id": 55989,
+    "bucket": "philosophy",
+    "issued": 2017,
+    "title": "Celtic Folklore: Welsh and Manx (Volume 2 of 2)"
+  },
+  {
+    "id": 57243,
+    "bucket": "philosophy",
+    "issued": 2018,
+    "title": "Thinking as a Science"
+  },
+  {
+    "id": 58108,
+    "bucket": "philosophy",
+    "issued": 2018,
+    "title": "Facts and Assertions: or a Brief and Plain Exhibition of the Incongruity of the Peculiar Doctrines of the Church of Rome\r\nWith Those Both of the Sacred Scriptures and of the Early Writers of the Christian Church Catholic"
+  },
+  {
+    "id": 59399,
+    "bucket": "philosophy",
+    "issued": 2019,
+    "title": "The Ayenbite of Inwyt (Remorse of Conscience)\r\nA Translation of Parts into Modern English"
+  },
+  {
+    "id": 60840,
+    "bucket": "philosophy",
+    "issued": 2019,
+    "title": "The Woman Movement"
+  },
+  {
+    "id": 62154,
+    "bucket": "philosophy",
+    "issued": 2020,
+    "title": "Canada"
+  },
+  {
+    "id": 63753,
+    "bucket": "philosophy",
+    "issued": 2020,
+    "title": "A Second Letter on the late Post Office Agitation"
+  },
+  {
+    "id": 65244,
+    "bucket": "philosophy",
+    "issued": 2021,
+    "title": "On criminal abortion in America"
+  },
+  {
+    "id": 67344,
+    "bucket": "philosophy",
+    "issued": 2022,
+    "title": "Myths of China and Japan\r\nwith illustrations in colour & monochrome after paintings and photographs"
+  },
+  {
+    "id": 69290,
+    "bucket": "philosophy",
+    "issued": 2022,
+    "title": "American slavery, and the means of its abolition"
+  },
+  {
+    "id": 71249,
+    "bucket": "philosophy",
+    "issued": 2023,
+    "title": "The Yoga-Vasishtha Maharamayana of Valmiki, Vol. 4 (of 4), Part 2 (of 2)"
+  },
+  {
+    "id": 73261,
+    "bucket": "philosophy",
+    "issued": 2024,
+    "title": "The works of the Rev. John Wesley, Vol. 07 (of 32)"
+  },
+  {
+    "id": 75543,
+    "bucket": "philosophy",
+    "issued": 2025,
+    "title": "An illustrated commentary on the Gospel according to St. John"
+  },
+  {
+    "id": 77108,
+    "bucket": "philosophy",
+    "issued": 2025,
+    "title": "Occultists & mystics of all ages"
+  },
+  {
+    "id": 2,
+    "bucket": "reference",
+    "issued": 1972,
+    "title": "The United States Bill of Rights\r\nThe Ten Original Amendments to the Constitution of the United States"
+  },
+  {
+    "id": 1359,
+    "bucket": "reference",
+    "issued": 1998,
+    "title": "A Guide to the Best Historical Novels and Tales"
+  },
+  {
+    "id": 10112,
+    "bucket": "reference",
+    "issued": 2003,
+    "title": "American Political Ideas Viewed from the Standpoint of Universal History"
+  },
+  {
+    "id": 10625,
+    "bucket": "reference",
+    "issued": 2004,
+    "title": "A Concise Dictionary of Middle English from A.D. 1150 to 1580"
+  },
+  {
+    "id": 11821,
+    "bucket": "reference",
+    "issued": 2004,
+    "title": "U.S. Copyright Renewals, 1960 January - June"
+  },
+  {
+    "id": 12253,
+    "bucket": "reference",
+    "issued": 2004,
+    "title": "Wholesale Price List of Newspapers and Periodicals"
+  },
+  {
+    "id": 14006,
+    "bucket": "reference",
+    "issued": 2004,
+    "title": "An English Grammar"
+  },
+  {
+    "id": 14999,
+    "bucket": "reference",
+    "issued": 2005,
+    "title": "A Briefe Introduction to Geography"
+  },
+  {
+    "id": 16751,
+    "bucket": "reference",
+    "issued": 2005,
+    "title": "McGuffey's Sixth Eclectic Reader"
+  },
+  {
+    "id": 19150,
+    "bucket": "reference",
+    "issued": 2006,
+    "title": "The Red Conspiracy"
+  },
+  {
+    "id": 22351,
+    "bucket": "reference",
+    "issued": 2007,
+    "title": "Publisher's Advertising (1872)"
+  },
+  {
+    "id": 26023,
+    "bucket": "reference",
+    "issued": 2008,
+    "title": "The League of Nations and Its Problems: Three Lectures"
+  },
+  {
+    "id": 28067,
+    "bucket": "reference",
+    "issued": 2009,
+    "title": "The Spirit of American Government\nA Study Of The Constitution: Its Origin, Influence And\nRelation To Democracy"
+  },
+  {
+    "id": 29815,
+    "bucket": "reference",
+    "issued": 2009,
+    "title": "The Declaration of the Rights of Man and of Citizens"
+  },
+  {
+    "id": 31950,
+    "bucket": "reference",
+    "issued": 2010,
+    "title": "Encyclopaedia Britannica, 11th Edition, \"Columbus\" to \"Condottiere\"\r\nVolume 6, Slice 7"
+  },
+  {
+    "id": 33427,
+    "bucket": "reference",
+    "issued": 2010,
+    "title": "Encyclopaedia Britannica, 11th Edition, \"Chariot\" to \"Chatelaine\"\r\nVolume 5, Slice 8"
+  },
+  {
+    "id": 34498,
+    "bucket": "reference",
+    "issued": 2010,
+    "title": "Evolution of Expression, Volume 2âRevised\nA Compilation of Selections Illustrating the Four Stages of Development in Art As Applied to Oratory; Twenty-Eighth Edition"
+  },
+  {
+    "id": 35815,
+    "bucket": "reference",
+    "issued": 2011,
+    "title": "The International Auxiliary Language Esperanto: Grammar & Commentary"
+  },
+  {
+    "id": 37055,
+    "bucket": "reference",
+    "issued": 2011,
+    "title": "An Alphabetical List of Books Contained in Bohn's Libraries (1892)"
+  },
+  {
+    "id": 38370,
+    "bucket": "reference",
+    "issued": 2011,
+    "title": "The battle of the press"
+  },
+  {
+    "id": 40009,
+    "bucket": "reference",
+    "issued": 2012,
+    "title": "Encyclopaedia Britannica, 11th Edition, \"Indole\" to \"Insanity\"\r\nVolume 14, Slice 5"
+  },
+  {
+    "id": 41023,
+    "bucket": "reference",
+    "issued": 2012,
+    "title": "From Workhouse to Westminster: The Life Story of Will Crooks, M.P."
+  },
+  {
+    "id": 42736,
+    "bucket": "reference",
+    "issued": 2013,
+    "title": "Encyclopaedia Britannica, 11th Edition, \"Malta\" to \"Map, Walter\"\r\nVolume 17, Slice 5"
+  },
+  {
+    "id": 44730,
+    "bucket": "reference",
+    "issued": 2014,
+    "title": "Memorabilia Mathematica; or, the Philomath's Quotation-Book"
+  },
+  {
+    "id": 46812,
+    "bucket": "reference",
+    "issued": 2014,
+    "title": "A History of Police in England"
+  },
+  {
+    "id": 49276,
+    "bucket": "reference",
+    "issued": 2015,
+    "title": "A History of Matrimonial Institutions, Vol. 3 of 3"
+  },
+  {
+    "id": 51843,
+    "bucket": "reference",
+    "issued": 2016,
+    "title": "The Oregon Question"
+  },
+  {
+    "id": 53488,
+    "bucket": "reference",
+    "issued": 2016,
+    "title": "Statement of Facts, on the Injurious Treatment of J. Elsee, Esq.\r\nLate Tenant of a Considerable Portion of Havering Park Farm, in the Forest of Hainault, in Certain Transactions with the Commissioners of Woods and Forests, and Their Agents; To Which Are Added Notes in Illustration of the Gross Abuses of the Forest Laws."
+  },
+  {
+    "id": 55253,
+    "bucket": "reference",
+    "issued": 2017,
+    "title": "The Journal of Prison Discipline and Philanthropy, January 1862"
+  },
+  {
+    "id": 57028,
+    "bucket": "reference",
+    "issued": 2018,
+    "title": "A Dominie's Log"
+  },
+  {
+    "id": 58024,
+    "bucket": "reference",
+    "issued": 2018,
+    "title": "Index of the Project Gutenberg Works of Alexandre Dumas, [pÃ¨re]"
+  },
+  {
+    "id": 58644,
+    "bucket": "reference",
+    "issued": 2019,
+    "title": "Index of the Project Gutenberg Works of Alexis de Tocqueville"
+  },
+  {
+    "id": 59453,
+    "bucket": "reference",
+    "issued": 2019,
+    "title": "A Short List of Scientific Books Published by E. & F. N. Spon, Ltd. September 1915"
+  },
+  {
+    "id": 60744,
+    "bucket": "reference",
+    "issued": 2019,
+    "title": "The Footprints of Time\r\nAnd a Complete Analysis of Our American System of Government, with a Concise History of the Original Colonies and of the United States, in Chronological Order"
+  },
+  {
+    "id": 63245,
+    "bucket": "reference",
+    "issued": 2020,
+    "title": "\"White man bery unsartin\": \"Nigger haint got no friends, no how\"; the blackest chapter in the history of the Republican Party; the men who robbed and combined to rob the freedmen of their hard earnings."
+  },
+  {
+    "id": 66174,
+    "bucket": "reference",
+    "issued": 2021,
+    "title": "The English Prison System"
+  },
+  {
+    "id": 69262,
+    "bucket": "reference",
+    "issued": 2022,
+    "title": "History for ready reference, Volume 4, NicÃ¦a to Tunis"
+  },
+  {
+    "id": 70957,
+    "bucket": "reference",
+    "issued": 2023,
+    "title": "The treasury of languages"
+  },
+  {
+    "id": 73530,
+    "bucket": "reference",
+    "issued": 2024,
+    "title": "An alphabetical catalogue of books in fiction and general literature published by Chatto & Windus, Sept. 1899"
+  },
+  {
+    "id": 77101,
+    "bucket": "reference",
+    "issued": 2025,
+    "title": "The Gaelic State in the past & future"
+  },
+  {
+    "id": 39,
+    "bucket": "science",
+    "issued": 1992,
+    "title": "Hitchhiker's Guide to the Internet"
+  },
+  {
+    "id": 2354,
+    "bucket": "science",
+    "issued": 2000,
+    "title": "Note on the Resemblances and Differences in the Structure and the Development of the Brain in Man and Apes"
+  },
+  {
+    "id": 3773,
+    "bucket": "science",
+    "issued": 2003,
+    "title": "Hopes and Fears for Art"
+  },
+  {
+    "id": 5000,
+    "bucket": "science",
+    "issued": 2004,
+    "title": "The Notebooks of Leonardo Da Vinci â Complete"
+  },
+  {
+    "id": 6934,
+    "bucket": "science",
+    "issued": 2004,
+    "title": "The Radio Amateur's Hand Book\r\nA Complete, Authentic and Informative Work on Wireless Telegraphy and Telephony"
+  },
+  {
+    "id": 11539,
+    "bucket": "science",
+    "issued": 2004,
+    "title": "The Mirror of Literature, Amusement, and Instruction. Volume 19, No. 535, February 25, 1832"
+  },
+  {
+    "id": 12856,
+    "bucket": "science",
+    "issued": 2004,
+    "title": "The Renaissance of the Vocal Art\r\nA Practical Study of Vitality, Vitalized Energy, of the Physical, Mental and Emotional Powers of the Singer, through Flexible, Elastic Bodily Movements"
+  },
+  {
+    "id": 14302,
+    "bucket": "science",
+    "issued": 2004,
+    "title": "Principles of Home Decoration, With Practical Examples"
+  },
+  {
+    "id": 8858,
+    "bucket": "science",
+    "issued": 2005,
+    "title": "Earthwork out of Tuscany: Being Impressions and Translations of Maurice Hewlett"
+  },
+  {
+    "id": 15468,
+    "bucket": "science",
+    "issued": 2005,
+    "title": "Lectures on popular and scientific subjects"
+  },
+  {
+    "id": 16768,
+    "bucket": "science",
+    "issued": 2005,
+    "title": "The history of Sumatra"
+  },
+  {
+    "id": 17463,
+    "bucket": "science",
+    "issued": 2006,
+    "title": "Great Violinists and Pianists"
+  },
+  {
+    "id": 18335,
+    "bucket": "science",
+    "issued": 2006,
+    "title": "The Breath of Life"
+  },
+  {
+    "id": 19133,
+    "bucket": "science",
+    "issued": 2006,
+    "title": "Practical Rules for the Management of a Locomotive Engine\nin the Station, on the Road, and in cases of Accident"
+  },
+  {
+    "id": 19980,
+    "bucket": "science",
+    "issued": 2006,
+    "title": "A Joy For Ever (and Its Price in the Market)"
+  },
+  {
+    "id": 21019,
+    "bucket": "science",
+    "issued": 2007,
+    "title": "At the Deathbed of Darwinism: A Series of Papers"
+  },
+  {
+    "id": 22430,
+    "bucket": "science",
+    "issued": 2007,
+    "title": "Evolution in Modern Thought"
+  },
+  {
+    "id": 24322,
+    "bucket": "science",
+    "issued": 2008,
+    "title": "Scientific American Supplement, No. 664, September 22,1888"
+  },
+  {
+    "id": 25326,
+    "bucket": "science",
+    "issued": 2008,
+    "title": "Lives of the Most Eminent Painters Sculptors and Architects, Vol. 01 (of 10)\r\nCimabue to Agnolo Gaddi"
+  },
+  {
+    "id": 26438,
+    "bucket": "science",
+    "issued": 2008,
+    "title": "Are the Effects of Use and Disuse Inherited?\nAn Examination of the View Held by Spencer and Darwin"
+  },
+  {
+    "id": 27465,
+    "bucket": "science",
+    "issued": 2008,
+    "title": "Birds in the Calendar"
+  },
+  {
+    "id": 28432,
+    "bucket": "science",
+    "issued": 2009,
+    "title": "Home Life in Germany"
+  },
+  {
+    "id": 29666,
+    "bucket": "science",
+    "issued": 2009,
+    "title": "Hymns and Hymnwriters of Denmark"
+  },
+  {
+    "id": 30688,
+    "bucket": "science",
+    "issued": 2009,
+    "title": "Letters of a Radio-Engineer to His Son"
+  },
+  {
+    "id": 31273,
+    "bucket": "science",
+    "issued": 2010,
+    "title": "The Arawack Language of Guiana in its Linguistic and Ethnological Relations"
+  },
+  {
+    "id": 31955,
+    "bucket": "science",
+    "issued": 2010,
+    "title": "Niagara: An Aboriginal Center of Trade"
+  },
+  {
+    "id": 33029,
+    "bucket": "science",
+    "issued": 2010,
+    "title": "Ducks and Geese"
+  },
+  {
+    "id": 33566,
+    "bucket": "science",
+    "issued": 2010,
+    "title": "Ecological Observations on the Woodrat, Neotoma floridana"
+  },
+  {
+    "id": 34127,
+    "bucket": "science",
+    "issued": 2010,
+    "title": "Morphological Variation in a Population of the Snake, Tantilla gracilis Baird and Girard"
+  },
+  {
+    "id": 34730,
+    "bucket": "science",
+    "issued": 2010,
+    "title": "Charles Darwin"
+  },
+  {
+    "id": 35580,
+    "bucket": "science",
+    "issued": 2011,
+    "title": "On the Laws of Japanese Painting: An Introduction to the Study of the Art of Japan"
+  },
+  {
+    "id": 36432,
+    "bucket": "science",
+    "issued": 2011,
+    "title": "The Coming of Coal"
+  },
+  {
+    "id": 37317,
+    "bucket": "science",
+    "issued": 2011,
+    "title": "Geographic Variation in the Pocket Gopher, Thomomys bottae, in Colorado"
+  },
+  {
+    "id": 38003,
+    "bucket": "science",
+    "issued": 2011,
+    "title": "Color Key to North American Birds\r\nwith bibliographical appendix"
+  },
+  {
+    "id": 38758,
+    "bucket": "science",
+    "issued": 2012,
+    "title": "Story of the Aeroplane"
+  },
+  {
+    "id": 39423,
+    "bucket": "science",
+    "issued": 2012,
+    "title": "The Manual of the Botany of the Northern United States\r\nIncluding the District East of the Mississippi and North of North Carolina and Tennessee"
+  },
+  {
+    "id": 39975,
+    "bucket": "science",
+    "issued": 2012,
+    "title": "Audubon and His Journals, Volume 1"
+  },
+  {
+    "id": 41241,
+    "bucket": "science",
+    "issued": 2012,
+    "title": "The progress of the marbling art, from technical scientific principles"
+  },
+  {
+    "id": 41947,
+    "bucket": "science",
+    "issued": 2013,
+    "title": "Boucher"
+  },
+  {
+    "id": 42564,
+    "bucket": "science",
+    "issued": 2013,
+    "title": "Art in Shell of the Ancient Americans\r\nSecond annual report of the Bureau of Ethnology to the Secretary of the Smithsonian Institution, 1880-81, pages 179-306"
+  },
+  {
+    "id": 43087,
+    "bucket": "science",
+    "issued": 2013,
+    "title": "Total Per Cent Lambing Rules"
+  },
+  {
+    "id": 43681,
+    "bucket": "science",
+    "issued": 2013,
+    "title": "The Popular Religion and Folk-Lore of Northern India, Vol. 1 (of 2)"
+  },
+  {
+    "id": 44341,
+    "bucket": "science",
+    "issued": 2013,
+    "title": "Minimum Gauge Railways"
+  },
+  {
+    "id": 45032,
+    "bucket": "science",
+    "issued": 2014,
+    "title": "The Principal Species of Wood: Their Characteristic Properties\nFirst Edition"
+  },
+  {
+    "id": 45730,
+    "bucket": "science",
+    "issued": 2014,
+    "title": "Buffon's Natural History. Volume 05 (of 10)\r\nContaining a Theory of the Earth, a General History of Man, of the Brute Creation, and of Vegetables, Minerals, &c. &c"
+  },
+  {
+    "id": 46330,
+    "bucket": "science",
+    "issued": 2014,
+    "title": "The Introduction to Hegel's Philosophy of Fine Arts\nTranslated from the German with Notes and Prefatory Essay"
+  },
+  {
+    "id": 46869,
+    "bucket": "science",
+    "issued": 2014,
+    "title": "The Royal Institution: Its Founder and First Professors"
+  },
+  {
+    "id": 47402,
+    "bucket": "science",
+    "issued": 2014,
+    "title": "Along Alaska's Great River\r\nA Popular Account of the Travels of an Alaska Exploring Expedition along the Great Yukon River, from Its Source to Its Mouth, in the British North-West Territory, and in the Territory of Alaska"
+  },
+  {
+    "id": 47915,
+    "bucket": "science",
+    "issued": 2015,
+    "title": "The Brochure Series of Architectural Illustration, vol. 06, No. 09, September 1900\r\nThe Ducal Palace: Venice; Types of Italian Garden Fountains"
+  },
+  {
+    "id": 48399,
+    "bucket": "science",
+    "issued": 2015,
+    "title": "Kingless Folk, and Other Addresses on Bible Animals"
+  },
+  {
+    "id": 49026,
+    "bucket": "science",
+    "issued": 2015,
+    "title": "Schubert and His Work"
+  },
+  {
+    "id": 49549,
+    "bucket": "science",
+    "issued": 2015,
+    "title": "Portraits of Dr. William Harvey"
+  },
+  {
+    "id": 50321,
+    "bucket": "science",
+    "issued": 2015,
+    "title": "Fifty Birds of Town and City"
+  },
+  {
+    "id": 51187,
+    "bucket": "science",
+    "issued": 2016,
+    "title": "A Visit to the Mammoth Cave of Kentucky"
+  },
+  {
+    "id": 52061,
+    "bucket": "science",
+    "issued": 2016,
+    "title": "A Book of the Pyrenees"
+  },
+  {
+    "id": 52973,
+    "bucket": "science",
+    "issued": 2016,
+    "title": "Geology and Revelation\r\nor, the Ancient History of the Earth, considered in the geological facts and revealed religion."
+  },
+  {
+    "id": 53670,
+    "bucket": "science",
+    "issued": 2016,
+    "title": "A Sketch of Assam: With some account of the Hill Tribes"
+  },
+  {
+    "id": 54328,
+    "bucket": "science",
+    "issued": 2017,
+    "title": "York: A Sketch-Book"
+  },
+  {
+    "id": 54893,
+    "bucket": "science",
+    "issued": 2017,
+    "title": "The Secrets of the Harem"
+  },
+  {
+    "id": 55623,
+    "bucket": "science",
+    "issued": 2017,
+    "title": "The Philosophy of Fine Art, volume 3 (of 4)\nHegel's Aesthetik"
+  },
+  {
+    "id": 56315,
+    "bucket": "science",
+    "issued": 2018,
+    "title": "Texas Fossils: An Amateur Collector's Handbook"
+  },
+  {
+    "id": 57120,
+    "bucket": "science",
+    "issued": 2018,
+    "title": "The Economy of Workshop Manipulation\r\nA logical method of learning constructive mechanics. Arranged with questions for the use of apprentice engineers and students."
+  },
+  {
+    "id": 57576,
+    "bucket": "science",
+    "issued": 2018,
+    "title": "A Method of Tanning without Bark"
+  },
+  {
+    "id": 58243,
+    "bucket": "science",
+    "issued": 2018,
+    "title": "The Korea Review, Vol. 5 No. 5, May 1905"
+  },
+  {
+    "id": 58922,
+    "bucket": "science",
+    "issued": 2019,
+    "title": "Scotts Bluff National Monument, Nebraska"
+  },
+  {
+    "id": 59419,
+    "bucket": "science",
+    "issued": 2019,
+    "title": "The Journal of Geology, May-June 1893\r\nA Semi-Quarterly Magazone of Geology and Related Sciences"
+  },
+  {
+    "id": 59928,
+    "bucket": "science",
+    "issued": 2019,
+    "title": "The Kingdom of Man"
+  },
+  {
+    "id": 60749,
+    "bucket": "science",
+    "issued": 2019,
+    "title": "A Thousand-Mile Walk to the Gulf"
+  },
+  {
+    "id": 61475,
+    "bucket": "science",
+    "issued": 2020,
+    "title": "Byzantine Constantinople, the walls of the city and adjoining historical sites"
+  },
+  {
+    "id": 62327,
+    "bucket": "science",
+    "issued": 2020,
+    "title": "Historical and descriptive sketches of the town and soke of Horncastle [1822]\r\nin the county of Lincoln and several places adjacent"
+  },
+  {
+    "id": 63012,
+    "bucket": "science",
+    "issued": 2020,
+    "title": "South America"
+  },
+  {
+    "id": 63678,
+    "bucket": "science",
+    "issued": 2020,
+    "title": "Travels Through North and South Carolina, Georgia, East and West Florida, the Cherokee Country, the Extensive Territories of the Muscogulges, or Creek Confederacy, and the Country of the Chactaws.\r\nContaining an Account of the Soil and Natural Productions of Those Regions, Together With Observations on the Manners of the Indians."
+  },
+  {
+    "id": 64626,
+    "bucket": "science",
+    "issued": 2021,
+    "title": "Abury, A Temple of the British Druids, With Some Others, Described"
+  },
+  {
+    "id": 65411,
+    "bucket": "science",
+    "issued": 2021,
+    "title": "Report on the Migration of Birds in the Spring and Autumn of 1880. [Second Report]"
+  },
+  {
+    "id": 66061,
+    "bucket": "science",
+    "issued": 2021,
+    "title": "The Story of Milk"
+  },
+  {
+    "id": 66663,
+    "bucket": "science",
+    "issued": 2021,
+    "title": "Ancient history from the monuments: Greek cities & islands of Asia Minor"
+  },
+  {
+    "id": 67377,
+    "bucket": "science",
+    "issued": 2022,
+    "title": "White Mountain Trails\r\nTales of the Trails to the Summit of Mount Washington and other Summits of the White Hills"
+  },
+  {
+    "id": 68142,
+    "bucket": "science",
+    "issued": 2022,
+    "title": "From North Pole to Equator: Studies of Wild Life and Scenes in Many Lands"
+  },
+  {
+    "id": 68946,
+    "bucket": "science",
+    "issued": 2022,
+    "title": "Pausanias' description of Greece, Volume I."
+  },
+  {
+    "id": 69617,
+    "bucket": "science",
+    "issued": 2022,
+    "title": "Pierre Curie"
+  },
+  {
+    "id": 70196,
+    "bucket": "science",
+    "issued": 2023,
+    "title": "Evil eye in the western Highlands"
+  },
+  {
+    "id": 70927,
+    "bucket": "science",
+    "issued": 2023,
+    "title": "Wanderings in North Africa"
+  },
+  {
+    "id": 71514,
+    "bucket": "science",
+    "issued": 2023,
+    "title": "The Kansas University science bulletin, Vol. I, No. 8, September 1902"
+  },
+  {
+    "id": 72103,
+    "bucket": "science",
+    "issued": 2023,
+    "title": "Travels into North America, Volume 2 (of 3)"
+  },
+  {
+    "id": 73009,
+    "bucket": "science",
+    "issued": 2024,
+    "title": "How animals talk"
+  },
+  {
+    "id": 73885,
+    "bucket": "science",
+    "issued": 2024,
+    "title": "The Cambridge natural history, Vol. 08 (of 10)"
+  },
+  {
+    "id": 75110,
+    "bucket": "science",
+    "issued": 2025,
+    "title": "A history of land mammals in the western hemisphere"
+  },
+  {
+    "id": 76198,
+    "bucket": "science",
+    "issued": 2025,
+    "title": "The folk-lore of China"
+  },
+  {
+    "id": 77115,
+    "bucket": "science",
+    "issued": 2025,
+    "title": "An ice cream laboratory guide"
+  }
+]
