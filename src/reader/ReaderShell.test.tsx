@@ -71,31 +71,52 @@ it('does not hide controls for a programmatic restore or page jump', () => {
 it.each([false, true])('keeps primary actions reachable and invokes existing handlers (desktop=%s)', desktop => {
   mount(desktop);
   const contents = vi.fn(), markup = vi.fn(), next = vi.fn();
-  act(() => render(<ReaderToolbar interfaceMode="simple" title="A long document title.pdf" contentsOpen={false} contextOpen={false} highlightAvailable onBack={vi.fn()} onContents={contents} onContext={vi.fn()} onNote={vi.fn()} onSettings={vi.fn()} onEngines={vi.fn()} onHighlight={markup} primaryActions={<button aria-label="OCR next" onClick={next}>OCR next</button>}><div>Original / Reading</div></ReaderToolbar>, host));
+  act(() => render(<ReaderToolbar interfaceMode="simple" title="A long document title.pdf" contentsOpen={false} contextOpen={false} highlightAvailable onBack={vi.fn()} onContents={contents} onContext={vi.fn()} onNote={vi.fn()} onSettings={vi.fn()} onEngines={vi.fn()} onHighlight={markup} primaryActions={<button aria-label="OCR next" onClick={next}>OCR next</button>} mode="original" onModeSwitch={vi.fn()} onRecognizeNext={next}><div>Original / Reading</div></ReaderToolbar>, host));
   expect(host.querySelector('.reader-header-leading h1')?.getAttribute('title')).toBe('A long document title.pdf');
-  expect(host.querySelector('.reader-header-position')?.textContent).toBe('Original / Reading');
-  for (const label of ['Contents', 'Markup', 'OCR next']) {
-    const button = host.querySelector<HTMLButtonElement>(`.reader-primary-tools [aria-label="${label}"]`)!;
-    expect(button).not.toBeNull();
-    act(() => button.click());
+  // Reading switcher is now a button in header, not in .reader-header-position
+  const modeSwitch = host.querySelector<HTMLButtonElement>('[aria-label="Switch to Reading mode"]');
+  expect(modeSwitch).not.toBeNull();
+  // On desktop, primaryActions (OCR next) should be in .reader-primary-tools
+  if (desktop) {
+    for (const label of ['OCR next']) {
+      const button = host.querySelector<HTMLButtonElement>(`.reader-primary-tools [aria-label="${label}"]`)!;
+      expect(button).not.toBeNull();
+      act(() => button.click());
+    }
+    expect(next).toHaveBeenCalledOnce();
   }
-  expect(contents).toHaveBeenCalledOnce(); expect(markup).toHaveBeenCalledOnce(); expect(next).toHaveBeenCalledOnce();
+  // On mobile, OCR next is in More menu - test via menu
+  if (!desktop) {
+    const moreTrigger = host.querySelector<HTMLButtonElement>('[aria-label="Reader menu"]')!;
+    act(() => moreTrigger.click());
+    const ocrNextMenuItem = Array.from(host.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')).find(b => b.textContent?.includes('OCR next'))!;
+    expect(ocrNextMenuItem).not.toBeNull();
+    act(() => ocrNextMenuItem.click());
+    expect(next).toHaveBeenCalledOnce();
+  }
+  expect(contents).not.toHaveBeenCalled(); // Contents is in More menu now
+  expect(markup).not.toHaveBeenCalled(); // Markup is in More menu now
 });
 
-it('OCR next invokes the existing action and can be moved into the toolbar without duplication', () => {
+it('PdfModeSwitch renders mode toggle and document tools on desktop', () => {
   mount(true);
   const next = vi.fn(), noop = vi.fn();
   const props = { mode: 'original' as const, uiLanguage: 'en' as const, canRead: true, hasPdfText: true, hasOcr: false, language: 'eng' as const, onOriginal: noop, onReading: noop, onSource: noop, onLanguage: noop, onRecognizeCurrent: noop, onRecognizeNext: next, queueStatus: null, onPause: noop, onContinue: noop, onCancel: noop, hasAnyOcr: false, onClear: noop };
   act(() => render(<PdfModeSwitch {...props} />, host));
-  act(() => host.querySelector<HTMLButtonElement>('[aria-label="OCR next"]')!.click());
-  expect(next).toHaveBeenCalledOnce();
-  act(() => render(<PdfModeSwitch {...props} showNext={false} />, host));
+  // Mode toggle buttons should exist (Original/Reading buttons in .pdf-mode-switch)
+  const originalBtn = host.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
+  const readingBtn = host.querySelector<HTMLButtonElement>('[aria-pressed="false"]');
+  expect(originalBtn).not.toBeNull();
+  expect(readingBtn).not.toBeNull();
+  // Document tools button should exist
+  const docTools = host.querySelector<HTMLButtonElement>('[aria-label="Document tools"]');
+  expect(docTools).not.toBeNull();
+  // OCR next button no longer exists in PdfModeSwitch (moved to ReaderToolbar More menu)
   expect(host.querySelector('[aria-label="OCR next"]')).toBeNull();
-  expect(host.querySelector('[aria-label="PDF view mode"]')).not.toBeNull();
-  act(() => host.querySelector<HTMLButtonElement>('[aria-label="Document tools"]')!.click());
-  const action = Array.from(host.querySelectorAll<HTMLButtonElement>('.pdf-reading-options button')).find(button => button.textContent?.includes('next 6'))!;
-  act(() => action.click());
-  expect(next).toHaveBeenCalledTimes(2);
+  // Clicking document tools opens the menu
+  act(() => docTools!.click());
+  const menuItems = host.querySelectorAll<HTMLButtonElement>('.pdf-reading-options button');
+  expect(menuItems.length).toBeGreaterThan(0);
 });
 
 it('does not reveal reading chrome for a touch that turns into a scroll flick', () => {

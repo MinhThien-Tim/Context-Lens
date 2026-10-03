@@ -4,10 +4,11 @@ import { useDialog } from '../../components/useDialog';
 import type { OcrLanguage } from '../../documents/pdf/ocrStore';
 import type { OcrQueueStatus } from './usePdfOcrQueue';
 import type { GuideLanguage } from '../../onboarding/store';
+import { FileText, BookOpen, Settings, MoreVertical } from 'lucide-preact';
 
 interface Props {
   showNext?: boolean; mode: 'original' | 'reading'; uiLanguage: GuideLanguage; canRead: boolean; hasPdfText: boolean; hasOcr: boolean; language: OcrLanguage;
-  onOriginal: () => void; onReading: () => void; onSource: (source: 'pdf' | 'ocr') => void; onLanguage: (language: OcrLanguage) => void;
+  onOriginal: () => void; onReading: () => void; onSource: (source: 'pdf' | 'ocr') => void; onLanguage: (lang: OcrLanguage) => void;
   onRecognizeCurrent: () => void; onRecognizeNext: () => void; queueStatus: OcrQueueStatus | null;
   onPause: () => void; onContinue: () => void; onCancel: () => void; hasAnyOcr: boolean; onClear: () => void;
 }
@@ -33,9 +34,8 @@ export function PdfModeSwitch({ showNext = true, mode, uiLanguage, canRead, hasP
       <button aria-pressed={mode === 'original'} onClick={() => { setOpen(false); onOriginal(); }}>{uiLanguage === 'vi' ? 'Trang gốc' : 'Original'}</button>
       <button aria-pressed={mode === 'reading'} disabled={!canRead} onClick={() => { setOpen(false); onReading(); }}>{uiLanguage === 'vi' ? 'Đọc chữ' : 'Reading'}</button>
     </div>
-    {showNext && <button class="toolbar-button ocr-next-button" aria-label="OCR next" title="Find and OCR the remaining scanned pages, 12 at a time" disabled={busy || done} onClick={onRecognizeNext}><span aria-hidden="true">✧</span> OCR next</button>}
     <div class="pdf-tools">
-      <button ref={trigger} class="icon-button pdf-reading-options-toggle" aria-label={uiLanguage === 'vi' ? 'Công cụ tài liệu' : 'Document tools'} title={uiLanguage === 'vi' ? 'Chữ PDF, OCR và nguồn văn bản' : 'PDF text, OCR and text sources'} aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(value => !value)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zM15 3v5h5M8 12h8M8 16h8" /></svg>{busy && <span class="pdf-tools-busy" />}</button>
+      <button ref={trigger} class="icon-button pdf-reading-options-toggle" aria-label={uiLanguage === 'vi' ? 'Công cụ tài liệu' : 'Document tools'} title={uiLanguage === 'vi' ? 'Chữ PDF, OCR và nguồn văn bản' : 'PDF text, OCR and text sources'} aria-expanded={open} aria-haspopup="dialog" onClick={() => setOpen(value => !value)}><MoreVertical size={20} />{busy && <span class="pdf-tools-busy" />}</button>
       {open && <>
       {!desktop && <button class="pdf-tools-backdrop" tabIndex={-1} aria-label="Close document tools" onClick={() => setOpen(false)} />}
       <section ref={dialog} tabIndex={-1} class="pdf-reading-options" role="dialog" aria-modal={desktop ? undefined : true} aria-label={uiLanguage === 'vi' ? 'Công cụ tài liệu' : 'Document tools'}>

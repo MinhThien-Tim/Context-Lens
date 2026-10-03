@@ -4,7 +4,8 @@ import { pdfFixture } from './pdfFixture';
 test('Original PDF reclaims mobile header space without a toolbar gap', async ({ page }) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'chrome.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });
-  await page.locator('.pdf-mode-switch').getByRole('button', { name: /Original|Trang gốc/ }).click();
+  // On mobile, mode switch is a button in header with aria-label
+  await page.getByRole('button', { name: /Switch to Reading mode|Switch to Original mode/ }).click();
   await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
 
   for (const [width, height] of [[320, 700], [360, 780], [390, 844], [393, 852], [430, 932], [640, 360]]) {
@@ -62,7 +63,8 @@ test('Original PDF reclaims mobile header space without a toolbar gap', async ({
 test('Original mobile Lookup open and close do not move the PDF reading position', async ({ page }) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'lookup-jump.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });
-  await page.locator('.pdf-mode-switch').getByRole('button', { name: /Original|Trang gốc/ }).click();
+  // On mobile, mode switch is a button in header with aria-label
+  await page.getByRole('button', { name: /Switch to Reading mode|Switch to Original mode/ }).click();
   await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
 

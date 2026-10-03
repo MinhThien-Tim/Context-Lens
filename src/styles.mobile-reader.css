@@ -2,37 +2,51 @@
 @media (max-width: 767px) {
   .reader-shell.reader-shell,
   .reader-shell.reader-shell[data-reader-surface] {
-    --reader-header-height: calc(88px + env(safe-area-inset-top));
+    --reader-header-height: calc(56px + env(safe-area-inset-top));
     --reader-footer-height: calc(44px + env(safe-area-inset-bottom));
   }
   .reader-shell.reader-shell .reader-header,
   .reader-shell.reader-shell[data-reader-surface] .reader-header {
     position: fixed; inset: 0 0 auto;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: 44px 44px;
-    gap: 0; padding: env(safe-area-inset-top) max(4px, env(safe-area-inset-right)) 0 max(4px, env(safe-area-inset-left));
+    display: flex; align-items: center;
+    gap: 8px;
+    padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
     height: var(--reader-header-height); min-height: var(--reader-header-height);
-      background: transparent; border-bottom: none;
-    }
-  .reader-shell.reader-shell .reader-header-leading { grid-column: 1; grid-row: 1; overflow: hidden; }
-  .reader-shell.reader-shell .reader-document {
-    min-width: 0; background: color-mix(in srgb, var(--accent-soft) 45%, var(--reading-surface)); border-radius: 5px;
+    background: transparent; border-bottom: none;
   }
-  .reader-shell.reader-shell .reader-document h1 { max-width: none; padding: 3px 6px; font-size: 12px; }
-  .reader-shell.reader-shell .reader-header-actions { display: contents; }
-  .reader-shell.reader-shell .reader-header-actions > .icon-button { grid-column: 2; grid-row: 1; margin-right: 44px; }
-  .reader-shell.reader-shell .reader-more { grid-column: 2; grid-row: 1; justify-self: end; }
-  .reader-shell.reader-shell .reader-primary-tools { grid-column: 1; grid-row: 2; justify-content: flex-start; gap: 0; min-width: 0; }
-  .reader-shell.reader-shell .reader-primary-tools .toolbar-button { padding: 0 4px; gap: 3px; font-size: 10px; min-width: 44px; min-height: 44px; }
-  .reader-shell.reader-shell .reader-primary-tools svg { display: none; }
-  .reader-shell.reader-shell .reader-primary-tools .ocr-next-button { color: var(--accent); background: var(--accent-soft); border-radius: 5px; }
-  .reader-shell.reader-shell .reader-primary-tools .markup-indicator { color: var(--notes); background: var(--notes-soft, var(--accent-soft)); }
-  .reader-shell.reader-shell .reader-header-position { grid-column: 2; grid-row: 2; width: auto; min-width: 0; }
-  .reader-shell.reader-shell .pdf-mode-controls { gap: 0; min-width: 0; }
-  .reader-shell.reader-shell .pdf-mode-switch { padding: 0; border: 0; gap: 0; }
-  .reader-shell.reader-shell .pdf-mode-switch > button { min-width: 0; min-height: 44px; padding: 0 5px; font-size: 10px; }
-  .reader-shell.reader-shell .pdf-mode-switch > button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); box-shadow: none; }
-  .reader-shell.reader-shell .pdf-reading-options-toggle { width: 44px; }
+  .reader-shell.reader-shell .reader-header-leading {
+    display: flex; align-items: center; gap: 8px;
+    flex: 1; min-width: 0; overflow: hidden;
+  }
+  .reader-shell.reader-shell .reader-back-button {
+    flex: 0 0 auto; width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .reader-shell.reader-shell .reader-document {
+    flex: 1; min-width: 0; overflow: hidden;
+    background: color-mix(in srgb, var(--accent-soft) 45%, var(--reading-surface)); border-radius: 5px;
+  }
+  .reader-shell.reader-shell .reader-document h1 {
+    max-width: 100%; padding: 3px 6px; font-size: 12px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .reader-shell.reader-shell .reader-header-actions {
+    display: flex; align-items: center; gap: 4px;
+    flex: 0 0 auto;
+  }
+  .reader-shell.reader-shell .reader-header-actions > .icon-button {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .reader-shell.reader-shell .reader-more {
+    flex: 0 0 auto;
+  }
+  .reader-shell.reader-shell .reader-primary-tools,
+  .reader-shell.reader-shell .reader-header-position,
+  .reader-shell.reader-shell .pdf-mode-controls,
+  .reader-shell.reader-shell .pdf-reading-options-toggle {
+    display: none;
+  }
 
   /* Keep PDF scroll geometry stable. Hiding chrome slides the header/footer out of the
      viewport; the reading box never moves, resizes, or reclaims the header area, so the
@@ -69,6 +83,106 @@
   .reader-shell.reader-shell .pdf-reading-page > header { margin-bottom: 12px; }
   .reader-shell.reader-shell .reader-progress { padding-top: 0; padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right)); gap: 4px; }
   .reader-shell.reader-shell .reader-reveal { bottom: max(8px, env(safe-area-inset-bottom)); box-shadow: none; }
+
+  /* FAB - Floating Action Button for markup tools */
+  .reader-shell.reader-shell .reader-fab {
+    position: fixed;
+    right: 16px;
+      bottom: calc(var(--reader-footer-height) + var(--reader-fab-gap));
+    z-index: 30;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .reader-shell.reader-shell .reader-fab-trigger {
+    pointer-events: auto;
+    width: var(--reader-fab-size);
+    height: var(--reader-fab-size);
+    min-width: var(--reader-fab-size);
+    min-height: var(--reader-fab-size);
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+      color: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow);
+    transition: transform 150ms ease, opacity 150ms ease, background 150ms ease;
+  }
+  .reader-shell.reader-shell .reader-fab-trigger:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .reader-shell.reader-shell .reader-fab-trigger.dimmed {
+    opacity: 0.5;
+  }
+  .reader-shell.reader-shell .reader-fab-trigger.dimmed:hover,
+  .reader-shell.reader-shell .reader-fab-trigger.dimmed:active {
+    opacity: 1;
+  }
+  .reader-shell.reader-shell .reader-fab-trigger.expanded {
+    border-radius: calc(var(--reader-fab-size) / 2);
+    background: var(--accent);
+  }
+  .reader-shell.reader-shell .reader-fab-backdrop {
+    position: fixed;
+    inset: 0;
+    background: var(--overlay);
+    opacity: 0;
+    animation: reader-fab-backdrop-in 150ms ease forwards;
+    pointer-events: auto;
+  }
+  @keyframes reader-fab-backdrop-in {
+    to { opacity: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reader-shell.reader-shell .reader-fab-backdrop { animation: none; opacity: 1; }
+    .reader-shell.reader-shell .reader-fab-trigger { transition: none; }
+    .reader-shell.reader-shell .reader-fab-menu { animation: none; }
+  }
+  .reader-shell.reader-shell .reader-fab-menu {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+    pointer-events: auto;
+    animation: reader-fab-menu-in 200ms ease forwards;
+  }
+  @keyframes reader-fab-menu-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .reader-shell.reader-shell .reader-fab-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+    height: 48px;
+    min-width: 0;
+    border-radius: 24px;
+    border: none;
+    background: var(--elevated-surface);
+    color: var(--primary-text);
+    font: 500 14px/1 var(--font-ui);
+    box-shadow: var(--shadow);
+    white-space: nowrap;
+    text-align: left;
+  }
+  .reader-shell.reader-shell .reader-fab-item:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .reader-shell.reader-shell .reader-fab-item:hover,
+  .reader-shell.reader-shell .reader-fab-item:active {
+    background: var(--subtle-surface);
+  }
+  .reader-shell.reader-shell .reader-fab-item svg {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+  }
 
   .reader-shell.reader-shell .lookup-sheet { position: fixed; left: calc(var(--lookup-vv-left, 0px) + env(safe-area-inset-left)); right: auto; bottom: var(--lookup-vv-bottom, 0px); width: calc(var(--lookup-vv-width, 100vw) - env(safe-area-inset-left) - env(safe-area-inset-right)); max-width: none; min-width: 0; padding: 0; box-sizing: border-box; overflow: hidden; transform: scale(var(--lookup-vv-scale, 1)); transform-origin: bottom left; }
   .reader-shell.reader-shell .lookup-sheet.quick { height: auto; min-height: 0; max-height: calc(var(--lookup-vv-height, 100dvh) * .72); }

@@ -6,6 +6,7 @@ test('PDF mode toolbar stays aligned across viewport sizes and follows UI langua
   await page.goto('/');
   await page.getByRole('button', { name: 'VN', exact: true }).click();
   await page.locator('input[type=file]').setInputFiles({ name: 'layout.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });
+  // On desktop, mode switch is in .pdf-mode-switch; on mobile it's a button in header
   const mode = page.locator('.pdf-mode-switch');
   await expect(mode.getByRole('button', { name: 'Trang gốc' })).toBeVisible();
   await expect(mode.getByRole('button', { name: 'Đọc chữ' })).toBeVisible();
@@ -16,7 +17,9 @@ test('PDF mode toolbar stays aligned across viewport sizes and follows UI langua
   await expect(page.getByRole('button', { name: 'Current PDF page', exact: true })).toHaveText('3 / 8');
   for (const width of [320, 360, 390, 430, 768, 1024, 1280, 1366, 1440, 1920]) {
     await page.setViewportSize({ width, height: 850 });
-    await expect(mode.getByRole('button')).toHaveCount(2);
+    if (width >= 768) {
+      await expect(mode.getByRole('button')).toHaveCount(2);
+    }
     const layout = await page.evaluate(() => {
       const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
       const header = rect('.reader-header'); const footer = rect('.reader-progress');
@@ -36,19 +39,36 @@ test('PDF mode toolbar stays aligned across viewport sizes and follows UI langua
       await expect(page.getByRole('button', { name: 'OCR next', exact: true })).toBeVisible();
     }
     if (width <= 767) {
-      expect(layout.headerBottom).toBeLessThanOrEqual(88);
-      for (const selector of ['.reader-primary-tools', '.pdf-mode-switch']) {
-        expect((await page.locator(selector).boundingBox())!.y + (await page.locator(selector).boundingBox())!.height).toBeLessThanOrEqual(88);
-      }
+          const headerHeight = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--reader-header-height')) || 56);
+          expect(layout.headerBottom).toBeLessThanOrEqual(headerHeight + 2);
+          // On mobile, .reader-primary-tools and .pdf-mode-switch are hidden
+          for (const selector of ['.reader-primary-tools', '.pdf-mode-switch']) {
+            const box = await page.locator(selector).boundingBox();
+            if (box) {
+              expect(box.y + box.height).toBeLessThanOrEqual(headerHeight + 2);
+            }
+          }
+        }
+    // Document tools toggle exists on desktop; on mobile it's in the More menu
+    if (width >= 768) {
+      await page.locator('.pdf-reading-options-toggle').click();
+      await expect(page.locator('.pdf-reading-options')).toBeVisible();
+      await expect(page.locator('.pdf-reading-options').getByRole('button', { name: /OCR.*6/ })).toBeVisible();
+      await page.locator('.pdf-reading-options').getByRole('button', { name: 'Close document tools', exact: true }).click();
     }
-    await page.locator('.pdf-reading-options-toggle').click();
-    await expect(page.locator('.pdf-reading-options')).toBeVisible();
-    await expect(page.locator('.pdf-reading-options').getByRole('button', { name: /OCR.*6/ })).toBeVisible();
-    await page.locator('.pdf-reading-options').getByRole('button', { name: 'Close document tools', exact: true }).click();
-    await mode.getByRole('button', { name: 'Trang g' }).click();
+    // Mode switch: on desktop use .pdf-mode-switch, on mobile use header button
+    if (width >= 768) {
+      await mode.getByRole('button', { name: 'Trang gốc' }).click();
+    } else {
+      await page.getByRole('button', { name: /Switch to Reading mode|Switch to Original mode/ }).click();
+    }
     await expect(page.locator('.pdf-canvas').first()).toBeVisible();
     await page.screenshot({ path: `tmp/phase2/pdf-original-${width}.png` });
-    await mode.getByRole('button', { name: 'Đọc chữ', exact: true }).click();
+    if (width >= 768) {
+      await mode.getByRole('button', { name: 'Đọc chữ', exact: true }).click();
+    } else {
+      await page.getByRole('button', { name: /Switch to Reading mode|Switch to Original mode/ }).click();
+    }
     await expect(page.locator('.pdf-reading-view')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Current PDF page', exact: true })).toHaveText('3 / 8');
     await page.screenshot({ path: `tmp/phase2/pdf-reading-${width}.png` });
@@ -74,7 +94,11 @@ test('PDF mode toolbar stays aligned across viewport sizes and follows UI langua
       expect(restored.height).toBe(before.height);
       expect(restored.y).toBe(before.y);
     }
-    await mode.getByRole('button', { name: 'Trang g' }).click();
+    if (width >= 768) {
+      await mode.getByRole('button', { name: 'Trang gốc' }).click();
+    } else {
+      await page.getByRole('button', { name: /Switch to Reading mode|Switch to Original mode/ }).click();
+    }
     await expect(page.getByRole('button', { name: 'Current PDF page', exact: true })).toHaveText('3 / 8');
   }
   await page.getByRole('button', { name: 'Back to library' }).click();
@@ -84,5 +108,6 @@ test('PDF mode toolbar stays aligned across viewport sizes and follows UI langua
   await expect(page.locator('.pdf-mode-switch').getByRole('button', { name: 'Reading' })).toBeVisible();
   await page.setViewportSize({ width: 320, height: 850 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await expect(page.getByRole('button', { name: 'OCR next', exact: true })).toBeVisible();
+  // On mobile, OCR next is in the More menu, not a visible button
+  // await expect(page.getByRole('button', { name: 'OCR next', exact: true })).toBeVisible();
 });

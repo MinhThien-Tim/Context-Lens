@@ -4,7 +4,8 @@ import { pdfFixture } from './pdfFixture';
 test('Original mobile zoom preserves reading and selection geometry', async ({ page }) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'mobile-zoom.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });
-  await page.locator('.pdf-mode-switch').getByRole('button', { name: /Original|Trang gốc/ }).click();
+  // On mobile, mode switch is a button in header with aria-label
+  await page.getByRole('button', { name: /Switch to Reading mode|Switch to Original mode/ }).click();
   const slot = page.locator('[data-pdf-page="1"]');
   const width = () => slot.evaluate(el => el.getBoundingClientRect().width);
   await expect(page.locator('.pdf-text-layer span').first()).toBeVisible();

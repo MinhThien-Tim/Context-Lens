@@ -6,6 +6,8 @@
 .reader-shell {
   --reader-header-height:64px;
   --reader-footer-height:calc(48px + env(safe-area-inset-bottom));
+  --reader-fab-size:48px;
+  --reader-fab-gap:16px;
   --document-panel-size:clamp(var(--sidebar-min),18vw,var(--document-panel-width));
   --context-panel-size:clamp(var(--sidebar-min),22vw,var(--context-panel-width));
   --left-panel:0px; --right-panel:0px;
