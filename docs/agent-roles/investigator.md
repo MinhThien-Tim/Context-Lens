@@ -125,6 +125,11 @@ The Investigator follows the same Terminal Loop Guard as all roles ([`docs/agent
 - At most one safe launcher fallback (`.ps1` → `.cmd`).
 - Stop and report `BLOCKED`/`UNRESOLVED` on environment or completion-unknown failures.
 - Never poll, never repeatedly retry.
+- **Never re-issue a call that already returned an answer** — results, a rendered page, or a zero
+  match — with unchanged inputs. That is a loop, not an attempt. Change the query shape or stop;
+  narration is not a new attempt. Batch independent reads in one response instead of sending them one
+  per turn.
+  [`agent-execution-rules.md` §7](../agent-execution-rules.md#identical-query-loop).
 - Never re-run a truncated or auto-offloaded search. Change the query shape (search the construct, not
   bracket-and-equals syntax) or read the offloaded artifact —
   [`agent-execution-rules.md` §7](../agent-execution-rules.md#search-and-output-overflow).
@@ -137,3 +142,7 @@ The Investigator follows the same request-efficiency rules as all roles ([`docs/
 - Do not re-read unchanged files.
 - Do not re-search established symbols.
 - Stop when evidence is sufficient.
+
+A read-only investigation is the failure mode for the loop rule above: with no edits to justify a
+re-read and no command output to vary, a repeated query is the only available motion. Name the new
+fact before repeating anything; if there is none, the search is finished.
