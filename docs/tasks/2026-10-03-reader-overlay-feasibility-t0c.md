@@ -312,3 +312,21 @@ reverted to. A12 is now owned by a selector-independent spec that will outlive t
 ### Not done (per task scope)
 
 T0d OCR audit, T0e behavior contract, and the Reader redesign were not started.
+
+---
+
+## 9. Post-verdict state (user unavailable)
+
+The blocker (a) question in §4 was put to the user with all four options. **The user was not available
+to answer.** This section records the resulting state exactly; it does not resolve the question.
+
+**FACT.** No decision was applied. No product code changed. Blocker (a) remains **OPEN** and blocker (b)
+remains **BLOCKED/UNVERIFIED**. The `OVERLAY FEASIBLE` verdict above is conditional on the user later
+choosing among the four options in §4 — it is a statement about A12 #1–#9 and #11–#12, which all hold
+unconditionally, not a claim that the load-state first-line gap is solved.
+
+**RECOMMENDATION.** The pragmatic default, if the user later wants one chosen on their behalf, is
+**option 1** (reconcile the opening scroll to the true content top). It keeps `scrollTop = 0` as the
+settled load state, which is exactly the state the new A12 spec already covers, so it closes the gap
+without adding a new untested state. It changes only the initial-scroll reconciliation, not the
+overlay model. This is a recommendation, not a change.
