@@ -85,7 +85,9 @@ check without a change is waste.
 - Batch independent reads and searches into a single call when the available tool supports batching.
   Parallel or multi-file requests cost the same round trip as one.
 - Do not repeat an equivalent search. If a symbol, file, or concept is already established, reuse the
-  finding.
+  finding. A successful call that is re-issued unchanged is a loop, not a verification — see
+  §7 [Identical-query loop](agent-execution-rules.md#identical-query-loop) for the blocking rule and
+  the two legitimate re-issues (batched reads, or a preceding fact actually changed).
 - Do not re-read an unchanged file when the required evidence is already in hand. Read a range, not
   the whole file, when only one region is unknown.
 - Do not poll. Repeated status checks on a running command, process, or server are prohibited; §7 owns
@@ -130,6 +132,13 @@ never alternate between read and re-read.
 
 Rule 5 — **Recover from a no-match by re-reading.** A failed exact match means re-read the exact
 target text; never reconstruct the search string from memory or retry whitespace or variant guesses.
+This is the one legitimate re-issue of an unchanged query: the search was *wrong*, not merely
+repetitive. It is bounded to a single re-read that resolves the query's text.
+
+Rule 6 — **Never re-send an unchanged successful call.** Rule 5 permits re-deriving a failed query
+once. It never permits re-sending a call that already returned its answer. Before any repeat, name the
+new fact it would return; if there is none, change the query shape or stop. §7
+[Identical-query loop](agent-execution-rules.md#identical-query-loop) is normative.
 
 ### Per-role application
 
@@ -294,6 +303,43 @@ report rather than retry. It owns the guard; the subsections below own the detai
    above) or consume the offloaded artifact — do not repeat the query.
 8. **Maximum two execution attempts per verification objective.** On reaching the cap, stop the task
    and report the exact blocker — do not retry.
+9. **Never re-issue an identical completed tool call.** If a call returned (results *or* zero matches)
+   and you have not changed its inputs, sending it again produces no new information and is a loop, not
+   an attempt. Before sending anything you already sent, change its *shape* or do not send it — see
+   “Identical-query loop” below.
+
+### Identical-query loop
+
+A query that **returned an answer** — results, a rendered page, or a deliberate zero-match — and is
+then re-issued unchanged is a Terminal Loop Guard breach even when the answer was correct and even when
+it is not a *command*. The retry rules above budget *executions*; this rule budgets *information*.
+Return is the reason it applies most strongly: a completed call has already answered its question.
+
+**The test before every tool call: what new fact will this return that the previous call did not?**
+
+- If the answer is **nothing**, do not send it. Change the query *shape* — different tool, different
+  path scoping, different construct — or move on.
+- Zero matches is an **answer**, not a failure. Repeating it does not make it more likely to match.
+- Re-typing the same pattern, reordering parameters, or re-sending with different narration is the
+  **same call**. Narration is not a new attempt; a fresh paragraph of prose in front of an identical
+  payload is the clearest signature of this loop.
+- Correct *silently*: when you notice you have repeated a call, stop, do not re-send it, and continue
+  from the results you already have. Do not narrate the correction at length — fix the query and move on.
+
+**Two legitimate re-issues**, both of which change the inputs:
+
+1. **Batch instead of repeat.** Several independent reads belong in **one** response, not in one call
+   per turn. Sequential single calls are how this loop starts.
+2. **A preceding fact changed.** Code was edited, a file was regenerated, or a decision invalidated the
+   earlier result. State the reason; the rerun is then a new attempt.
+
+**Worked example (2026-10-04, T0d OCR/More audit).** A `grep` for
+`Không có|Không còn|trang cần OCR|message` was issued roughly **fifteen** times with an identical
+pattern, each preceded by an identical sentence of narration. The search had long since returned what
+was needed; the repetition produced zero new facts and burned the budget of a read-only audit. The user
+interrupted with *"resume. fix loop"*. The correct response was to stop re-sending, acknowledge once, and
+switch to **batched independent reads** — several files in a single response — which is the pattern that
+should have been used from the first result onward.
 
 ### Search and output overflow
 
@@ -301,6 +347,10 @@ A search or read that returns a truncated, preview-only or auto-offloaded result
 failure, so it is not covered by the retry budget above — but re-running it is still a Terminal Loop
 Guard breach. Reordering parameters, widening the path list, changing `head_limit`, or re-typing the
 pattern produces **no new information**; it is a retry and counts as one.
+
+This subsection is the overflow-specific case. [Identical-query loop](#identical-query-loop) above is
+the general rule and applies whether the returned answer was a result set, a rendered page, or a
+zero-match.
 
 **Classify once, then change the query shape — never the query repetition.**
 

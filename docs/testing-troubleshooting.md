@@ -53,6 +53,36 @@ before the task ends. Note that JSON tool-output files are often a single enormo
 them to another grep may fail — read them with `view_range` or use
 `Get-Content -Raw -LiteralPath <path> | ConvertFrom-Json` in PowerShell.
 
+### The same search keeps getting re-sent
+
+**Symptom.** The identical `grep`/`view`/shell call is sent again with the same pattern, same `paths`
+and same options, usually preceded by a fresh sentence of narration. Nothing about the payload
+changed. The tool returns the same answer it returned last time — or a zero match it already gave you.
+
+This is the **information** half of the Terminal Loop Guard. The execution rules budget retries; this
+budgets repeated queries. A call that returned an answer has spent its purpose. Re-typing the same
+pattern, reordering parameters, or wrapping the same payload in new narration is *the same call* —
+narration is not a new attempt.
+
+**Fix: change the query shape, or stop.**
+
+| Instead of | Do | Why |
+| --- | --- | --- |
+| re-sending the identical `grep` | re-anchor on a construct: symbol name, line range, file-scoped `paths` | a narrower anchor is a genuinely new question |
+| one read per turn, in sequence | batch the independent reads into **one** response | parallel reads cost one round trip |
+| re-sending after reading the answer | continue from the results already in hand | the fact is established |
+
+Before every repeat, ask: **what new fact would this return?** If nothing — do not send it.
+
+**Correct silently.** When you notice the loop, stop re-sending, fix the query shape, and move on. Do
+not add a paragraph explaining the correction; the next correct action is the whole remedy.
+
+**Reported example (2026-10-04, T0d OCR/More audit).** A `grep` for
+`Không có|Không còn|trang cần OCR|message` ran roughly **fifteen** times unchanged, each preceded by
+an identical sentence. The user interrupted with *"resume. fix loop"*. Switching to batched independent
+reads resolved it immediately. See
+[`agent-execution-rules.md` §7](agent-execution-rules.md#identical-query-loop) for the normative rule.
+
 ### PowerShell blocks npm.ps1
 
 **Symptom**

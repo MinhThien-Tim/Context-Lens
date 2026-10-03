@@ -58,7 +58,7 @@ Canonical policy: [§4](docs/agent-execution-rules.md#4-verification-proportiona
 
 ## 6. Stop instead of looping
 
-The [Terminal Loop Guard](docs/agent-execution-rules.md#terminal-loop-guard) is mandatory: never repeatedly retry shell commands — classify each failure once, take at most one safe fallback, then stop and report the blocker.
+The [Terminal Loop Guard](docs/agent-execution-rules.md#terminal-loop-guard) is mandatory: never repeatedly retry shell commands — classify each failure once, take at most one safe fallback, then stop and report the blocker. It also bans **re-issuing an identical successful tool call**: if a call yields no new fact, change the query shape or stop — never re-send it, and never re-send it behind fresh narration ([§7](docs/agent-execution-rules.md#identical-query-loop)).
 Launcher preference (`.ps1` → `.cmd`), the two-attempt execution budget, one direct result check,
 and sandbox approval mechanics are owned by the canonical
 [Execution / Test Retry Policy §7](docs/agent-execution-rules.md#7-execution--test-retry-policy);
