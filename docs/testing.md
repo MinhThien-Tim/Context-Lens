@@ -9,6 +9,7 @@ Related: [ARCHITECTURE.md](ARCHITECTURE.md) · [Testing troubleshooting](testing
 | Unit / integration (co-located) | `src/**/*.test.ts`, `src/**/*.test.tsx` | Vitest via `vite.config.ts` |
 | Gateway unit tests | `gateway/src/gateway.test.ts` | Vitest (same `include` glob) |
 | Browser / E2E | `e2e/*.spec.ts` | Playwright, `playwright.config.ts` |
+| Browser / E2E by execution tier | `e2e/*.spec.ts` | Playwright, `playwright.tiers.config.ts` (`PW_TIER`) |
 | Cross-repository vocabulary handoff | `e2e/vocabulary-handoff.spec.ts` | Playwright, `playwright.vocabulary.config.ts` |
 | Shared setup | `src/test/setup.ts` (`fake-indexeddb/auto`, `vi.restoreAllMocks`), `src/test/fixtures.ts` | — |
 | Bundle budget + precache assets | `scripts/check_bundle_budget.mjs` | Node script, run during `build` |
@@ -50,10 +51,31 @@ Keep the same arguments and test scope; see the [launcher policy](agent-executio
 | Targeted tests | `npx vitest run <path-or-glob>` |
 | Single test by name | `npx vitest run <path> -t "<name>"` |
 | Browser tests | `npm run test:browser` |
+| Browser tests by execution tier | `$env:PW_TIER='<fast\|pdf-normal\|heavy>'; npx playwright test --config playwright.tiers.config.ts <spec>` |
 | Offline E2E (production build only) | `$env:QA_PRODUCTION='true'; npx playwright test e2e/offline.spec.ts` |
 | Vocabulary handoff (two repos) | `npx playwright test --config playwright.vocabulary.config.ts` |
 | Gateway typecheck / build / dry-run | `npm run gateway:typecheck`, `npm run gateway:build`, `npm run gateway:check` |
 | Dictionary audits | `npm run audit:dictionary`, `npm run audit:en-vi-gaps` |
+
+## Playwright execution tiers
+
+`playwright.tiers.config.ts` imports the base `playwright.config.ts` and only sets timeouts, so
+projects, `--project=laptop` / `--project=mobile-chromium`, and the web server behave exactly as
+usual. Select a tier with `PW_TIER`; an unknown value fails fast rather than falling back silently.
+
+| Tier | `PW_TIER` | Test timeout | `actionTimeout` | Use for |
+| --- | --- | --- | --- | --- |
+| FAST | `fast` | 30s | 10s | Navigation, chrome transitions, no PDF rasterisation |
+| PDF-NORMAL | `pdf-normal` | 90s | 10s | One PDF loaded, geometry and Lookup invariants |
+| HEAVY | `heavy` | 240s | 10s | OCR windows, queue drains, long stability checks |
+
+`retries` stays `0` and `workers` stays `1` (the base config fixes `workers` globally, so tiers never
+scale concurrency). A tier is a *ceiling*, not a target: raise the tier only when the test genuinely
+needs OCR or a queue drain, and never to hide a slow or failing test.
+
+```powershell
+$env:PW_TIER='pdf-normal'; npx playwright test --config playwright.tiers.config.ts e2e/pdf-reader-chrome-a12.spec.ts
+```
 
 ## Per-subsystem verify commands
 

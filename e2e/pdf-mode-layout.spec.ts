@@ -1,7 +1,12 @@
 ﻿import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
 
-test('PDF mode toolbar stays aligned across viewport sizes and follows UI language', async ({ page }) => {
+// QUARANTINED (T0c, REWRITE): drives chrome with `classList.add('chrome-quiet')`
+// and asserts reserved-strip geometry that is false under the approved Overlay
+// model. Separately, its `/OCR.*6/` assertion at :46 is stale against the
+// 12-page OCR window shipped in 0230896 — that label migration is T0d scope and
+// is deliberately NOT fixed here.
+test.fixme('REWRITE (T0c): reserved-strip geometry + stale /OCR.*6/ label (T0d); superseded by pdf-reader-chrome-a12.spec.ts', async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto('/');
   await page.getByRole('button', { name: 'VN', exact: true }).click();

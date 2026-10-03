@@ -1,7 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
 
-test('Original PDF reclaims mobile header space without a toolbar gap', async ({ page }) => {
+// QUARANTINED (T0c, REWRITE): this spec encodes the OLD reserved-strip (R) model —
+// it drives chrome with `classList.add/remove('chrome-quiet')` and asserts
+// `viewportTop === headerBottom`, which is false by construction under the
+// approved Overlay (O) model where the header overlays the reading surface.
+// Its assertions are left intact on purpose: the replacement is the new
+// selector-independent contract in e2e/pdf-reader-chrome-a12.spec.ts.
+test.fixme('REWRITE (T0c): encodes the reserved-strip chrome model and fakes chrome via classList; superseded by pdf-reader-chrome-a12.spec.ts', async ({ page }) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'chrome.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });
   await page.locator('.pdf-mode-switch').getByRole('button', { name: /Original|Trang gốc/ }).click();
@@ -59,7 +65,11 @@ test('Original PDF reclaims mobile header space without a toolbar gap', async ({
   }
 });
 
-test('Original mobile Lookup open and close do not move the PDF reading position', async ({ page }) => {
+// QUARANTINED (T0c, REWRITE): the Lookup position contract is still valid, but
+// this copy sets `scrollTop = 0` directly and would re-assert the same invariant
+// now owned, with real input, by pdf-reader-chrome-a12.spec.ts. Kept (not
+// deleted) so the pre-redesign expectation stays reviewable.
+test.fixme('REWRITE (T0c): valid Lookup contract but duplicates pdf-reader-chrome-a12.spec.ts with synthetic scroll', async ({ page }) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'lookup-jump.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });
   await page.locator('.pdf-mode-switch').getByRole('button', { name: /Original|Trang gốc/ }).click();

@@ -1,7 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
 
-test('Original mobile Click handles a real touchscreen tap without treating gestures as taps', async ({ page }) => {
+// QUARANTINED (T0c, REWRITE): the tap/gesture disambiguation this test guards is
+// still valid, but it forces quiet chrome with a FAKE scroll —
+// `dispatchEvent(new Event('touchmove')) + el.scrollTop = 65 +
+// dispatchEvent(new Event('scroll'))` — which bypasses the real-input path.
+// Under the approved contract chrome responds to real scroll (and focus), never
+// to tap, so this step must be rebuilt on real input rather than repaired.
+// Its "Lookup still works while chrome is quiet" assertions remain valid.
+test.fixme('REWRITE (T0c): fakes quiet chrome via synthetic touchmove/scroll events; must be rebuilt on real input', async ({ page }) => {
   test.skip(!test.info().project.use.isMobile, 'Mobile touchscreen only');
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'click.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
