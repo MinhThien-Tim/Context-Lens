@@ -23,15 +23,16 @@ src/main.tsx
 ```
 
 `ReaderShell` exposes `data-interface-mode` and `data-reader-surface`, plus panel classes.
-It owns only transient mobile chrome visibility: accumulated downward reading scroll quiets the
-header/footer; upward scroll, top-of-document or a **confirmed tap** reveals them without changing
-content geometry. A confirmed tap is a primary-touch press of at most 450 ms and 10 px movement that
-does not move the scroll position and leaves no active selection — the same classifier `PdfPage` uses
-for Original Mode word lookup — so an ordinary scroll flick never reveals the chrome. The reading
-surface exempt from the reveal rule is `.pdf-page` in Original and `.pdf-reading-scroll` in Reading
-Mode. Open panels, selection, settings and any open reading overlay (including the OCR
+It owns only transient mobile chrome visibility, and it is specified by
+[reader-behavior-contract.md](reader-behavior-contract.md) §4–§6 and
+[reader-chrome-foundation.md](reader-chrome-foundation.md). In short: accumulated **downward** reading
+scroll quiets the header/footer and accumulated **upward** travel reveals them, using one shared
+threshold; taps never change chrome state; only focus entering real Reader chrome reveals it. Quiet is
+visual only — it never changes content height, scrollTop, page identity or layout geometry. Open
+panels, selection, settings and any open reading overlay (including the OCR
 `.pdf-reading-selection-actions` bar) keep controls visible. It observes existing scroll events, never
-navigation.
+navigation. The full rules, thresholds and the obsolete tap-reveal rule that was removed in
+ChromeFoundation are recorded in the ChromeFoundation spec.
 
 ## Homepage (`home-shell`)
 
@@ -63,17 +64,20 @@ atomically. Invalid appearance defaults to System.
 
 ## Reader layout
 
-Desktop uses a reading canvas between independent Document and Context columns. Mobile/tablet
-below 1024 px use a compact header, bottom page navigation and modal drawers/sheets.
-`useDesktop()` (`src/components/useDesktop.ts`) is a single `matchMedia('(min-width: 1024px)')`
-subscription and is the responsive authority.
+Desktop uses a reading canvas between independent Document and Context columns. Mobile below
+1024 px uses a compact header, bottom page navigation and modal drawers/sheets. There is no tablet
+band: 768–1023 px is Mobile presentation. `useDesktop()` (`src/components/useDesktop.ts`) is a single
+`matchMedia('(min-width: 1024px)')` subscription and is the sole Reader responsive authority; the
+obsolete 768 px Reader breakpoint has been removed rather than re-targeted. See
+[reader-chrome-foundation.md](reader-chrome-foundation.md) for the foundation rules and for which
+Mobile presentation gaps belong to the MobileChrome phase.
 
 | Area | Desktop | Mobile |
 | --- | --- | --- |
 | Side panel | Contents and context render as columns (`reader-shell.has-contents` / `.has-context`) | Drawers/sheets; `App.tsx` auto-closes Contents when the lookup sheet or notes open |
 | Lookup result | Quick popup; explicit Full opens Context Inspector | Quick bottom sheet; Full expands the same sheet |
 | Notes | Side panel | Full-height panel (`NotesPanel`) |
-| Toolbar | Left: Library and bounded title; center: PDF mode and Document tools; right: Contents, Markup, OCR next, Aa, overflow; Advanced adds Context | Phones ≤767 px: Back/title/Aa/menu, then Contents/Markup/OCR next and PDF mode/tools together; tablets retain the three-row PDF layout |
+| Toolbar | Left: Library and bounded title; center: PDF mode and Document tools; right: Contents, Markup, OCR next, Aa, overflow; Advanced adds Context | Phones: Back/title/Aa/menu, then Contents/Markup/OCR next and PDF mode/tools together. 768–1023 currently reuses the desktop sheet, which the MobileChrome phase resolves |
 | Contents / Go to | Keyboard `T` and `G` (guarded by `keyboardCanNavigate`) | Visible Contents button / bottom location button |
 | PDF paging | Bottom `PageNavigation` and guarded arrow keys | Bottom touch navigation / Go to page |
 
@@ -88,14 +92,18 @@ with both open at supported desktop widths. No resize handles or width animation
 Mobile opens one panel at a time with the existing focus trap and Escape behavior.
 
 The top PDF control contains only Original/Reading; the adjacent Document tools popover contains
-existing text-source, OCR language, recognition and queue actions. OCR next is also visible in the primary actions group, reusing the same next-six-pages action and busy/completed guards. OCR behavior is unchanged.
-Original keeps a centered PDF canvas with a quiet desktop zoom toolbar in both densities: zoom out, current percentage with Default/Fit width/Fit page presets, and zoom in. Mobile keeps its footer Zoom menu.
-Reading retains the shared structured pages with comfortable margins and no card border per page.
+existing text-source, OCR language, recognition and queue actions. OCR next is also visible in the
+primary actions group; under the frozen contract it is retired as a Header/L1 action and becomes a
+document-tools action meaning "run OCR on remaining unprocessed pages", migrated in the MobileChrome
+phase. OCR queue semantics are unchanged here. Original keeps a centered PDF canvas with a zoom
+control in both densities: zoom out, current level, zoom in. Under the frozen contract the mobile
+footer Zoom **menu** is retired and replaced by a direct Footer control in the PDF/OCR phase; the
+desktop zoom bar is unchanged. Reading retains the shared structured pages with comfortable margins
+and no card border per page.
 `ReaderProgress` always reports reading progress separately from optional OCR status. PDF page
 navigation is rendered once at the bottom; non-PDF location opens the existing Go to dialog.
-Header/footer size variables determine PDF viewport height; quiet chrome changes opacity/transform,
-not viewport size. On phones, PDF scroll surfaces keep a full viewport height and the viewport moves
-into the header area when quiet, without changing scroll offsets or slot geometry. Text chrome overlays
+Header/footer size variables determine PDF viewport height; quiet chrome is visual only — opacity and
+transform, never viewport size, content height or scrollTop (contract §4.2, A12). Text chrome overlays
 window-scrolled content. Long text continues to use window scrolling and the existing location contract.
 
 `LookupBottomSheet` presents the Quick/Full display mode supplied by App. New lookups use the saved
@@ -212,7 +220,7 @@ There is no global store. Ownership rules:
 ## Theme system
 
 - `src/styles.css` contains shared styling and the original Simple homepage, imported once from `src/main.tsx`. `src/reader-layout.css` loads before opening a document and imports `src/styles.reader-base.css` first for reader markup, PDF Original/Reading presentation, controls and PDF.js text layers, followed by the responsive reader sheets and layout/inspector overrides. Base rules retain their original relative order; shared settings and mixed shared/lookup rules remain global. Both CSS chunks remain in the service-worker precache. `src/home-advanced.css` is loaded on demand for Advanced and scopes its rules to the Advanced home shell.
-- `src/styles.mobile-reader.css` is imported first by the lazy `reader-layout.css`, after shared styles, and scopes phone reader/lookup presentation to ≤767 px. Shell specificity preserves its overrides over the following reader-layout rules. Linked bilingual meanings stack per sense; unmatched entry glosses remain separate. Quick and Full size to content up to their respective caps.
+- `src/styles.mobile-reader.css` is imported first by the lazy `reader-layout.css`, after shared styles, and scopes phone reader/lookup presentation to ≤767 px. Shell specificity preserves its overrides over the following reader-layout rules. Linked bilingual meanings stack per sense; unmatched entry glosses remain separate. Quick and Full size to content up to their respective caps. **Known gap:** 768–1023 px is Mobile presentation semantically but no mobile stylesheet currently covers it; this is defect D5 and belongs to the MobileChrome phase, not to ChromeFoundation.
 - `src/styles.desktop-reader.css` is imported next by the lazy `reader-layout.css` and scopes reader presentation to ≥1024 px, with shell specificity that survives the following reader-layout rules. Both responsive stylesheets load before opening a document and remain in the service-worker precache, outside the initial homepage bundle. It owns compact desktop chrome and bounded panel sizing; both open panels share less than half the viewport. Quick keeps its shared 440 px positioning contract and stacked linked senses; Full can use paired columns when its own container reaches 390 px. Shared structure and mobile presentation remain in their existing stylesheets.
 - Design tokens are CSS variables on `:root` (palette, surfaces, `--reading-surface`,
   `--elevated-surface`, `--primary-text`, `--secondary-text`, `--border`, `--selection`,

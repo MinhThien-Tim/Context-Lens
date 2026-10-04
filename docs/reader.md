@@ -42,7 +42,7 @@ It renders plain `content` or sanitized `safeHtml` (markdown/article), and reuse
 | Rendering | `PdfPage.tsx` canvas + PDF.js text layer | `PdfReadingPage.tsx` / `PdfOcrReadingPage.tsx` DOM blocks |
 | Page model source | PDF.js live document geometry (`PdfViewer` sizes map) | `PdfStructuredPage` from `db.documents.pdfPages` |
 | Selection mapping | `src/reader/pdf/selectionAdapter.ts` + `PdfTextIndex` (PDF.js DOM ↔ canonical offsets) | `src/reader/pdf-reading/readingSelectionAdapter.ts` (DOM ↔ `documentRecord.content`) |
-| Zoom | `calculatePdfScale` natural / fit-width / fit-page / custom; desktop control bar, mobile footer menu | Reader typography only (`--reader-size`, `--reader-leading`, `--reader-font`) |
+| Zoom | `calculatePdfScale` natural / fit-width / fit-page / custom; desktop control bar, mobile footer control | Reader typography only (`--reader-size`, `--reader-leading`, `--reader-font`) |
 | OCR display | Never overlays OCR on the original page | Renders OCR text for pages that need it |
 | Extra chrome | Shared top mode switch + Document tools, quiet zoom controls | Shared top mode switch + Document tools, reading typography |
 | Page mounting | Dominant viewport page + immediate previous/next pages, at most three canvases; neighbors skipped while OCR is busy | All pages in one scroll container |
@@ -52,14 +52,16 @@ contains only the two view choices, with OCR/source controls in a separate Docum
 Shell height tokens reserve header and footer space without modifying scroll/navigation mapping.
 Phones ≤767 px place the Original PDF scroll surface directly below the compact fixed header.
 Quiet chrome moves it to the top and expands its height to the full viewport without changing scrollTop.
-The chrome quiets only after accumulated downward travel on the same scroll surface, and a touch that
-starts inside the reading surface (`.pdf-page` in Original, `.pdf-reading-scroll` in Reading Mode) is
-treated as a scroll candidate rather than a control request: only a confirmed tap (primary touch,
-≤450 ms, ≤10 px, unchanged scroll position, no active selection) reveals it again. Ordinary reading
-flicks therefore leave the header and footer quiet, while an intentional tap still recovers the
-controls. Open reading overlays — including the OCR `.pdf-reading-selection-actions` bar — block
-quieting.
-The mobile Original zoom control lives in the bottom progress bar, so its empty in-viewer toolbar takes no space.
+Chrome quiets after accumulated downward reading travel and reveals after accumulated upward travel or
+on reaching the content top, using one shared threshold; a tap never changes chrome state, and only
+focus entering real Reader chrome reveals it. Ordinary reading flicks therefore leave the header and
+footer quiet while deliberate upward travel recovers the controls. Open reading overlays — including
+the OCR `.pdf-reading-selection-actions` bar — block quieting. The exact rules, constants and the
+removed confirmed-tap reveal are specified in [reader-chrome-foundation.md](reader-chrome-foundation.md),
+derived from [reader-behavior-contract.md](reader-behavior-contract.md) §4–§6.
+The Original PDF zoom control currently lives in the bottom progress bar. Under the frozen contract it
+becomes a direct Footer zoom control (decrease / level / increase) and the footer Zoom **menu** is
+retired, migrated in the PDF/OCR phase.
 Reading Mode retains its stable full-height scroll surface and visual header offset.
 Bottom content padding keeps the last page reachable above the overlaid footer.
 
