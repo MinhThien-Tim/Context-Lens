@@ -26,11 +26,8 @@
   .reader-shell.reader-shell .reader-header .toolbar-button { min-height: 36px; padding-inline: 7px; gap: 5px; font-size: 12px; white-space: nowrap; }
   .reader-shell.reader-shell .reader-header .icon-button { flex: 0 0 36px; width: 36px; min-width: 36px; min-height: 36px; }
   .reader-shell.reader-shell .reader-header .toolbar-button[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent); }
-  .reader-shell.reader-shell .ocr-next-button { background: color-mix(in srgb, var(--accent-soft) 55%, var(--reading-surface)); }
-  .reader-shell.reader-shell .pdf-mode-controls { gap: 6px; }
   .reader-shell.reader-shell .pdf-mode-switch > button { min-height: 34px; min-width: 66px; padding-inline: 9px; font-size: 12px; }
   .reader-shell.reader-shell .pdf-mode-switch > button[aria-pressed="true"] { color: var(--accent); background: var(--reading-surface); }
-  .reader-shell.reader-shell .reader-header-position { justify-self: center; }
   .reader-shell.reader-shell .reader-more-menu button,
   .reader-shell.reader-shell .pdf-reading-options button,
   .reader-shell.reader-shell .pdf-reading-options select { min-height: 36px; }
@@ -39,8 +36,6 @@
   .reader-shell.reader-shell .pdf-toolbar select { min-height: 36px; }
   .reader-shell.reader-shell .pdf-zoom-presets { position: relative; }
   .reader-shell.reader-shell .pdf-zoom-presets > button { min-width: 64px; font-variant-numeric: tabular-nums; }
-  .reader-shell.reader-shell .pdf-queue-status { min-height: 36px; padding-block: 0; }
-  .reader-shell.reader-shell .pdf-queue-status button { min-height: 34px; }
   .reader-shell.reader-shell .reader-text { padding-top: clamp(24px, 3vh, 40px); }
   .reader-shell.reader-shell .reader-viewport { transition: none; }
   .reader-shell.reader-shell .pdf-reading-page { padding-top: 24px; }

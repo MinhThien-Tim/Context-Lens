@@ -1,5 +1,5 @@
-/* Phone presentation only. Extra shell specificity also wins over lazy reader-layout.css. */
-@media (max-width: 767px) {
+/* Mobile presentation (≤1023px). Extra shell specificity also wins over lazy reader-layout.css. */
+@media (max-width: 1023px) {
   .reader-shell.reader-shell,
   .reader-shell.reader-shell[data-reader-surface] {
     --reader-header-height: calc(88px + env(safe-area-inset-top));
@@ -20,19 +20,9 @@
   }
   .reader-shell.reader-shell .reader-document h1 { max-width: none; padding: 3px 6px; font-size: 12px; }
   .reader-shell.reader-shell .reader-header-actions { display: contents; }
-  .reader-shell.reader-shell .reader-header-actions > .icon-button { grid-column: 2; grid-row: 1; margin-right: 44px; }
-  .reader-shell.reader-shell .reader-more { grid-column: 2; grid-row: 1; justify-self: end; }
-  .reader-shell.reader-shell .reader-primary-tools { grid-column: 1; grid-row: 2; justify-content: flex-start; gap: 0; min-width: 0; }
-  .reader-shell.reader-shell .reader-primary-tools .toolbar-button { padding: 0 4px; gap: 3px; font-size: 10px; min-width: 44px; min-height: 44px; }
-  .reader-shell.reader-shell .reader-primary-tools svg { display: none; }
-  .reader-shell.reader-shell .reader-primary-tools .ocr-next-button { color: var(--accent); background: var(--accent-soft); border-radius: 5px; }
-  .reader-shell.reader-shell .reader-primary-tools .markup-indicator { color: var(--notes); background: var(--notes-soft, var(--accent-soft)); }
-  .reader-shell.reader-shell .reader-header-position { grid-column: 2; grid-row: 2; width: auto; min-width: 0; }
-  .reader-shell.reader-shell .pdf-mode-controls { gap: 0; min-width: 0; }
   .reader-shell.reader-shell .pdf-mode-switch { padding: 0; border: 0; gap: 0; }
   .reader-shell.reader-shell .pdf-mode-switch > button { min-width: 0; min-height: 44px; padding: 0 5px; font-size: 10px; }
   .reader-shell.reader-shell .pdf-mode-switch > button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); box-shadow: none; }
-  .reader-shell.reader-shell .pdf-reading-options-toggle { width: 44px; }
 
   /* Keep PDF scroll geometry stable. Hiding chrome slides the header/footer out of the
      viewport; the reading box never moves, resizes, or reclaims the header area, so the
@@ -45,32 +35,79 @@
   .reader-shell.reader-shell[data-reader-surface="reading"] .reader-viewport { position: relative; top: var(--reader-header-height); }
   .reader-shell.reader-shell[data-reader-surface="original"] .reader-viewport { min-height: 0; }
   .reader-shell.reader-shell[data-reader-surface="original"] .pdf-viewer-wrap { height: calc(100dvh - var(--reader-header-height)); }
-  .reader-shell.reader-shell .reader-viewport:has(.pdf-queue-status) { height: 100dvh; min-height: 0; }
-  .reader-shell.reader-shell .reader-viewport:has(.pdf-queue-status) > .pdf-viewer-wrap,
-  .reader-shell.reader-shell .reader-viewport:has(.pdf-queue-status) > .pdf-reading-view { height: auto; flex: 1; }
-  .reader-shell.reader-shell .pdf-reading-scroll { padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); box-sizing: border-box; }
+    .reader-shell.reader-shell .pdf-reading-scroll { padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); box-sizing: border-box; }
   .reader-shell.reader-shell .pdf-scroll { padding-top: 48px; padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); }
-  .reader-shell.reader-shell .pdf-toolbar { position: absolute; top: 0; left: 0; right: 0; height: 44px; min-height: 44px; padding-block: 0; flex-wrap: nowrap; justify-content: space-between; overflow: visible; }
   .reader-shell.reader-shell[data-reader-surface="original"] .pdf-toolbar { display: none; }
   .reader-shell.reader-shell[data-reader-surface="original"] .pdf-scroll { padding-top: 4px; }
-  .reader-shell.reader-shell .pdf-toolbar > .pdf-more { flex: 0 0 auto; }
-  .reader-shell.reader-shell .pdf-mobile-zoom-host { display: flex; flex: none; }
-  .reader-shell.reader-shell .pdf-mobile-zoom-host .pdf-more > button { min-width: 48px; min-height: 44px; padding: 0 6px; border: 1px solid var(--border); border-radius: 8px; background: var(--elevated-surface); color: var(--primary-text); font: 600 12px/1 var(--font-ui); }
-  .reader-shell.reader-shell .pdf-mobile-zoom-host .pdf-more-menu { top: auto; bottom: calc(100% + 6px); right: 0; left: auto; width: 148px; max-width: calc(100vw - 16px); padding: 4px; }
-  .reader-shell.reader-shell .pdf-mobile-zoom-host .pdf-more-menu button { min-height: 40px; padding: 0 8px; font-size: 12px; }
+  /* §8.2/§8.3/§9.6: at <=1023px zoom is a direct Footer control (decrease / level / increase).
+     It is never a popup and never appears in More, so the mobile zoom host is a plain Footer slot. */
+  .reader-shell.reader-shell .pdf-footer-zoom-host { display: flex; flex: none; }
+  .reader-shell.reader-shell .pdf-zoom-stepper { display: flex; align-items: center; gap: 2px; }
+  .reader-shell.reader-shell .pdf-zoom-stepper > button { min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--primary-text); font: 600 16px/1 var(--font-ui); touch-action: manipulation; }
+  .reader-shell.reader-shell .pdf-zoom-stepper > button:hover { background: var(--hover-surface, var(--elevated-surface)); }
+  .reader-shell.reader-shell .pdf-zoom-stepper > span { min-width: 40px; text-align: center; font: 600 12px/1 var(--font-ui); color: var(--secondary-text); font-variant-numeric: tabular-nums; }
   .reader-shell.reader-shell .reader-progress-status { gap: 6px; }
-  .reader-shell.reader-shell .reader-progress .pdf-click-toggle { flex: 0 0 auto; min-width: 48px; min-height: 44px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--elevated-surface); color: var(--primary-text); font: 600 12px/1 var(--font-ui); touch-action: manipulation; }
-  .reader-shell.reader-shell .reader-progress .pdf-click-toggle[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .reader-shell.reader-shell .reader-progress .pdf-click-toggle[aria-pressed="false"] { opacity: .7; }
   .reader-shell.reader-shell.chrome-quiet .pdf-toolbar { opacity: 0; pointer-events: none; }
-  .reader-shell.reader-shell[data-reader-surface="original"].chrome-quiet .reader-progress { transform: none; opacity: 1; pointer-events: auto; }
   .reader-shell.reader-shell .reader-text { width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding-top: calc(var(--reader-header-height) + 12px); }
   .reader-shell.reader-shell .pdf-reading-page { box-sizing: border-box; width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding: 12px max(var(--reader-page-padding, 18px), env(safe-area-inset-right)) 32px max(var(--reader-page-padding, 18px), env(safe-area-inset-left)); }
   .reader-shell.reader-shell .pdf-reading-page > header { margin-bottom: 12px; }
   .reader-shell.reader-shell .reader-progress { padding-top: 0; padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right)); gap: 4px; }
-  .reader-shell.reader-shell .reader-reveal { bottom: max(8px, env(safe-area-inset-bottom)); box-shadow: none; }
+  /* §6.9 (MobileChrome placement): the reveal-only control anchors directly above the reserved
+     Footer band. The mobile override that pinned it to the viewport bottom is removed, so it can
+     never overlap the Footer controls it shares space with, at any mobile width. */
+  .reader-shell.reader-shell .reader-reveal { box-shadow: none; }
 
-  .reader-shell.reader-shell .lookup-sheet { position: fixed; left: calc(var(--lookup-vv-left, 0px) + env(safe-area-inset-left)); right: auto; bottom: var(--lookup-vv-bottom, 0px); width: calc(var(--lookup-vv-width, 100vw) - env(safe-area-inset-left) - env(safe-area-inset-right)); max-width: none; min-width: 0; padding: 0; box-sizing: border-box; overflow: hidden; transform: scale(var(--lookup-vv-scale, 1)); transform-origin: bottom left; }
+  /* Centered/max-width treatment for wider mobile widths (768-1023px).
+       Centering uses `left/right:0` + `margin-inline:auto` rather than
+       `left:50%` + `translateX(-50%)` on purpose: a non-none `transform` would make the
+       Header/Footer the containing block for every `position:fixed` descendant, which
+       silently re-anchors the §9.2 More bottom sheet and the §6.9 reveal control to the
+       Footer box instead of the viewport. Both must stay anchored to the viewport. */
+    @media (min-width: 768px) {
+      .reader-shell.reader-shell .reader-header {
+        max-width: 720px;
+        margin-inline: auto;
+        inset: 0 0 auto;
+      }
+      .reader-shell.reader-shell .reader-progress {
+        max-width: 720px;
+        margin-inline: auto;
+        inset: auto 0 0;
+      }
+      .reader-shell.reader-shell .reader-reveal {
+        max-width: 720px;
+        margin-inline: auto;
+        left: 0;
+        right: 0;
+      }
+      .reader-shell.reader-shell .reader-viewport {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      .reader-shell.reader-shell .pdf-reading-options {
+        left: 50%;
+        right: auto;
+        width: min(720px, calc(100vw - 16px));
+        transform: translateX(-50%);
+      }
+    }
+
+    /* §9.2/§9.5 — one More disclosure, presented as a bottom sheet on the whole mobile band.
+       Same component and same menu element as the >=1024px popover; only the presentation
+       differs. `margin-inline:auto` + `max-width` centers and caps the sheet on 768-1023px
+       (§9.6) without turning it back into a centered popover. It is scrollable, capped at
+       70dvh, and anchored to the viewport rather than to the Footer it lives inside. */
+    .reader-shell.reader-shell .reader-more-menu {
+      position: fixed; z-index: 40; top: auto; bottom: 0; left: 8px; right: 8px;
+      margin-inline: auto; max-width: min(720px, calc(100vw - 16px));
+      width: auto; max-height: 70dvh; overflow-y: auto; overscroll-behavior: contain;
+      padding: 8px calc(8px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+      border: 1px solid var(--border); border-bottom: 0;
+      border-radius: 16px 16px 0 0; background: var(--elevated-surface);
+      color: var(--text); box-shadow: var(--shadow);
+    }
+
+    .reader-shell.reader-shell .lookup-sheet { position: fixed; left: calc(var(--lookup-vv-left, 0px) + env(safe-area-inset-left)); right: auto; bottom: var(--lookup-vv-bottom, 0px); width: calc(var(--lookup-vv-width, 100vw) - env(safe-area-inset-left) - env(safe-area-inset-right)); max-width: none; min-width: 0; padding: 0; box-sizing: border-box; overflow: hidden; transform: scale(var(--lookup-vv-scale, 1)); transform-origin: bottom left; }
   .reader-shell.reader-shell .lookup-sheet.quick { height: auto; min-height: 0; max-height: calc(var(--lookup-vv-height, 100dvh) * .72); }
   .reader-shell.reader-shell .lookup-sheet.expanded { height: auto; min-height: 0; max-height: calc(var(--lookup-vv-height, 100dvh) * .88); }
   .reader-shell.reader-shell .lookup-sheet *,

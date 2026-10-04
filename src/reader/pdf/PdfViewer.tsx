@@ -78,10 +78,13 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desk
   const [visible, setVisible] = useState(location.page);
   const [customScale, setCustomScale] = useState(1);
   const [bounds, setBounds] = useState<{ width: number; height: number } | null>(null);
-  const [mobileZoomHost, setMobileZoomHost] = useState<HTMLElement | null>(null);
+  const [footerZoomHost, setFooterZoomHost] = useState<HTMLElement | null>(null);
+  // Contract §8.2/§8.3 (U3): at <=1023px zoom is a direct Footer control, never a popup. The Footer
+  // owns the host element; this is a render seam for a control that lives in the Footer, not a
+  // disclosure surface, and `.pdf-more` / `.pdf-more-menu` are gone from the mobile path.
   useEffect(() => {
-    if (desktop || !ready) { setMobileZoomHost(null); return; }
-    setMobileZoomHost(document.querySelector<HTMLElement>('.pdf-mobile-zoom-host'));
+    if (desktop || !ready) { setFooterZoomHost(null); return; }
+    setFooterZoomHost(document.querySelector<HTMLElement>('.pdf-footer-zoom-host'));
   }, [desktop, ready]);
   const selectedCustomScale = desktop ? desktopCustomScale : customScale;
   const scaleFor = (size: PdfPageSize) => calculatePdfScale(effectiveZoom, selectedCustomScale, bounds?.width ?? 0, bounds?.height ?? 0, size.width, size.height, desktop ? 6 : 3);
@@ -136,8 +139,14 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desk
   if (!pdf || !ready) return <div class="pdf-state" role="status">Opening PDF…</div>;
   return <div class="pdf-viewer-wrap">
     {(() => {
-      const menu = <div class="pdf-more" ref={zoomMenu}><button aria-label="PDF options" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>Zoom</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => stepZoom(-1)}>Zoom out</button><button onClick={() => stepZoom(1)}>Zoom in</button>{desktop && <button onClick={() => changeZoom('natural')}>Default</button>}<button onClick={() => changeZoom('fit-width')}>Fit width</button><button onClick={() => changeZoom('fit-page')}>Fit page</button></div>}</div>;
-      return <><div class="pdf-toolbar" aria-label="PDF controls">{desktop ? <><button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button><div class="pdf-more pdf-zoom-presets" ref={zoomMenu}><button aria-label="PDF zoom presets" aria-expanded={moreOpen} aria-haspopup="true" onClick={() => setMoreOpen(value => !value)}>{Math.round(scaleFor(sizes[visible] ?? DEFAULT_SIZE) * 100)}%</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => { changeZoom('natural'); setMoreOpen(false); }}>Default</button><button onClick={() => { changeZoom('fit-width'); setMoreOpen(false); }}>Fit width</button><button onClick={() => { changeZoom('fit-page'); setMoreOpen(false); }}>Fit page</button></div>}</div><button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button></> : !mobileZoomHost ? menu : null}</div>{!desktop && mobileZoomHost && createPortal(menu, mobileZoomHost)}</>;
+      // One direct Footer zoom control at <=1023px (§8.2): decrease, level readout, increase. It is
+      // never a popup and never appears in More (§8.3/§9.4).
+      const directStepper = <div class="pdf-zoom-stepper">
+        <button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button>
+        <span aria-label="Zoom level" aria-live="off">{Math.round(scaleFor(sizes[visible] ?? DEFAULT_SIZE) * 100)}%</span>
+        <button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button>
+      </div>;
+      return <><div class="pdf-toolbar" aria-label="PDF controls">{desktop && <><button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button><div class="pdf-more pdf-zoom-presets" ref={zoomMenu}><button aria-label="PDF zoom presets" aria-expanded={moreOpen} aria-haspopup="true" onClick={() => setMoreOpen(value => !value)}>{Math.round(scaleFor(sizes[visible] ?? DEFAULT_SIZE) * 100)}%</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => { changeZoom('natural'); setMoreOpen(false); }}>Default</button><button onClick={() => { changeZoom('fit-width'); setMoreOpen(false); }}>Fit width</button><button onClick={() => { changeZoom('fit-page'); setMoreOpen(false); }}>Fit page</button></div>}</div><button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button></>}</div>{!desktop && footerZoomHost && createPortal(directStepper, footerZoomHost)}</>;
     })()}
     <div ref={rootRef} class="pdf-scroll" tabIndex={0}>
       <div class="pdf-pages">

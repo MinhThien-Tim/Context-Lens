@@ -44,24 +44,26 @@ It renders plain `content` or sanitized `safeHtml` (markdown/article), and reuse
 | Selection mapping | `src/reader/pdf/selectionAdapter.ts` + `PdfTextIndex` (PDF.js DOM ↔ canonical offsets) | `src/reader/pdf-reading/readingSelectionAdapter.ts` (DOM ↔ `documentRecord.content`) |
 | Zoom | `calculatePdfScale` natural / fit-width / fit-page / custom; desktop control bar, mobile footer control | Reader typography only (`--reader-size`, `--reader-leading`, `--reader-font`) |
 | OCR display | Never overlays OCR on the original page | Renders OCR text for pages that need it |
-| Extra chrome | Shared top mode switch + Document tools, quiet zoom controls | Shared top mode switch + Document tools, reading typography |
+| Extra chrome | Header Original/Reading + Document tools via More, quiet zoom controls | Header Original/Reading + Document tools via More, reading typography |
 | Page mounting | Dominant viewport page + immediate previous/next pages, at most three canvases; neighbors skipped while OCR is busy | All pages in one scroll container |
 
 Both PDF surfaces share the shell bottom `PageNavigation`; the header Original/Reading segment
 contains only the two view choices, with OCR/source controls in a separate Document tools popover.
-Shell height tokens reserve header and footer space without modifying scroll/navigation mapping.
-Phones ≤767 px place the Original PDF scroll surface directly below the compact fixed header.
+The Header overlays the reading surface and reserves no header space; the Footer stays visible and
+is backed by a bottom height token, so the overlay never shifts content or scroll mapping.
+Phones ≤1023 px place the Original PDF scroll surface directly below the compact fixed header.
 Quiet chrome moves it to the top and expands its height to the full viewport without changing scrollTop.
 Chrome quiets after accumulated downward reading travel and reveals after accumulated upward travel or
 on reaching the content top, using one shared threshold; a tap never changes chrome state, and only
 focus entering real Reader chrome reveals it. Ordinary reading flicks therefore leave the header and
 footer quiet while deliberate upward travel recovers the controls. Open reading overlays — including
-the OCR `.pdf-reading-selection-actions` bar — block quieting. The exact rules, constants and the
-removed confirmed-tap reveal are specified in [reader-chrome-foundation.md](reader-chrome-foundation.md),
-derived from [reader-behavior-contract.md](reader-behavior-contract.md) §4–§6.
-The Original PDF zoom control currently lives in the bottom progress bar. Under the frozen contract it
-becomes a direct Footer zoom control (decrease / level / increase) and the footer Zoom **menu** is
-retired, migrated in the PDF/OCR phase.
+the OCR `.pdf-reading-selection-actions` bar — and the More bottom sheet block quieting. The exact
+rules, constants and the removed confirmed-tap reveal are specified in
+[reader-chrome-foundation.md](reader-chrome-foundation.md), derived from
+[reader-behavior-contract.md](reader-behavior-contract.md) §4–§6. Mobile Header/Footer/More composition
+is specified in [mobile-chrome.md](mobile-chrome.md).
+The mobile Original PDF zoom control is a direct Footer control — decrease, level readout, increase —
+and the former footer Zoom **menu** is retired; it is not reachable from More.
 Reading Mode retains its stable full-height scroll surface and visual header offset.
 Bottom content padding keeps the last page reachable above the overlaid footer.
 
@@ -174,7 +176,7 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 ```
 
 - Text reader: caret hit-testing (`rangeFromPoint`) plus native drag / long-press selection.
-- Original Reader: `selectionAdapter.ts` converts a PDF.js text-layer range through `PdfTextIndex`. On mobile, the session-local **Click** control defaults on and lives next to the reading percentage in the bottom progress bar, which stays visible when Original chrome quiets. A short, stationary single-finger tap on an actual text glyph maps the word through the same index and opens Quick directly; turning Click off leaves native selection available without tap lookup. Scroll, long press, multi-touch, links and empty page space do not trigger tap lookup. Quiet chrome does not move the Original PDF viewport during contact.
+- Original Reader: `selectionAdapter.ts` converts a PDF.js text-layer range through `PdfTextIndex`. On mobile, the session-local **Click word lookup** control defaults on and is a More action; it is no longer an independent Footer action at narrow widths. The Footer stays visible when Original chrome quiets. A short, stationary single-finger tap on an actual text glyph maps the word through the same index and opens Quick directly; turning Click off leaves native selection available without tap lookup. Scroll, long press, multi-touch, links and empty page space do not trigger tap lookup. Quiet chrome does not move the Original PDF viewport during contact.
 - On desktop, double-clicking a single word in the Original text layer keeps native selection
   and opens Quick through the same indexed lookup handler. Phrase and drag selections keep
   the action bar for Define, Highlight and Note when no markup tool is active. With Highlight,
@@ -222,8 +224,11 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
   partially recognized page is never persisted.
 - Queue: `src/reader/pdf/usePdfOcrQueue.ts`. States `preparing | running | paused | done | error`,
   one job at a time, abort on document change. `preloadFirstTwelve` scans at most the first 12 pages
-  on open, recognizes at most 6 candidates per run, and skips pages that already carry PDF text; `App.tsx` only triggers it when a page in
-  that window has empty `plainText` and passes `ocrCandidate`.
+  on open but stops collecting candidates once **6** are gathered (`pending.length >= 6`), and skips
+  pages that already carry PDF text; `App.tsx` only triggers it when a page in the first 12 has empty
+  `plainText` and passes `ocrCandidate`. The 12-page explicit window (`OCR_AUTO_BATCH_SIZE`) is the
+  intended contract behavior; the hard-coded 6-candidate cap is the known U6 defect deferred to the
+  PDF/OCR controls phase.
 - Explicit runs auto-continue. `startCurrent(page)` and `startNextUnprocessed(fromPage)` are explicit
   user actions that walk the document once in consecutive `OCR_AUTO_BATCH_SIZE` (12) page windows
   until the end, so the user never has to click again between batches. `startCurrent(page)` OCRs the
@@ -236,8 +241,10 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
   switch remain available.
 - Per-page text source choice: `DocumentRecord.pdfTextSources[page] = 'pdf' | 'ocr'`, toggled by
   `PdfModeSwitch.onSource` and honored by `PdfReadingView.selectedOcr`.
-- Active OCR progress is a secondary status in `ReaderProgress` (`activeOcrProgress` in `App.tsx`),
-  separate from reading percentage. Queue/source/OCR actions remain in the Document tools popover.
+- Active OCR progress is an ambient status in `ReaderProgress` (`activeOcrProgress` in `App.tsx`), separate
+  from reading percentage, shown only while an OCR run is active/resumable (`preparing | running | paused`)
+  and hidden on terminal success, terminal error, cancel and clear. Document tools — reached through More —
+  is the canonical OCR status surface; Queue/source/OCR actions live there too.
 - Out of scope by design: whole-book OCR, selectable OCR overlays on the original PDF page, and
   vision-API fallback.
 - Delivery: worker, core and `eng` / `vie` trained data are served from the same origin and are

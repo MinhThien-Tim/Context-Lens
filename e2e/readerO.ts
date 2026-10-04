@@ -146,10 +146,25 @@ export async function expectMobileChrome(page: Page, state: 'revealed' | 'quiet'
   // (a fully opaque header reaches exactly 1, so an upper-bound match would
   // never be satisfiable); `quiet` must fall below 0.1.
   const message = `reader header never reached the ${state} state`;
+    // A mode switch or zoom remounts the surface, so the surface is briefly absent. Reading it here
+    // would throw inside `expect.poll` and abort the whole assertion instead of retrying, so an
+    // unmounted surface reports NaN — a value no assertion can match, which retries as intended.
   const poll = expect
-    .poll(async () => (await readerGeometry(page)).headerOpacity, { message, timeout: 5_000 });
+    .poll(async () => { try { return (await readerGeometry(page)).headerOpacity; } catch { return Number.NaN; } }, { message, timeout: 5_000 });
   if (state === 'quiet') await poll.toBeLessThan(0.1);
   else await poll.toBeGreaterThan(0.9);
+}
+
+/**
+ * Waits until a reading surface is mounted and has settled, so a remounting surface is observed
+ * after re-pagination rather than during it. Returns the settled geometry.
+ */
+export async function waitForReaderSurface(page: Page) {
+  await expect
+    .poll(async () => { try { const g = await readerGeometry(page); return Number.isFinite(g.viewportHeight) && g.viewportHeight > 0; } catch { return false; } },
+    { message: 'reader surface never settled', timeout: 15_000 })
+    .toBe(true);
+  return readerGeometry(page);
 }
 
 /**
@@ -193,7 +208,12 @@ export async function readerScrollOffset(page: Page) {
 }
 
 export async function togglePdfMode(page: Page, mode: 'Original' | 'Reading') {
-  await page.locator('.pdf-mode-switch').getByRole('button', { name: mode === 'Original' ? /Original|Trang gốc/ : /Reading/ }).click();
+  // The Footer control can be scrolled out of reach on a short surface; scrolling it into view with
+  // real input is a prerequisite for activating it, not a chrome assertion.
+  const button = page.locator('.pdf-mode-switch').getByRole('button', { name: mode === 'Original' ? /Original|Trang gốc/ : /Reading/ });
+  await button.scrollIntoViewIfNeeded();
+  await button.click();
+  await waitForReaderSurface(page);
 }
 
 export async function openMore(page: Page) {
@@ -202,7 +222,9 @@ export async function openMore(page: Page) {
 }
 
 export async function closeMore(page: Page) {
-  await page.getByRole('button', { name: 'Reader menu' }).click();
+  // §9.5 — at <=1023px the sheet is a bottom sheet with a backdrop, so Escape closes it
+  // (the trigger is covered by the sheet on that band and is not a reliable close target).
+  await page.keyboard.press('Escape');
   await expect(page.getByRole('menu', { name: 'Reader actions' })).toBeHidden();
 }
 

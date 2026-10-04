@@ -245,12 +245,14 @@ for (const width of [1024, 1280, 1366, 1440, 1920, 390]) {
       await expect(shell).toHaveClass(desktopAdvanced ? /has-contents/ : /^(?!.*has-contents).*$/);
       await expect(shell).not.toHaveClass(/has-context/);
       await page.screenshot({ path: `tmp/phase2/reader-${mode.toLowerCase()}-${width}.png` });
+      // §7.2/§9.3/§9.4: at every width the Header owns only Back, title and PDF mode, so every
+      // secondary action is reached through the single More disclosure. Only the label differs.
+      const moreAction = async (name: string) => {
+        await page.getByRole('button', { name: 'Reader menu', exact: true }).click();
+        await page.getByRole('menuitem', { name, exact: true }).click();
+      };
       const action = async (panel: 'Document' | 'Context') => {
-        if (desktopAdvanced) await page.locator('.reader-header').getByRole('button', { name: panel === 'Document' ? 'Contents' : 'Context panel', exact: true }).click();
-        else {
-          await page.getByRole('button', { name: 'Reader menu', exact: true }).click();
-          await page.getByRole('menuitem', { name: panel === 'Document' ? 'Document / Contents' : 'Context panel', exact: true }).click();
-        }
+        await moreAction(panel === 'Document' ? 'Contents' : 'Context');
       };
       if (desktopAdvanced) await action('Document');
       await action('Document');
@@ -275,7 +277,7 @@ for (const width of [1024, 1280, 1366, 1440, 1920, 390]) {
       await expect(page.locator('.notes-panel')).toBeVisible();
       await page.locator('.notes-panel').getByRole('button', { name: 'Close notes', exact: true }).click();
       if (width >= 1024) await expect(shell).toHaveClass(/has-contents/);
-      await page.getByRole('button', { name: 'Reading appearance', exact: true }).click();
+      await moreAction('Text and theme');
       await page.getByRole('dialog', { name: 'Reader settings' }).getByRole('button', { name: mode === 'Simple' ? 'Advanced' : 'Simple', exact: true }).click();
       await expect(shell).toHaveAttribute('data-interface-mode', mode === 'Simple' ? 'advanced' : 'simple');
       await page.getByRole('button', { name: 'Close reader settings', exact: true }).click();

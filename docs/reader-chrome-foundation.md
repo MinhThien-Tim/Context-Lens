@@ -99,8 +99,23 @@ Only these inputs may quiet or reveal chrome (§5.1):
 
 - Real input is established by a `wheel`, `touchmove` or paging key over the reading surface
   (`.reader-viewport`, `.pdf-scroll`, `.pdf-reading-scroll`, `[data-reader-text]`) within the gesture
-  window. Programmatic scroll therefore never accumulates travel (§5.2).
-- Wheel and touch use identical thresholds (§5.4).
+  window. Wheel and touch use identical thresholds (§5.4).
+- **§5.1/§5.2 programmatic attribution is explicit, never inferred.** `GESTURE_WINDOW` bounds how long
+  one gesture keeps authorising the deltas it produces; it never decides user-drivenness, because a
+  programmatic `scrollTop` assignment fires the same *trusted* scroll event as a wheel and therefore
+  cannot be told apart by recency or by `isTrusted`. Whoever performs a programmatic move declares the
+  position it produces (`src/reader/programmaticScroll.ts`):
+  - `expectProgrammaticScroll(top, target)` is called **before** the assignment — `usePdfScroll.navigate`
+    (page jump, restoration, zoom re-pagination, mode switch) and `jumpToOffset` (text Contents jump).
+  - `isProgrammaticScroll(target, top)` consumes that declaration once, matching **strictly** on target
+    identity and within `1` px of the declared position. The Reader zeroes both accumulators and
+    returns without driving a transition; the next uncommanded movement accumulates normally again.
+  - `clearProgrammaticScroll()` drops a pending declaration. Any real gesture calls it first, so a
+    gesture that happens to land on a stale declared position is still counted as real travel.
+  - The default is always "treat as ordinary scroll", never "treat as user travel" — an undeclared
+    movement can never be silently credited as user travel, and can never quietly be excluded.
+- The reveal control and chrome-focus reveal reset both accumulators, so the movement following a
+  reveal starts from a clean baseline instead of inheriting pre-quiet travel.
 - Tests must not synthesize scroll events to satisfy a user-visible requirement (§5.5): use real input
   or the sanctioned real-input e2e spec.
 
@@ -111,6 +126,7 @@ Only these inputs may quiet or reveal chrome (§5.1):
 | `CHROME_TRAVEL` | `32` px | Accumulated travel in **either** direction that commits a transition (§6.0/§6.1). One constant, opposite directions |
 | `CONTENT_TOP` | `40` px | At or above this `scrollTop`, chrome is always revealed with no threshold (§6.0) |
 | `CHROME` | `.reader-header,.reader-progress,.reader-reveal` | Real Reader chrome; focus entering it reveals (§6.4) |
+| `GESTURE_WINDOW` | `1200` ms | How long one real gesture keeps authorising the deltas it produces. Bounds momentum only — it never decides user-drivenness (§5.2, see [§5](#5-input-attribution)) |
 
 - **§6.2 reset before apply.** A direction change resets both accumulators *before* the new delta is
   applied, so travel never mixes directions.

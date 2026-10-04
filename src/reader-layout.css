@@ -25,7 +25,6 @@ body:has(.reader-shell) { background:var(--reading-surface); }
 .reader-shell .reader-header-leading,.reader-shell .reader-header-actions { display:flex; align-items:center; gap:var(--space-1); min-width:0; }
 .reader-shell .reader-document { grid-column:2; grid-row:1; display:block; min-width:0; }
 .reader-shell .reader-document h1 { display:block; margin:0; padding:0; max-width:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:600 14px/1.4 var(--font-ui); color:var(--primary-text); text-align:center; }
-.reader-shell .reader-header-position { grid-column:3; grid-row:1; display:flex; align-items:center; min-width:0; }
 .reader-shell .reader-header .icon-button { flex:0 0 44px; width:44px; min-height:44px; }
 .reader-shell .toolbar-button { background:transparent; border:0; color:var(--secondary-text); font-size:13px; }
 .reader-shell .toolbar-button[aria-expanded="true"] { background:var(--subtle-surface); color:var(--primary-text); }
@@ -43,24 +42,16 @@ body:has(.reader-shell) { background:var(--reading-surface); }
 .reader-shell .pdf-viewer-wrap { background:var(--subtle-surface); }
 .reader-shell .pdf-toolbar { position:relative; top:auto; right:auto; z-index:5; flex-shrink:0; min-height:48px; padding:2px var(--space-3); justify-content:flex-end; border:0; border-bottom:1px solid var(--border); border-radius:0; box-shadow:none; background:var(--subtle-surface); color:var(--primary-text); }
 .reader-shell .pdf-toolbar button,.reader-shell .pdf-toolbar select { min-height:44px; border:0; border-radius:var(--radius-control); background:transparent; color:var(--primary-text); }
-.reader-shell .pdf-more-menu { background:var(--elevated-surface); }
-.reader-shell .pdf-more-menu button { width:100%; text-align:left; }
 .reader-shell .pdf-scroll { padding:var(--space-4); }
 .reader-shell .pdf-page-slot { box-shadow:var(--shadow); }
-.reader-shell .pdf-mode-controls { display:flex; align-items:center; gap:var(--space-2); }
 .reader-shell .pdf-mode-switch { display:flex; align-items:center; flex:none; padding:2px; border:1px solid var(--border); border-radius:var(--radius-control); background:var(--subtle-surface); }
 .reader-shell .pdf-mode-switch > button { min-height:44px; min-width:78px; padding:0 var(--space-3); border:0; border-radius:4px; font:600 13px var(--font-ui); color:var(--secondary-text); background:transparent; }
 .reader-shell .pdf-mode-switch > button[aria-pressed="true"] { background:var(--reading-surface); color:var(--primary-text); box-shadow:0 1px 2px color-mix(in srgb,var(--text) 8%,transparent); }
 .reader-shell .pdf-mode-switch > button:disabled { opacity:.45; }
-.reader-shell .pdf-tools { position:relative; }
-.reader-shell .pdf-reading-options-toggle { position:relative; min-width:44px!important; padding:0!important; color:var(--secondary-text); }
-.reader-shell .pdf-reading-options-toggle svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.7; }
-.reader-shell .pdf-tools-busy { position:absolute; right:5px; top:5px; width:5px; height:5px; border-radius:50%; background:var(--accent); }
 .reader-shell .pdf-reading-options { width:min(320px,calc(100vw - 24px)); right:0; left:auto; max-height:calc(100dvh - var(--reader-header-height) - 24px); overflow:auto; }
 .reader-shell .pdf-reading-options header { display:flex; align-items:center; justify-content:space-between; padding-left:var(--space-2); }
 .reader-shell .pdf-reading-options header button { width:44px; text-align:center; }
 .reader-shell .pdf-reading-options button { min-height:44px; }
-.reader-shell .pdf-tools-backdrop { position:fixed; inset:0; border:0; background:var(--overlay); }
 .reader-progress { position:fixed; z-index:16; bottom:0; left:var(--left-panel); right:var(--right-panel); min-height:var(--reader-footer-height); padding:2px max(var(--space-4),env(safe-area-inset-right)) env(safe-area-inset-bottom) max(var(--space-4),env(safe-area-inset-left)); display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); background:var(--reading-surface); color:var(--secondary-text); font:12px/1.4 var(--font-ui); transition:opacity 120ms ease,transform 120ms ease; }
 .reading-progress-track { position:absolute; top:0; left:0; right:0; height:1px; background:var(--border); }
 .reading-progress-track span { display:block; height:100%; background:var(--secondary-text); }
@@ -88,6 +79,10 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .reader-shell .contents-panel { top:var(--reader-header-height); bottom:0; width:var(--document-panel-size); box-shadow:none; z-index:20; }
   .reader-shell .lookup-sheet.side-panel,.reader-shell .notes-panel,.reader-shell .context-panel { position:fixed; top:var(--reader-header-height); bottom:0; left:auto; right:0; width:var(--context-panel-size); max-height:none; height:auto; transform:none; padding:var(--space-4); border:0; border-left:1px solid var(--border); border-radius:0; box-shadow:none; background:var(--elevated-surface); z-index:20; }
   .reader-shell .settings-popover,.reader-shell .reader-highlight-palette { top:calc(var(--reader-header-height) + 8px); }
+  /* §9.2: at >=1024px More is a popover, but its trigger is Footer-owned (§8.1), so the popover must
+     open upward from the trigger. The base `top:calc(100% + 6px)` anchor assumed the trigger lived in
+     the Header and would otherwise place the menu below a trigger pinned to the viewport bottom. */
+  .reader-shell .reader-more-menu { top:auto; bottom:calc(100% + 6px); max-height:calc(100dvh - var(--reader-footer-height) - 24px); overflow:auto; }
 }
 @media (max-width:1023px) {
   .reader-shell { --reader-header-height:56px; }
@@ -96,7 +91,6 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .reader-shell[data-reader-surface="original"] .reader-header,.reader-shell[data-reader-surface="reading"] .reader-header { grid-template-rows:56px 52px; }
   .reader-shell .reader-header-actions { grid-column:3; gap:0; }
   .reader-shell .reader-document h1 { text-align:center; padding:0 var(--space-2); }
-  .reader-shell .reader-header-position { grid-row:2; grid-column:1 / -1; justify-content:center; width:100%; }
   .reader-shell .reader-back { width:44px; padding:0; }
   .reader-shell .reader-back span { display:none; }
   .reader-shell .reader-more-menu { position:fixed; top:auto; bottom:max(8px,env(safe-area-inset-bottom)); left:8px; right:8px; width:auto; max-height:70dvh; overflow:auto; box-shadow:var(--shadow); }
@@ -106,7 +100,8 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .reader-shell .pdf-reading-options { position:fixed; top:auto; bottom:max(8px,env(safe-area-inset-bottom)); left:8px; right:8px; width:auto; max-height:75dvh; z-index:40; }
   .reader-shell .pdf-toolbar { padding:2px var(--space-2); }
   .reader-shell.chrome-quiet .reader-header { transform:translateY(-100%); opacity:0; pointer-events:none; }
-  .reader-shell.chrome-quiet .reader-progress { transform:translateY(100%); opacity:0; pointer-events:none; }
+  /* §4.x/§6: quiet is a Header-only visual state. The Footer band stays visible and reserved on
+     every surface, so quieting never hides the only route to More, zoom, or the reveal control. */
   .reader-reveal { position:fixed; right:12px; bottom:calc(var(--reader-footer-height) + 8px); z-index:17; min-width:56px; min-height:44px; padding:0 var(--space-3); border:1px solid var(--border); border-radius:var(--radius-control); background:var(--reading-surface); color:var(--secondary-text); box-shadow:var(--shadow); font:13px var(--font-ui); }
 }
 

@@ -2,10 +2,11 @@ import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, expect, it, vi } from 'vitest';
 import { ReaderShell } from './ReaderShell';
-import { PdfModeSwitch } from './pdf/PdfModeSwitch';
-import { ReaderToolbar } from './ReaderToolbar';
+import { PdfDocumentTools, PdfModeSwitch } from './pdf/PdfModeSwitch';
+import { ReaderMore, ReaderToolbar } from './ReaderToolbar';
 import { ContextPanel } from './ContextPanel';
 import { ContentsPanel } from './ContentsPanel';
+import { expectProgrammaticScroll } from './programmaticScroll';
 
 let host: HTMLDivElement;
 afterEach(() => { if (host) act(() => render(null, host)); document.body.replaceChildren(); vi.unstubAllGlobals(); });
@@ -116,7 +117,7 @@ it('closes the focused Context panel on Escape while keeping Document open', () 
 });
 it('supports keyboard menu navigation and restores focus on Escape', () => {
   mount(1024);
-  act(() => render(<ReaderToolbar interfaceMode="simple" title="Test" contentsOpen={false} contextOpen={false} onBack={vi.fn()} onContents={vi.fn()} onContext={vi.fn()} onNote={vi.fn()} onSettings={vi.fn()} onEngines={vi.fn()} />, host));
+  act(() => render(<ReaderMore items={[{ label: 'Contents', onSelect: vi.fn() }, { label: 'Markup', onSelect: vi.fn() }]} />, host));
   const trigger = host.querySelector<HTMLButtonElement>('[aria-label="Reader menu"]')!;
   act(() => trigger.click());
   const items = host.querySelectorAll('[role="menuitem"]');
@@ -135,38 +136,55 @@ it('does not hide controls for a programmatic restore or page jump', () => {
   expect(isQuiet()).toBe(false);
 });
 
-it.each([390, 1024])('keeps primary actions reachable and invokes existing handlers (width=%s)', width => {
-  mount(width);
-  const contents = vi.fn(), markup = vi.fn(), next = vi.fn();
-  act(() => render(<ReaderToolbar interfaceMode="simple" title="A long document title.pdf" contentsOpen={false} contextOpen={false} highlightAvailable onBack={vi.fn()} onContents={contents} onContext={vi.fn()} onNote={vi.fn()} onSettings={vi.fn()} onEngines={vi.fn()} onHighlight={markup} primaryActions={<button aria-label="OCR next" onClick={next}>OCR next</button>}><div>Original / Reading</div></ReaderToolbar>, host));
-  expect(host.querySelector('.reader-header-leading h1')?.getAttribute('title')).toBe('A long document title.pdf');
-  expect(host.querySelector('.reader-header-position')?.textContent).toBe('Original / Reading');
-  for (const label of ['Contents', 'Markup', 'OCR next']) {
-    const button = host.querySelector<HTMLButtonElement>(`.reader-primary-tools [aria-label="${label}"]`)!;
-    expect(button).not.toBeNull();
-    act(() => button.click());
-  }
-  expect(contents).toHaveBeenCalledOnce(); expect(markup).toHaveBeenCalledOnce(); expect(next).toHaveBeenCalledOnce();
+// §5.2 the accumulator must not be credited for a jump the Reader itself commanded, even when the
+// jump lands inside a live gesture's momentum window and travels well past the 32px threshold.
+it('does not accumulate travel for a declared programmatic jump during a live gesture', () => {
+  const { scroll } = mount();
+  act(() => { scroll.dispatchEvent(new Event('wheel', { bubbles: true })); });
+  expectProgrammaticScroll(604, scroll);
+  act(() => { scroll.scrollTop = 604; scroll.dispatchEvent(new Event('scroll')); });
+  expect(isQuiet()).toBe(false);
+  // The declaration is consumed once: the very next uncommanded movement is ordinary real travel.
+  scrollSteps(scroll, [640]);
+  expect(isQuiet()).toBe(true);
 });
 
-// §7.2/§9.x ownership: the retired Header/L1 entry point leaves, the action stays reachable in
-// document tools, and exactly one button owns it.
-it('OCR next leaves the Header entry point and keeps exactly one action in document tools', () => {
+// §7.1/§7.2/§9.4: the Header owns exactly Back, the document title, and Original/Reading for PDF.
+// Every other approved action lives once, in More, at both widths.
+it.each([390, 1024])('keeps the Header to Back, title, and mode while More owns the secondary actions (width=%s)', width => {
+  mount(width);
+  const contents = vi.fn(), markup = vi.fn(), settings = vi.fn();
+  act(() => render(<><ReaderToolbar title="A long document title.pdf" onBack={vi.fn()} primaryActions={<div>Original / Reading</div>} /><ReaderMore items={[{ label: 'Contents', onSelect: contents }, { label: 'Markup', onSelect: markup }, { label: 'Text and theme', onSelect: settings }]} /></>, host));
+  expect(host.querySelector('.reader-header-leading h1')?.getAttribute('title')).toBe('A long document title.pdf');
+  expect(host.querySelector('.reader-header-actions')?.textContent).toBe('Original / Reading');
+  for (const label of ['Contents', 'Markup', 'OCR next', 'Text and theme', 'Language engines', 'Reader menu']) {
+    expect(host.querySelector(`.reader-header [aria-label="${label}"]`)).toBeNull();
+  }
+  act(() => host.querySelector<HTMLButtonElement>('[aria-label="Reader menu"]')!.click());
+  // Selecting an action closes the disclosure (§9 disclosure lifecycle), so each invocation
+  // re-opens More: the assertion is that the action is reachable exactly once, via More.
+  for (const label of ['Contents', 'Markup', 'Text and theme']) {
+    if (!host.querySelector('[role="menuitem"]')) act(() => host.querySelector<HTMLButtonElement>('[aria-label="Reader menu"]')!.click());
+    act(() => host.querySelector<HTMLButtonElement>(`[role="menuitem"][aria-label="${label}"]`)!.click());
+  }
+  expect(contents).toHaveBeenCalledOnce(); expect(markup).toHaveBeenCalledOnce(); expect(settings).toHaveBeenCalledOnce();
+});
+
+// U2/§7.2/§9.3/§9.7/§12.11: OCR next is a document-tools action reached from More, never a Header
+// action, and exactly one control in the Reader performs it.
+it('OCR next lives only in the document-tools surface opened from More', () => {
   mount(1024);
   const next = vi.fn(), noop = vi.fn();
-  const props = { mode: 'original' as const, uiLanguage: 'en' as const, canRead: true, hasPdfText: true, hasOcr: false, language: 'eng' as const, onOriginal: noop, onReading: noop, onSource: noop, onLanguage: noop, onRecognizeCurrent: noop, onRecognizeNext: next, queueStatus: null, onPause: noop, onContinue: noop, onCancel: noop, hasAnyOcr: false, onClear: noop };
-  act(() => render(<PdfModeSwitch {...props} />, host));
-  act(() => host.querySelector<HTMLButtonElement>('[aria-label="OCR next"]')!.click());
-  expect(next).toHaveBeenCalledOnce();
-  act(() => render(<PdfModeSwitch {...props} showNext={false} />, host));
+  const tools = { uiLanguage: 'en' as const, hasPdfText: true, hasOcr: false, language: 'eng' as const, onSource: noop, onLanguage: noop, onRecognizeCurrent: noop, onRecognizeNext: next, queueStatus: null, onPause: noop, onContinue: noop, onCancel: noop, hasAnyOcr: false, onClear: noop };
+  act(() => render(<><ReaderToolbar title="Doc.pdf" onBack={noop} primaryActions={<PdfModeSwitch mode="original" uiLanguage="en" canRead onOriginal={noop} onReading={noop} />} /><PdfDocumentTools {...tools} open onClose={noop} /></>, host));
+  expect(host.querySelector('.reader-header [aria-label="OCR next"]')).toBeNull();
+  const owners = Array.from(host.querySelectorAll<HTMLButtonElement>('[aria-label="OCR next"]')).filter(button => { next.mockClear(); button.click(); return next.mock.calls.length > 0; });
+  expect(owners).toHaveLength(1);
+  act(() => render(null, host));
+  // With the surface closed the Reader exposes no OCR-next entry point at all.
+  act(() => render(<ReaderToolbar title="Doc.pdf" onBack={noop} primaryActions={<PdfModeSwitch mode="original" uiLanguage="en" canRead onOriginal={noop} onReading={noop} />} />, host));
   expect(host.querySelector('[aria-label="OCR next"]')).toBeNull();
-  expect(host.querySelector('[aria-label="PDF view mode"]')).not.toBeNull();
-  act(() => host.querySelector<HTMLButtonElement>('[aria-label="Document tools"]')!.click());
-    // Ownership is the product requirement: exactly one document-tools button performs the action.
-    // OCR window copy is deliberately not asserted here; the 12-page wording is the PDF/OCR phase.
-    const owners = Array.from(host.querySelectorAll<HTMLButtonElement>('.pdf-reading-options button')).filter(button => { next.mockClear(); button.click(); return next.mock.calls.length > 0; });
-    expect(owners).toHaveLength(1);
-  });
+});
 
 it('keeps reading chrome visible while a selection action surface is open', () => {
   const { scroll } = mount();

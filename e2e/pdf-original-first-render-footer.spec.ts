@@ -37,34 +37,78 @@ test('first desktop canvas uses real bounds and dominant DPR before zoom', async
   expect(zoomed.backing / zoomed.css).toBeGreaterThan(1);
 });
 
-test('mobile Zoom fits in footer and its menu stays operable', async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 850 });
+
+/**
+ * Contract §8.1/§8.2: PDF zoom is a direct Footer control (decrease, level readout, increase) and
+ * §8.3 forbids a zoom popup or any menu in the mobile band. Zoom is never reachable from More (§8.3).
+ * The Footer must stay usable down to 320px without horizontal overflow (§8.6).
+ */
+test('mobile Footer keeps a direct zoom stepper operable down to 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 850 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'footer.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
   await page.getByRole('button', { name: 'Original', exact: true }).first().click();
   for (const width of [320, 360, 390, 393, 430]) {
     await page.setViewportSize({ width, height: 850 });
-    const zoom = page.getByRole('button', { name: 'PDF options' });
-    await expect(zoom).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Click word lookup' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Zoom out' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Zoom in' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Zoom level' })).toBeVisible();
+    // §8.3 — the retired mobile zoom popup and More-hosted zoom must both be gone.
+    await expect(page.getByRole('button', { name: 'PDF options' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Reader menu', exact: true }).click();
+    await expect(page.getByRole('menuitem', { name: 'Zoom out', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('menuitem', { name: 'Zoom in', exact: true })).toHaveCount(0);
+    await page.keyboard.press('Escape');
     const layout = await page.evaluate(() => {
       const footer = document.querySelector<HTMLElement>('.reader-progress')!;
       const location = footer.querySelector<HTMLElement>('.reader-progress-location')!;
       const status = footer.querySelector<HTMLElement>('.reader-progress-status')!;
-      const a = location.getBoundingClientRect(), b = status.getBoundingClientRect(), f = footer.getBoundingClientRect();
-      return { documentWidth: document.documentElement.scrollWidth, viewport: innerWidth, footerHeight: f.height, sameLine: Math.abs(a.top - b.top) < 3, separated: a.right <= b.left + 1, inside: b.right <= innerWidth + 1 };
+      const a = location.getBoundingClientRect(), b = status.getBoundingClientRect();
+      return {
+        documentWidth: document.documentElement.scrollWidth,
+        viewport: innerWidth,
+        sameLine: Math.abs(a.top - b.top) < 3,
+        separated: a.right <= b.left + 1,
+        inside: b.right <= innerWidth + 1,
+        zoomReachable: !!footer.querySelector('[aria-label="Zoom in"]'),
+      };
     });
     expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewport);
     expect(layout.sameLine && layout.separated && layout.inside).toBe(true);
-    await zoom.click();
-    const menu = page.locator('.pdf-more-menu');
-    await expect(menu).toBeVisible();
-    const box = await menu.boundingBox();
-    expect(box!.x).toBeGreaterThanOrEqual(0);
-    expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
-    expect(box!.y + box!.height).toBeLessThan((await zoom.boundingBox())!.y);
-    for (const action of ['Zoom out', 'Zoom in', 'Fit width', 'Fit page']) await menu.getByRole('button', { name: action }).click();
-    await zoom.click();
-    await expect(menu).toHaveCount(0);
+    expect(layout.zoomReachable).toBe(true);
+    const before = await page.evaluate(() => scrollY);
+    await page.getByRole('button', { name: 'Zoom in' }).click();
+    await page.getByRole('button', { name: 'Zoom out' }).click();
+    // §8.2 + §13: a zoom change is programmatic movement; it must not move the reader or its chrome.
+    expect(await page.evaluate(() => scrollY)).toBe(before);
   }
+});
+
+/**
+ * §9.3/§9.4 — the §9.3 inventory is reachable exactly once through the single More disclosure,
+ * and no §9.3 action is duplicated in the Header or Footer. §9.5 — at 320px the More disclosure is a
+ * dismissible bottom sheet with no horizontal overflow.
+ */
+test('mobile More is the only host of the secondary actions and is a dismissible sheet at 320px', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 850 });
+  await page.goto('/');
+  await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill(Array.from({ length: 40 }, (_, i) => `Paragraph ${i + 1}. A quiet reader gives this passage room to breathe.`).join('\n\n'));
+  await page.getByRole('button', { name: /Preview & read/ }).click();
+  await expect(page.locator('.reader-text')).toBeVisible();
+  const header = page.locator('.reader-header');
+  await page.getByRole('button', { name: 'Reader menu', exact: true }).click();
+  const sheet = page.getByRole('menu', { name: 'Reader actions' });
+  await expect(sheet).toBeVisible();
+  for (const action of ['Contents', 'Context', 'Notes', 'Markup', 'Text and theme', 'Language engines', 'Document tools', 'Click word lookup']) {
+    await expect(sheet.getByRole('menuitem', { name: action, exact: true })).toHaveCount(1);
+    await expect(header.getByRole('button', { name: action, exact: true })).toHaveCount(0);
+    await expect(page.locator('.reader-progress').getByRole('button', { name: action, exact: true })).toHaveCount(0);
+  }
+  const sheetBox = await sheet.boundingBox();
+  expect(sheetBox!.x).toBeGreaterThanOrEqual(0);
+  expect(sheetBox!.x + sheetBox!.width).toBeLessThanOrEqual(321);
+  expect(sheetBox!.y + sheetBox!.height).toBeLessThanOrEqual(851);
+  await page.keyboard.press('Escape');
+  await expect(sheet).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

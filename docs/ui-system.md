@@ -77,7 +77,7 @@ Mobile presentation gaps belong to the MobileChrome phase.
 | Side panel | Contents and context render as columns (`reader-shell.has-contents` / `.has-context`) | Drawers/sheets; `App.tsx` auto-closes Contents when the lookup sheet or notes open |
 | Lookup result | Quick popup; explicit Full opens Context Inspector | Quick bottom sheet; Full expands the same sheet |
 | Notes | Side panel | Full-height panel (`NotesPanel`) |
-| Toolbar | Left: Library and bounded title; center: PDF mode and Document tools; right: Contents, Markup, OCR next, Aa, overflow; Advanced adds Context | Phones: Back/title/Aa/menu, then Contents/Markup/OCR next and PDF mode/tools together. 768–1023 currently reuses the desktop sheet, which the MobileChrome phase resolves |
+| Toolbar | Left: Library and bounded title; center: PDF mode and Document tools; right: Contents, Markup, OCR next, Aa, overflow; Advanced adds Context | Back/title/Original–Reading in the overlay Header; every secondary action (Contents, Context, Markup, Text and theme, Notes, Language engines, Document tools, Click-to-lookup) is reached once through the Footer **More** disclosure, presented as a bottom sheet ≤1023 px and a popover ≥1024 px |
 | Contents / Go to | Keyboard `T` and `G` (guarded by `keyboardCanNavigate`) | Visible Contents button / bottom location button |
 | PDF paging | Bottom `PageNavigation` and guarded arrow keys | Bottom touch navigation / Go to page |
 
@@ -92,13 +92,12 @@ with both open at supported desktop widths. No resize handles or width animation
 Mobile opens one panel at a time with the existing focus trap and Escape behavior.
 
 The top PDF control contains only Original/Reading; the adjacent Document tools popover contains
-existing text-source, OCR language, recognition and queue actions. OCR next is also visible in the
-primary actions group; under the frozen contract it is retired as a Header/L1 action and becomes a
-document-tools action meaning "run OCR on remaining unprocessed pages", migrated in the MobileChrome
-phase. OCR queue semantics are unchanged here. Original keeps a centered PDF canvas with a zoom
-control in both densities: zoom out, current level, zoom in. Under the frozen contract the mobile
-footer Zoom **menu** is retired and replaced by a direct Footer control in the PDF/OCR phase; the
-desktop zoom bar is unchanged. Reading retains the shared structured pages with comfortable margins
+existing text-source, OCR language, recognition and queue actions. Under the frozen contract OCR next
+is retired as a Header/L1 action and is a document-tools action meaning "run OCR on remaining
+unprocessed pages"; OCR queue semantics are unchanged. Original keeps a centered PDF canvas with a
+zoom control in both densities: zoom out, current level, zoom in. Under the frozen contract the mobile
+footer Zoom **menu** is retired and replaced by a direct Footer stepper; the desktop zoom bar is
+unchanged. Reading retains the shared structured pages with comfortable margins
 and no card border per page.
 `ReaderProgress` always reports reading progress separately from optional OCR status. PDF page
 navigation is rendered once at the bottom; non-PDF location opens the existing Go to dialog.
@@ -220,7 +219,7 @@ There is no global store. Ownership rules:
 ## Theme system
 
 - `src/styles.css` contains shared styling and the original Simple homepage, imported once from `src/main.tsx`. `src/reader-layout.css` loads before opening a document and imports `src/styles.reader-base.css` first for reader markup, PDF Original/Reading presentation, controls and PDF.js text layers, followed by the responsive reader sheets and layout/inspector overrides. Base rules retain their original relative order; shared settings and mixed shared/lookup rules remain global. Both CSS chunks remain in the service-worker precache. `src/home-advanced.css` is loaded on demand for Advanced and scopes its rules to the Advanced home shell.
-- `src/styles.mobile-reader.css` is imported first by the lazy `reader-layout.css`, after shared styles, and scopes phone reader/lookup presentation to ≤767 px. Shell specificity preserves its overrides over the following reader-layout rules. Linked bilingual meanings stack per sense; unmatched entry glosses remain separate. Quick and Full size to content up to their respective caps. **Known gap:** 768–1023 px is Mobile presentation semantically but no mobile stylesheet currently covers it; this is defect D5 and belongs to the MobileChrome phase, not to ChromeFoundation.
+- `src/styles.mobile-reader.css` is imported first by the lazy `reader-layout.css`, after shared styles, and scopes mobile reader/lookup presentation to **≤1023 px**, so 768–1023 px is covered by the same mobile presentation as narrower phones. Shell specificity preserves its overrides over the following reader-layout rules. Linked bilingual meanings stack per sense; unmatched entry glosses remain separate. Quick and Full size to content up to their respective caps.
 - `src/styles.desktop-reader.css` is imported next by the lazy `reader-layout.css` and scopes reader presentation to ≥1024 px, with shell specificity that survives the following reader-layout rules. Both responsive stylesheets load before opening a document and remain in the service-worker precache, outside the initial homepage bundle. It owns compact desktop chrome and bounded panel sizing; both open panels share less than half the viewport. Quick keeps its shared 440 px positioning contract and stacked linked senses; Full can use paired columns when its own container reaches 390 px. Shared structure and mobile presentation remain in their existing stylesheets.
 - Design tokens are CSS variables on `:root` (palette, surfaces, `--reading-surface`,
   `--elevated-surface`, `--primary-text`, `--secondary-text`, `--border`, `--selection`,
@@ -242,7 +241,7 @@ subsystem verification. See the canonical
 | Change | Location |
 | --- | --- |
 | New homepage section, import source, or library control | `src/app/App.tsx` home branch, plus a component in `src/components/` |
-| Reader chrome, panel arrangement, keyboard shortcuts | `src/reader/ReaderShell.tsx`, `src/reader/ReaderToolbar.tsx`, `src/app/App.tsx` |
+| Reader chrome, panel arrangement, keyboard shortcuts | `src/reader/ReaderShell.tsx`, `src/reader/ReaderToolbar.tsx`, `src/reader/ReaderProgress.tsx`, `src/app/App.tsx`; see [mobile-chrome.md](mobile-chrome.md) |
 | Lookup card content or expansion behavior | `src/components/LookupBottomSheet.tsx`, `QuickExplain.tsx`, `ExpandedExplain.tsx`, `LanguageTabs.tsx` |
 | Reading typography, theme tokens, responsive rules | `src/styles.css` + `src/components/ReaderSettings.tsx` |
 | PDF controls, mode switch, page navigation | `src/reader/pdf/PdfViewer.tsx`, `src/reader/pdf/PdfModeSwitch.tsx`, `src/reader/DocumentPosition.tsx` |
@@ -253,7 +252,7 @@ subsystem verification. See the canonical
 | Onboarding and guide language | `src/onboarding/ContextLensOnboarding.tsx`, `src/onboarding/store.ts` |
 | Offline status and readiness UI | `src/components/OfflineBadge.tsx`, `src/documents/offline.ts`, `src/app/App.tsx` (`online`) |
 
-Both densities expose Contents, Markup and PDF OCR next in the primary actions group; Markup opens the existing tools and Note.
+Both densities expose Contents, Markup and Document tools through the single **More** disclosure; Markup opens the existing tools and Note. The mobile Header carries only Back, the document title, and Original/Reading for PDF, and the mobile Footer owns progress, location, the direct PDF zoom stepper, the More trigger, and OCR status only while an OCR run is active.
 Titles omit known file extensions and subtitles after a colon, with visual ellipsis and a full-title tooltip.
 Secondary actions remain in the reader overflow menu. Advanced adds the Context toggle;
 lookup content, notes and processing capabilities remain available through the existing components.

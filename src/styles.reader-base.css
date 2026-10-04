@@ -171,7 +171,6 @@ body:has(.pdf-viewer-wrap),body:has(.pdf-reading-view) { overflow:hidden; }
   padding:7px 14px; border-radius:0; background:var(--surface);
   color:var(--danger); box-shadow:none;
 }
-.pdf-reading-options-toggle { padding-inline:6px!important; min-width:28px!important; }
 .pdf-mode-switch { position:relative; }
 .pdf-reading-options {
   position:absolute; z-index:40; top:calc(100% + 8px); right:0;
@@ -189,11 +188,6 @@ body:has(.pdf-viewer-wrap),body:has(.pdf-reading-view) { overflow:hidden; }
 .pdf-reading-options label { display:grid; gap:5px; padding:7px 10px; color:var(--muted); font-size:12px; }
 .pdf-reading-options select { width:100%; min-height:36px; padding:0 8px; border:1px solid var(--border); border-radius:7px; background:var(--surface); color:var(--text); }
 .pdf-reading-options p { margin:5px 10px 4px; color:var(--muted); font-size:11px; line-height:1.4; }
-.pdf-queue-status { display:flex; align-items:center; gap:7px; min-height:36px; padding:4px 12px; border-bottom:1px solid var(--border); background:var(--surface); color:var(--text); font-size:12px; }
-.pdf-queue-status span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.pdf-queue-status button { flex:none; min-height:28px; padding:2px 8px; border:1px solid var(--border); border-radius:7px; background:var(--elevated-surface); color:var(--text); cursor:pointer; }
-.reader-viewport:has(.pdf-queue-status) { display:flex; flex-direction:column; height:calc(100dvh - 62px); }
-.reader-viewport:has(.pdf-queue-status) > .pdf-viewer-wrap,.reader-viewport:has(.pdf-queue-status) > .pdf-reading-view { flex:1; min-height:0; height:auto; }
 @media (max-width:767px) {
   .pdf-toolbar { justify-content:flex-end; padding-inline:10px; }
   .pdf-reading-options { left:0; right:auto; }

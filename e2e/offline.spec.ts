@@ -1,4 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
+/**
+ * Contract §7.2/§9.3: Markup is a More action, never a Header control. Secondary Reader actions are
+ * reached through the single More disclosure at every width (§9.2 presentation differs by band).
+ */
+async function openMoreAction(page: Page, name: string) {
+  await page.getByRole('button', { name: 'Reader menu' }).click();
+  await page.getByRole('menuitem', { name }).click();
+}
 
 /**
  * Offline behaviour is only observable in the production build: `vite dev` installs no service worker
@@ -74,7 +82,7 @@ test('starts, reads, and looks up a stored document while offline', async ({ pag
   await sheet.getByRole('button', { name: 'Close meaning', exact: true }).click();
 
   // 9. Highlight and note capture stay on the device and survive a reload without network.
-  await page.getByRole('button', { name: 'Markup', exact: true }).click();
+  await openMoreAction(page, 'Markup');
   await page.getByRole('dialog', { name: 'Markup tools' }).getByRole('button', { name: 'Highlight' }).click();
   await page.getByRole('button', { name: 'Done' }).click();
   await selectText(page, 'difficult passage');

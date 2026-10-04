@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'preact/hooks';
 import type { RefObject } from 'preact';
 import type { PdfDocumentLocation } from '../../documents/location';
+import { expectProgrammaticScroll } from '../programmaticScroll';
 
 export function pageAtPosition(slots: HTMLElement[], root: HTMLElement, previous: number): number {
   const top = root.getBoundingClientRect().top + root.clientTop;
@@ -43,7 +44,11 @@ export function usePdfScroll(rootRef: RefObject<HTMLDivElement>, selector: strin
     page = Math.max(1, Math.min(slots.length, page));
     const slot = slots[page - 1];
     currentPage.current = page;
-    root.scrollTop = root.scrollTop + slot.getBoundingClientRect().top - root.getBoundingClientRect().top - root.clientTop + slot.offsetHeight * Math.max(0, Math.min(1, fraction));
+    const target = root.scrollTop + slot.getBoundingClientRect().top - root.getBoundingClientRect().top - root.clientTop + slot.offsetHeight * Math.max(0, Math.min(1, fraction));
+    // §5.1/§5.2 the Reader must not read this jump as user reading travel, so the resulting position is
+    // declared before it is observed rather than being told apart from a gesture after the fact.
+    expectProgrammaticScroll(target, root);
+    root.scrollTop = target;
     commandedTop.current = root.scrollTop;
     latest.current.onVisible(page, fraction, root.scrollTop, page, page);
   };

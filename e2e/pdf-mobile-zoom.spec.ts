@@ -8,18 +8,19 @@ test('Original mobile zoom preserves reading and selection geometry', async ({ p
   const slot = page.locator('[data-pdf-page="1"]');
   const width = () => slot.evaluate(el => el.getBoundingClientRect().width);
   await expect(page.locator('.pdf-text-layer span').first()).toBeVisible();
-  await page.getByRole('button', { name: 'PDF options' }).click();
-  await page.getByRole('button', { name: 'Fit width', exact: true }).click();
+  // §8.2/§8.3 (U3): at <=1023px zoom is a direct Footer control, never a popup. The mobile PDF
+  // options popup and its Fit width / Fit page entries are gone from this band.
+  const stepper = page.getByRole('button', { name: 'Zoom out', exact: true });
+  await expect(stepper).toBeVisible();
+  await expect(page.getByRole('button', { name: 'PDF options' })).toHaveCount(0);
   const fitted = await width();
-  await page.getByRole('button', { name: 'Zoom out', exact: true }).click();
+  await stepper.click();
   await expect.poll(width).toBeLessThan(fitted);
   const smaller = await width();
   await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
   await expect.poll(width).toBeGreaterThan(smaller);
-  await page.getByRole('button', { name: 'Fit page', exact: true }).click();
   expect(await slot.evaluate(el => el.getBoundingClientRect().height)).toBeLessThanOrEqual(await page.locator('.pdf-scroll').evaluate(el => el.clientHeight));
-  await page.getByRole('button', { name: 'Fit width', exact: true }).click();
-  await page.getByRole('button', { name: 'PDF options' }).click();
+  await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
   await page.getByRole('button', { name: 'Current PDF page', exact: true }).click();
   await page.getByRole('dialog', { name: 'Go to location', exact: true }).getByRole('spinbutton').fill('3');
   await page.getByRole('button', { name: 'Go', exact: true }).click();
@@ -31,10 +32,7 @@ test('Original mobile zoom preserves reading and selection geometry', async ({ p
     expect(await page.locator('.pdf-canvas').count()).toBeLessThanOrEqual(3);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
-  for (const zoom of ['Fit width', 'Zoom in']) {
-    await page.getByRole('button', { name: 'PDF options' }).click();
-    await page.getByRole('button', { name: zoom, exact: true }).click();
-    await page.getByRole('button', { name: 'PDF options' }).click();
+  for (const zoom of ['Zoom in']) {
     const text = page.locator('[data-pdf-page="3"] .pdf-text-layer span').filter({ hasText: 'The decision' }).first();
     await expect(text).toBeVisible();
     await text.evaluate(el => {
@@ -49,9 +47,7 @@ test('Original mobile zoom preserves reading and selection geometry', async ({ p
     expect(await scroll.evaluate(el => el.scrollTop)).toBe(before);
     await expect(position).toHaveText('3 / 8');
   }
-  await page.getByRole('button', { name: 'PDF options' }).click();
   for (let n = 0; n < 20; n++) await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
-  await page.getByRole('button', { name: 'PDF options' }).click();
   await expect.poll(() => page.locator('[data-pdf-page="3"]').evaluate(el => el.getBoundingClientRect().width)).toBeCloseTo(612 * 3, 0);
   const pan = await page.locator('.pdf-scroll').evaluate(el => {
     const top = el.scrollTop; el.scrollLeft = el.scrollWidth;

@@ -1,5 +1,6 @@
 import type { DocumentRecord } from '../db/database';
 import type { DocumentLocation } from '../documents/location';
+import { expectProgrammaticScroll } from './programmaticScroll';
 
 export function indexAtOffset(offsets: number[] | undefined, offset: number): number {
   if (!offsets?.length) return 0;
@@ -52,7 +53,13 @@ export function jumpToOffset(offset: number): void {
   if (!root) return;
   const range = rangeAtOffset(root, offset);
   const rect = range?.getBoundingClientRect?.();
-  if (rect) window.scrollTo({ top: Math.max(0, window.scrollY + rect.top - 110), behavior: 'auto' });
+  if (rect) {
+    const top = Math.max(0, window.scrollY + rect.top - 110);
+    // §5.1/§5.2 a Contents jump is programmatic and must not drive the Chrome. The window is the
+    // scroll target the Reader observes, so the destination is declared before the jump.
+    expectProgrammaticScroll(top, document);
+    window.scrollTo({ top, behavior: 'auto' });
+  }
   root.focus({ preventScroll: true });
   const element = range?.startContainer.parentElement;
   element?.classList.add('location-target');
