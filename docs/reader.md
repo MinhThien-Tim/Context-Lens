@@ -42,9 +42,9 @@ It renders plain `content` or sanitized `safeHtml` (markdown/article), and reuse
 | Rendering | `PdfPage.tsx` canvas + PDF.js text layer | `PdfReadingPage.tsx` / `PdfOcrReadingPage.tsx` DOM blocks |
 | Page model source | PDF.js live document geometry (`PdfViewer` sizes map) | `PdfStructuredPage` from `db.documents.pdfPages` |
 | Selection mapping | `src/reader/pdf/selectionAdapter.ts` + `PdfTextIndex` (PDF.js DOM ↔ canonical offsets) | `src/reader/pdf-reading/readingSelectionAdapter.ts` (DOM ↔ `documentRecord.content`) |
-| Zoom | `calculatePdfScale` natural / fit-width / fit-page / custom; desktop control bar, mobile footer control | Reader typography only (`--reader-size`, `--reader-leading`, `--reader-font`) |
+| Zoom | `calculatePdfScale` natural / fit-width / fit-page / custom; direct Footer stepper at every density | Reader typography only (`--reader-size`, `--reader-leading`, `--reader-font`) |
 | OCR display | Never overlays OCR on the original page | Renders OCR text for pages that need it |
-| Extra chrome | Header Original/Reading + Document tools via More, quiet zoom controls | Header Original/Reading + Document tools via More, reading typography |
+| Extra chrome | Header Original/Reading + Document tools via More, Footer zoom stepper | Header Original/Reading + Document tools via More, reading typography |
 | Page mounting | Dominant viewport page + immediate previous/next pages, at most three canvases; neighbors skipped while OCR is busy | All pages in one scroll container |
 
 Both PDF surfaces share the shell bottom `PageNavigation`; the header Original/Reading segment

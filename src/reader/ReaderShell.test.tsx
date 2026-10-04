@@ -120,12 +120,13 @@ it('supports keyboard menu navigation and restores focus on Escape', () => {
   act(() => render(<ReaderMore items={[{ label: 'Contents', onSelect: vi.fn() }, { label: 'Markup', onSelect: vi.fn() }]} />, host));
   const trigger = host.querySelector<HTMLButtonElement>('[aria-label="Reader menu"]')!;
   act(() => trigger.click());
-  const items = host.querySelectorAll('[role="menuitem"]');
+  // Menu is rendered via portal to document.body
+  const items = document.body.querySelectorAll('[role="menuitem"]');
   expect(document.activeElement).toBe(items[0]);
   act(() => { items[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); });
   expect(document.activeElement).toBe(items[1]);
   act(() => { items[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
-  expect(host.querySelector('[role="menu"]')).toBeNull();
+  expect(document.body.querySelector('[role="menu"]')).toBeNull();
   expect(document.activeElement).toBe(trigger);
 });
 
@@ -164,8 +165,8 @@ it.each([390, 1024])('keeps the Header to Back, title, and mode while More owns 
   // Selecting an action closes the disclosure (§9 disclosure lifecycle), so each invocation
   // re-opens More: the assertion is that the action is reachable exactly once, via More.
   for (const label of ['Contents', 'Markup', 'Text and theme']) {
-    if (!host.querySelector('[role="menuitem"]')) act(() => host.querySelector<HTMLButtonElement>('[aria-label="Reader menu"]')!.click());
-    act(() => host.querySelector<HTMLButtonElement>(`[role="menuitem"][aria-label="${label}"]`)!.click());
+    if (!document.body.querySelector('[role="menuitem"]')) act(() => host.querySelector<HTMLButtonElement>('[aria-label="Reader menu"]')!.click());
+    act(() => document.body.querySelector<HTMLButtonElement>(`[role="menuitem"][aria-label="${label}"]`)!.click());
   }
   expect(contents).toHaveBeenCalledOnce(); expect(markup).toHaveBeenCalledOnce(); expect(settings).toHaveBeenCalledOnce();
 });

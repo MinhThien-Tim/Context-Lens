@@ -35,14 +35,14 @@ test.fixme('REWRITE (T0c): reserved-strip geometry + stale /OCR.*6/ label (T0d);
     expect(layout.overflow).toBe(false);
     if (width >= 1024) {
       expect(layout.headerBottom).toBe(56);
-      for (const selector of ['.reader-header-leading', '.reader-header-position', '.reader-header-actions']) {
+      for (const selector of ['.reader-header-leading', '.reader-header-actions']) {
         expect(await page.locator(selector).evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
       }
       await expect(page.getByRole('button', { name: 'OCR next', exact: true })).toBeVisible();
     }
     if (width <= 767) {
       expect(layout.headerBottom).toBeLessThanOrEqual(88);
-      for (const selector of ['.reader-primary-tools', '.pdf-mode-switch']) {
+      for (const selector of ['.pdf-mode-switch']) {
         expect((await page.locator(selector).boundingBox())!.y + (await page.locator(selector).boundingBox())!.height).toBeLessThanOrEqual(88);
       }
     }

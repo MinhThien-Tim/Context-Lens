@@ -67,7 +67,6 @@ const OVERLAY_CSS = `
   transform: none !important;
   opacity: 1 !important;
 }
-.reader-shell .pdf-toolbar { display: none !important; }
 `;
 
 async function openPdfAtWidth(page: import('@playwright/test').Page, width: number, height: number) {

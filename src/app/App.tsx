@@ -2,7 +2,7 @@ import { useDesktop } from '../components/useDesktop';
 import { ReaderShell } from '../reader/ReaderShell';
 import { ReaderProgress } from '../reader/ReaderProgress';
 import { ContextPanel } from '../reader/ContextPanel';
-import { ReaderMore, ReaderToolbar, type ReaderMoreItem } from '../reader/ReaderToolbar';
+import { ReaderMore, ReaderToolbar, type ReaderMoreItem, ContentsIcon, NotesIcon, MarkupIcon, ContextIcon, TextThemeIcon, LanguagesIcon, DocumentToolsIcon, OcrIcon, ClickLookupIcon } from '../reader/ReaderToolbar';
 import { ContentsPanel } from '../reader/ContentsPanel';
 import { DocumentPosition, GoToLocation, PageNavigation } from '../reader/DocumentPosition';
 import { jumpToOffset, keyboardCanNavigate, locationAtOffset, navigationOffset, positionLabel } from '../reader/navigation';
@@ -17,7 +17,7 @@ import { createLocationPersistence } from '../reader/pdf/locationPersistence';
 import { PdfViewer } from '../reader/pdf/PdfViewer';
 import { PdfDocumentTools, PdfModeSwitch } from '../reader/pdf/PdfModeSwitch';
 import { usePdfOcrQueue } from '../reader/pdf/usePdfOcrQueue';
-import { pdfOffsetForPage, pdfPageForOffset } from '../reader/pdf/navigation';
+import { pdfOffsetForPage, pdfPageForOffset, calculatePdfScale, stepDesktopPdfScale } from '../reader/pdf/navigation';
 import { PdfReadingView } from '../reader/pdf-reading/PdfReadingView';
 import { eraseHighlights, upsertHighlight } from '../reader/pdf-reading/highlights';
 import { pdfHasReadableText } from '../reader/pdf-reading/structuredPages';
@@ -592,22 +592,83 @@ export function App() {
   const progressPercent = activeOcrProgress ? activeOcrProgress.total ? (activeOcrProgress.completed + activeOcrProgress.progress / 100) / activeOcrProgress.total * 100 : 0 : progress * 100;
   const isPdf = documentRecord.kind === 'pdf';
   const pdfSurface = isPdf && currentLocation.kind === 'pdf';
-  // Contract §9.3: exactly this inventory, no duplicates (§9.4), zoom never included (§8.3).
-  const readerMoreItems: ReaderMoreItem[] = [
-    { label: 'Contents', onSelect: toggleDocumentPanel },
-    { label: 'Context', onSelect: toggleContextPanel },
-    { label: 'Notes', onSelect: () => openNotes(null) },
-    { label: 'Markup', onSelect: () => setHighlightToolsOpen(true) },
-    { label: 'Text and theme', onSelect: () => setShowReaderSettings(true) },
-    { label: 'Language engines', onSelect: () => setShowApiSettings(true) },
-    { label: 'Document tools', onSelect: () => setDocumentToolsOpen(true) },
-    { label: 'Click word lookup', pressed: originalClickLookup, onSelect: () => setOriginalClickLookup(value => !value) },
-  ];
-  return (
-    <ReaderShell interfaceMode={preferences.interfaceMode} surface={documentRecord.kind === 'pdf' ? pdfMode : 'text'} controlsLocked={lookupOpen || showNotes || showReaderSettings || showApiSettings || goToOpen || highlightToolsOpen || documentToolsOpen || activeMarkupTool !== null} contentsOpen={contentsOpen} contextOpen={contextPanelOpen}>
-      {!online && <div class="reader-offline" role="status">Offline · Local only</div>}
-      {/* §7.1 Header owns exactly and only Back, document title, and Original/Reading for PDF. */}
-      <ReaderToolbar title={documentRecord.title} onBack={() => void closeDocument()} primaryActions={pdfSurface && <PdfModeSwitch mode={pdfMode} uiLanguage={guideLanguage} canRead={pdfHasReadableText(documentRecord) || hasSelectedOcr} onOriginal={() => changePdfViewMode('original')} onReading={() => changePdfViewMode('reading')} />} />
+    const totalPages = documentRecord.pageOffsets?.length;
+    const currentPage = currentLocation.kind === 'pdf' ? currentLocation.page : undefined;
+    const zoomMode = preferences.pdfZoomMode;
+    const customScale = preferences.pdfCustomScale;
+
+    // Desktop toolbar callbacks
+    const onPrevPage = () => {
+      if (currentPage && currentPage > 1) jumpPdfPage(currentPage - 1);
+    };
+    const onNextPage = () => {
+      if (currentPage && totalPages && currentPage < totalPages) jumpPdfPage(currentPage + 1);
+    };
+    const onGoToPage = (page: number) => {
+      if (totalPages && page >= 1 && page <= totalPages) jumpPdfPage(page);
+    };
+    const onZoomOut = () => {
+      setPreferences(current => ({ ...current, pdfZoomMode: 'custom', pdfCustomScale: Math.max(0.1, current.pdfCustomScale * 0.85) }));
+    };
+    const onZoomIn = () => {
+      setPreferences(current => ({ ...current, pdfZoomMode: 'custom', pdfCustomScale: Math.min(6, current.pdfCustomScale * 1.15) }));
+    };
+        const onZoomSelect = (mode: 'auto' | 'custom', value?: number) => {
+          if (mode === 'auto') {
+            setPreferences(current => ({ ...current, pdfZoomMode: 'fit-width' }));
+          } else if (value !== undefined) {
+            setPreferences(current => ({ ...current, pdfZoomMode: 'custom', pdfCustomScale: value / 100 }));
+          }
+        };
+        const onContents = toggleDocumentPanel;
+        const onNotes = () => openNotes(null);
+        const onMarkup = () => setHighlightToolsOpen(true);
+        const onPrint = () => window.print();
+        const onHighlight = () => setActiveMarkupTool('highlight');
+                const onPen = () => setActiveMarkupTool('underline');
+                const onErase = () => setActiveMarkupTool('eraser');
+
+        // Contract §9.3: exactly this inventory, no duplicates (§9.4), zoom never included (§8.3).
+        // Grouped with icons for compact presentation
+        const readerMoreItems: ReaderMoreItem[] = [
+          { label: 'Contents', onSelect: toggleDocumentPanel, icon: <ContentsIcon />, group: 'Navigation' },
+          { label: 'Context', onSelect: toggleContextPanel, icon: <ContextIcon />, group: 'Navigation' },
+          { label: 'Notes', onSelect: () => openNotes(null), icon: <NotesIcon />, group: 'Document' },
+          { label: 'Markup', onSelect: () => setHighlightToolsOpen(true), icon: <MarkupIcon />, group: 'Document' },
+          { label: 'Text', onSelect: () => setShowReaderSettings(true), icon: <TextThemeIcon />, group: 'Appearance' },
+          { label: 'Languages', onSelect: () => setShowApiSettings(true), icon: <LanguagesIcon />, group: 'Appearance' },
+          { label: 'Document', onSelect: () => setDocumentToolsOpen(true), icon: <DocumentToolsIcon />, group: 'Tools' },
+          { label: 'OCR', onSelect: () => setDocumentToolsOpen(true), icon: <OcrIcon />, group: 'Tools' },
+          { label: 'Click lookup', pressed: originalClickLookup, onSelect: () => setOriginalClickLookup(value => !value), icon: <ClickLookupIcon />, group: 'Tools' },
+        ];
+    return (
+      <ReaderShell interfaceMode={preferences.interfaceMode} surface={documentRecord.kind === 'pdf' ? pdfMode : 'text'} controlsLocked={lookupOpen || showNotes || showReaderSettings || showApiSettings || goToOpen || highlightToolsOpen || documentToolsOpen || activeMarkupTool !== null} contentsOpen={contentsOpen} contextOpen={contextPanelOpen}>
+        {!online && <div class="reader-offline" role="status">Offline · Local only</div>}
+        {/* DesktopReader toolbar: single band at ≥1024px with navigation, page/location, zoom, Original/Reading, tools, More */}
+        <ReaderToolbar
+          title={documentRecord.title}
+          onBack={() => void closeDocument()}
+          primaryActions={pdfSurface && <PdfModeSwitch mode={pdfMode} uiLanguage={guideLanguage} canRead={pdfHasReadableText(documentRecord) || hasSelectedOcr} onOriginal={() => changePdfViewMode('original')} onReading={() => changePdfViewMode('reading')} />}
+          page={currentPage}
+          totalPages={totalPages}
+          onPrevPage={onPrevPage}
+          onNextPage={onNextPage}
+          onGoToPage={onGoToPage}
+          zoomLevel={Math.round(customScale * 100)}
+                  zoomMode={zoomMode === 'fit-width' ? 'auto' : 'custom'}
+                  onZoomOut={onZoomOut}
+                  onZoomIn={onZoomIn}
+                  onZoomSelect={onZoomSelect}
+                  onContents={onContents}
+                  onNotes={onNotes}
+                  onMarkup={onMarkup}
+                  onPrint={onPrint}
+                  onHighlight={onHighlight}
+                  onPen={onPen}
+                  onErase={onErase}
+                  moreItems={readerMoreItems}
+                          markupActive={activeMarkupTool !== null}
+                        />
       {highlightToolsOpen && <MarkupPalette onNote={() => { setHighlightToolsOpen(false); openNotes(null); }} tool={activeMarkupTool} color={activeMarkupColor} onToolChange={setActiveMarkupTool} onColorChange={setActiveMarkupColor} onClose={() => setHighlightToolsOpen(false)} />}
       {showReaderSettings && <ReaderSettings value={preferences} onChange={setPreferences} onClose={() => setShowReaderSettings(false)} />}
       {goToOpen && <GoToLocation document={documentRecord} onClose={() => setGoToOpen(false)} onJump={jump} onPage={jumpPdfPage} />}
@@ -622,7 +683,7 @@ export function App() {
         ? <PdfReadingView key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} style={readerStyle} ocrPages={ocrPages} ocrLanguage={ocrLanguage} onTextSource={(page, source) => { const pdfTextSources = { ...documentRecord.pdfTextSources, [page]: source }; setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfTextSources } : current); void db.documents.update(documentRecord.id, { pdfTextSources }); }} onOpenOriginal={() => changePdfViewMode('original')} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset, ocrPage, ocrLanguage) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset, ocrPage, ocrLanguage); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
         : <TextReader offsets={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets : documentRecord.chapterOffsets} onAddNote={selection => openNotes(selection)} content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />}
       </div>
-      <ReaderProgress showPercentage={isPdf} progress={progress} ocr={activeOcrProgress ? { progress: progressPercent, completed: activeOcrProgress.completed, total: activeOcrProgress.total } : null} zoom={pdfSurface && pdfMode === 'original' && !desktop ? <span class="pdf-footer-zoom-host" /> : null} moreTrigger={<ReaderMore items={readerMoreItems} />}>
+      <ReaderProgress showPercentage={isPdf} progress={progress} ocr={activeOcrProgress ? { progress: progressPercent, completed: activeOcrProgress.completed, total: activeOcrProgress.total } : null} zoom={pdfSurface && pdfMode === 'original' ? <span class="pdf-footer-zoom-host" /> : null}>
         {documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf' ? <PageNavigation page={currentLocation.page} total={documentRecord.pageOffsets?.length ?? 1} onPrevious={() => jumpPdfPage(currentLocation.page - 1)} onNext={() => jumpPdfPage(currentLocation.page + 1)} onOpen={() => setGoToOpen(true)} /> : <DocumentPosition document={documentRecord} location={currentLocation} onOpen={() => setGoToOpen(true)} />}
       </ReaderProgress>
       {contextPanelOpen && !lookupOpen && !showNotes && <ContextPanel onClose={closeContext} onNote={() => openNotes(null)} />}

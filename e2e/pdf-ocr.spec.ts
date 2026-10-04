@@ -1,13 +1,26 @@
 import { test, expect, type Page } from '@playwright/test';
 
-async function beginOcr(page: Page) {
-  await page.locator('.pdf-reading-options-toggle').click();
-  await page.getByRole('menuitem', { name: 'Nhận dạng chữ trang này' }).click();
+// §9.7 — document tools and OCR controls are ONE surface reached through More. The old
+// `.pdf-reading-options-toggle` no longer has a renderer (removed in 34f4ca1/75497f9); opening
+// Document tools is the canonical entry, exactly as mobile-chrome.spec.ts asserts.
+async function openDocumentTools(page: Page) {
+  await page.getByRole('button', { name: 'Reader menu' }).click();
+  await page.getByRole('menuitem', { name: 'Document tools', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: /Document tools|Công cụ/ })).toBeVisible();
 }
 
+async function beginOcr(page: Page) {
+  await openDocumentTools(page);
+  await page.getByRole('button', { name: 'Nhận dạng chữ trang này', exact: true }).click();
+}
+
+// "read OCR" = wait until recognized text for the document actually exists, then leave the
+// reader in OCR-source mode. `Chữ OCR` is disabled until OCR text exists, so it is the semantic
+// equivalent of the old positional `.pdf-reading-options button` nth(1) pick, without depending
+// on DOM order inside the dialog.
 async function readOcr(page: Page) {
-  await page.locator('.pdf-reading-options-toggle').click();
-  const option = page.locator('.pdf-reading-options button').nth(1);
+  await openDocumentTools(page);
+  const option = page.getByRole('button', { name: /^Chữ OCR/ });
   await expect(option).toBeEnabled({ timeout: 45_000 });
   await option.click();
 }
@@ -30,8 +43,19 @@ test('lets a reader choose PDF or OCR text on a page with a text layer', async (
   await page.getByRole('button', { name: 'Original', exact: true }).click();
   await expect(page.getByLabel('Current PDF page')).toContainText('1 / 2');
   await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
-  const layout = await page.evaluate(() => ({ toolbarBottom: document.querySelector('.pdf-toolbar')!.getBoundingClientRect().bottom, pageTop: document.querySelector('.pdf-page-slot')!.getBoundingClientRect().top }));
-  expect(layout.pageTop).toBeGreaterThanOrEqual(layout.toolbarBottom);
+  // The document canvas starts below the Header band and scrolls under the fixed Footer
+    // (docs/desktop-reader.md §1). A rendered page is normally taller than the viewport, so only
+    // the top edge is guaranteed to clear the Header; the bottom edge is reached by scrolling.
+    const layout = await page.evaluate(() => ({
+      headerBottom: document.querySelector('.reader-header')!.getBoundingClientRect().bottom,
+      footerTop: document.querySelector('.reader-progress')!.getBoundingClientRect().top,
+      pageTop: document.querySelector('.pdf-page-slot')!.getBoundingClientRect().top,
+      pageHeight: document.querySelector('.pdf-page-slot')!.getBoundingClientRect().height,
+    }));
+    expect(layout.pageTop).toBeGreaterThanOrEqual(layout.headerBottom);
+    expect(layout.footerTop).toBeGreaterThan(layout.headerBottom);
+    expect(layout.pageHeight).toBeGreaterThan(0);
+    await expect(page.locator('.pdf-toolbar')).toHaveCount(0);
   await expect(page.locator('.pdf-queue-status')).toHaveCount(0, { timeout: 90_000 });
   await beginOcr(page);
   await readOcr(page);
@@ -61,9 +85,9 @@ test('keeps extracted and scanned pages separate across modes and reopening', as
   await page.getByRole('button', { name: 'Original', exact: true }).click();
   await expect(page.getByLabel('Current PDF page')).toContainText('1 / 2');
   await expect(page.locator('.pdf-queue-status')).toHaveCount(0, { timeout: 90_000 });
-  await page.locator('.pdf-reading-options-toggle').click();
-  await expect(page.locator('.pdf-reading-options button').last()).toBeVisible();
-  await page.locator('.pdf-reading-options-toggle').click();
+  await openDocumentTools(page);
+    await expect(page.getByRole('button', { name: 'OCR next' })).toBeVisible();
+    await page.getByRole('button', { name: 'Close document tools', exact: true }).click();
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByLabel('Current PDF page')).toContainText('2 / 2');
   await page.getByRole('button', { name: 'Reading', exact: true }).click();
@@ -119,11 +143,12 @@ test('loads Vietnamese language data only after selecting bilingual OCR', async 
   await page.locator('input[type=file]').setInputFiles({ name: 'bilingual.pdf', mimeType: 'application/pdf', buffer: pdfScanFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
   await page.getByRole('button', { name: 'Original', exact: true }).click();
   await expect(page.locator('.pdf-queue-status')).toHaveCount(0, { timeout: 90_000 });
-  expect(transfers.some(item => item.url.includes('/eng.traineddata.gz'))).toBe(true);
+  // Preloading is asynchronous, so poll the transfer log instead of sampling it once.
+  await expect.poll(() => transfers.some(item => item.url.includes('/eng.traineddata.gz')), { timeout: 90_000 }).toBe(true);
   expect(transfers.some(item => item.url.includes('/vie.traineddata.gz'))).toBe(false);
-  await page.locator('.pdf-reading-options-toggle').click();
+  await openDocumentTools(page);
   await page.getByLabel('OCR language').selectOption('eng+vie');
-  await page.locator('.pdf-reading-options-toggle').click();
+    await page.getByRole('button', { name: 'Close document tools', exact: true }).click();
   const start = Date.now();
   await beginOcr(page);
   await readOcr(page);
@@ -209,8 +234,15 @@ test('cancels OCR and can retry the same scanned page', async ({ page }) => {
     return canvas.toDataURL('image/jpeg', .92).split(',')[1];
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'cancel-scan.pdf', mimeType: 'application/pdf', buffer: pdfScanFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
-  await expect(page.getByRole('button', { name: 'Hủy OCR' })).toBeVisible();
+  // §12.11 — cancel is a Document-tools control reached through More, and it only renders while the
+  // auto-preload queue is actually running. The panel stays open after Cancel (only the recognize
+  // and clear handlers close it), so close it before retrying rather than leaving its <p> subtree to
+  // intercept the next "Reader menu" click. Poll the panel that is already open: re-entering More
+  // inside the retry would toggle the menu shut and livelock.
+  await openDocumentTools(page);
+  await expect(page.getByRole('button', { name: 'Hủy OCR' })).toBeVisible({ timeout: 90_000 });
   await page.getByRole('button', { name: 'Hủy OCR' }).click();
+  await page.getByRole('button', { name: 'Close document tools', exact: true }).click();
   await beginOcr(page);
 });
 

@@ -15,11 +15,12 @@ src/main.tsx
        │    OnboardingCard / ContextLensOnboarding
        │    modals: ApiSettings, VocabularyLibrary, DataManagement
        └─ READER <ReaderShell interfaceMode surface contentsOpen contextOpen>
-            ReaderToolbar (short title, Contents, Markup, Aa, menu; PDF: Original/Reading + Document tools)
-            ReaderProgress (bottom location/page navigation, percent, secondary OCR status)
-            reader-viewport  → TextReader | PdfViewer | PdfReadingView
-            panels: ContentsPanel (Document), ContextPanel (empty), LookupBottomSheet, NotesPanel
-            overlays: MarkupPalette, ReaderSettings, GoToLocation
+            ReaderToolbar (Back, document title; PDF: Original/Reading — exactly and only, §7.1)
+                        ReaderProgress (bottom location/page navigation, percent, direct zoom stepper,
+                                       secondary OCR status, Reader menu/More trigger)
+                        reader-viewport  → TextReader | PdfViewer | PdfReadingView
+                        panels: ContentsPanel (Document), ContextPanel (empty), LookupBottomSheet, NotesPanel
+                        overlays: MarkupPalette, ReaderSettings, GoToLocation, Document tools (via More)
 ```
 
 `ReaderShell` exposes `data-interface-mode` and `data-reader-surface`, plus panel classes.
@@ -77,7 +78,7 @@ Mobile presentation gaps belong to the MobileChrome phase.
 | Side panel | Contents and context render as columns (`reader-shell.has-contents` / `.has-context`) | Drawers/sheets; `App.tsx` auto-closes Contents when the lookup sheet or notes open |
 | Lookup result | Quick popup; explicit Full opens Context Inspector | Quick bottom sheet; Full expands the same sheet |
 | Notes | Side panel | Full-height panel (`NotesPanel`) |
-| Toolbar | Left: Library and bounded title; center: PDF mode and Document tools; right: Contents, Markup, OCR next, Aa, overflow; Advanced adds Context | Back/title/Original–Reading in the overlay Header; every secondary action (Contents, Context, Markup, Text and theme, Notes, Language engines, Document tools, Click-to-lookup) is reached once through the Footer **More** disclosure, presented as a bottom sheet ≤1023 px and a popover ≥1024 px |
+| Toolbar | Back, bounded document title and Original–Reading in the Header band; page/location, progress, percentage, direct PDF zoom stepper, OCR status and the single **More** disclosure in the Footer band. Every secondary action (Contents, Context, Markup, Text and theme, Notes, Language engines, Document tools, Click-to-lookup) is reached once through **More**, presented as a popover ≥1024 px. See [desktop-reader.md](desktop-reader.md) | Back/title/Original–Reading in the overlay Header; every secondary action is reached once through the Footer **More** disclosure, presented as a bottom sheet ≤1023 px and a popover ≥1024 px |
 | Contents / Go to | Keyboard `T` and `G` (guarded by `keyboardCanNavigate`) | Visible Contents button / bottom location button |
 | PDF paging | Bottom `PageNavigation` and guarded arrow keys | Bottom touch navigation / Go to page |
 
@@ -95,9 +96,10 @@ The top PDF control contains only Original/Reading; the adjacent Document tools 
 existing text-source, OCR language, recognition and queue actions. Under the frozen contract OCR next
 is retired as a Header/L1 action and is a document-tools action meaning "run OCR on remaining
 unprocessed pages"; OCR queue semantics are unchanged. Original keeps a centered PDF canvas with a
-zoom control in both densities: zoom out, current level, zoom in. Under the frozen contract the mobile
-footer Zoom **menu** is retired and replaced by a direct Footer stepper; the desktop zoom bar is
-unchanged. Reading retains the shared structured pages with comfortable margins
+zoom control in both densities: zoom out, current level, zoom in. Under the frozen contract the
+footer Zoom **menu** is retired and replaced by a direct Footer stepper in both densities; there is
+no separate desktop zoom bar and no zoom popup at any width. Reading retains the shared structured
+pages with comfortable margins
 and no card border per page.
 `ReaderProgress` always reports reading progress separately from optional OCR status. PDF page
 navigation is rendered once at the bottom; non-PDF location opens the existing Go to dialog.

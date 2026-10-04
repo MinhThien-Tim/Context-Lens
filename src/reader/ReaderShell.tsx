@@ -16,9 +16,9 @@ const GESTURE_WINDOW = 1200;
 // Contract §6.4: only focus entering real Reader chrome reveals it. The reading surface, page content
 // and selection handles are not chrome and must never reveal.
 const CHROME = '.reader-header,.reader-progress,.reader-reveal';
-// §4.4/§9.8: any open Reader overlay blocks quieting. `.pdf-more-menu` is gone with the mobile zoom
-// popup; the desktop PDF zoom preset popover is the only remaining element of that class.
-const OVERLAY_OPEN = '.reader-more-menu,.pdf-reading-options,.pdf-more-menu,.pdf-reading-selection-wrap,.pdf-reading-selection-actions,.selection-actions';
+// §4.4/§9.8: any open Reader overlay blocks quieting. Contract §3.6 makes More the only popup
+// architecture, so the former `.pdf-more-menu` entries are gone with the deleted PDF zoom popover.
+const OVERLAY_OPEN = '.reader-more-menu,.pdf-reading-options,.pdf-reading-selection-wrap,.pdf-reading-selection-actions,.selection-actions';
 
 export function ReaderShell({ children, contentsOpen, contextOpen, interfaceMode, surface, controlsLocked = false }: {
   interfaceMode: 'simple' | 'advanced'; children: ComponentChildren; contentsOpen: boolean; contextOpen: boolean;

@@ -147,6 +147,7 @@ These are not default reading. Each is opened only for a task that genuinely nee
 | Task | Read |
 | --- | --- |
 | PDF/OCR/reader | [reader.md](reader.md) |
+| DesktopReader toolbar | [desktop-reader.md](desktop-reader.md) |
 | Dictionary/translation/context | [translation-pipeline.md](translation-pipeline.md) |
 | UI/theme/responsive | [ui-system.md](ui-system.md) |
 | Offline mode / PWA shell | [ui-system.md](ui-system.md) + [data-storage.md](data-storage.md) + [translation-pipeline.md](translation-pipeline.md) |

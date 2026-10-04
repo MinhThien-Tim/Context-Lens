@@ -422,10 +422,10 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
 .library-delete:hover,.library-delete:focus-visible { color:var(--danger); background:color-mix(in srgb,var(--danger) 10%,transparent); }
 
 /* A control may be compact visually while retaining a reliable touch area. */
-.reader-header,.pdf-toolbar,.lookup-sheet,.settings-modal { box-sizing:border-box; }
+.reader-header,.lookup-sheet,.settings-modal { box-sizing:border-box; }
 
 @media (max-width:767px) {
-  .brand-header,.home-nav,.reader-header,.reader-document,.reader-header-position { min-width:0; }
+  .brand-header,.home-nav,.reader-header,.reader-document { min-width:0; }
   .lookup-sheet,.settings-modal { padding-bottom:calc(18px + env(safe-area-inset-bottom)); overscroll-behavior:contain; }
 }
 @media (max-width:390px) {

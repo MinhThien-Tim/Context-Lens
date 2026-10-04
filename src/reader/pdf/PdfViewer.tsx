@@ -18,9 +18,7 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desk
   const [mobileZoom, setMobileZoom] = useState<PdfZoomMode>('fit-width');
   const effectiveZoom = desktop ? zoomMode : mobileZoom;
   const changeZoom = (mode: PdfZoomMode) => { if (desktop) onZoomMode(mode); else setMobileZoom(mode); };
-  const [moreOpen, setMoreOpen] = useState(false);
-  const { pdf, error, passwordRequired, password, setPassword, submitPassword } = usePdfDocument(documentRecord.data);
-  const [sizes, setSizes] = useState<Record<number, PdfPageSize>>({});
+  const { pdf, error, passwordRequired, password, setPassword, submitPassword } = usePdfDocument(documentRecord.data);  const [sizes, setSizes] = useState<Record<number, PdfPageSize>>({});
   const ready = Boolean(pdf && Object.keys(sizes).length === pdf.numPages);
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -66,26 +64,18 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desk
       root.removeEventListener('pointerup', end); root.removeEventListener('pointercancel', end);
     };
   }, [desktop, ready]);
-  const zoomMenu = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!moreOpen) return;
-    const dismiss = (event: PointerEvent) => { if (!zoomMenu.current?.contains(event.target as Node)) setMoreOpen(false); };
-    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); setMoreOpen(false); zoomMenu.current?.querySelector<HTMLButtonElement>('[aria-expanded]')?.focus({ preventScroll: true }); } };
-    document.addEventListener('pointerdown', dismiss); document.addEventListener('keydown', escape, true);
-    return () => { document.removeEventListener('pointerdown', dismiss); document.removeEventListener('keydown', escape, true); };
-  }, [moreOpen]);
   const [geometryError, setGeometryError] = useState<string | null>(null);
   const [visible, setVisible] = useState(location.page);
   const [customScale, setCustomScale] = useState(1);
   const [bounds, setBounds] = useState<{ width: number; height: number } | null>(null);
   const [footerZoomHost, setFooterZoomHost] = useState<HTMLElement | null>(null);
-  // Contract §8.2/§8.3 (U3): at <=1023px zoom is a direct Footer control, never a popup. The Footer
-  // owns the host element; this is a render seam for a control that lives in the Footer, not a
-  // disclosure surface, and `.pdf-more` / `.pdf-more-menu` are gone from the mobile path.
+  // Contract §8.2/§8.3 (U3): zoom is a direct Footer control at every density, never a popup. The
+    // Footer owns the host element; this is a render seam for a control that lives in the Footer, not a
+    // disclosure surface. `.pdf-more` / `.pdf-more-menu` and the `.pdf-toolbar` band are gone entirely.
   useEffect(() => {
-    if (desktop || !ready) { setFooterZoomHost(null); return; }
+      if (!ready) { setFooterZoomHost(null); return; }
     setFooterZoomHost(document.querySelector<HTMLElement>('.pdf-footer-zoom-host'));
-  }, [desktop, ready]);
+    }, [ready]);
   const selectedCustomScale = desktop ? desktopCustomScale : customScale;
   const scaleFor = (size: PdfPageSize) => calculatePdfScale(effectiveZoom, selectedCustomScale, bounds?.width ?? 0, bounds?.height ?? 0, size.width, size.height, desktop ? 6 : 3);
   const stepZoom = (direction: -1 | 1) => {
@@ -139,15 +129,16 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desk
   if (!pdf || !ready) return <div class="pdf-state" role="status">Opening PDF…</div>;
   return <div class="pdf-viewer-wrap">
     {(() => {
-      // One direct Footer zoom control at <=1023px (§8.2): decrease, level readout, increase. It is
-      // never a popup and never appears in More (§8.3/§9.4).
-      const directStepper = <div class="pdf-zoom-stepper">
-        <button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button>
-        <span aria-label="Zoom level" aria-live="off">{Math.round(scaleFor(sizes[visible] ?? DEFAULT_SIZE) * 100)}%</span>
-        <button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button>
-      </div>;
-      return <><div class="pdf-toolbar" aria-label="PDF controls">{desktop && <><button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button><div class="pdf-more pdf-zoom-presets" ref={zoomMenu}><button aria-label="PDF zoom presets" aria-expanded={moreOpen} aria-haspopup="true" onClick={() => setMoreOpen(value => !value)}>{Math.round(scaleFor(sizes[visible] ?? DEFAULT_SIZE) * 100)}%</button>{moreOpen && <div class="pdf-more-menu"><button onClick={() => { changeZoom('natural'); setMoreOpen(false); }}>Default</button><button onClick={() => { changeZoom('fit-width'); setMoreOpen(false); }}>Fit width</button><button onClick={() => { changeZoom('fit-page'); setMoreOpen(false); }}>Fit page</button></div>}</div><button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button></>}</div>{!desktop && footerZoomHost && createPortal(directStepper, footerZoomHost)}</>;
-    })()}
+        // One direct Footer zoom control at every density (§8.2): decrease, level readout, increase.
+        // It is never a popup and never appears in More (§8.3/§9.4). At >=1024px the Footer owns the
+        // host too, so desktop and mobile share one stepper and one owner.
+        const directStepper = <div class="pdf-zoom-stepper">
+          <button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button>
+          <span aria-label="Zoom level" aria-live="off">{Math.round(scaleFor(sizes[visible] ?? DEFAULT_SIZE) * 100)}%</span>
+          <button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button>
+        </div>;
+        return footerZoomHost ? createPortal(directStepper, footerZoomHost) : null;
+      })()}
     <div ref={rootRef} class="pdf-scroll" tabIndex={0}>
       <div class="pdf-pages">
         {bounds && Array.from({ length: pdf.numPages }, (_, index) => index + 1).map(pageNumber => {

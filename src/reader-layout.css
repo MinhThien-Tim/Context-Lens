@@ -26,8 +26,6 @@ body:has(.reader-shell) { background:var(--reading-surface); }
 .reader-shell .reader-document { grid-column:2; grid-row:1; display:block; min-width:0; }
 .reader-shell .reader-document h1 { display:block; margin:0; padding:0; max-width:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:600 14px/1.4 var(--font-ui); color:var(--primary-text); text-align:center; }
 .reader-shell .reader-header .icon-button { flex:0 0 44px; width:44px; min-height:44px; }
-.reader-shell .toolbar-button { background:transparent; border:0; color:var(--secondary-text); font-size:13px; }
-.reader-shell .toolbar-button[aria-expanded="true"] { background:var(--subtle-surface); color:var(--primary-text); }
 .reader-shell .reader-back { color:var(--primary-text); }
 .reader-shell .reader-more-menu { width:230px; }
 .reader-shell .reader-more-menu button { width:100%; min-height:44px; padding:0 var(--space-3); background:transparent; border:0; text-align:left; color:var(--primary-text); font-size:13px; }
@@ -40,8 +38,6 @@ body:has(.reader-shell) { background:var(--reading-surface); }
 .reader-shell[data-reader-surface="original"] .reader-viewport,.reader-shell[data-reader-surface="reading"] .reader-viewport { min-height:0; }
 .reader-shell .pdf-viewer-wrap,.reader-shell .pdf-reading-view { height:calc(100dvh - var(--reader-header-height) - var(--reader-footer-height)); min-height:0; }
 .reader-shell .pdf-viewer-wrap { background:var(--subtle-surface); }
-.reader-shell .pdf-toolbar { position:relative; top:auto; right:auto; z-index:5; flex-shrink:0; min-height:48px; padding:2px var(--space-3); justify-content:flex-end; border:0; border-bottom:1px solid var(--border); border-radius:0; box-shadow:none; background:var(--subtle-surface); color:var(--primary-text); }
-.reader-shell .pdf-toolbar button,.reader-shell .pdf-toolbar select { min-height:44px; border:0; border-radius:var(--radius-control); background:transparent; color:var(--primary-text); }
 .reader-shell .pdf-scroll { padding:var(--space-4); }
 .reader-shell .pdf-page-slot { box-shadow:var(--shadow); }
 .reader-shell .pdf-mode-switch { display:flex; align-items:center; flex:none; padding:2px; border:1px solid var(--border); border-radius:var(--radius-control); background:var(--subtle-surface); }
@@ -98,7 +94,6 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .reader-shell .lookup-sheet,.reader-shell .notes-panel { left:0; right:0; width:auto; max-width:none; transform:none; }
   .reader-shell .notes-panel { top:0; bottom:0; height:100dvh; max-height:100dvh; border-radius:0; }
   .reader-shell .pdf-reading-options { position:fixed; top:auto; bottom:max(8px,env(safe-area-inset-bottom)); left:8px; right:8px; width:auto; max-height:75dvh; z-index:40; }
-  .reader-shell .pdf-toolbar { padding:2px var(--space-2); }
   .reader-shell.chrome-quiet .reader-header { transform:translateY(-100%); opacity:0; pointer-events:none; }
   /* §4.x/§6: quiet is a Header-only visual state. The Footer band stays visible and reserved on
      every surface, so quieting never hides the only route to More, zoom, or the reveal control. */
@@ -193,14 +188,10 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .inspector-header-actions { flex-direction:column-reverse; }
 }
 
-/* Visible reader tools and compact inspector controls. */
-.reader-shell .reader-header { grid-template-columns:auto minmax(0,1fr) auto auto auto; gap:8px; }
-.reader-shell .reader-primary-tools { grid-column:4; grid-row:1; display:flex; align-items:center; gap:4px; }
-.reader-shell .reader-header-actions { grid-column:5; }
+/* Reader header and compact inspector controls. */
+.reader-shell .reader-header { grid-template-columns:auto minmax(0,1fr) auto; gap:8px; }
+.reader-shell .reader-header-actions { grid-column:3; }
 .reader-shell .reader-document h1 { max-width:32ch; margin-inline:auto; text-align:left; }
-.reader-shell .reader-primary-tools .toolbar-button { display:flex; align-items:center; gap:6px; min-height:44px; padding:0 8px; white-space:nowrap; }
-.reader-shell .reader-primary-tools svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.7; }
-.reader-shell .reader-primary-tools button[aria-expanded="true"] { color:var(--accent); background:var(--accent-soft); }
 .inspector-controls { display:flex; flex:none; justify-content:space-between; align-items:center; gap:6px; padding:2px 12px; border-bottom:1px solid var(--border); background:var(--elevated-surface); }
 .lookup-sheet .inspector-controls .language-tabs { display:flex; flex:none; width:auto; margin:0; padding:2px; border-radius:6px; background:var(--subtle-surface); gap:0; }
 .lookup-sheet .inspector-controls .language-tabs button { flex:none; min-width:42px; min-height:40px; padding:0 8px; font-size:11px; border-radius:4px; }
@@ -223,15 +214,11 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .reader-shell .reader-header { grid-template-columns:44px minmax(0,1fr) 88px; grid-template-rows:52px 48px; gap:0; }
   .reader-shell[data-reader-surface="original"] .reader-header,.reader-shell[data-reader-surface="reading"] .reader-header { grid-template-rows:52px 48px 52px; }
   .reader-shell .reader-header-actions { grid-column:3; grid-row:1; }
-  .reader-shell .reader-header-actions>.toolbar-button { display:none; }
-  .reader-shell .reader-primary-tools { grid-column:1 / -1; grid-row:2; justify-content:center; }
-  .reader-shell .reader-header-position { grid-column:1 / -1; grid-row:3; }
-  .reader-shell .reader-document h1 { max-width:24ch; }
-}
+    .reader-shell .reader-document h1 { max-width:24ch; }
+  }
 
-/* Restore bilingual Quick columns and subtle section hierarchy. */
-.reader-shell .reader-header-leading>.toolbar-button { display:flex; align-items:center; gap:6px; padding:0 8px; min-height:44px; white-space:nowrap; }
-.reader-shell .reader-header-leading svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.7; }
+  /* Restore bilingual Quick columns and subtle section hierarchy. */
+  .reader-shell .reader-header-leading svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.7; }
 .reader-shell .reader-document h1 { margin-inline:auto; text-align:center; }
 .reader-shell .ocr-next-button { min-height:44px; padding:0 8px; white-space:nowrap; color:var(--accent); background:var(--accent-soft); border-radius:6px; }
 .lookup-sheet .inspector-meanings { padding:8px; border-radius:7px; background:color-mix(in srgb,var(--accent) 4%,var(--elevated-surface)); }
@@ -261,10 +248,9 @@ body:has(.reader-shell) { background:var(--reading-surface); }
 .lookup-sheet .deep-explanation>.inspector-disclosure:nth-of-type(even) { background:var(--accent-soft); }
 @media (max-width:1023px) {
   .reader-shell .reader-header-leading { display:contents; }
-  .reader-shell .reader-back { grid-column:1; grid-row:1; }
-  .reader-shell .reader-header-leading>[aria-label="Contents"] { position:absolute; top:52px; left:calc(50% - 102px); width:102px; }
-  .reader-shell .reader-primary-tools { grid-column:1 / -1; grid-row:2; justify-content:flex-start; padding-left:50%; }
-  .reader-shell .reader-document h1 { margin-inline:auto; }
+    .reader-shell .reader-back { grid-column:1; grid-row:1; }
+    .reader-shell .reader-header-leading>[aria-label="Contents"] { position:absolute; top:52px; left:calc(50% - 102px); width:102px; }
+    .reader-shell .reader-document h1 { margin-inline:auto; }
   .reader-shell .pdf-mode-controls { gap:4px; }
   .reader-shell .pdf-mode-switch>button { min-width:70px; padding:0 8px; }
   .reader-shell .ocr-next-button { font-size:11px; padding:0 5px; }
@@ -303,14 +289,13 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .lookup-sheet .inspector-header .inspector-note,.lookup-sheet .inspector-header .explain-toggle { min-height:40px; }
 }
 
-/* Phase 3 recovery: three toolbar zones and a compact reference panel. */
-.reader-shell .reader-header { grid-template-columns:minmax(120px,1fr) auto minmax(max-content,1fr); }
-.reader-shell .reader-header-leading { grid-column:1; display:flex; min-width:0; }
+/* Reader header: two bands own controls. Header = Back + bounded title + Original/Reading (§7.1).
+   Page/location, progress, zoom and More are Footer-owned (§8), so no Header zone exists for them. */
+.reader-shell .reader-header { grid-template-columns:minmax(0,1fr) auto; }
+.reader-shell .reader-header-leading { grid-column:1; grid-row:1; display:flex; min-width:0; }
 .reader-shell .reader-document { position:static; min-width:0; }
 .reader-shell .reader-document h1 { max-width:24ch; margin:0; text-align:left; }
-.reader-shell .reader-header-position { grid-column:2; justify-content:center; }
-.reader-shell .reader-header-actions { grid-column:3; justify-content:flex-end; }
-.reader-shell .reader-primary-tools { display:flex; padding:0; gap:2px; }
+.reader-shell .reader-header-actions { grid-column:2; grid-row:1; justify-content:flex-end; }
 .reader-shell .reader-highlight-palette { display:flex; flex-wrap:wrap; align-items:center; gap:8px; width:max-content; max-width:calc(100vw - 24px); }
 .reader-shell .reader-highlight-colors { margin:0; }
 .lookup-sheet .inspector-header .inspector-controls { justify-content:flex-start; flex-wrap:wrap; gap:4px 6px; }
@@ -337,12 +322,10 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .reader-shell .reader-header-leading { grid-column:1; grid-row:1; display:flex; }
   .reader-shell .reader-document h1 { max-width:24ch; text-align:left; padding:0 6px; }
   .reader-shell .reader-header-actions { display:contents; }
-  .reader-shell .reader-header-actions>.icon-button { grid-column:2; grid-row:1; justify-self:start; }
-  .reader-shell .reader-more { grid-column:2; grid-row:1; justify-self:end; }
-  .reader-shell .reader-primary-tools { grid-column:1 / -1; grid-row:2; justify-content:center; padding:0; }
-  .reader-shell .reader-header-position { grid-column:1 / -1; grid-row:3; }
-  .lookup-sheet .inspector-controls button,.lookup-sheet .inspector-controls .inspector-sources>summary { min-height:44px; }
-}
+    .reader-shell .reader-header-actions>.icon-button { grid-column:2; grid-row:1; justify-self:start; }
+    .reader-shell .reader-more { grid-column:2; grid-row:1; justify-self:end; }
+    .lookup-sheet .inspector-controls button,.lookup-sheet .inspector-controls .inspector-sources>summary { min-height:44px; }
+  }
 
 .reader-shell .reader-markup-tools { display:flex; gap:4px; }
 .reader-shell .reader-markup-tools button { display:flex; align-items:center; gap:4px; min-height:36px; padding:4px 6px; border-radius:6px; }

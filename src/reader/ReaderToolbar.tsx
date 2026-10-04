@@ -1,5 +1,6 @@
-﻿import { useEffect, useRef, useState } from 'preact/hooks';
+﻿import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
+import { createPortal } from 'preact/compat';
 import { useDesktop } from '../components/useDesktop';
 import { useDialog } from '../components/useDialog';
 
@@ -7,19 +8,198 @@ function BackIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>;
 }
 
-function MoreIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="19" cy="12" r="1.5" /></svg>;
+export function MoreIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>;
+}
+
+export function PrevPageIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>;
+}
+
+export function NextPageIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>;
+}
+
+export function ZoomOutIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>;
+}
+
+export function ZoomInIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M8 12h8M12 8v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>;
+}
+
+export function ContentsIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>;
+}
+
+export function NotesIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M14 2v6h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /><path d="M10 12h8M10 16h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>;
+}
+
+export function MarkupIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15c2.5-6 4.5 2 7-3s4.5 1 9-5"/><path d="M4 20h16"/></svg>;
+}
+
+export function PrintIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9V3h10v6"/><path d="M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M7 14h10v7H7z"/></svg>;
+}
+
+export function HighlightIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5l4.5 4.5-7.5 7.5-4.5-4.5z"/><path d="M7.5 12L6 17.5 11.5 16"/><path d="M14 20.5h6"/></svg>;
+}
+
+export function PenIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4l4 4L8.5 19.5 4 20l.5-4.5z"/><path d="M13.5 6.5l4 4"/></svg>;
+}
+
+export function EraseIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 5.8a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8L11.5 19.5H8l-3.2-3.2a2 2 0 0 1 0-2.8z"/><path d="M11.5 19.5H20"/></svg>;
+}
+
+export function ContextIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M12 8v4M12 16h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>;
+}
+
+export function TextThemeIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>;
+}
+
+export function LanguagesIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>;
+}
+
+export function DocumentToolsIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M14 2v6h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /><path d="M16 13H8M16 17H8M10 9h6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>;
+}
+
+export function OcrIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M8.5 16l3.5-8 3.5 8M9.8 13h4.4"/></svg>;
+}
+
+export function ClickLookupIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5M11 8.5v5M8.5 11h5"/></svg>;
 }
 
 // Contract §7.1: the Header owns exactly and only Back, the document title, and Original/Reading
 // for PDF. No secondary action, no More trigger, no OCR control lives here (§7.2).
-export function ReaderToolbar({ title, onBack, primaryActions }: { title: string; onBack: () => void; primaryActions?: ComponentChildren }) {
+// DesktopReader extension: at ≥1024px the Header expands to a full document-reader toolbar
+// with navigation, page/location, zoom, document tools, and More — all in one band.
+export function ReaderToolbar({ 
+  title, 
+  onBack, 
+  primaryActions,
+  // Desktop toolbar props (≥1024px)
+  page,
+  totalPages,
+  onPrevPage,
+  onNextPage,
+  onGoToPage,
+  zoomLevel,
+  zoomMode,
+  onZoomOut,
+  onZoomIn,
+  onZoomSelect,
+  onContents,
+  onNotes,
+  onMarkup,
+  onPrint,
+  onHighlight,
+  onPen,
+  onErase,
+  moreItems,
+  markupActive = false
+}: { 
+  title: string; 
+  onBack: () => void; 
+  primaryActions?: ComponentChildren;
+  // Desktop toolbar props
+  page?: number;
+  totalPages?: number;
+  onPrevPage?: () => void;
+  onNextPage?: () => void;
+  onGoToPage?: (page: number) => void;
+  zoomLevel?: number;
+  zoomMode?: 'auto' | 'custom';
+  onZoomOut?: () => void;
+  onZoomIn?: () => void;
+  onZoomSelect?: (mode: 'auto' | 'custom', value?: number) => void;
+  onContents?: () => void;
+  onNotes?: () => void;
+  onMarkup?: () => void;
+  onPrint?: () => void;
+  onHighlight?: () => void;
+  onPen?: () => void;
+  onErase?: () => void;
+  moreItems?: Array<{ label: string; onSelect: () => void; pressed?: boolean }>;
+  markupActive?: boolean;
+}) {
+  const desktop = useDesktop();
+  
+  // Only render desktop toolbar groups at ≥1024px
+  const showDesktopToolbar = desktop && (page !== undefined && totalPages !== undefined);
+  
   return <header class="reader-header">
     <div class="reader-header-leading">
-      <button class="icon-button reader-back" aria-label="Back to library" onClick={onBack}><BackIcon /><span>Back</span></button>
+      <button class="icon-button reader-back" aria-label="Back to library" onClick={onBack}><BackIcon /></button>
       <div class="reader-document"><h1 title={title}>{title}</h1></div>
     </div>
-    <div class="reader-header-actions">{primaryActions}</div>
+    <div class="reader-header-actions">
+      {primaryActions}
+      {showDesktopToolbar && (
+        <>
+          {/* Page navigation group */}
+          <nav class="page-navigation" aria-label="Page navigation">
+            <button class="icon-button" aria-label="Previous page" disabled={page! <= 1} onClick={onPrevPage}><PrevPageIcon /></button>
+            <button class="text-button page-count" aria-label={`Page ${page} of ${totalPages}`} title={`Go to page ${page} of ${totalPages}`} onClick={() => onGoToPage?.(page!)}>{page} / {totalPages}</button>
+            <button class="icon-button" aria-label="Next page" disabled={page! >= totalPages!} onClick={onNextPage}><NextPageIcon /></button>
+          </nav>
+          
+          {/* Zoom group with selector */}
+          <div class="pdf-zoom-stepper" role="group" aria-label="Zoom">
+            <button class="icon-button" aria-label="Zoom out" onClick={onZoomOut}><ZoomOutIcon /></button>
+            <div class="zoom-selector">
+              <select 
+                aria-label="Zoom level" 
+                value={zoomMode === 'auto' ? 'auto' : String(zoomLevel)}
+                onChange={(e: Event) => {
+                  const value = (e.target as HTMLSelectElement).value;
+                  if (value === 'auto') {
+                    onZoomSelect?.('auto');
+                  } else {
+                    onZoomSelect?.('custom', parseInt(value, 10));
+                  }
+                }}
+              >
+                <option value="auto">Automatic</option>
+                <option value="75">75%</option>
+                <option value="100">100%</option>
+                <option value="125">125%</option>
+                <option value="150">150%</option>
+              </select>
+            </div>
+            <button class="icon-button" aria-label="Zoom in" onClick={onZoomIn}><ZoomInIcon /></button>
+          </div>
+          
+          {/* Document tools group */}
+          <div class="reader-tools" role="group" aria-label="Document tools">
+            <button class="icon-button" aria-label="Contents" onClick={onContents}><ContentsIcon /></button>
+            <button class="icon-button" aria-label="Notes" onClick={onNotes}><NotesIcon /></button>
+            <button class="icon-button" aria-label="Markup" onClick={onMarkup}><MarkupIcon /></button>
+            <button class="icon-button" aria-label="Print" onClick={onPrint}><PrintIcon /></button>
+          </div>
+          
+          {/* Markup tools group */}
+          <div class="reader-markup-tools" role="group" aria-label="Markup tools">
+            <button class="icon-button" aria-label="Highlight" onClick={onHighlight}><HighlightIcon /></button>
+            <button class="icon-button" aria-label="Pen" onClick={onPen}><PenIcon /></button>
+            <button class="icon-button" aria-label="Erase" onClick={onErase}><EraseIcon /></button>
+          </div>
+          
+          {/* More/overflow */}
+          <ReaderMore items={moreItems ?? []} />
+        </>
+      )}
+    </div>
   </header>;
 }
 
@@ -27,27 +207,60 @@ export interface ReaderMoreItem {
   label: string;
   onSelect: () => void;
   pressed?: boolean;
+  icon?: ComponentChildren;
+  group?: string;
 }
 
 // Contract §9: exactly one More disclosure. One component, one menu element, one dismissal and
 // focus path for both presentation forms — bottom sheet at <=1023px, popover at >=1024px (§9.2).
+// Desktop popover opens downward from the Header trigger.
 export function ReaderMore({ items, markupActive = false }: { items: ReaderMoreItem[]; markupActive?: boolean }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLElement>(null);
   const desktop = useDesktop();
-  // §14.4: focus returns to the opener on close for both forms. `useDialog` owns the ref that both
-  // its activation focus and its focus restoration depend on, so the section must use it directly.
-  const dialog = useDialog(() => { setOpen(false); trigger.current?.focus({ preventScroll: true }); }, open, !desktop);
+  const [pos, setPos] = useState<{ top: number; right: number; maxHeight: number } | null>(null);
+
+  // Position the desktop popover using trigger's bounding rect
+  useLayoutEffect(() => {
+    if (!open || !desktop) { setPos(null); return; }
+    const place = () => {
+      const r = trigger.current!.getBoundingClientRect();
+      setPos({
+        top: r.bottom + 8,
+        right: Math.max(8, window.innerWidth - r.right),
+        maxHeight: window.innerHeight - r.bottom - 16
+      });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+  }, [open, desktop]);
+
+  // Dismiss: check both root (trigger) and dialog (menu, which is in portal)
   useEffect(() => {
     if (!open) return;
-    const dismiss = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false); };
+    const dismiss = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!root.current?.contains(target) && !dialog.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
     if (desktop) dialog.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });
     document.addEventListener('pointerdown', dismiss);
     return () => document.removeEventListener('pointerdown', dismiss);
   }, [open, desktop]);
-  // §14.3: expose expanded/collapsed state, and keep it keyboard operable inside the menu.
+
+  // Keyboard navigation inside menu
   const onMenuKeyDown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setOpen(false);
+      trigger.current?.focus({ preventScroll: true });
+      return;
+    }
     const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
     if (!keys.includes(event.key)) return;
     const items = Array.from(dialog.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []);
@@ -57,17 +270,55 @@ export function ReaderMore({ items, markupActive = false }: { items: ReaderMoreI
     const next = event.key === 'Home' ? 0
       : event.key === 'End' ? items.length - 1
       : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
-    items[next]?.focus();
+    (items[next] as HTMLElement)?.focus();
   };
+
   const select = (item: ReaderMoreItem) => { setOpen(false); trigger.current?.focus({ preventScroll: true }); item.onSelect(); };
+
+  // Group items by their group property
+  const groupedItems = items.reduce((acc, item) => {
+    const group = item.group || 'actions';
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(item);
+    return acc;
+  }, {} as Record<string, ReaderMoreItem[]>);
+
+  // Guard: don't render empty menu
+  if (!items.length) return null;
+
+  const layer = open && (
+    <>
+      {!desktop && <button class="sheet-backdrop" tabIndex={-1} aria-label="Close reader menu" onClick={() => { setOpen(false); trigger.current?.focus({ preventScroll: true }); }} />}
+      <section ref={dialog} class={`reader-more-menu ${desktop ? 'desktop' : 'mobile'}`} role="menu" aria-label="Reader actions" onKeyDown={onMenuKeyDown}
+        style={desktop && pos ? { position: 'fixed', top: pos.top, right: pos.right, maxHeight: pos.maxHeight, overflowY: 'auto' } : undefined}
+      >
+        {Object.entries(groupedItems).map(([groupName, groupItems]) => (
+          <div key={groupName} class="more-group">
+            {groupName !== 'actions' && <div class="more-group-label">{groupName}</div>}
+            <div class="more-group-items">
+              {groupItems.map(item => (
+                <button 
+                  key={item.label} 
+                  role="menuitem" 
+                  type="button" 
+                  aria-label={item.label} 
+                  aria-pressed={item.pressed} 
+                  onClick={() => select(item)}
+                  class="more-item"
+                >
+                  {item.icon && <span class="more-item-icon">{item.icon}</span>}
+                  <span class="more-item-label">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+    </>
+  );
+
   return <div class="reader-more" ref={root}>
     <button ref={trigger} class={`icon-button ${markupActive ? 'markup-indicator' : ''}`} aria-label="Reader menu" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(value => !value)}><MoreIcon /></button>
-    {/* §9.5 — at <=1023px More is a bottom sheet, so it needs the product's standard
-        backdrop dismissal. The sheet sits above the Footer band and therefore covers the
-        trigger, which makes the trigger unusable as a close affordance on that band. */}
-    {open && !desktop && <button class="sheet-backdrop" tabIndex={-1} aria-label="Close reader menu" onClick={() => { setOpen(false); trigger.current?.focus({ preventScroll: true }); }} />}
-    {open && <section ref={dialog} class="reader-more-menu" role="menu" aria-label="Reader actions" onKeyDown={onMenuKeyDown}>
-      {items.map(item => <button key={item.label} role="menuitem" type="button" aria-label={item.label} aria-pressed={item.pressed} onClick={() => select(item)}>{item.label}</button>)}
-    </section>}
+    {layer && createPortal(layer, document.body)}
   </div>;
 }

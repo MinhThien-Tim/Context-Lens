@@ -1,6 +1,6 @@
 /* Reader-owned base presentation, before responsive and layout overrides. */
 
-.reader-more,.pdf-more { position:relative; }
+.reader-more { position:relative; }
 .reader-highlight-button { flex:0 0 44px; color:var(--muted); }
 .reader-highlight-button.active { color:#9a6a00; background:color-mix(in srgb,#ffdb75 24%,transparent); }
 .reader-highlight-palette { position:fixed; z-index:31; top:60px; right:54px; width:218px; padding:10px; border:1px solid var(--border); border-radius:14px; background:var(--elevated-surface); box-shadow:var(--shadow); }
@@ -10,9 +10,8 @@
 .reader-highlight-colors { display:flex; align-items:center; justify-content:space-around; gap:14px; padding:12px 6px 4px; border-top:1px solid var(--border); }
 .reader-highlight-colors .highlight-color { width:30px; height:30px; cursor:pointer; }
 .reader-highlight-colors .highlight-color.selected { outline:2px solid var(--text); outline-offset:3px; }
-.reader-more-menu,.pdf-more-menu { position:absolute; z-index:30; top:calc(100% + 6px); right:0; width:190px; padding:6px; border:1px solid var(--border); border-radius:10px; background:var(--elevated-surface); box-shadow:var(--shadow); }
-.reader-more-menu button,.pdf-more-menu button { width:100%; min-height:44px; padding:0 10px; border:0; background:transparent; color:var(--text); text-align:left; }
-.pdf-more-menu { color:var(--text); }
+.reader-more-menu { position:absolute; z-index:30; top:calc(100% + 6px); right:0; width:190px; padding:6px; border:1px solid var(--border); border-radius:10px; background:var(--elevated-surface); box-shadow:var(--shadow); }
+.reader-more-menu button { width:100%; min-height:44px; padding:0 10px; border:0; background:transparent; color:var(--text); text-align:left; }
 .reader-viewport { min-width:0; background:var(--reading-surface); min-height:calc(100vh - 56px); }
 .reader-source { padding-top:20px; margin-top:0; margin-bottom:0; }
 .text-segment { white-space:pre-wrap; min-height:1em; }
@@ -21,11 +20,6 @@
 .pdf-mode-switch button { min-height:34px; padding:0 9px; border:0; border-radius:6px; background:transparent; color:var(--muted); }
 .pdf-mode-switch button[aria-pressed="true"] { background:var(--accent-soft); color:var(--accent); }
 .pdf-viewer-wrap { height:calc(100vh - 56px); display:flex; flex-direction:column; background:#4b4d4f; }
-.pdf-toolbar { min-height:48px; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:5px; padding:4px max(8px,env(safe-area-inset-right)) 4px max(8px,env(safe-area-inset-left)); color:#fff; background:#303234; border-bottom:1px solid #202224; }
-.pdf-toolbar button { min-width:44px; min-height:40px; padding:0 10px; border:1px solid #62666a; border-radius:7px; background:#414448; color:#fff; }
-.pdf-toolbar button[aria-pressed="true"] { border-color:#9ed8c7; background:#176b57; }
-.pdf-toolbar button:disabled { opacity:.45; }
-.pdf-toolbar span { min-width:72px; text-align:center; font-variant-numeric:tabular-nums; }
 .pdf-scroll { flex:1; min-height:0; overflow:auto; padding:18px 16px max(30px,env(safe-area-inset-bottom)); scroll-padding-top:16px; }
 .pdf-pages { width:max-content; min-width:100%; }
 .pdf-ocr-notice,.pdf-ocr-error { position:absolute; z-index:6; top:62px; left:12px; max-width:min(520px,calc(100% - 24px)); margin:0; padding:9px 12px; border-radius:8px; background:#fff; color:#252a2a; box-shadow:0 2px 12px #0004; font-size:13px; }
@@ -86,8 +80,7 @@
 @media (max-width:767px) {
   .pdf-viewer-wrap { height:calc(100dvh - 56px); }
   .pdf-reading-view { font-size:max(18px,var(--reader-size)); }
-  .pdf-toolbar { justify-content:center; overflow:visible; flex-wrap:nowrap; }
-}
+  }
 
 /* PDF.js 6.3 text-layer variables (pdfjs-dist/web/pdf_viewer.css, Apache-2.0).
    These must track the installed TextLayer implementation. */
@@ -110,7 +103,6 @@
 body:has(.pdf-viewer-wrap),body:has(.pdf-reading-view) { overflow:hidden; }
 
 .pdf-text-host { position:absolute; inset:0; z-index:1; }
-.pdf-toolbar { justify-content:flex-end; min-height:42px; padding-right:14px; }
 .pdf-viewer-wrap,.pdf-reading-view { height:calc(100dvh - 62px); }
 .reader-highlight-button.active { background:var(--accent-soft); color:var(--accent); }
 .reader-viewport { transition:margin 200ms ease; }
@@ -121,12 +113,10 @@ body:has(.pdf-viewer-wrap),body:has(.pdf-reading-view) { overflow:hidden; }
 
 .pdf-text-host { position:absolute; inset:0; z-index:1; }
 .pdf-viewer-wrap { position:relative; height:calc(100dvh - 62px); }
-.pdf-toolbar { position:absolute; z-index:5; top:10px; right:12px; min-height:42px; justify-content:flex-end; border:1px solid #62666a; border-radius:10px; box-shadow:0 5px 18px rgba(0,0,0,.28); }
 .pdf-scroll { padding-top:18px; }
 .pdf-reading-view { height:calc(100dvh - 62px); }
 @media (max-width:767px) {
   .pdf-mode-switch button { min-width:0; padding:0 5px; font-size:10px; white-space:nowrap; }
-  .pdf-toolbar { justify-content:center; }
 }
 
 /* Shared PDF markup palette: available in Original and Reading views. */
@@ -154,18 +144,6 @@ body:has(.pdf-viewer-wrap),body:has(.pdf-reading-view) { overflow:hidden; }
 
 /* PDF controls sit above the document instead of floating over its page. */
 .pdf-viewer-wrap { position:relative; }
-.pdf-toolbar {
-  position:relative; inset:auto; z-index:2; flex:0 0 auto; min-height:40px;
-  justify-content:flex-end; gap:4px; padding:3px 12px;
-  border:0; border-bottom:1px solid var(--border); border-radius:0;
-  background:var(--surface); color:var(--text); box-shadow:none;
-}
-.pdf-toolbar button,.pdf-toolbar select {
-  min-width:36px; min-height:34px; padding:0 9px; border:1px solid var(--border);
-  border-radius:7px; background:var(--elevated-surface); color:var(--text); font-size:12px;
-}
-.pdf-toolbar select { min-width:130px; }
-.pdf-toolbar span { min-width:0; margin-right:6px; font-size:12px; }
 .pdf-viewer-wrap > .pdf-ocr-error {
   position:static; z-index:auto; flex:0 0 auto; max-width:none; margin:0;
   padding:7px 14px; border-radius:0; background:var(--surface);
@@ -189,7 +167,6 @@ body:has(.pdf-viewer-wrap),body:has(.pdf-reading-view) { overflow:hidden; }
 .pdf-reading-options select { width:100%; min-height:36px; padding:0 8px; border:1px solid var(--border); border-radius:7px; background:var(--surface); color:var(--text); }
 .pdf-reading-options p { margin:5px 10px 4px; color:var(--muted); font-size:11px; line-height:1.4; }
 @media (max-width:767px) {
-  .pdf-toolbar { justify-content:flex-end; padding-inline:10px; }
   .pdf-reading-options { left:0; right:auto; }
   .pdf-viewer-wrap,.pdf-reading-view { height:calc(100dvh - 92px); }
   .reader-viewport:has(.pdf-queue-status) { height:calc(100dvh - 92px); }
@@ -206,18 +183,16 @@ body:has(.pdf-viewer-wrap),body:has(.pdf-reading-view) { overflow:hidden; }
 .lexical-unit,.context-card { background:var(--language-soft); }
 .lexical-label,.context-card h3,.lexical-unit p,.context-card p { color:var(--language); }
 .lookup-sheet button,.lookup-sheet summary,.lookup-sheet select,
-.pdf-toolbar button,.pdf-toolbar select,.pdf-mode-switch button,
+.pdf-mode-switch button,
 .pdf-reading-options button,.pdf-reading-options select,.pdf-queue-status button,
 .markup-done,.reader-highlight-colors .highlight-color { min-height:44px; touch-action:manipulation; }
 .reader-highlight-colors .highlight-color { min-width:44px; }
 .reader-header button,.pdf-mode-switch button { touch-action:manipulation; }
 .reader-text,.pdf-text-layer { -webkit-user-select:text; user-select:text; }
-.reader-header button:focus-visible,.lookup-sheet button:focus-visible,.pdf-toolbar button:focus-visible,
+.reader-header button:focus-visible,.lookup-sheet button:focus-visible,
 .pdf-mode-switch button:focus-visible,.pdf-reading-options button:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
 @media (max-width:767px) {
-  .pdf-toolbar { gap:4px; flex-wrap:wrap; padding-inline:max(8px,env(safe-area-inset-left)) max(8px,env(safe-area-inset-right)); }
-  .pdf-toolbar select { min-width:0; max-width:100%; }
   .pdf-reading-options { max-height:min(70dvh,520px); overflow-y:auto; overscroll-behavior:contain; }
 }
 @media (max-width:390px) {

@@ -227,6 +227,7 @@ These are deliberately **not** implemented here and must not be invented in Mobi
 - `surface` participates in the Reader chrome effect's dependencies. A surface identity change
   resets quiet, which is correct for a mode switch but is a coupling worth revisiting if a
   future phase restores across surface changes.
-- The desktop PDF zoom preset popover (`.pdf-more-menu`) still exists at ≥1024 px only. Mobile zoom
-  is a direct Footer stepper and never a popup, so this does not create a second mobile popup
-  architecture.
+- Zoom is a direct Footer stepper — decrease, level readout, increase — at **every** density, so
+  desktop and mobile share one control with one owner and there is no zoom popup at any width.
+  The former desktop preset popover (`.pdf-more-menu`) and the mobile zoom menu are both deleted;
+  see [desktop-reader.md](desktop-reader.md) §3.

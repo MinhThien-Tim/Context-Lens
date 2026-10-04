@@ -37,17 +37,15 @@
   .reader-shell.reader-shell[data-reader-surface="original"] .pdf-viewer-wrap { height: calc(100dvh - var(--reader-header-height)); }
     .reader-shell.reader-shell .pdf-reading-scroll { padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); box-sizing: border-box; }
   .reader-shell.reader-shell .pdf-scroll { padding-top: 48px; padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); }
-  .reader-shell.reader-shell[data-reader-surface="original"] .pdf-toolbar { display: none; }
   .reader-shell.reader-shell[data-reader-surface="original"] .pdf-scroll { padding-top: 4px; }
-  /* §8.2/§8.3/§9.6: at <=1023px zoom is a direct Footer control (decrease / level / increase).
-     It is never a popup and never appears in More, so the mobile zoom host is a plain Footer slot. */
-  .reader-shell.reader-shell .pdf-footer-zoom-host { display: flex; flex: none; }
-  .reader-shell.reader-shell .pdf-zoom-stepper { display: flex; align-items: center; gap: 2px; }
-  .reader-shell.reader-shell .pdf-zoom-stepper > button { min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--primary-text); font: 600 16px/1 var(--font-ui); touch-action: manipulation; }
-  .reader-shell.reader-shell .pdf-zoom-stepper > button:hover { background: var(--hover-surface, var(--elevated-surface)); }
-  .reader-shell.reader-shell .pdf-zoom-stepper > span { min-width: 40px; text-align: center; font: 600 12px/1 var(--font-ui); color: var(--secondary-text); font-variant-numeric: tabular-nums; }
-  .reader-shell.reader-shell .reader-progress-status { gap: 6px; }
-  .reader-shell.reader-shell.chrome-quiet .pdf-toolbar { opacity: 0; pointer-events: none; }
+    /* §8.2/§8.3/§9.6: at <=1023px zoom is a direct Footer control (decrease / level / increase).
+       It is never a popup and never appears in More, so the mobile zoom host is a plain Footer slot. */
+    .reader-shell.reader-shell .pdf-footer-zoom-host { display: flex; flex: none; }
+    .reader-shell.reader-shell .pdf-zoom-stepper { display: flex; align-items: center; gap: 2px; }
+    .reader-shell.reader-shell .pdf-zoom-stepper > button { min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--primary-text); font: 600 16px/1 var(--font-ui); touch-action: manipulation; }
+    .reader-shell.reader-shell .pdf-zoom-stepper > button:hover { background: var(--hover-surface, var(--elevated-surface)); }
+    .reader-shell.reader-shell .pdf-zoom-stepper > span { min-width: 40px; text-align: center; font: 600 12px/1 var(--font-ui); color: var(--secondary-text); font-variant-numeric: tabular-nums; }
+    .reader-shell.reader-shell .reader-progress-status { gap: 6px; }
   .reader-shell.reader-shell .reader-text { width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding-top: calc(var(--reader-header-height) + 12px); }
   .reader-shell.reader-shell .pdf-reading-page { box-sizing: border-box; width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding: 12px max(var(--reader-page-padding, 18px), env(safe-area-inset-right)) 32px max(var(--reader-page-padding, 18px), env(safe-area-inset-left)); }
   .reader-shell.reader-shell .pdf-reading-page > header { margin-bottom: 12px; }
