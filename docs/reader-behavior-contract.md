@@ -132,8 +132,9 @@ Each input class is defined separately. Only real user scroll may change chrome 
 ## 7. Header contract
 
 7.1 The Header **MUST** own **exactly and only**: **Back**; **document title**; **Original / Reading** for PDF.
-7.2 The Header **MUST NOT** own: Contents; Context; Notes; Markup; Text and theme; Language engines; Reading appearance (`Aa`); OCR Next or any OCR action; zoom; a More trigger; Search; any FAB.
+7.2 The Header **MUST NOT** own: Contents; Context; Notes; Markup; Text; Languages; OCR Next or any OCR action; zoom; a More trigger; Search; any FAB.
 - **EVIDENCE.** T0b consolidated Header table; T0d §6 inventory; the audited Header currently duplicates Contents, Markup, Context and `Aa`.
+- **AMENDMENT (2026-10-05, labels).** The retired `Reading appearance` (`Aa`) Header button **MUST NOT** return; its surface is reached through the §9.3 `Text` item. Item *names* in this clause follow the §9.3 rename table below. Ownership is unchanged.
 7.3 The document title **MUST** be present, **MUST** identify the current document, and **MUST NOT** be an interactive control.
 7.4 `Original / Reading` **MUST** appear **only** for PDF and **MUST** be a single mode control (§10).
 7.5 Header controls **MUST** meet the hit targets of §1.5 and **MUST** be reachable and operable by keyboard.
@@ -157,7 +158,9 @@ Each input class is defined separately. Only real user scroll may change chrome 
 9.1 There **MUST** be exactly **one** conceptual More disclosure.
 9.2 At `≤1023px` More **MUST** be a **bottom sheet**. At `≥1024px` More **MUST** be a **popover**. One disclosure, one implementation of dismissal and focus handling per form — **MUST NOT** be two More concepts.
 - **EVIDENCE.** `src/reader-layout.css:102` (sheet, `left/right: 8px`, `max-height: 70dvh`), `:33` (popover, `width: 230px`); T0b open decision #2.
-9.3 The More action inventory **MUST** be exactly: **Contents**; **Context**; **Notes**; **Markup**; **Text and theme**; **Language engines**; **document tools / OCR controls**; **Click word lookup**.
+9.3 The More action inventory **MUST** be exactly, in this order: **Contents**; **Context**; **Notes**; **Markup**; **Text**; **Languages**; **Document** (document tools / OCR controls); **Click lookup** — 8 items.
+- **AMENDMENT (2026-10-05, labels).** Four labels were renamed on 2026-10-05 with no change to count, order, or ownership: `Document tools` → **`Document`**; `Text and theme` → **`Text`**; `Language engines` → **`Languages`**; `Click word lookup` → **`Click lookup`**. Source of truth: [`mobile-chrome.md`](mobile-chrome.md) §6 and [`ui-system.md`](ui-system.md) §6. `Document tools` remains the *dialog*'s accessible name — only the More item was renamed.
+- **EVIDENCE.** `src/app/App.tsx` `readerMoreItems` (8 entries, this order).
 9.4 **No duplicate entry points.** An action in §9.3 **MUST NOT** also be reachable from the Header (§7.2) or from any other Reader surface. Zoom **MUST NOT** appear in More (§8.3). OCR controls **MUST NOT** appear outside document tools (§12).
 9.5 `320px` behavior: More **MUST** be a bottom sheet; **MUST** fit the viewport width with its existing `8px` insets; **MUST NOT** exceed `70dvh` height; **MUST** expose every §9.3 action by scrolling within the sheet if the inventory does not fit; **MUST NOT** force horizontal scrolling; and **MUST** remain fully dismissible.
 - **EVIDENCE.** T0d §7 verified existing 320px behavior; width-cap work for `768–1023px` is outstanding.
