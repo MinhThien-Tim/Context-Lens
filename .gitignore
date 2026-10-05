@@ -53,3 +53,6 @@ pnpm-debug.log*
 .vitest/
 # Occurrence dataset: 33 MB resolver-evidence index - rebuild with scripts/build_resolver_seen_index.mjs
 data/occurrences/resolver-seen-index.json
+
+# Agent scratch output (diagnostics redirected from shells)
+_*.txt
