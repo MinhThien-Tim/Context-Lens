@@ -10,8 +10,16 @@
 .reader-highlight-colors { display:flex; align-items:center; justify-content:space-around; gap:14px; padding:12px 6px 4px; border-top:1px solid var(--border); }
 .reader-highlight-colors .highlight-color { width:30px; height:30px; cursor:pointer; }
 .reader-highlight-colors .highlight-color.selected { outline:2px solid var(--text); outline-offset:3px; }
-.reader-more-menu { position:absolute; z-index:30; top:calc(100% + 6px); right:0; width:190px; padding:6px; border:1px solid var(--border); border-radius:10px; background:var(--elevated-surface); box-shadow:var(--shadow); }
-.reader-more-menu button { width:100%; min-height:44px; padding:0 10px; border:0; background:transparent; color:var(--text); text-align:left; }
+/* §9 — the More menu and its backdrop are portaled to <body> (see ReaderToolbar.tsx), so they
+   escape .reader-shell and every layout token. Two consequences are load-bearing:
+   1. Presentation tokens come from :root (not .reader-shell), so the layer inherits them intact.
+   2. Only the position-independent shell of the menu lives here; geometry and the desktop/mobile
+      split are owned by .reader-more-layer rules. The old bare `.reader-more-menu` rule carried
+      `position:absolute; top:calc(100% + 6px); right:0; width:190px`, which is what survived the
+      portal and pinned the mobile sheet 190px wide below the viewport. */
+.reader-more-layer { --z-more: 1000; --z-more-backdrop: calc(var(--z-more) - 1); }
+.reader-more-menu { padding:6px; border:1px solid var(--border); border-radius:10px; background:var(--elevated-surface); color:var(--text); box-shadow:var(--shadow); }
+.reader-more-menu button { width:100%; min-height:44px; padding:0 10px; border:0; background:transparent; color:inherit; text-align:left; }
 .reader-viewport { min-width:0; background:var(--reading-surface); min-height:calc(100vh - 56px); }
 .reader-source { padding-top:20px; margin-top:0; margin-bottom:0; }
 .text-segment { white-space:pre-wrap; min-height:1em; }
@@ -169,7 +177,6 @@ body:has(.pdf-viewer-wrap),body:has(.pdf-reading-view) { overflow:hidden; }
 @media (max-width:767px) {
   .pdf-reading-options { left:0; right:auto; }
   .pdf-viewer-wrap,.pdf-reading-view { height:calc(100dvh - 92px); }
-  .reader-viewport:has(.pdf-queue-status) { height:calc(100dvh - 92px); }
 }
 
 /* Functional accents stay on actions and states; reading surfaces remain quiet. */
@@ -184,7 +191,7 @@ body:has(.pdf-viewer-wrap),body:has(.pdf-reading-view) { overflow:hidden; }
 .lexical-label,.context-card h3,.lexical-unit p,.context-card p { color:var(--language); }
 .lookup-sheet button,.lookup-sheet summary,.lookup-sheet select,
 .pdf-mode-switch button,
-.pdf-reading-options button,.pdf-reading-options select,.pdf-queue-status button,
+.pdf-reading-options button,.pdf-reading-options select,
 .markup-done,.reader-highlight-colors .highlight-color { min-height:44px; touch-action:manipulation; }
 .reader-highlight-colors .highlight-color { min-width:44px; }
 .reader-header button,.pdf-mode-switch button { touch-action:manipulation; }
@@ -204,17 +211,14 @@ body:has(.pdf-viewer-wrap),body:has(.pdf-reading-view) { overflow:hidden; }
 
 
 
-.pdf-mode-switch > .pdf-reading-options-toggle { display:grid; place-items:center; width:40px; min-width:40px!important; padding:0!important; }
-.pdf-reading-options-toggle svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:2.7; stroke-linecap:round; stroke-linejoin:round; }
+
 @media (max-width:767px) {
   .pdf-mode-switch > button { padding-inline:5px; font-size:11px; }
 
   .pdf-reading-options { left:0; right:auto; }
   .pdf-viewer-wrap,.pdf-reading-view { height:calc(100dvh - 98px); }
-  .reader-viewport:has(.pdf-queue-status) { height:calc(100dvh - 98px); }
 }
 
 @media (min-width:768px) and (max-width:850px) {
   .pdf-viewer-wrap,.pdf-reading-view { height:calc(100dvh - 110px); }
-  .reader-viewport:has(.pdf-queue-status) { height:calc(100dvh - 110px); }
 }

@@ -248,19 +248,22 @@ export function ReaderMore({ items, markupActive = false }: { items: ReaderMoreI
         setOpen(false);
       }
     };
+    // Escape dismisses from the document, not just the menu: at <=1023px the bottom sheet keeps
+    // focus on the trigger behind its backdrop (§9.5), so a section-level handler would never run.
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      setOpen(false);
+      trigger.current?.focus({ preventScroll: true });
+    };
     if (desktop) dialog.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });
     document.addEventListener('pointerdown', dismiss);
-    return () => document.removeEventListener('pointerdown', dismiss);
+    document.addEventListener('keydown', onKeyDown);
+    return () => { document.removeEventListener('pointerdown', dismiss); document.removeEventListener('keydown', onKeyDown); };
   }, [open, desktop]);
 
   // Keyboard navigation inside menu
   const onMenuKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      setOpen(false);
-      trigger.current?.focus({ preventScroll: true });
-      return;
-    }
     const keys = ['ArrowDown', 'ArrowUp', 'Home', 'End'];
     if (!keys.includes(event.key)) return;
     const items = Array.from(dialog.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? []);
@@ -286,11 +289,16 @@ export function ReaderMore({ items, markupActive = false }: { items: ReaderMoreI
   // Guard: don't render empty menu
   if (!items.length) return null;
 
+  // The layer is portaled to <body>, so it escapes .reader-shell entirely. That is deliberate:
+  // the Footer is a position:fixed stacking context with z-index 16, and an in-shell menu could
+  // never paint above the panels. `reader-more-layer` is therefore the single scoping hook for
+  // every More rule — no rule may address .reader-more-menu by a bare or .reader-shell selector,
+  // because a portal outside the shell silently loses both (see docs/reader-behavior-contract.md §9).
   const layer = open && (
-    <>
-      {!desktop && <button class="sheet-backdrop" tabIndex={-1} aria-label="Close reader menu" onClick={() => { setOpen(false); trigger.current?.focus({ preventScroll: true }); }} />}
+    <div class={`reader-more-layer ${desktop ? 'desktop' : 'mobile'}`}>
+      {!desktop && <button class="sheet-backdrop more-backdrop" tabIndex={-1} aria-label="Close reader menu" onClick={() => { setOpen(false); trigger.current?.focus({ preventScroll: true }); }} />}
       <section ref={dialog} class={`reader-more-menu ${desktop ? 'desktop' : 'mobile'}`} role="menu" aria-label="Reader actions" onKeyDown={onMenuKeyDown}
-        style={desktop && pos ? { position: 'fixed', top: pos.top, right: pos.right, maxHeight: pos.maxHeight, overflowY: 'auto' } : undefined}
+        style={desktop && pos ? { top: pos.top, right: pos.right, maxHeight: pos.maxHeight, overflowY: 'auto' } : undefined}
       >
         {Object.entries(groupedItems).map(([groupName, groupItems]) => (
           <div key={groupName} class="more-group">
@@ -314,7 +322,7 @@ export function ReaderMore({ items, markupActive = false }: { items: ReaderMoreI
           </div>
         ))}
       </section>
-    </>
+    </div>
   );
 
   return <div class="reader-more" ref={root}>

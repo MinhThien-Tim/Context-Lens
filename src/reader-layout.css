@@ -75,10 +75,10 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .reader-shell .contents-panel { top:var(--reader-header-height); bottom:0; width:var(--document-panel-size); box-shadow:none; z-index:20; }
   .reader-shell .lookup-sheet.side-panel,.reader-shell .notes-panel,.reader-shell .context-panel { position:fixed; top:var(--reader-header-height); bottom:0; left:auto; right:0; width:var(--context-panel-size); max-height:none; height:auto; transform:none; padding:var(--space-4); border:0; border-left:1px solid var(--border); border-radius:0; box-shadow:none; background:var(--elevated-surface); z-index:20; }
   .reader-shell .settings-popover,.reader-shell .reader-highlight-palette { top:calc(var(--reader-header-height) + 8px); }
-  /* §9.2: at >=1024px More is a popover, but its trigger is Footer-owned (§8.1), so the popover must
-     open upward from the trigger. The base `top:calc(100% + 6px)` anchor assumed the trigger lived in
-     the Header and would otherwise place the menu below a trigger pinned to the viewport bottom. */
-  .reader-shell .reader-more-menu { top:auto; bottom:calc(100% + 6px); max-height:calc(100dvh - var(--reader-footer-height) - 24px); overflow:auto; }
+  /* §9.2 at >=1024px: the popover geometry is owned by .reader-more-layer in
+       styles.desktop-reader.css and positioned inline from the trigger rect, so there is nothing
+       band-specific left to set here. The former .reader-shell-scoped rules for the menu were dead:
+       the layer is portaled to <body> and matched none of them. */
 }
 @media (max-width:1023px) {
   .reader-shell { --reader-header-height:56px; }
@@ -89,7 +89,7 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .reader-shell .reader-document h1 { text-align:center; padding:0 var(--space-2); }
   .reader-shell .reader-back { width:44px; padding:0; }
   .reader-shell .reader-back span { display:none; }
-  .reader-shell .reader-more-menu { position:fixed; top:auto; bottom:max(8px,env(safe-area-inset-bottom)); left:8px; right:8px; width:auto; max-height:70dvh; overflow:auto; box-shadow:var(--shadow); }
+  /* (the More sheet's geometry is owned by .reader-more-layer — see styles.desktop-reader.css) */
   .reader-shell .reader-text { width:min(calc(100% - 40px),var(--reading-width),var(--reading-chars)); padding-top:var(--space-6); }
   .reader-shell .lookup-sheet,.reader-shell .notes-panel { left:0; right:0; width:auto; max-width:none; transform:none; }
   .reader-shell .notes-panel { top:0; bottom:0; height:100dvh; max-height:100dvh; border-radius:0; }

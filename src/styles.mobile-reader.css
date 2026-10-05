@@ -90,20 +90,9 @@
       }
     }
 
-    /* §9.2/§9.5 — one More disclosure, presented as a bottom sheet on the whole mobile band.
-       Same component and same menu element as the >=1024px popover; only the presentation
-       differs. `margin-inline:auto` + `max-width` centers and caps the sheet on 768-1023px
-       (§9.6) without turning it back into a centered popover. It is scrollable, capped at
-       70dvh, and anchored to the viewport rather than to the Footer it lives inside. */
-    .reader-shell.reader-shell .reader-more-menu {
-      position: fixed; z-index: 40; top: auto; bottom: 0; left: 8px; right: 8px;
-      margin-inline: auto; max-width: min(720px, calc(100vw - 16px));
-      width: auto; max-height: 70dvh; overflow-y: auto; overscroll-behavior: contain;
-      padding: 8px calc(8px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
-      border: 1px solid var(--border); border-bottom: 0;
-      border-radius: 16px 16px 0 0; background: var(--elevated-surface);
-      color: var(--text); box-shadow: var(--shadow);
-    }
+    /* §9.2/§9.5 — the More bottom sheet itself is owned by .reader-more-layer in
+           styles.desktop-reader.css (outside every media query). It used to be duplicated here and in
+           reader-layout.css; those copies could not reach the portaled layer and only diverged. */
 
     .reader-shell.reader-shell .lookup-sheet { position: fixed; left: calc(var(--lookup-vv-left, 0px) + env(safe-area-inset-left)); right: auto; bottom: var(--lookup-vv-bottom, 0px); width: calc(var(--lookup-vv-width, 100vw) - env(safe-area-inset-left) - env(safe-area-inset-right)); max-width: none; min-width: 0; padding: 0; box-sizing: border-box; overflow: hidden; transform: scale(var(--lookup-vv-scale, 1)); transform-origin: bottom left; }
   .reader-shell.reader-shell .lookup-sheet.quick { height: auto; min-height: 0; max-height: calc(var(--lookup-vv-height, 100dvh) * .72); }

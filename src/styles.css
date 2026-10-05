@@ -592,7 +592,7 @@ button:not(:disabled):active,.secondary-button:not(:disabled):active { transform
 @media (max-width:520px) { .engine-toggles { grid-template-columns:1fr; } .language-settings-modal .settings-card { padding:13px; } }
 :root[data-theme="dark"] .ai-card .setup-choice.selected,:root[data-theme="system"] .ai-card .setup-choice.selected { background:color-mix(in srgb,#7253a4 15%,var(--surface)); }
 .reader-shell .toolbar-button,.reader-shell .icon-button { border-radius:var(--radius-control); min-height:var(--control-height); }
-.reader-shell .popover,.reader-shell .reader-more-menu,.reader-shell .reader-highlight-palette { border-radius:var(--radius-surface); }
+.reader-shell .popover,.reader-shell .reader-highlight-palette { border-radius:var(--radius-surface); }
 .reader-text p { margin:0 0 1.25em; }
 .settings-group { border:0; padding:0; margin:var(--space-4) 0; min-width:0; }
 .settings-group legend { color:var(--secondary-text); font-size:13px; margin-bottom:var(--space-2); }

@@ -55,60 +55,6 @@
             .reader-shell.reader-shell .reader-more { display: flex; align-items: center; }
             .reader-shell.reader-shell .reader-more .icon-button { flex: 0 0 36px; width: 36px; min-width: 36px; min-height: 36px; }
       
-            /* More panel - desktop popover opens downward via portal */
-            .reader-shell.reader-shell .reader-more-menu.desktop {
-                          position: fixed; z-index: var(--z-popover, 1000);
-              min-width: 220px; max-width: 280px;
-                          background: var(--elevated-surface); border: 1px solid var(--border); border-radius: 12px;
-                          box-shadow: 0 8px 24px color-mix(in srgb, var(--primary-text) 14%, transparent);
-                          padding: 6px; overflow: hidden;
-            }
-            .reader-shell.reader-shell .more-group { border-block-end: 1px solid var(--border); }
-            .reader-shell.reader-shell .more-group:last-child { border-block-end: none; }
-            .reader-shell.reader-shell .more-group-label {
-              padding: 4px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase;
-              color: var(--secondary-text); letter-spacing: 0.5px;
-            }
-            .reader-shell.reader-shell .more-group-items { display: flex; flex-direction: column; gap: 1px; }
-            .reader-shell.reader-shell .more-item {
-              display: flex; align-items: center; gap: 10px; width: 100%;
-              padding: 8px 10px; border: none; background: transparent; border-radius: 6px;
-              font-size: 13px; color: var(--primary-text); text-align: left; cursor: pointer;
-              min-height: 36px;
-            }
-            .reader-shell.reader-shell .more-item:hover,
-            .reader-shell.reader-shell .more-item:focus {
-              background: var(--accent-soft); color: var(--accent); outline: none;
-            }
-            .reader-shell.reader-shell .more-item[aria-pressed="true"] {
-              background: var(--accent-soft); color: var(--accent);
-            }
-            .reader-shell.reader-shell .more-item-icon {
-              display: flex; align-items: center; justify-content: center;
-                          width: 20px; height: 20px; flex-shrink: 0; flex: none; color: var(--secondary-text);
-            }
-                        .reader-shell.reader-shell .more-item-icon svg {
-                          width: 100%; height: 100%;
-                        }
-                        .reader-shell.reader-shell .more-item:hover .more-item-icon,
-                        .reader-shell.reader-shell .more-item:focus .more-item-icon,
-                        .reader-shell.reader-shell .more-item[aria-pressed="true"] .more-item-icon {
-                          color: var(--accent);
-                        }
-            .reader-shell.reader-shell .more-item-label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      
-            /* Mobile bottom sheet styles */
-            .reader-shell.reader-shell .reader-more-menu.mobile {
-              position: fixed; left: 0; right: 0; bottom: 0;
-              border-radius: 16px 16px 0 0;
-              padding-bottom: env(safe-area-inset-bottom);
-              max-height: 70dvh; overflow-y: auto;
-            }
-            .reader-shell.reader-shell .sheet-backdrop {
-              position: fixed; inset: 0;
-              z-index: calc(var(--z-popover, 1000) - 1);
-              background: rgb(0 0 0 / 0.3);
-            }
             .reader-shell.reader-shell .reader-header-actions { overflow: visible; }
   .reader-shell.reader-shell .reader-text { padding-top: clamp(24px, 3vh, 40px); }
   .reader-shell.reader-shell .reader-viewport { transition: none; }
@@ -262,3 +208,73 @@
   .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-header-actions .save-inline { min-height: 34px; padding-inline: 8px; }
   .reader-shell.reader-shell .lookup-sheet:not(.quick[data-quick-mode="simple"]) .inspector-header-actions .explain-close { min-height: 34px; width: 34px; min-width: 34px; }
 }
+
+/* §9 — the More panel is portaled to <body> (ReaderToolbar.tsx), so these rules CANNOT be scoped to
+   .reader-shell: a portal outside the shell matches no .reader-shell rule. They must also stay OUT
+   of any min-width:1024px query, or the mobile sheet never receives them at all. The band split
+   is carried by the .desktop/.mobile class the component already renders, so no media query is
+   needed here — only one scoping convention, one file, one band each. */
+            /* More panel - desktop popover opens downward via portal */
+                        .reader-more-layer.desktop .reader-more-menu.desktop {
+                                      position: fixed; z-index: var(--z-more);
+              min-width: 220px; max-width: 280px;
+                          background: var(--elevated-surface); border: 1px solid var(--border); border-radius: 12px;
+                          box-shadow: 0 8px 24px color-mix(in srgb, var(--primary-text) 14%, transparent);
+                          padding: 6px; overflow: hidden;
+            }
+                        .reader-more-layer .more-group { border-block-end: 1px solid var(--border); }
+                        .reader-more-layer .more-group:last-child { border-block-end: none; }
+                        .reader-more-layer .more-group-label {
+              padding: 4px 8px; font-size: 11px; font-weight: 600; text-transform: uppercase;
+              color: var(--secondary-text); letter-spacing: 0.5px;
+            }
+                        .reader-more-layer .more-group-items { display: flex; flex-direction: column; gap: 1px; }
+                        .reader-more-layer .more-item {
+              display: flex; align-items: center; gap: 10px; width: 100%;
+              padding: 8px 10px; border: none; background: transparent; border-radius: 6px;
+              font-size: 13px; color: var(--primary-text); text-align: left; cursor: pointer;
+              min-height: 36px;
+            }
+                        .reader-more-layer .more-item:hover,
+                        .reader-more-layer .more-item:focus {
+              background: var(--accent-soft); color: var(--accent); outline: none;
+            }
+                        .reader-more-layer .more-item[aria-pressed="true"] {
+              background: var(--accent-soft); color: var(--accent);
+            }
+                        /* flex:none is load-bearing — the label is the only flex:1 child, so an unconstrained
+                           icon stretches to the leftover width (measured: 156px) and squeezes every label. */
+                        .reader-more-layer .more-item-icon {
+                          display: flex; align-items: center; justify-content: center;
+                                      width: 20px; height: 20px; flex-shrink: 0; flex: none; color: var(--secondary-text);
+                        }
+                                    .reader-more-layer .more-item-icon svg {
+                                      width: 100%; height: 100%; flex: none;
+                                    }
+                                    .reader-more-layer .more-item:hover .more-item-icon,
+                                    .reader-more-layer .more-item:focus .more-item-icon,
+                                    .reader-more-layer .more-item[aria-pressed="true"] .more-item-icon {
+                                      color: var(--accent);
+                                    }
+                        .reader-more-layer .more-item-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+                        /* Mobile bottom sheet styles — §9.2/§9.5/§9.6. Anchored to the viewport, not to the Footer it
+                           logically lives in, because the layer is portaled. Capped at 70dvh and scrollable so a long
+                           inventory never exceeds the viewport. */
+                        .reader-more-layer.mobile .reader-more-menu.mobile {
+                          position: fixed; z-index: var(--z-more);
+                          left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom));
+                          width: auto; max-height: 70dvh; overflow-y: auto; overscroll-behavior: contain;
+                          padding: 8px calc(8px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+                          border: 1px solid var(--border); border-bottom: 0;
+                          border-radius: 16px 16px 0 0;
+                        }
+                        /* §9.6 — on wider phones/tablets the sheet centres and caps instead of stretching. */
+                        @media (min-width: 700px) {
+                          .reader-more-layer.mobile .reader-more-menu.mobile { left: 50%; right: auto; width: 420px; max-width: calc(100vw - 16px); transform: translateX(-50%); }
+                        }
+                        .reader-more-layer .more-backdrop {
+                          position: fixed; inset: 0;
+                          z-index: var(--z-more-backdrop);
+                          background: rgb(0 0 0 / 0.3);
+                        }
