@@ -16,7 +16,7 @@ The desktop Reader is a **single toolbar band above a dominant document canvas**
 
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ Back │ document │ page navigation │ zoom │ mode │ highlight pen erase │ More │
+│ Back │ document │ page navigation │ zoom │ mode │ highlight underline erase │ More │
 └──────────────────────────────────────────────────────────────────────────────┘
 │                                                              │
 │                     document canvas                          │
@@ -38,13 +38,36 @@ One toolbar band with clear functional groups. The toolbar owns all desktop read
 | Page/location (current/total) | `ReaderToolbar` | Page count display |
 | Zoom/view (selector + stepper) | `ReaderToolbar` | Selector: Automatic / 75% / 100% / 125% / 150%; stepper: − / + |
 | Original/Reading | `PdfModeSwitch` via `primaryActions` | **One** control, not two |
-| Markup tools | `ReaderToolbar` | Highlight, Pen, Erase — direct access |
+| Markup tools | `ReaderToolbar` | Highlight, Underline, Erase — direct access |
 | Reader/document tools | `ReaderToolbar` | Contents, Notes, Markup, Print |
 | More/overflow | `ReaderMore` | Secondary actions |
 
 Every secondary action stays in **More** (§9.3): Contents, Context, Notes, Markup, Text, Languages, Document, Click lookup. Desktop does **not** gain an always-visible action rail, an L1 layer, or a second toolbar band. Simple/Advanced only changes disclosure and density (§11) — it never changes which band owns an action (§11.5). The labels are the ones fixed by [mobile-chrome.md](mobile-chrome.md) §6 (2026-10-05 rename); `Document` names the menu item, while `Document tools` remains the name of the surface it opens.
 
 **Popup rule.** More is the **only** popup architecture (§3.6). `.pdf-more`, `.pdf-more-menu` and the `.pdf-toolbar` band are deleted, not restyled. Desktop zoom is a direct selector + stepper; it never opens a menu (§8.3).
+
+### 2.1 Markup group ↔ the More "Markup" item (2026-10-05, owner decision)
+
+The desktop **Markup group stays on the Header toolbar**, and the More entry labelled **Markup**
+is retained at the same time. This is deliberate, and the two are not a duplicate action host:
+
+- The toolbar group is **direct access** to the individual tools (Highlight, Underline, Erase) with
+  `aria-pressed` state, per §4.1 and §5.
+- The More `Markup` item is the **disclosure route to that same tools surface** — it opens the markup
+  tools dialog/palette, exactly as the mobile band does at ≤1023px where no toolbar group exists.
+
+Both routes therefore converge on one markup surface; only the *entry points* differ by band. This
+satisfies §2's "no duplicate canonical action host" rule: there is one markup surface and one active
+tool state, reached by two access affordances that belong to different bands. On desktop the toolbar
+group is the canonical host and More is the redundant convenience route; at ≤1023px More is the only
+route. A change that removes the toolbar Markup group, or that gives the toolbar group and the More
+item divergent state, breaks this rule.
+
+**Rename: `Pen` → `Underline` (2026-10-05, owner decision).** The toolbar control previously labelled
+`Pen` sets `activeMarkupTool` to the literal `'underline'`, so the label misdescribed the behavior.
+Renamed to `Underline` together with its icon, its `aria-label`, and the `onPen` prop (`onUnderline`).
+No behavior, state, or shortcut changes — only the name and the icon. `docs/mobile-chrome.md` §6 label
+changes do not apply here; this is a desktop toolbar control, not a More menu item.
 
 ## 3. Zoom ownership
 
@@ -73,7 +96,7 @@ The legacy `@media (min-width: 768px)` block in `styles.desktop-reader.css` is *
 - `.page-navigation` — page stepper + count
 - `.pdf-zoom-stepper` — zoom selector dropdown + −/+ stepper buttons
 - `.reader-tools` — document tools (Contents, Notes, Markup, Print)
-- `.reader-markup-tools` — Highlight, Pen, Erase with active state styling
+- `.reader-markup-tools` — Highlight, Underline, Erase with active state styling
 - `.reader-more` — More trigger
 - `.reader-more-menu.desktop` — downward-opening popover anchored to More trigger
 
@@ -98,7 +121,7 @@ Behavioral tests assert semantics — accessible names, roles, ownership across 
 
 ### 6.1 Required test coverage
 
-- Header: complete desktop toolbar exists; Highlight/Pen/Erase available with accessible names; no duplicate canonical action hosts
+- Header: complete desktop toolbar exists; Highlight/Underline/Erase available with accessible names; no duplicate canonical action hosts
 - More: opens downward by default; remains visible; not clipped/covered; opening does not alter Reader document geometry; compact action labels present; secondary actions accessible
 - Zoom: selector exposes Automatic, 75%, 100%, 125%, 150%; selecting each explicit value changes actual PDF rendering scale; Automatic restores automatic behavior; current selection reflected in control; zoom does not change current page identity; rendered page geometry corresponds to selected scale
 - Responsive desktop: behavioral checks at 1024px, 1280px, 1366px, 1440px, 1920px

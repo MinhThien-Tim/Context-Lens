@@ -124,7 +124,6 @@ same task.
    explicitly and assert it.
 5. Do not run the full suite repeatedly while debugging; run the smallest spec, then domain, then
    full once at phase end.
-6. Test behavior and contract, not implementation details. Prefer role/name/state queries.
 
 ## I. Report format (end of every task)
 
@@ -145,10 +144,6 @@ same task.
    over-apology.
 4. If a request would violate these rules (e.g. "just make the test pass"), say which rule and
    propose the compliant alternative.
-5. When a prior instruction from the owner conflicts with a new one, say so and ask which wins; do
-   not silently pick.
-6. When the owner corrects you, acknowledge in one line, fix, and re-verify. No defensiveness, no
-   over-apology.
 
 ## 1. Scope discipline
 
@@ -724,3 +719,83 @@ Out-of-scope findings: <unrelated issues noticed but not fixed>
 ```
 
 Do not ask a follow-up agent to rescan the repository; point at the specific files listed above.
+
+## 13. Standing rules — commit discipline and evidence (cleanup phase, 2026-10-05)
+
+Adopted during the 2026-10-05 cleanup phase. These are additive to §A–§L. Where §H or §7 already
+governs a case, §13 does not restate it.
+
+### 13.1 Commit discipline
+
+1. One logical change = one commit. Never mix product code, CSS, tests, docs/spec, or `.gitignore`.
+2. Commit as soon as a task is accepted and its relevant verification is green. Do not leave
+   accepted work uncommitted.
+3. Order inside a behavior change: **spec → code → tests**, each its own commit, each typechecking
+   independently.
+4. After every commit report `git status --short` and `git --no-pager log --oneline -3`. Name and
+   explain anything left uncommitted.
+5. Before handing work to another step, write `git diff > backup-wip.patch` (gitignored, uncommitted).
+6. Never `git stash drop`, `reset --hard`, `checkout --`, or `restore` a file this task did not
+   change. Do not amend or rewrite pushed commits.
+7. Never commit failing work as if it were finished. Park unapproved work on `wip/<name>`.
+
+### 13.2 Evidence rule — failure classification
+
+Every failing test is classified as exactly one of **implementation bug**, **stale test**,
+**fragile test**, **missing coverage**, or **unrelated regression** (see §H.2).
+
+- "Stale test" is invalid without a `file + section` spec citation. Without one it is a suspected
+  implementation bug, and work stops until the contract is settled.
+- A behavior/state/flow change — enabled/disabled conditions, status lifecycle, dialog closing —
+  requires an approved spec line. A label or selector rename requires only the updated spec line. An
+  item marked `OPEN` is **not** approved.
+- Never argue "the test expects X so production must do X", nor "code changed so the test is wrong".
+  Both are circular; resolve against the approved spec.
+- Never report a failure as "calibration" or "pre-existing" without evidence (`git log -S`,
+  `git show <commit>`, measured values). **"Unmodified in the working tree" does not mean
+  "pre-existing"** — check HEAD history before claiming either.
+- When claiming a regression is caused by a specific commit, paste the offending diff hunk.
+
+### 13.3 Test hygiene (adds to §H)
+
+- Forbidden to make a suite pass by: `skip`, `.only`, deleting a test, weakening/removing/commenting
+  out an assertion, or a blind snapshot update.
+- A test may be deleted only when the behavior is intentionally retired (cite spec) **or** a
+  replacement test lands in the same commit.
+- Selectors are role/aria-label/state. No CSS classes or pixel constants, except in dedicated
+  geometry tests.
+- Measure in the state being claimed: measure 100% before selecting 150%. No fixed `waitForTimeout` —
+  poll a real condition (`expect.poll`).
+- A test must not depend on viewport size to "guarantee" a condition; build it (e.g. a wide-page PDF
+  fixture).
+- One test per viewport — never a `for` loop over viewports inside one test, so reports stay
+  attributable.
+- Name tests with their contract section (`§9.2: ...`) so `rg "§9"` finds them.
+- Tests are included in `tsconfig`, so prop and type changes break `tsc`.
+
+### 13.4 Verification discipline (adds to §5 and §8)
+
+- Run the smallest relevant spec, then the domain, then the full suite **once at phase end**, not
+  repeatedly while debugging.
+- Single tests run with `--grep` and a short `actionTimeout` (10s) so a stuck test fails in seconds
+  rather than minutes.
+- Paste real command output. A summary without output is not evidence.
+- Any green result predating a later contract-changing commit is **untrusted** until re-run.
+
+### 13.5 Search and tooling discipline (adds to §F and §7)
+
+- Each search runs **once**. Zero results means report "0 results" and change strategy — never
+  re-issue the same query or a reworded variant of it (§7 “Identical-query loop” is the canonical
+  rule).
+- Search ASCII fragments or identifiers; Windows encoding corrupts Vietnamese strings. Prefer `rg`.
+- Max 5 search commands per investigation step, then stop and report.
+- Use `git --no-pager`, or `git config core.pager cat`, so output is never trapped in a pager.
+- Never create probe or output files in the repo root. Use `test-results/` or `.tmp/` (both
+  gitignored) and delete them when the task ends.
+
+### 13.6 Escalation
+
+- A bug fixable locally is **fixed**, not filed. Only product or contract decisions are escalated.
+- Never guess a product decision — ask, and record the answer in the spec before writing code.
+- When a required fix is blocked on an unanswered decision, finish everything else, then report the
+  decision with its options and a recommendation.

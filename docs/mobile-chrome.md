@@ -262,3 +262,19 @@ These are deliberately **not** implemented here and must not be invented in Mobi
   stepper without qualifying it to the mobile band. Approved as a rollback of `40e807d`
   (DesktopReader Toolbar) in the PDF/OCR Controls phase, reconciling `40e807d`'s own
   `desktop-reader.md` §3 against the Footer zoom host it left rendering unconditionally.
+
+### 12.1 Audit of `40e807d`'s doc edits (2026-10-05, cleanup phase)
+
+Reviewed during the cleanup phase whether `40e807d` loosened a frozen contract to match its own
+implementation. **Finding: it did**, in two places, and both were already reverted by `1e628bd`:
+
+| Commit | Edited | Change | Verdict |
+| --- | --- | --- | --- |
+| `40e807d` | `mobile-chrome.md` §5 (7 lines) | restated the Footer zoom stepper as applying at "**every** density" | Loosened — contradicted the same commit's `desktop-reader.md` §3 and the Footer-only host |
+| `40e807d` | `ui-system.md` (20 lines) | recorded that there is "no separate desktop zoom bar" | Loosened — removed the ≥1024px Header toolbar zoom host from the contract |
+
+Both edits made `mobile-chrome.md` agree with `40e807d`'s desktop implementation while that
+implementation contradicted `desktop-reader.md` §3 within the same commit. The rollback `1e628bd`
+restored the band-qualified wording now recorded in §5 and §12 above, and this audit closes the item.
+No further doc change is required: §5, §6 and §12 of this document, and the Reader layout section of
+[ui-system.md](ui-system.md), already agree with `desktop-reader.md` §3.
