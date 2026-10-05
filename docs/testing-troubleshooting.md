@@ -327,11 +327,29 @@ Do not report build PASS just because Vite itself completed.
 **Meaning**
 
 PDF rendering, OCR, real fixtures, and Playwright are intentionally heavier than normal Vitest tests.
+Since the tiered configs landed, concurrency is also tier-owned: `fast` runs 4 workers while
+`pdf-normal` and `heavy` run 2, because PDF rasterisation and OCR are CPU-bound.
 
 **Fast action**
 
-Run only the narrow spec/project required by the task.
+Run only the narrow spec/project required by the task. Pick the tier that matches the test's tags
+(`fast` untagged, `pdf-normal` `@pdf`, `heavy` `@heavy`) rather than raising a timeout.
 Do not repeatedly restart a legitimate long-running test.
+
+**A timeout that only appears in a parallel run is not a flaky test.** OCR and rasterisation
+contend for the same cores, so a `@pdf`/`@heavy` test that passes at `--workers=1` and fails under
+the tier's own worker count has starved, not regressed. Diagnose it by running that one file both
+ways and comparing wall-clock:
+
+```powershell
+npx playwright test --config playwright.tiers.config.ts e2e/<file>.spec.ts   # as configured
+npx playwright test --workers=1 e2e/<file>.spec.ts                            # diagnostic only
+```
+
+If it passes serially and fails in parallel, report the pair of results as evidence — the fix is a
+scheduling or tier decision, not a test change, and neither `workers` nor `retries` may be edited to
+make a run green. Raising `@heavy` is legitimate only when a test is genuinely heavy on its own
+terms, never as a way to absorb contention.
 ### Test completion is unknown
 
 **Symptom**

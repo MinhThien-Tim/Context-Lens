@@ -9,7 +9,7 @@ Related: [ARCHITECTURE.md](ARCHITECTURE.md) · [Testing troubleshooting](testing
 | Unit / integration (co-located) | `src/**/*.test.ts`, `src/**/*.test.tsx` | Vitest via `vite.config.ts` |
 | Gateway unit tests | `gateway/src/gateway.test.ts` | Vitest (same `include` glob) |
 | Browser / E2E | `e2e/*.spec.ts` | Playwright, `playwright.config.ts` |
-| Browser / E2E by execution tier | `e2e/*.spec.ts` | Playwright, `playwright.tiers.config.ts` (`PW_TIER`) |
+| Browser / E2E by execution tier | `e2e/*.spec.ts` | Playwright, `playwright.tiers.config.ts` (`PW_TIER`, tags `@pdf` / `@heavy`) |
 | Cross-repository vocabulary handoff | `e2e/vocabulary-handoff.spec.ts` | Playwright, `playwright.vocabulary.config.ts` |
 | Shared setup | `src/test/setup.ts` (`fake-indexeddb/auto`, `vi.restoreAllMocks`), `src/test/fixtures.ts` | — |
 | Bundle budget + precache assets | `scripts/check_bundle_budget.mjs` | Node script, run during `build` |
@@ -52,6 +52,7 @@ Keep the same arguments and test scope; see the [launcher policy](agent-executio
 | Single test by name | `npx vitest run <path> -t "<name>"` |
 | Browser tests | `npm run test:browser` |
 | Browser tests by execution tier | `$env:PW_TIER='<fast\|pdf-normal\|heavy>'; npx playwright test --config playwright.tiers.config.ts <spec>` |
+| Browser tests, filtered by tag | `npx playwright test --config playwright.tiers.config.ts --grep '@pdf' <spec>` |
 | Offline E2E (production build only) | `$env:QA_PRODUCTION='true'; npx playwright test e2e/offline.spec.ts` |
 | Vocabulary handoff (two repos) | `npx playwright test --config playwright.vocabulary.config.ts` |
 | Gateway typecheck / build / dry-run | `npm run gateway:typecheck`, `npm run gateway:build`, `npm run gateway:check` |
@@ -59,22 +60,67 @@ Keep the same arguments and test scope; see the [launcher policy](agent-executio
 
 ## Playwright execution tiers
 
-`playwright.tiers.config.ts` imports the base `playwright.config.ts` and only sets timeouts, so
+`playwright.tiers.config.ts` imports the base `playwright.config.ts` and layers a tier on top, so
 projects, `--project=laptop` / `--project=mobile-chromium`, and the web server behave exactly as
 usual. Select a tier with `PW_TIER`; an unknown value fails fast rather than falling back silently.
 
-| Tier | `PW_TIER` | Test timeout | `actionTimeout` | Use for |
-| --- | --- | --- | --- | --- |
-| FAST | `fast` | 30s | 10s | Navigation, chrome transitions, no PDF rasterisation |
-| PDF-NORMAL | `pdf-normal` | 90s | 10s | One PDF loaded, geometry and Lookup invariants |
-| HEAVY | `heavy` | 240s | 10s | OCR windows, queue drains, long stability checks |
+### Tags
 
-`retries` stays `0` and `workers` stays `1` (the base config fixes `workers` globally, so tiers never
-scale concurrency). A tier is a *ceiling*, not a target: raise the tier only when the test genuinely
-needs OCR or a queue drain, and never to hide a slow or failing test.
+Tags are plain inline markers in the **test title**, not a separate declaration:
+
+```ts
+test('render trang 1 @pdf', async ({ page }) => { /* ... */ });
+test('OCR window drain @pdf @heavy', async ({ page }) => { /* ... */ });
+```
+
+A title carries at most the tags it needs, and a tag is chosen by what the test *does*, never by
+how long it happened to take.
+
+| Tag | Meaning | Tier |
+| --- | --- | --- |
+| *(none)* | Navigation, chrome transitions, no PDF rasterisation | `fast` |
+| `@pdf` | One PDF loaded: geometry, DPR, Lookup invariants | `pdf-normal` |
+| `@heavy` | OCR windows, queue drains, long stability checks | `heavy` |
+
+`@heavy` should almost always accompany `@pdf` for a PDF test, but it is independent: `heavy` selects
+on `@heavy` alone, so a non-PDF slow test is still reachable. Adding `@heavy` is not a way to make a
+failing test pass — a test is promoted because it is genuinely heavy, never because it was red.
+
+### Tiers
+
+| Tier | `PW_TIER` | Test timeout | `actionTimeout` | Workers | `globalTimeout` | Matches |
+| --- | --- | --- | --- | --- | --- | --- |
+| FAST | `fast` (default) | 30s | 10s | 4 | 20 min | untagged, excluding `@pdf`/`@heavy` |
+| PDF-NORMAL | `pdf-normal` | 90s | 10s | 2 | 45 min | `@pdf` without `@heavy` |
+| HEAVY | `heavy` | 180s | 10s | 2 | 60 min | `@heavy` |
+
+`retries` stays `0` in every tier: a failing test is a failing test, and an automatic rerun would
+hide exactly the flakiness these tiers exist to expose. `forbidOnly` is enabled under CI so a stray
+`.only` cannot silently shrink a whole tier. `fullyParallel` is off unless `PW_FULLY_PARALLEL=1`,
+because most specs in a file share Reader state.
+
+**Concurrency is tier-owned, not uniform.** The tiers deliberately run `fast` at 4 workers and
+`pdf-normal` / `heavy` at 2, because PDF rasterisation and OCR are CPU-bound: several workers
+competing for the same cores is slower than running them alone. OCR/PDF wall-clock timeouts measured
+under `workers: 4` are therefore **not** comparable with the same test run serially — see
+[testing-troubleshooting.md](testing-troubleshooting.md).
+
+### Environment overrides
+
+| Variable | Effect |
+| --- | --- |
+| `PW_TIMEOUT_MS` | Overrides the tier's per-test timeout |
+| `PW_WORKERS` | Overrides the tier's worker count |
+| `PW_FULLY_PARALLEL=1` | Runs tests within a single file in parallel |
+| `PW_REUSE_SERVER=0` | Always starts a fresh server instead of reusing one |
+
+Server mode is selected by `QA_BASELINE=1`, `QA_PRODUCTION=1` (default: dev), or `QA_BASE_URL`.
+`heavy` is best run with `QA_PRODUCTION=1` so dev-server on-demand compilation does not add
+variance to a 180s budget.
 
 ```powershell
 $env:PW_TIER='pdf-normal'; npx playwright test --config playwright.tiers.config.ts e2e/pdf-reader-chrome-a12.spec.ts
+$env:PW_TIER='heavy'; npx playwright test --config playwright.tiers.config.ts e2e/pdf-ocr.spec.ts
 ```
 
 ## Per-subsystem verify commands
