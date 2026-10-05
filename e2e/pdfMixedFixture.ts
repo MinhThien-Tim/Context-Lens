@@ -1,10 +1,20 @@
+export interface MixedFixtureOptions {
+  /** Appends a third page that keeps a short text layer while still painting an image. */
+  eligibleTextPage?: boolean;
+}
+
 /** Two-page PDF: selectable text followed by an image-only scan. */
-export function pdfMixedFixture(jpeg: Buffer, imageWidth: number, imageHeight: number): Buffer {
+export function pdfMixedFixture(jpeg: Buffer, imageWidth: number, imageHeight: number, options: MixedFixtureOptions = {}): Buffer {
   const text = 'BT /F1 18 Tf 48 730 Td (A readable PDF page with selectable text.) Tj ET';
   const image = 'q 612 0 0 792 0 0 cm /Im0 Do Q';
+  // Under 24 characters keeps the page 'poor', and 12pt keeps the string clear of the
+  // single-large-glyph filter, so the page stays an OCR candidate with a text layer.
+  const shortText = 'BT /F1 12 Tf 48 730 Td (Short caption) Tj ET';
+  const eligiblePage = options.eligibleTextPage === true;
+  const kids = eligiblePage ? '[3 0 R 4 0 R 9 0 R]' : '[3 0 R 4 0 R]';
   const objects: Buffer[] = [
     Buffer.from('<< /Type /Catalog /Pages 2 0 R >>'),
-    Buffer.from('<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>'),
+    Buffer.from(`<< /Type /Pages /Kids ${kids} /Count ${eligiblePage ? 3 : 2} >>`),
     Buffer.from('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 6 0 R >>'),
     Buffer.from('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /XObject << /Im0 7 0 R >> >> /Contents 8 0 R >>'),
     Buffer.from('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'),
@@ -12,6 +22,10 @@ export function pdfMixedFixture(jpeg: Buffer, imageWidth: number, imageHeight: n
     Buffer.concat([Buffer.from(`<< /Type /XObject /Subtype /Image /Width ${imageWidth} /Height ${imageHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`), jpeg, Buffer.from('\nendstream')]),
     Buffer.from(`<< /Length ${Buffer.byteLength(image)} >>\nstream\n${image}\nendstream`),
   ];
+  if (eligiblePage) {
+    objects.push(Buffer.from('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> /XObject << /Im0 7 0 R >> >> /Contents 10 0 R >>'));
+    objects.push(Buffer.from(`<< /Length ${Buffer.byteLength(`${image}\n${shortText}`)} >>\nstream\n${image}\n${shortText}\nendstream`));
+  }
   const parts = [Buffer.from('%PDF-1.7\n')];
   const offsets = [0];
   let length = parts[0].length;

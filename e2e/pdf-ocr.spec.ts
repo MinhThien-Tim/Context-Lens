@@ -30,6 +30,15 @@ async function readOcr(page: Page) {
 import { pdfScanFixture } from './pdfScanFixture';
 import { pdfMixedFixture } from './pdfMixedFixture';
 
+// The contract under test is a page that carries BOTH a PDF text layer and an OCR result, so a
+// reader can pick the source per page (docs/reader.md §9 "Explicit runs auto-continue" —
+// `startCurrent(page)` OCRs the selected page first). `ocrCandidate` rejects any page whose
+// extraction quality is not `poor` (ocrEligibility.ts:8), so the fixture's readable page 1 can
+// never be OCR'd and the text-free page 2 can never offer a source switch. The fixture therefore
+// adds page 3: `poor` (caption under 24 chars) yet non-empty text, plus a painted image, which is
+// exactly the corrupt/eligible-but-readable case in tasks/2026-09-29-pdf-corrupt-ocr-eligibility.md.
+// Preload cannot reach page 3 — it skips pages that already carry text (docs/reader.md §9) — so the
+// explicit `Nhận dạng chữ trang này` action is the only route, and it is the route asserted here.
 test('lets a reader choose PDF or OCR text on a page with a text layer @pdf @heavy', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/');
@@ -41,9 +50,9 @@ test('lets a reader choose PDF or OCR text on a page with a text layer @pdf @hea
     context.fillText('A second page for OCR.', 65, 190);
     return canvas.toDataURL('image/jpeg', .92).split(',')[1];
   });
-  await page.locator('input[type=file]').setInputFiles({ name: 'source-choice.pdf', mimeType: 'application/pdf', buffer: pdfMixedFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
+  await page.locator('input[type=file]').setInputFiles({ name: 'source-choice.pdf', mimeType: 'application/pdf', buffer: pdfMixedFixture(Buffer.from(jpeg, 'base64'), 1224, 1584, { eligibleTextPage: true }) });
   await page.getByRole('button', { name: 'Original', exact: true }).click();
-  await expect(page.getByLabel('Current PDF page')).toContainText('1 / 2');
+  await expect(page.getByLabel('Current PDF page')).toContainText('1 / 3');
   await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
   // The document canvas starts below the Header band and scrolls under the fixed Footer
     // (docs/desktop-reader.md §1). A rendered page is normally taller than the viewport, so only
@@ -59,17 +68,23 @@ test('lets a reader choose PDF or OCR text on a page with a text layer @pdf @hea
     expect(layout.pageHeight).toBeGreaterThan(0);
     await expect(page.locator('.pdf-toolbar')).toHaveCount(0);
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
+  // An explicit run acts on the page being read, so navigate to the eligible page first.
+  await page.getByRole('button', { name: 'Next page' }).click();
+  await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
+  await page.getByRole('button', { name: 'Next page' }).click();
+  await expect(page.getByLabel('Current PDF page')).toContainText('3 / 3');
   await beginOcr(page);
   await readOcr(page);
-  await expect(page.locator('[data-ocr-page="1"]')).toHaveCount(1);
-  await page.getByLabel('Nguồn chữ trang 1').selectOption('pdf');
-  await expect(page.locator('[data-ocr-page="1"]')).toHaveCount(0);
+  await expect(page.locator('[data-ocr-page="3"]')).toHaveCount(1);
+  await page.getByLabel('Nguồn chữ trang 3').selectOption('pdf');
+  await expect(page.locator('[data-ocr-page="3"]')).toHaveCount(0);
   await expect(page.locator('.pdf-reading-page').first()).toContainText('readable PDF page');
-  await page.getByLabel('Nguồn chữ trang 1').selectOption('ocr');
-  await expect(page.locator('[data-ocr-page="1"]')).toHaveCount(1);
+  await expect(page.locator('[data-pdf-reading-page="3"]')).toContainText('Short caption');
+  await page.getByLabel('Nguồn chữ trang 3').selectOption('ocr');
+  await expect(page.locator('[data-ocr-page="3"]')).toHaveCount(1);
   await page.getByRole('button', { name: 'Back to library' }).click();
   await page.locator('.library-open').filter({ hasText: 'source-choice' }).click();
-  await expect(page.locator('[data-ocr-page="1"]')).toHaveCount(1);
+  await expect(page.locator('[data-ocr-page="3"]')).toHaveCount(1);
 });
 
 test('keeps extracted and scanned pages separate across modes and reopening @pdf @heavy', async ({ page }) => {
