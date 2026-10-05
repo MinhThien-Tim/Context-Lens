@@ -35,7 +35,7 @@ One toolbar band with clear functional groups. The toolbar owns all desktop read
 | --- | --- | --- |
 | Document/nav (Back) | `ReaderToolbar` | Back to library |
 | Page navigation (prev/next) | `ReaderToolbar` | Page stepper |
-| Page/location (current/total) | `ReaderToolbar` | Page count display |
+| Page/location (current/total) | `ReaderToolbar` | Page count display; **sole owner ≥1024px** of the `Current PDF page` control |
 | Zoom/view (selector + stepper) | `ReaderToolbar` | Selector: Automatic / 75% / 100% / 125% / 150%; stepper: − / + |
 | Original/Reading | `PdfModeSwitch` via `primaryActions` | **One** control, not two |
 | Markup tools | `ReaderToolbar` | Highlight, Underline, Erase — direct access |
@@ -68,6 +68,26 @@ item divergent state, breaks this rule.
 Renamed to `Underline` together with its icon, its `aria-label`, and the `onPen` prop (`onUnderline`).
 No behavior, state, or shortcut changes — only the name and the icon. `docs/mobile-chrome.md` §6 label
 changes do not apply here; this is a desktop toolbar control, not a More menu item.
+
+### 2.2 Page navigation ownership and its accessible name (2026-10-05, owner decision)
+
+At ≥1024px the Header `ReaderToolbar` is the **sole owner** of PDF page navigation. The
+Footer does **not** render a second `PageNavigation` there; it keeps only the progress bar
+and percentage (§3 applies the same single-owner rule to zoom). Below 1024px the Footer
+remains the navigation host and is unchanged.
+
+The Header page-count button therefore carries the stable accessible name
+**`Current PDF page`**. This is deliberate:
+
+- It is the single stable handle for the page/location control across both bands, so the
+  Footer at ≤1023px and the Header at ≥1024px expose **the same accessible name** for the
+  same product action. Tests may select it by that name at any width.
+- It must not also carry `Previous page` / `Next page`, because those two labels belong to
+  the sibling stepper buttons in the same group. Exactly one `Current PDF page` and exactly
+  one `Next page` exist per band.
+- The visible text stays `{page} / {total}`, and `title` / `aria-description` carry the full
+  `Page {page} of {total}` sentence, so no information present in the old
+  `Page {page} of {totalPages}` label is lost.
 
 ## 3. Zoom ownership
 
@@ -111,7 +131,7 @@ The legacy `@media (min-width: 768px)` block in `styles.desktop-reader.css` is *
 
 ## 5. Accessibility
 
-Toolbar controls meet ≥36px desktop hit targets (§1.5, §8.6). The zoom selector exposes its current value accessibly. Markup tools have accessible names and pressed state when active. More keeps its `aria-expanded`/`aria-haspopup`, arrow-key menu navigation and focus restoration (§14.3, §14.4). Band reordering is never so aggressive that a control falls below the hit-target minimum or disappears at 1024px.
+Toolbar controls meet ≥36px desktop hit targets (§1.5, §8.6). The zoom selector exposes its current value accessibly. The page-count button is named `Current PDF page` and appears exactly once per band, with `Previous page` and `Next page` unique in the same group (§2.2). Markup tools have accessible names and pressed state when active. More keeps its `aria-expanded`/`aria-haspopup`, arrow-key menu navigation and focus restoration (§14.3, §14.4). Band reordering is never so aggressive that a control falls below the hit-target minimum or disappears at 1024px.
 
 ## 6. Verification
 
@@ -121,7 +141,7 @@ Behavioral tests assert semantics — accessible names, roles, ownership across 
 
 ### 6.1 Required test coverage
 
-- Header: complete desktop toolbar exists; Highlight/Underline/Erase available with accessible names; no duplicate canonical action hosts
+- Header: complete desktop toolbar exists; Highlight/Underline/Erase available with accessible names; no duplicate canonical action hosts; exactly one `Current PDF page`, `Previous page` and `Next page` at ≥1024px (§2.2), and exactly one of each inside the Footer at ≤1023px
 - More: opens downward by default; remains visible; not clipped/covered; opening does not alter Reader document geometry; compact action labels present; secondary actions accessible
 - Zoom: selector exposes Automatic, 75%, 100%, 125%, 150%; selecting each explicit value changes actual PDF rendering scale; Automatic restores automatic behavior; current selection reflected in control; zoom does not change current page identity; rendered page geometry corresponds to selected scale
 - Responsive desktop: behavioral checks at 1024px, 1280px, 1366px, 1440px, 1920px
