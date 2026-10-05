@@ -514,7 +514,31 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
     await expect(page.getByRole('menu', { name: 'Reader actions' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Document', exact: true })).toHaveCount(1);
   });
-  test('the More layer stays usable at every band it presents (§9.2/§9.5/§9.6)', async ({ page }) => {
+
+      // Contract §9.3 + mobile-chrome.md §6: the inventory is exactly eight items in a fixed order,
+      // with the labels fixed by the 2026-10-05 rename (Document, Text, Languages, Click lookup).
+      // `Document` is the single OCR entry (§9.7), so a separate `OCR` item must not appear.
+      test('More exposes exactly the eight §9.3 items, in order, with the §6 labels', async ({ page }) => {
+        test.setTimeout(90_000);
+        const expected = ['Contents', 'Context', 'Notes', 'Markup', 'Text', 'Languages', 'Document', 'Click lookup'];
+
+        for (const width of [390, 1280]) {
+          await openPdfReader(page, width, 900);
+          await openMore(page);
+          const items = page.getByRole('menu', { name: 'Reader actions' }).getByRole('menuitem');
+          // The accessible name of each item is its label, and the label is also the visible text,
+          // so a plain ordered text assertion pins both the membership and the order.
+          await expect(items).toHaveCount(8);
+          await expect(items).toHaveText(expected);
+
+          // OCR is reachable only through `Document` (§9.7), never as its own entry (§12.11).
+          await expect(page.getByRole('menuitem', { name: /^OCR/ })).toHaveCount(0);
+          await expect(page.getByRole('menuitem', { name: 'Zoom' })).toHaveCount(0);
+          await closeMore(page);
+        }
+      });
+
+      test('the More layer stays usable at every band it presents (§9.2/§9.5/§9.6)', async ({ page }) => {
     test.setTimeout(120_000);
 
     // Regression lock for the portal-scope defect: the menu is portaled to <body>, so every

@@ -13,7 +13,7 @@ test.fixme('REWRITE (T0c): fakes quiet chrome via synthetic touchmove/scroll eve
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'click.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
   await page.getByRole('button', { name: 'Original', exact: true }).first().click();
-  const toggle = page.getByRole('button', { name: 'Click word lookup' });
+  const toggle = page.getByRole('button', { name: 'Click lookup' });
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   const span = page.locator('.pdf-page-slot[data-pdf-page="1"] .pdf-text-layer span').filter({ hasText: 'The decision had surprised many voters.' });
   await expect(span).toBeVisible();

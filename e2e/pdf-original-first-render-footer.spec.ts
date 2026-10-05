@@ -99,7 +99,7 @@ test('mobile More is the only host of the secondary actions and is a dismissible
   await page.getByRole('button', { name: 'Reader menu', exact: true }).click();
   const sheet = page.getByRole('menu', { name: 'Reader actions' });
   await expect(sheet).toBeVisible();
-  for (const action of ['Contents', 'Context', 'Notes', 'Markup', 'Text and theme', 'Language engines', 'Document tools', 'Click word lookup']) {
+  for (const action of ['Contents', 'Context', 'Notes', 'Markup', 'Text', 'Languages', 'Document', 'Click lookup']) {
     await expect(sheet.getByRole('menuitem', { name: action, exact: true })).toHaveCount(1);
     await expect(header.getByRole('button', { name: action, exact: true })).toHaveCount(0);
     await expect(page.locator('.reader-progress').getByRole('button', { name: action, exact: true })).toHaveCount(0);
