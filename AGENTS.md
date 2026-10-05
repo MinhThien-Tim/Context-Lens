@@ -1,194 +1,108 @@
 # Agent working rules — Context Lens
 
 Architecture-first, verification-proportional workflow for anyone (human or agent) changing this repo.
-Details: [`docs/agent-execution-rules.md`](docs/agent-execution-rules.md) · Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+Detail: [`docs/agent-execution-rules.md`](docs/agent-execution-rules.md) · Architecture: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
-## Instruction precedence
+```text
+Precedence: task instructions > this file > docs/agent-execution-rules.md > domain docs
+```
 
-Task-specific instructions > this file > `docs/agent-execution-rules.md` > domain architecture docs.
 Code and config are always the final authority for behavior and facts.
 
-## 1. Navigate from the architecture map, never by scanning
+## Hard rules
 
-1. `docs/ARCHITECTURE.md` — subsystem map, entry points, invariants, task-routing table.
-2. The one domain doc that routing table selects.
-3. Only the source files that domain doc names.
+Check these **before every tool call, edit, commit and report**. This is the canonical short list; each rule
+links to the section that owns the detail.
 
-Do not scan the repository. The routing table in `docs/ARCHITECTURE.md` selects exactly one document
-for the task at hand; do not read all domain docs unless the task genuinely crosses subsystem
-boundaries.
+**Navigate and scope**
+1. Navigate `docs/ARCHITECTURE.md` → **one** domain doc → only the files it names. No repository scan.
+   `docs/archive/` is history, never default reading and never current truth.
+2. Do exactly the task. Out-of-scope findings are reported, not fixed; a bug local to the task is fixed.
+   [§1](docs/agent-execution-rules.md#1-scope)
 
-`docs/archive/` is historical material — completed reports, decisions and raw measurements. Never
-browse it by default, and read a file there only when the task explicitly needs historical rationale,
-regression investigation or an older measurement. Archive content is never current architecture truth;
-code, config and the active docs override it.
+**Requests and loops**
+3. Before a tool call, name the new fact it returns. None → do not send it. Zero matches is an answer; never
+   repeat or reword a query; max 5 searches per question, then report.
+   [Identical-query loop](docs/agent-execution-rules.md#identical-query-loop)
+4. On failure, classify once (`CODE` / `LAUNCHER` / `ENVIRONMENT` / `UNKNOWN`), take at most one safe fallback,
+   max 2 attempts, then stop with `BLOCKED`. Never rerun an unchanged failing command; no watch mode; no
+   polling. [Terminal Loop Guard](docs/agent-execution-rules.md#terminal-loop-guard)
 
-## 2. Scope discipline
+**Edit and fix**
+5. Read the exact range before editing. Never edit from memory or overwrite a file wholesale.
+6. Root cause before fix: reproduce, one hypothesis, one refuting test. Three failed attempts → stop and report.
+7. No new behavior without an approved spec line. "Stale test" needs a `file + section` citation.
+   [§9](docs/agent-execution-rules.md#9-failure-classification-and-spec)
+8. Never weaken a test: no `skip`, `.only`, deletion, weakened assertion or blind snapshot update.
 
-Change only the requested subsystem. No opportunistic cleanup, refactoring, or drive-by fixes.
-Report unrelated findings separately instead of fixing them.
+**Verify and report**
+9. Classify the diff (`PRESENTATION_ONLY` / `LOCAL_UI` / `SUBSYSTEM_LOGIC` / `SHARED_CONTRACT`), then run the
+   smallest relevant check. CSS-only stops at `npm run check:css`. `verify:full` is escalation-only.
+   [§4](docs/agent-execution-rules.md#4-verification-proportionality) ·
+   [§8](docs/agent-execution-rules.md#8-verification-execution-and-reporting) ·
+   [commands](docs/testing.md)
+10. Report only what was observed. Label every check exactly `PASS`, `FAIL`, `BLOCKED`, `UNRESOLVED` or
+    `NOT RUN`, with real output. Never change code because a check was blocked or not run.
 
-## 3. Keep architecture docs true
+**Git and stop**
+11. `git status --short` before and after each step; one logical change per commit; no destructive git
+    commands. [§6](docs/agent-execution-rules.md#6-working-tree-and-commits)
+12. A user stop, cancel, interrupt or handoff is terminal: no retry, no further tool call, and no resolving a
+    pending confirmation with another command. When the work is done and verified or blocked, stop.
+    [§11](docs/agent-execution-rules.md#11-stop-condition)
 
-If architecture, ownership, subsystem boundaries, control flow, data flow, persistence, or integration
-behavior changed, update the matching domain doc in the same task. Do not touch architecture docs for
-copy, naming, style, test-only, or isolated bug-fix changes.
+## Always binding
 
-## 4. Binding constraints
-
-`COST & QUOTA GUARDRAILS.md` (root) and the invariants in `docs/ARCHITECTURE.md` are binding:
-local/static first, cache before network, Worker API deny-by-default, safe degradation on quota
-exhaustion, no hidden cost.
-
-## 5. Verification proportional to blast radius
-
-Classify the diff first — `PRESENTATION_ONLY`, `LOCAL_UI`, `SUBSYSTEM_LOGIC`, or `SHARED_CONTRACT` —
-then start with the smallest relevant check and escalate only as far as the change actually reaches.
-Invariants:
-
-- A `PRESENTATION_ONLY` CSS diff stops at `npm run check:css` — no `typecheck`, no subsystem Vitest, no `verify:full`.
-- A `LOCAL_UI` diff may stop at targeted verification plus `typecheck`.
-- Subsystem `verify:*` commands stay authoritative for `SUBSYSTEM_LOGIC`; `verify:full` is escalation-only.
-- Browser E2E is conditional, narrow and never mandatory. Never watch mode.
-- The per-subsystem command table, test layout and every command live in [`docs/testing.md`](docs/testing.md).
-
-Canonical policy: [§4](docs/agent-execution-rules.md#4-verification-proportionality) and
-[§8](docs/agent-execution-rules.md#8-verification-execution-and-reporting); change classes:
-[docs/verification-map.md](docs/verification-map.md#change-classes).
-
-## 6. Stop instead of looping
-
-The [Terminal Loop Guard](docs/agent-execution-rules.md#terminal-loop-guard) is mandatory: never repeatedly retry shell commands — classify each failure once, take at most one safe fallback, then stop and report the blocker. It also bans **re-issuing an identical completed tool call**: if a call yields no new fact, change the query shape or stop — never re-send it, and never re-send it behind fresh narration ([§7](docs/agent-execution-rules.md#identical-query-loop)).
-Launcher preference (`.ps1` → `.cmd`), the two-attempt execution budget, one direct result check,
-and sandbox approval mechanics are owned by the canonical
-[Execution / Test Retry Policy §7](docs/agent-execution-rules.md#7-execution--test-retry-policy);
-follow it exactly — never weaken security, request Windows administrator elevation, or poll
-repeatedly.
-
-Label every check exactly `PASS`, `FAIL`, `BLOCKED`, `UNRESOLVED`, or `NOT RUN`. Never report a
-non-pass as a pass, and never change code because a check was `BLOCKED`, `UNRESOLVED`, or `NOT RUN`.
-For recurring test symptoms and fast diagnosis paths, use
-[`docs/testing-troubleshooting.md`](docs/testing-troubleshooting.md).
-
-A user stop, cancel, interrupt, or handoff request is terminal: end the execution loop immediately —
-no retry, no new approach, no further tool call — and never resolve a pending confirmation with
-another command. Canonical rule:
-[§11](docs/agent-execution-rules.md#11-stop-condition).
-
-## 7. Minimize redundant requests
-
-**Spend requests on new information, not on re-reading, re-searching, or re-verifying information that
-has not changed.** Batch independent reads, never repeat an equivalent search or rerun a passing
-check without a reason, and never scan unrelated subsystems or broaden verification without
-evidence — efficiency never weakens source verification. Batch only genuinely independent reads that
-are needed now; see the execution-control rules in
-[§3](docs/agent-execution-rules.md#3-request-and-context-efficiency). There is deliberately **no numeric request
-budget**: complex tasks may legitimately need more requests, so no hard per-task or per-role cap
-exists. Canonical rules for all three roles:
-[§3](docs/agent-execution-rules.md#3-request-and-context-efficiency).
+- `COST & QUOTA GUARDRAILS.md` and the invariants in `docs/ARCHITECTURE.md`: local/static first, cache before
+  network, Worker API deny-by-default, safe degradation on quota exhaustion, no hidden cost.
+- Keep architecture docs true: update the matching domain doc in the same task only when architecture,
+  ownership, boundaries, control/data flow, persistence or integration behavior changed. Not for copy, naming,
+  style, test-only or isolated bug-fix changes.
+- Recurring test symptoms: [`docs/testing-troubleshooting.md`](docs/testing-troubleshooting.md).
 
 ## Agent roles
 
-For every task, use one fixed role: Investigator → [`docs/agent-roles/investigator.md`](docs/agent-roles/investigator.md),
-Planner → [`docs/agent-roles/planner.md`](docs/agent-roles/planner.md),
-Implementer → [`docs/agent-roles/implementer.md`](docs/agent-roles/implementer.md), or Verifier →
-[`docs/agent-roles/verifier.md`](docs/agent-roles/verifier.md). Do not redefine roles in task prompts.
+Every task uses one fixed role. Do not redefine roles in task prompts.
 
-- `/investigate` or `ROLE: Investigator` → Investigator.
-- `/plan` or `ROLE: Planner` → Planner.
-- `/implement` or `ROLE: Implementer` → Implementer.
-- `/verify` or `ROLE: Verifier` → Verifier.
-- Without an explicit route: investigate / assess / diagnose / plan → Investigator → Planner; implement / fix /
-  modify / change → Implementer; verify / test / review completed work → Verifier.
-- An explicit role or slash command wins over inferred intent. These are agent conventions, not app
-  commands.
+| Role | Trigger | Contract |
+| --- | --- | --- |
+| Investigator | `/investigate`, `ROLE: Investigator`; or investigate / assess / diagnose | [`investigator.md`](docs/agent-roles/investigator.md) |
+| Planner | `/plan`, `ROLE: Planner`; or plan | [`planner.md`](docs/agent-roles/planner.md) |
+| Implementer | `/implement`, `ROLE: Implementer`; or implement / fix / modify / change | [`implementer.md`](docs/agent-roles/implementer.md) |
+| Verifier | `/verify`, `ROLE: Verifier`; or verify / test / review completed work | [`verifier.md`](docs/agent-roles/verifier.md) |
 
-Investigator → Fact Report → Planner → compact task spec → Implementer → implementation + compact handoff → Verifier → PASS or
-compact failure packet. Roles exchange artifacts, relevant diffs/files, and required architecture
-docs; they do not depend on a shared long-running transcript. Do not include chain-of-thought or
-verbose reasoning in handoffs.
-
-### The Investigator owns evidence gathering
-
-The Investigator is **read-only for product implementation** and the canonical owner of evidence gathering and diagnosis:
-it inspects source, tests, docs, config, and git state, but never edits, patches, or "tries the fix"
-to validate its own plan — a discovered defect is reported, not patched. Its handoff is the
-Fact Report the Planner consumes and the Verifier may reference. The full
-read-only contract and all scope-derivation rules live in
-[`docs/agent-roles/investigator.md`](docs/agent-roles/investigator.md).
-
-A user prompt normally needs only the problem, the desired result, and any genuinely task-specific
-constraint. Common scope restrictions — "do not touch lookup logic", "use targeted tests", "follow
-the Terminal Loop Guard" — are derived by the Investigator from architecture, classification, and
-investigation rather than repeated in every prompt; user-supplied task-specific constraints still
-take precedence and are always retained.
-
-Repository-global rules stay in this file, [`docs/agent-execution-rules.md`](docs/agent-execution-rules.md),
-[`docs/testing.md`](docs/testing.md), and the role files. Handoffs **reference** them; they never
-reproduce them.
+An explicit role or slash command wins over inferred intent. These are agent conventions, not app commands.
 
 ```text
-# sufficient
-"Mobile Full card still wastes space around Translate and AI. Inspect and make a plan to compact the controls."
-"Change the Advanced theme colors to match this screenshot."
-"Investigate why PDF rendering flashes black before text appears."
+Investigator -> Fact Report -> Planner -> task spec -> Implementer -> handoff -> Verifier -> PASS | failure packet
 ```
 
-**Direct implementation requests:** do not force Investigator ceremony on a trivial task. A very small,
-obvious, low-risk task may go straight to Implementer, which derives a narrow scope using the same
-rules and states it in its handoff. Ambiguous, multi-file, architectural, or investigation-heavy tasks
-go to Investigator → Planner first, and an existing Planner handoff is always used when one is present.
-
-Task prompts should normally contain only the task details, acceptance criteria, and optional relevant
-files, commits, or task-spec path. Start from [`docs/task-template.md`](docs/task-template.md).
-Example: `/investigate` with the symptom and acceptance criteria; then `/plan` with the approved spec path;
-then `/implement` with the spec path and implementation handoff; then `/verify` with the spec path and implementation handoff. Carry only the compact handoff or task
-spec into the next context — never the Investigator transcript.
-
-### The Planner owns execution scope
-
-The Planner is **read-only for product implementation** and the canonical owner of execution scope:
-it inspects source, tests, docs, config, and git state, but never edits, patches, or "tries the fix"
-to validate its own plan — a discovered defect is reported, not patched. Its handoff is the
-implementation contract the Implementer follows and the Verifier checks against. The full
-read-only contract and all scope-derivation rules live in
-[`docs/agent-roles/planner.md`](docs/agent-roles/planner.md).
-
-A user prompt normally needs only the problem, the desired result, and any genuinely task-specific
-constraint. Common scope restrictions — "do not touch lookup logic", "use targeted tests", "follow
-the Terminal Loop Guard" — are derived by the Planner from architecture, classification, and
-investigation rather than repeated in every prompt; user-supplied task-specific constraints still
-take precedence and are always retained.
-
-Repository-global rules stay in this file, [`docs/agent-execution-rules.md`](docs/agent-execution-rules.md),
-[`docs/testing.md`](docs/testing.md), and the role files. Handoffs **reference** them; they never
-reproduce them.
+- **Investigator and Planner are read-only for product code.** They inspect source, tests, docs, config and git
+  state, but never edit, patch or "try the fix". A discovered defect is reported, not patched. The Investigator
+  owns evidence (the Fact Report); the Planner owns execution scope (the contract the Implementer follows and
+  the Verifier checks).
+- **Prompts stay short.** A prompt needs the problem, the desired result, acceptance criteria, and any genuinely
+  task-specific constraint. Standard restrictions ("use targeted tests", "follow the Terminal Loop Guard") are
+  derived from architecture and classification, not repeated. User-supplied constraints always take precedence.
+  Start from [`docs/task-template.md`](docs/task-template.md).
+- **Direct implementation.** A very small, obvious, low-risk task may go straight to the Implementer, which
+  derives a narrow scope and states it in its handoff. Ambiguous, multi-file, architectural or
+  investigation-heavy work goes Investigator → Planner first. An existing Planner handoff is always used.
 
 ### Mixed tasks and context boundaries
 
-If a task combines investigation and implementation, run Investigator first and write a Fact Report
-to `docs/tasks/YYYY-MM-DD-short-task-name-investigation.md`. Start a fresh Planner context with that Fact Report,
-not the Investigator transcript. When planning is complete, pass a compact task spec and start a
-fresh Implementer context. When implementation is complete, pass a compact handoff and start a
-fresh Verifier context.
+If a task combines investigation and implementation, run the Investigator first and write the Fact Report to
+`docs/tasks/YYYY-MM-DD-short-task-name-investigation.md`. Each later role starts in a **fresh context**:
+Planner gets the Fact Report, Implementer gets the compact task spec, Verifier gets the compact handoff.
 
-Roles are persistent; conversation context is not. Pass only the minimum artifact each stage needs:
-the Fact Report, task spec, changed files, relevant diff, verification command, known risks, and (if needed) a
-compact failure packet. Do not pass full conversation histories, reasoning logs, terminal transcripts,
-repeated architecture summaries, or scratch work. The Investigator transcript is disposable once the Fact Report exists; stop after a confirmed PASS or return a compact failure packet to a fresh Planner.
+Pass only what the next stage needs: Fact Report, task spec, changed files, relevant diff, verification command,
+known risks, and a compact failure packet if any. Do not pass conversation histories, reasoning logs, terminal
+transcripts, repeated architecture summaries or scratch work. Stop after a confirmed `PASS`; on failure return a
+compact failure packet to a fresh Planner.
 
-Repository-owned role files are the source of truth instead of editor-specific custom modes. This
-keeps reviewable, version-controlled instructions consistent across Cline, Codex, Copilot, Claude Code,
-and similar agents and machines, and lets them evolve with the architecture. It avoids repeating
-1–2k-token role prompts for every task. Store permanent instructions once in `AGENTS.md`,
-`docs/agent-roles/`, and `docs/verification-map.md`; keep task prompts task-specific (roughly 90%
-persistent instructions and 10% task details, as a guideline).
+Handoffs **reference** repository-global rules (this file, `docs/agent-execution-rules.md`, `docs/testing.md`,
+the role files); they never reproduce them. Role files in the repo, not editor-specific custom modes, are the
+source of truth, so Cline, Codex, Copilot, Claude Code and similar agents share the same reviewable
+instructions. Artifacts under `docs/tasks/` contain only what a fresh context needs.
 
-Invocation conventions are `ROLE: Investigator | Planner | Implementer | Verifier` or `/investigate`, `/plan`, `/implement`, `/verify`.
-These are agent conventions, not application commands. Do not copy full role instructions
-into task files; artifacts under `docs/tasks/` contain only what a fresh context needs.
-
-See [`docs/verification-map.md`](docs/verification-map.md) for existing subsystem commands. Execution,
-retry, and reporting rules remain canonical in [`docs/agent-execution-rules.md`](docs/agent-execution-rules.md)
-and [`docs/testing.md`](docs/testing.md).
-
+Subsystem commands: [`docs/verification-map.md`](docs/verification-map.md).
