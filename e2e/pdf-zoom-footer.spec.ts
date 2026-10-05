@@ -10,7 +10,7 @@ const desktopWidths = [1024, 1280, 1366, 1440, 1920];
 
 for (const mode of ['simple', 'advanced'] as const) {
   for (const width of desktopWidths) {
-    test(`desktop ${mode} exposes a direct Header toolbar zoom stepper at ${width}px`, async ({ page }) => {
+    test(`desktop ${mode} exposes a direct Header toolbar zoom stepper at ${width}px @pdf`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
       await useInterfaceMode(page, mode);
@@ -79,7 +79,7 @@ for (const mode of ['simple', 'advanced'] as const) {
 }
 
 // §8.2 says the Footer owns zoom at mobile density, so the mobile band keeps the same control.
-test('mobile keeps the same direct Footer zoom stepper', async ({ page }) => {
+test('mobile keeps the same direct Footer zoom stepper @pdf', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'zoom-footer-mobile.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
@@ -92,4 +92,22 @@ test('mobile keeps the same direct Footer zoom stepper', async ({ page }) => {
   await expect(footer.getByRole('button', { name: 'Zoom in' })).toBeVisible();
   await expect(level).toHaveText(/^\d+%$/);
   await expect(page.locator('.pdf-toolbar')).toHaveCount(0);
+});
+
+// docs/desktop-reader.md §3 and docs/mobile-chrome.md §8.2: zoom has exactly one owner per density
+// band, and the Footer owns it only at ≤1023px. App.tsx gates `.pdf-footer-zoom-host` on `!desktop`,
+// restoring the contract wording that `40e807d` loosened to "every density".
+test('the Footer zoom host exists exactly once at 390px and not at all at 1280px @pdf', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.locator('input[type=file]').setInputFiles({ name: 'zoom-owner-390.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
+  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
+  await expect(page.locator('.pdf-footer-zoom-host')).toHaveCount(1);
+  // One control, not two: the desktop preset <select> must not also be present in this band.
+  await expect(page.locator('.reader-header .zoom-selector select')).toHaveCount(0);
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.locator('.pdf-footer-zoom-host')).toHaveCount(0);
+  await expect(page.locator('.reader-header .zoom-selector select')).toHaveCount(1);
 });
