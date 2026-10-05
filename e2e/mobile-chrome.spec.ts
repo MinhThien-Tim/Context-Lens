@@ -72,14 +72,14 @@ test.describe('MobileChrome — presentation band', () => {
       // §7.1/§7.2 — the Header owns Back, the title, and (PDF only) Original/Reading. Nothing else.
       const header = page.locator('.reader-header');
       await expect(header.getByRole('button', { name: 'Back to library' })).toBeVisible();
-      for (const action of ['Contents', 'Context', 'Notes', 'Markup', 'Text and theme', 'Language engines', 'Document tools', 'Click word lookup', 'OCR next', 'Search']) {
+      for (const action of ['Contents', 'Context', 'Notes', 'Markup', 'Text', 'Languages', 'Document', 'Click lookup', 'OCR next', 'Search']) {
         await expect(header.getByRole('button', { name: action, exact: true })).toHaveCount(0);
       }
 
       // §9.1/§9.4 — one More disclosure, in the Footer, owning the whole §9.3 inventory.
       await expect(page.locator('.reader-progress').getByRole('button', { name: 'Reader menu' })).toBeVisible();
       await openMore(page);
-      for (const action of ['Contents', 'Context', 'Notes', 'Markup', 'Text and theme', 'Language engines', 'Document tools', 'Click word lookup']) {
+      for (const action of ['Contents', 'Context', 'Notes', 'Markup', 'Text', 'Languages', 'Document', 'Click lookup']) {
         await expect(page.getByRole('menuitem', { name: action, exact: true })).toHaveCount(1);
       }
       // §8.3 — zoom is a direct Footer control and MUST NOT appear in More.
@@ -490,7 +490,117 @@ test.describe('MobileChrome — geometry invariants (A12 / U1)', () => {
   });
 });
 test.describe('MobileChrome — Footer and zoom ownership', () => {
-  test('the mobile Footer owns a direct zoom stepper and never a zoom menu (§8.2/§8.3)', async ({ page }) => {
+  // §8.1/§9.4 and docs/desktop-reader.md §2: one More trigger per density band, in the band that
+  // owns the surrounding chrome. App.tsx gates the Footer trigger on `!desktop`, so restoring it
+  // must give mobile the Footer disclosure and desktop the Header one — never two, never none.
+  test('exactly one Reader menu trigger per band: Footer at 390px, Header at 1280px', async ({ page }) => {
+    test.setTimeout(90_000);
+    await openPdfReader(page, 390, 900);
+    // §8.1 — mobile Header owns Back/title/Original-Reading only; More lives in the Footer.
+    await expect(page.locator('.reader-header').getByRole('button', { name: 'Reader menu' })).toHaveCount(0);
+    await expect(page.locator('.reader-progress').getByRole('button', { name: 'Reader menu' })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Reader menu' })).toHaveCount(1);
+    await openMore(page);
+    await expect(page.getByRole('menu', { name: 'Reader actions' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Document', exact: true })).toHaveCount(1);
+    await closeMore(page);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    // docs/desktop-reader.md §2 — desktop More is the Header toolbar disclosure; the Footer is status-only.
+    await expect(page.locator('.reader-header').getByRole('button', { name: 'Reader menu' })).toHaveCount(1);
+    await expect(page.locator('.reader-progress').getByRole('button', { name: 'Reader menu' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Reader menu' })).toHaveCount(1);
+    await page.locator('.reader-header').getByRole('button', { name: 'Reader menu' }).click();
+    await expect(page.getByRole('menu', { name: 'Reader actions' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Document', exact: true })).toHaveCount(1);
+  });
+  test('the More layer stays usable at every band it presents (§9.2/§9.5/§9.6)', async ({ page }) => {
+    test.setTimeout(120_000);
+
+    // Regression lock for the portal-scope defect: the menu is portaled to <body>, so every
+    // rule that styled it used to be scoped `.reader-shell.reader-shell` (or sat in a
+    // min-width:1024px query) and silently stopped matching. The symptom was not a thrown
+    // error — it was a 190px-wide absolute menu rendered below the viewport, with the backdrop
+    // above it. These two computed values are the contract the defect broke.
+    const layerGeometry = async () => page.evaluate(() => {
+      const menu = document.querySelector<HTMLElement>('.reader-more-menu');
+      if (!menu) throw new Error('More menu is not in the DOM');
+      const backdrop = document.querySelector<HTMLElement>('.reader-more-layer .more-backdrop');
+      const rect = menu.getBoundingClientRect();
+      const cs = getComputedStyle(menu);
+      const atCentre = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      return {
+        position: cs.position,
+        menuZ: Number(cs.zIndex),
+        backdropZ: backdrop ? Number(getComputedStyle(backdrop).zIndex) : null,
+        rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        withinViewport: rect.x >= 0 && rect.y >= 0
+          && rect.right <= innerWidth && rect.bottom <= innerHeight,
+        centreHitsMenu: !!atCentre?.closest('.reader-more-menu'),
+        iconWidth: menu.querySelector<SVGElement>('.more-item-icon svg')?.getBoundingClientRect().width ?? null,
+      };
+    });
+
+    for (const size of [{ width: 390, height: 900 }, { width: 768, height: 900 }]) {
+      await openPdfReader(page, size.width, size.height);
+      const trigger = page.getByRole('button', { name: 'Reader menu' });
+      await trigger.click();
+      const menu = page.getByRole('menu', { name: 'Reader actions' });
+      await expect(menu).toBeVisible();
+
+      const geometry = await layerGeometry();
+      // Viewport-anchored sheet, not an absolutely positioned box tied to the Footer.
+      expect(geometry.position).toBe('fixed');
+      // The menu must outrank its own backdrop, or every tap on an item lands on the backdrop.
+      expect(geometry.menuZ).toBeGreaterThan(geometry.backdropZ ?? -1);
+      expect(geometry.withinViewport).toBe(true);
+      expect(geometry.centreHitsMenu).toBe(true);
+      // A 20px icon is not cosmetic here: unconstrained, the SVG absorbed the row's leftover
+      // flex space (measured 156px) and squeezed every label in the inventory.
+      expect(geometry.iconWidth).toBe(20);
+
+      // §9.8 — an item is reachable and actually acts. `Click lookup` is used deliberately: it
+            // flips its own pressed state, so activation is observable without opening a panel that
+            // would legitimately take focus away from the trigger. Its starting value is not asserted —
+            // the toggle persists across bands, so only the flip itself is a stable contract.
+            const lookup = menu.getByRole('menuitem', { name: 'Click lookup' });
+            const pressedBefore = await lookup.getAttribute('aria-pressed');
+            await lookup.click();
+            await expect(menu).toBeHidden();
+            await trigger.click();
+            await expect(menu).toBeVisible();
+            await expect(menu.getByRole('menuitem', { name: 'Click lookup' }))
+              .not.toHaveAttribute('aria-pressed', String(pressedBefore));
+
+            // Escape closes and returns focus to the trigger it belongs to (§9.5).
+            await page.keyboard.press('Escape');
+            await expect(menu).toBeHidden();
+            await expect(trigger).toBeFocused();
+
+            // The backdrop is a real dismiss target on the sheet, and it must not swallow item taps.
+            await trigger.click();
+            await expect(menu).toBeVisible();
+            await page.locator('.reader-more-layer .more-backdrop').click({ position: { x: 5, y: 5 } });
+            await expect(menu).toBeHidden();
+            await expect(page.locator('.reader-more-menu')).toHaveCount(0);
+    }
+
+    // §9.2 — at >=1024px the same component presents as a popover in the Header, with no backdrop.
+    await openPdfReader(page, 1280, 900);
+    await page.locator('.reader-header').getByRole('button', { name: 'Reader menu' }).click();
+    const desktopMenu = page.getByRole('menu', { name: 'Reader actions' });
+    await expect(desktopMenu).toBeVisible();
+    const desktopGeometry = await layerGeometry();
+    expect(desktopGeometry.position).toBe('fixed');
+    expect(desktopGeometry.withinViewport).toBe(true);
+    expect(desktopGeometry.centreHitsMenu).toBe(true);
+    expect(desktopGeometry.iconWidth).toBe(20);
+    expect(desktopGeometry.backdropZ).toBe(null);
+        await desktopMenu.getByRole('menuitem', { name: 'Click lookup' }).click();
+    await expect(desktopMenu).toBeHidden();
+  });
+
+      test('the mobile Footer owns a direct zoom stepper and never a zoom menu (§8.2/§8.3)', async ({ page }) => {
     test.setTimeout(90_000);
     await openPdfReader(page, 390, 900);
     const footer = page.locator('.reader-progress');
@@ -530,7 +640,7 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
     // §9.7 — document tools and OCR controls are ONE More action opening ONE surface.
     await openMore(page);
     await expect(page.getByRole('menuitem', { name: 'OCR next', exact: true })).toHaveCount(0);
-    await page.getByRole('menuitem', { name: 'Document tools', exact: true }).click();
+    await page.getByRole('menuitem', { name: 'Document', exact: true }).click();
     await expect(page.getByRole('dialog', { name: /Document tools|Công cụ/ })).toBeVisible();
     await expect(page.getByRole('button', { name: 'OCR next' })).toBeVisible();
   });
