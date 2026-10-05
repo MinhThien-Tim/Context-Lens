@@ -89,6 +89,15 @@ The Header page-count button therefore carries the stable accessible name
   `Page {page} of {total}` sentence, so no information present in the old
   `Page {page} of {totalPages}` label is lost.
 
+**Activating the Header page-count button opens `Go to location`.** Because the Footer is no
+longer a navigation host at ≥1024px (§2.2 above), the Header button is the only opener of the
+`Go to location` dialog in that band, so **single ownership also means single reachability**:
+the `Go to location` dialog must remain reachable at ≥1024px. Activating the Footer button at
+≤1023px opens the same dialog (`DocumentPosition.tsx` `PageNavigation` `onClick={onOpen}`), so
+both bands present the same action with the same outcome. The Header button therefore does
+**not** jump directly; it opens the dialog, matching the Footer. `Go to location` stays a
+dialog at every density and is not merged into the toolbar.
+
 ## 3. Zoom ownership
 
 `ReaderToolbar` owns the zoom selector and stepper at ≥1024px. `PdfViewer` computes `stepZoom` and `scaleFor`; it must **not** render a zoom control band of its own. The Footer no longer owns a zoom host at desktop. One selector+stepper, one owner, no duplicate control.
@@ -142,6 +151,7 @@ Behavioral tests assert semantics — accessible names, roles, ownership across 
 ### 6.1 Required test coverage
 
 - Header: complete desktop toolbar exists; Highlight/Underline/Erase available with accessible names; no duplicate canonical action hosts; exactly one `Current PDF page`, `Previous page` and `Next page` at ≥1024px (§2.2), and exactly one of each inside the Footer at ≤1023px
+- Page navigation: at ≥1024px activating `Current PDF page` opens the `Go to location` dialog, entering a page number and confirming changes the current page (§2.2); the Footer at ≤1023px opens the same dialog
 - More: opens downward by default; remains visible; not clipped/covered; opening does not alter Reader document geometry; compact action labels present; secondary actions accessible
 - Zoom: selector exposes Automatic, 75%, 100%, 125%, 150%; selecting each explicit value changes actual PDF rendering scale; Automatic restores automatic behavior; current selection reflected in control; zoom does not change current page identity; rendered page geometry corresponds to selected scale
 - Responsive desktop: behavioral checks at 1024px, 1280px, 1366px, 1440px, 1920px
