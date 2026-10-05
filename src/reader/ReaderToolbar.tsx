@@ -134,9 +134,14 @@ export function ReaderToolbar({
   markupActive?: boolean;
 }) {
   const desktop = useDesktop();
-  
+
   // Only render desktop toolbar groups at ≥1024px
   const showDesktopToolbar = desktop && (page !== undefined && totalPages !== undefined);
+    // Regression fix for the missing More trigger on text/EPUB at ≥1024px (task
+    // 2026-10-05-desktop-text-document-has-no-more). `page`/`totalPages` are PDF-only, so gating the
+    // whole toolbar on them also removed the single More disclosure. Mobile keeps Footer ownership via
+    // App.tsx (moreTrigger is passed only when !desktop), so this is still one trigger per band.
+    const showMore = desktop;
   
   return <header class="reader-header">
     <div class="reader-header-leading">
@@ -194,13 +199,11 @@ export function ReaderToolbar({
             <button class="icon-button" aria-label="Pen" onClick={onPen}><PenIcon /></button>
             <button class="icon-button" aria-label="Erase" onClick={onErase}><EraseIcon /></button>
           </div>
-          
-          {/* More/overflow */}
-          <ReaderMore items={moreItems ?? []} />
-        </>
-      )}
-    </div>
-  </header>;
+                  </>
+                )}
+                {showMore && <ReaderMore items={moreItems ?? []} markupActive={markupActive} />}
+              </div>
+            </header>;
 }
 
 export interface ReaderMoreItem {
