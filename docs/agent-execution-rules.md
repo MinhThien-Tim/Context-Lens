@@ -17,6 +17,139 @@ Code and config (`vite.config.ts`, `package.json`, `playwright.config.ts`) are t
 behavior and facts. When a doc and the code disagree, the code is right and the doc gets fixed in the
 same task.
 
+## A. Honesty of reports
+
+1. Report only what was observed. Separate **FACT** (command output, file:line, measured value) from
+   **INTERPRETATION** (inference) and **UNKNOWN**.
+2. Never write "PASS", "fixed", "verified" without the command and its real output. A result from
+   before later changes is stale; say so.
+3. Never invent line numbers, test names, file names or causes. If not read this session, mark it
+   unverified.
+4. Do not trust your own earlier reports. Re-check any prior claim that the current step depends on
+   (the lost `App.tsx` wiring and the "PASS 24/24" result came from trusting an old report).
+5. Failures are reported first and plainly: what failed, where, how it was found. No softening
+   ("minor", "calibration", "unrelated") without evidence.
+6. If a report contradicts itself or the numbers do not add up, resolve the contradiction before
+   concluding.
+
+## B. Root cause before fix
+
+1. Reproduce or measure first. State one hypothesis, one test that could refute it, then run it.
+2. Before declaring a cause, rule out at least the main alternatives with evidence (e.g. a stuck
+   `disabled` for 429 retries is a stable state, not a race).
+3. Fix the cause, not the symptom. No patching to make a measurement pass (extra timeouts, retries,
+   aliases, compat shims for old tests).
+4. After a fix, show the before/after measurement that proves it, and add a test that would have
+   failed before.
+5. If three attempts at the same approach fail, stop, report what was learned, and change approach
+   or ask.
+
+## C. Scope and change control
+
+1. Do exactly the task. Findings outside scope are **reported, not fixed**, unless the fix is a
+   trivial, local part of the task. Record them in the report.
+2. Smallest diff that solves the problem. No drive-by refactors, renames, formatting sweeps, or
+   dependency changes.
+3. No new behavior, label, state or product rule without an approved spec line. Product decisions are
+   escalated with options and a recommendation.
+4. Do not delete or rename files, components, exports, tests or docs unless the task says so. Before
+   removal show `rg` proof of no remaining users.
+5. Do not change a frozen contract (docs marked frozen) to match code. Code follows the contract;
+   contract changes need owner approval first.
+6. A bug fixable locally is fixed in this task; it is not "filed, not fixed" or deferred as
+   "pre-existing" without `git log -S`/`git show` evidence.
+
+## D. Safety of the working tree
+
+1. Run `git status --short` before starting and after finishing every step; paste it.
+2. Back up uncommitted work (`git diff > backup-wip.patch`, gitignored) before any step that edits
+   many files.
+3. Forbidden without explicit permission: `git reset --hard`, `git clean`, `git checkout -- <file>`,
+   `git restore` on files you did not edit, force push, history rewrite of pushed commits,
+   `taskkill /IM node.exe`.
+4. Never overwrite a file wholesale when a targeted edit works. Read the current file before editing;
+   do not edit from memory.
+5. Probe/debug files go under `.tmp/` or `test-results/`, are never committed, and are deleted when
+   the step ends.
+6. Never leave a half-applied change: finish the step, or revert exactly your own edits and say so.
+
+## E. Loops and stuck states
+
+1. Never repeat an identical command or search. Zero results = state it, change strategy.
+2. Maximum 5 search/inspection commands per question; then report findings and ask.
+3. A test or process running longer than expected is stopped (`Ctrl+C`), not waited on. Use `--grep`,
+   short `actionTimeout`, and one test at a time.
+4. Do not retry a failing command unchanged. Read the error, change one variable.
+5. If blocked by missing information (file, output, decision), ask for exactly that item and say
+   what each answer would change.
+6. Never re-issue an identical completed tool call. If a call returned (results or zero matches) and
+   you have not changed its inputs, sending it again produces no new information and is a loop,
+   not an attempt.
+
+## F. Evidence gathering (Windows / PowerShell)
+
+1. Use `git --no-pager` and `rg` (UTF-8 safe). Search by ASCII identifiers rather than Vietnamese
+   strings.
+2. Quote paths and use `-LiteralPath` where needed; do not rely on `**` globbing in PowerShell, use
+   `rg --glob`.
+3. Read files with the file viewer, not `cat` piped through the shell, when content has non-ASCII
+   text.
+4. Large outputs: cap with `Select-Object -First N` or `rg -m`, and state the cap.
+5. Use native PowerShell commands not DOS commands (e.g., use Get-ChildItem rather than dir). DOS
+   commands may not work.
+6. On a PowerShell version without PowerShell 7 syntax support. Avoid PowerShell 7-only syntax such
+   as `&&`, `||`, `??`, `??=`, `?.,` and `?[`.
+
+## G. Code and contract sync
+
+1. A behavior change updates, in order: spec -> code -> tests -> docs/comments, in separate commits
+   that each typecheck.
+2. Every UI label, role, aria-name and selector that tests depend on is part of the contract; changing
+   one means updating its tests in the same phase.
+3. Comments and docs naming components/files must match the code (no stale names such as a
+   non-existent `PdfDocumentTools.tsx`).
+4. State lifecycles (idle/running/paused/done/error) are explicit: define who sets and who clears
+   each state. A terminal state that is never cleared is a bug.
+5. CSS that targets portaled/body-level nodes must not be scoped to an ancestor the node no longer
+   has. After moving a node in the DOM, re-check every rule and token it depends on.
+6. One owner per control per band (e.g. one More trigger per breakpoint). Duplicates are defects.
+
+## H. Testing behavior
+
+1. Test behavior and contract, not implementation details. Prefer role/name/state queries.
+2. A test that fails after your change gets classified (bug / stale / fragile / missing coverage /
+   unrelated) before any edit, with a spec citation for "stale".
+3. New behavior ships with a test in the same phase. A bug fix ships with a regression test.
+4. Never use a viewport, fixture size or timing as an implicit guarantee; construct the condition
+   explicitly and assert it.
+5. Do not run the full suite repeatedly while debugging; run the smallest spec, then domain, then
+   full once at phase end.
+6. Test behavior and contract, not implementation details. Prefer role/name/state queries.
+
+## I. Report format (end of every task)
+
+1. **Changed:** commits (hash, message), files, one line each.
+2. **Tests:** added / updated / replaced / removed (each removal justified), with spec citation.
+3. **Verification:** exact commands and pasted output; what was NOT run and why.
+4. **Classification:** each failure as bug / stale / fragile / missing coverage / unrelated.
+5. **Out of scope findings:** list with file:line and proposed owner.
+6. **Open decisions:** questions for the owner, each with options and a recommendation.
+7. `git status --short` at the end.
+
+## J. Communication
+
+1. Answer the question asked, first. Be concise; no filler, no celebration.
+2. When a prior instruction from the owner conflicts with a new one, say so and ask which wins; do
+   not silently pick.
+3. When the owner corrects you, acknowledge in one line, fix, and re-verify. No defensiveness, no
+   over-apology.
+4. If a request would violate these rules (e.g. "just make the test pass"), say which rule and
+   propose the compliant alternative.
+5. When a prior instruction from the owner conflicts with a new one, say so and ask which wins; do
+   not silently pick.
+6. When the owner corrects you, acknowledge in one line, fix, and re-verify. No defensiveness, no
+   over-apology.
+
 ## 1. Scope discipline
 
 Establish before the first edit. When a Planner handoff exists, its `SCOPE` / `RELEVANT FILES` /
