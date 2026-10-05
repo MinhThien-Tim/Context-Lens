@@ -178,6 +178,9 @@ During `preparing`, `running`, `paused`:
 - This is the single-entry ownership. No competing PDF/OCR entry point.
 
 ### 8.2 OCR actions in Document tools
+- OCR controls are `button`s inside the Document tools dialog, not `menuitem`s. The former
+  `role="menu"` / `role="menuitem"` container was replaced by `role="dialog"` in `3490a22`
+  (2026-09-27); tests must select them by button role.
 - "Recognize current page" — OCRs the current page only.
 - "Run OCR on remaining pages" — the §6 canonical entry point.
 - Pause / Resume / Cancel — available while a run is active.
