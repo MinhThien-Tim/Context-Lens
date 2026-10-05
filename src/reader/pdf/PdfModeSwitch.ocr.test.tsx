@@ -21,12 +21,37 @@ it('reports page and batch progress inside the document-tools surface', async ()
   const host = document.createElement('div'); document.body.append(host);
   const props = { uiLanguage: 'vi' as const, hasPdfText: true, hasOcr: true, language: 'eng' as const,
     onSource: vi.fn(), onLanguage: vi.fn(), onRecognizeCurrent: vi.fn(), onRecognizeNext: vi.fn(),
-    queueStatus: { state: 'running' as const, completed: 1, total: 6, page: 7, progress: 42 },
+    queueStatus: { state: 'running' as const, completed: 1, total: 12, page: 7, progress: 42, exhausted: false },
     onPause: vi.fn(), onContinue: vi.fn(), onCancel: vi.fn(), hasAnyOcr: true, onClear: vi.fn() };
   await act(() => render(<PdfDocumentTools {...props} open onClose={vi.fn()} />, host));
   expect(host.querySelector<HTMLButtonElement>('[aria-label="OCR next"]')!.disabled).toBe(true);
   expect(host.querySelector('[role="status"]')?.textContent).toContain('Trang 7: 42%');
-  expect(host.querySelector('[role="status"]')?.textContent).toContain('1/6');
+  expect(host.querySelector('[role="status"]')?.textContent).toContain('1/12');
+  await act(() => render(null, host));
+});
+
+// A finished run is not exhausted work. `exhausted` is the structural flag, not `state === 'done'`:
+// after a 12-page preload the later scanned pages are untouched and must stay reachable.
+it('keeps OCR next available after a completed run that did not exhaust the document', async () => {
+  const host = document.createElement('div'); document.body.append(host);
+  await act(() => render(<PdfDocumentTools uiLanguage="vi" hasPdfText={false} hasOcr={false} language="eng"
+    onSource={vi.fn()} onLanguage={vi.fn()} onRecognizeCurrent={vi.fn()} onRecognizeNext={vi.fn()}
+    queueStatus={{ state: 'done', completed: 12, total: 12, progress: 100, exhausted: false }}
+    onPause={vi.fn()} onContinue={vi.fn()} onCancel={vi.fn()} hasAnyOcr={true} onClear={vi.fn()}
+    open onClose={vi.fn()} />, host));
+  expect(host.querySelector<HTMLButtonElement>('[aria-label="OCR next"]')!.disabled).toBe(false);
+  await act(() => render(null, host));
+});
+
+// Only a full-document walk may disable the action; the predicate must not read a localized message.
+it('disables OCR next only when the run exhausted the document', async () => {
+  const host = document.createElement('div'); document.body.append(host);
+  await act(() => render(<PdfDocumentTools uiLanguage="vi" hasPdfText={false} hasOcr={false} language="eng"
+    onSource={vi.fn()} onLanguage={vi.fn()} onRecognizeCurrent={vi.fn()} onRecognizeNext={vi.fn()}
+    queueStatus={{ state: 'done', completed: 3, total: 3, progress: 100, exhausted: true, message: '0/0 trang cần OCR.' }}
+    onPause={vi.fn()} onContinue={vi.fn()} onCancel={vi.fn()} hasAnyOcr={false} onClear={vi.fn()}
+    open onClose={vi.fn()} />, host));
+  expect(host.querySelector<HTMLButtonElement>('[aria-label="OCR next"]')!.disabled).toBe(true);
   await act(() => render(null, host));
 });
 

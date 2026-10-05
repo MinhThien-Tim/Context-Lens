@@ -38,7 +38,9 @@ export function PdfDocumentTools({ open, onClose, uiLanguage, hasPdfText, hasOcr
   }, [open, desktop]);
   const choose = (source: 'pdf' | 'ocr') => { onSource(source); onClose(); };
   const busy = Boolean(queueStatus && ['preparing', 'running', 'paused'].includes(queueStatus.state));
-  const done = queueStatus?.state === 'done' && queueStatus.message === 'Không còn trang cần OCR.';
+  // Only a structurally exhausted run disables the action. A finished preload window leaves later
+  // pages untouched, so `OCR Next` must stay available for them.
+  const exhausted = queueStatus?.state === 'done' && queueStatus.exhausted;
   if (!open) return null;
   return <>
     {!desktop && <button class="pdf-tools-backdrop" tabIndex={-1} aria-label="Close document tools" onClick={onClose} />}
@@ -49,7 +51,7 @@ export function PdfDocumentTools({ open, onClose, uiLanguage, hasPdfText, hasOcr
     <div class="pdf-reading-options-divider" />
     <label>Ngôn ngữ OCR <select aria-label="OCR language" value={language} onChange={event => onLanguage(event.currentTarget.value as OcrLanguage)}><option value="eng">English</option><option value="eng+vie">English + Vietnamese</option></select></label>
     <button disabled={hasOcr || busy} onClick={() => { onClose(); onRecognizeCurrent(); }}>Nhận dạng chữ trang này</button>
-    <button aria-label="OCR next" title="Find and OCR the remaining scanned pages, starting at this one, 12 at a time" disabled={busy || done} onClick={() => { onClose(); onRecognizeNext(); }}>{uiLanguage === 'vi' ? 'Tìm và OCR tối đa 12 trang scan tiếp theo, tiếp tục đến hết tài liệu' : 'Find and OCR the next 12 scanned pages, continuing to the end'}</button>
+    <button aria-label="OCR next" title="Find and OCR the remaining scanned pages, continuing to the end" disabled={busy || exhausted} onClick={() => { onClose(); onRecognizeNext(); }}>{uiLanguage === 'vi' ? 'Tìm và OCR các trang scan còn lại, tiếp tục đến hết tài liệu' : 'Find and OCR the remaining scanned pages, continuing to the end'}</button>
     {queueStatus?.state === 'running' && <button onClick={onPause}>Tạm dừng OCR</button>}
     {queueStatus?.state === 'paused' && <button onClick={onContinue}>Tiếp tục OCR</button>}
     {queueStatus && <button onClick={onCancel}>Hủy OCR</button>}

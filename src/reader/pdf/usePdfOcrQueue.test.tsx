@@ -51,11 +51,33 @@ it('does not publish a saved result after switching documents', async () => {
   expect(queue.status).toBeNull();
 });
 
-it('preload examines only the first twelve pages and recognizes at most six', async () => {
+it('preload examines only the first twelve pages and recognizes up to twelve candidates', async () => {
   await setup();
   await act(() => queue.preloadFirstTwelve());
-  expect(mocks.recognize.mock.calls.map(call => call[1])).toEqual([1, 2, 3, 4, 5, 6]);
+  expect(mocks.recognize.mock.calls.map(call => call[1])).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
   expect(mocks.getPage.mock.calls.every(call => call[0] <= 12)).toBe(true);
+});
+
+it('distinguishes initial automatic preload from explicit OCR Next', async () => {
+  await setup(doc('a', 30));
+  await act(() => queue.preloadFirstTwelve());
+  expect(mocks.recognize.mock.calls.map(call => call[1])).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  expect(queue.status?.state).toBe('done');
+  // A preload examines one bounded window, so it is never exhausted: pages 13-30 remain for OCR Next.
+  expect(queue.status?.exhausted).toBe(false);
+  mocks.recognize.mockClear(); mocks.getPage.mockClear();
+  await act(() => queue.startNextUnprocessed());
+  expect(mocks.recognize.mock.calls.map(call => call[1])).toEqual(Array.from({ length: 30 }, (_, index) => index + 1));
+  expect(queue.status?.state).toBe('done');
+  // The explicit run walked every window of the document, so nothing is left.
+  expect(queue.status?.exhausted).toBe(true);
+});
+
+it('automatic continuation after a run begins processes consecutive 12-page windows', async () => {
+  await setup(doc('a', 30));
+  await act(() => queue.startNextUnprocessed());
+  expect(mocks.recognize.mock.calls.map(call => call[1])).toEqual(Array.from({ length: 30 }, (_, index) => index + 1));
+  expect(queue.status?.state).toBe('done');
 });
 
 it('does not publish done after cancellation during ink preflight', async () => {
@@ -130,7 +152,7 @@ it('continues the queue when a page returns empty OCR text', async () => {
   await act(() => queue.startNextUnprocessed());
   expect(mocks.recognize.mock.calls.map(call => call[1])).toEqual([1, 2, 3]);
   expect(mocks.save.mock.calls.map(call => call[1])).toEqual([2, 3]);
-  expect(queue.status).toBeNull();
+  expect(queue.status?.state).toBe('done');
 });
 
 it('continues automatically through every 12-page window until the end of the document', async () => {
@@ -157,7 +179,7 @@ it('keeps the automatic queue running when a page has no ink', async () => {
   mocks.ink.mockImplementation(async (page: { pageNumber: number }) => page.pageNumber !== 2);
   await act(() => queue.startNextUnprocessed());
   expect(mocks.recognize.mock.calls.map(call => call[1])).toEqual([1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
-  expect(queue.status).toBeNull();
+  expect(queue.status?.state).toBe('done');
 });
 
 it('finishes a short final batch without looping past the last page', async () => {
@@ -165,5 +187,5 @@ it('finishes a short final batch without looping past the last page', async () =
   await act(() => queue.startNextUnprocessed());
   expect(mocks.recognize.mock.calls.map(call => call[1])).toEqual(Array.from({ length: 20 }, (_, index) => index + 1));
   expect(mocks.getPage.mock.calls.every(call => call[0] <= 20)).toBe(true);
-  expect(queue.status).toBeNull();
+  expect(queue.status?.state).toBe('done');
 });
