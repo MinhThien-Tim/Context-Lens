@@ -56,3 +56,6 @@ data/occurrences/resolver-seen-index.json
 
 # Agent scratch output (diagnostics redirected from shells)
 _*.txt
+output.txt
+# Uncommitted WIP safety patch written before handing work to another step
+backup-wip.patch
