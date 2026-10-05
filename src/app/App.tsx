@@ -2,7 +2,7 @@ import { useDesktop } from '../components/useDesktop';
 import { ReaderShell } from '../reader/ReaderShell';
 import { ReaderProgress } from '../reader/ReaderProgress';
 import { ContextPanel } from '../reader/ContextPanel';
-import { ReaderMore, ReaderToolbar, type ReaderMoreItem, ContentsIcon, NotesIcon, MarkupIcon, ContextIcon, TextThemeIcon, LanguagesIcon, DocumentToolsIcon, OcrIcon, ClickLookupIcon } from '../reader/ReaderToolbar';
+import { ReaderMore, ReaderToolbar, type ReaderMoreItem, ContentsIcon, NotesIcon, MarkupIcon, ContextIcon, TextThemeIcon, LanguagesIcon, DocumentToolsIcon, ClickLookupIcon } from '../reader/ReaderToolbar';
 import { ContentsPanel } from '../reader/ContentsPanel';
 import { DocumentPosition, GoToLocation, PageNavigation } from '../reader/DocumentPosition';
 import { jumpToOffset, keyboardCanNavigate, locationAtOffset, navigationOffset, positionLabel } from '../reader/navigation';
@@ -628,17 +628,17 @@ export function App() {
                 const onPen = () => setActiveMarkupTool('underline');
                 const onErase = () => setActiveMarkupTool('eraser');
 
-        // Contract §9.3: exactly this inventory, no duplicates (§9.4), zoom never included (§8.3).
-        // Grouped with icons for compact presentation
-        const readerMoreItems: ReaderMoreItem[] = [
-          { label: 'Contents', onSelect: toggleDocumentPanel, icon: <ContentsIcon />, group: 'Navigation' },
-          { label: 'Context', onSelect: toggleContextPanel, icon: <ContextIcon />, group: 'Navigation' },
-          { label: 'Notes', onSelect: () => openNotes(null), icon: <NotesIcon />, group: 'Document' },
-          { label: 'Markup', onSelect: () => setHighlightToolsOpen(true), icon: <MarkupIcon />, group: 'Document' },
-          { label: 'Text', onSelect: () => setShowReaderSettings(true), icon: <TextThemeIcon />, group: 'Appearance' },
-          { label: 'Languages', onSelect: () => setShowApiSettings(true), icon: <LanguagesIcon />, group: 'Appearance' },
-          { label: 'Document', onSelect: () => setDocumentToolsOpen(true), icon: <DocumentToolsIcon />, group: 'Tools' },
-          { label: 'OCR', onSelect: () => setDocumentToolsOpen(true), icon: <OcrIcon />, group: 'Tools' },
+        // Contract §9.3 + mobile-chrome.md §6: exactly these eight items, in this order. `Document`
+                // is the single OCR entry (§9.7) — a separate `OCR` item duplicated it and is removed.
+                // Grouped with icons for compact presentation
+                const readerMoreItems: ReaderMoreItem[] = [
+                  { label: 'Contents', onSelect: toggleDocumentPanel, icon: <ContentsIcon />, group: 'Navigation' },
+                  { label: 'Context', onSelect: toggleContextPanel, icon: <ContextIcon />, group: 'Navigation' },
+                  { label: 'Notes', onSelect: () => openNotes(null), icon: <NotesIcon />, group: 'Document' },
+                  { label: 'Markup', onSelect: () => setHighlightToolsOpen(true), icon: <MarkupIcon />, group: 'Document' },
+                  { label: 'Text', onSelect: () => setShowReaderSettings(true), icon: <TextThemeIcon />, group: 'Appearance' },
+                  { label: 'Languages', onSelect: () => setShowApiSettings(true), icon: <LanguagesIcon />, group: 'Appearance' },
+                  { label: 'Document', onSelect: () => setDocumentToolsOpen(true), icon: <DocumentToolsIcon />, group: 'Tools' },
           { label: 'Click lookup', pressed: originalClickLookup, onSelect: () => setOriginalClickLookup(value => !value), icon: <ClickLookupIcon />, group: 'Tools' },
         ];
     return (
