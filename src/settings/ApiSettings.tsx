@@ -33,7 +33,7 @@ export function ApiSettings({ initial, initialVerified = false, initialEngines =
   };
   return (
     <div class="modal-layer">
-      <button class="modal-backdrop" aria-label="Close settings" onClick={() => { testController.current?.abort(); onClose(); }} />
+      <button class="modal-backdrop" tabIndex={-1} aria-hidden="true" onClick={() => { testController.current?.abort(); onClose(); }} />
       <section ref={dialogRef} tabIndex={-1} class="settings-modal language-settings-modal" role="dialog" aria-modal="true" aria-labelledby="ai-title">
         <header><div><p class="eyebrow">Reading setup</p><h2 id="ai-title">Language engines</h2></div><button class="icon-button close-button" onClick={() => { testController.current?.abort(); onClose(); }} aria-label="Close settings">×</button></header>
         <EngineSettingsForm value={engines} onChange={setEngines} health={health} />

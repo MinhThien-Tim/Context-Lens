@@ -24,7 +24,7 @@ export function NotesPanel({ document, selection, location, onJump, onClose }: {
     beginNew(); refresh();
   };
   return <div class="notes-layer">
-    {!desktop && <button class="modal-backdrop" tabIndex={-1} aria-label="Close notes" onClick={onClose} />}
+    {!desktop && <button class="modal-backdrop" tabIndex={-1} aria-hidden="true" onClick={onClose} />}
     <section ref={dialogRef} tabIndex={-1} class="settings-modal notes-panel" role={desktop ? 'complementary' : 'dialog'} aria-modal={desktop ? undefined : true} aria-labelledby="notes-title">
       <header><div><p class="eyebrow">Context &middot; Notes</p><h2 id="notes-title">Notes for {document.title}</h2></div><button class="icon-button close-button" onClick={onClose} aria-label="Close notes">×</button></header>
       {selection && !editing && <div class="note-selection"><strong>Selected text</strong><q>{selection.text}</q><small>{selection.context.current}</small></div>}

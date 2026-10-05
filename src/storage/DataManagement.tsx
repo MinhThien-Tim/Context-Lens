@@ -14,7 +14,7 @@ export function DataManagement({ onClose, onRestored }: { onClose: () => void; o
   const refresh = () => { void storageSnapshot().then(setSnapshot); void db.dictionaryPacks.toArray().then(setPacks); };
   useEffect(refresh, []);
   return <div class="modal-layer">
-    <button class="modal-backdrop" aria-label="Close data management" onClick={onClose} />
+    <button class="modal-backdrop" tabIndex={-1} aria-hidden="true" onClick={onClose} />
     <section ref={dialogRef} tabIndex={-1} class="settings-modal data-modal" role="dialog" aria-modal="true" aria-labelledby="data-title">
       <header><div><p class="eyebrow">On this device</p><h2 id="data-title">Data & storage</h2></div><button class="icon-button close-button" onClick={onClose} aria-label="Close data management">×</button></header>
       {snapshot && <div class="storage-summary">

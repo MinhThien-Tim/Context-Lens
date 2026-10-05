@@ -43,7 +43,7 @@ export function PdfDocumentTools({ open, onClose, uiLanguage, hasPdfText, hasOcr
   const exhausted = queueStatus?.state === 'done' && queueStatus.exhausted;
   if (!open) return null;
   return <>
-    {!desktop && <button class="pdf-tools-backdrop" tabIndex={-1} aria-label="Close document tools" onClick={onClose} />}
+    {!desktop && <button class="pdf-tools-backdrop" tabIndex={-1} aria-hidden="true" onClick={onClose} />}
     <section ref={dialog} tabIndex={-1} class="pdf-reading-options" role="dialog" aria-modal={desktop ? undefined : true} aria-label={uiLanguage === 'vi' ? 'Công cụ tài liệu' : 'Document tools'}>
     <header><strong>{uiLanguage === 'vi' ? 'Công cụ tài liệu' : 'Document tools'}</strong><button class="icon-button" aria-label="Close document tools" onClick={onClose}>×</button></header>
     <button disabled={!hasPdfText} onClick={() => choose('pdf')}>Chữ PDF</button>

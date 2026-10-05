@@ -12,7 +12,7 @@ export function VocabularyLibrary({ records, onClose, onDelete }: { records: Voc
     return records.filter((record) => [record.lemma, record.surface, record.lexicalUnit, record.originalSentence, ...record.meaningVi].some((value) => value?.toLocaleLowerCase().includes(normalized)));
   }, [records, query]);
   return <div class="modal-layer">
-    <button class="modal-backdrop" aria-label="Close saved vocabulary" onClick={onClose} />
+    <button class="modal-backdrop" tabIndex={-1} aria-hidden="true" onClick={onClose} />
     <section ref={dialogRef} tabIndex={-1} class="settings-modal vocabulary-modal" role="dialog" aria-modal="true" aria-labelledby="vocabulary-title">
       <header><div><p class="eyebrow">Learning</p><h2 id="vocabulary-title">Saved in context</h2></div><button class="icon-button close-button" onClick={onClose} aria-label="Close saved vocabulary">×</button></header>
       <div class="vocabulary-toolbar"><input type="search" value={query} onInput={(event) => setQuery(event.currentTarget.value)} placeholder="Search saved words" aria-label="Search saved vocabulary" /><span>{visible.length} saved</span></div>
