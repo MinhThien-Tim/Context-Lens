@@ -127,12 +127,12 @@ async function textChrome(page: Page) {
   return page.evaluate(() => {
     const box = (sel: string) => {
       const el = document.querySelector<HTMLElement>(sel);
-      if (!el) return null;
+      if (!el) throw new Error(`text surface element missing: ${sel}`);
       const r = el.getBoundingClientRect();
       return { top: r.top, bottom: r.bottom, height: r.height, opacity: Number(getComputedStyle(el).opacity) };
     };
-    const header = box('.reader-header')!;
-    const footer = box('.reader-progress')!;
+    const header = box('.reader-header');
+    const footer = box('.reader-progress');
     const firstLine = document.querySelector<HTMLElement>('.reader-text p');
     return {
       headerBottom: header.bottom,
@@ -553,7 +553,7 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
       const rect = menu.getBoundingClientRect();
       const cs = getComputedStyle(menu);
       const atCentre = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
-      return {
+      const base = {
         position: cs.position,
         menuZ: Number(cs.zIndex),
         backdropZ: backdrop ? Number(getComputedStyle(backdrop).zIndex) : null,
@@ -561,8 +561,12 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
         withinViewport: rect.x >= 0 && rect.y >= 0
           && rect.right <= innerWidth && rect.bottom <= innerHeight,
         centreHitsMenu: !!atCentre?.closest('.reader-more-menu'),
-        iconWidth: menu.querySelector<SVGElement>('.more-item-icon svg')?.getBoundingClientRect().width ?? null,
       };
+      // A missing icon would otherwise compare as null !== 20, which reports the same failure as a
+      // wrong width for two different causes; throw so the cause is named.
+      const icon = menu.querySelector<SVGElement>('.more-item-icon svg');
+      if (!icon) throw new Error('More item icon is not rendered');
+      return { ...base, iconWidth: icon.getBoundingClientRect().width };
     });
 
     for (const size of [{ width: 390, height: 900 }, { width: 768, height: 900 }]) {

@@ -109,11 +109,24 @@ test('preloads at most the first twelve pages and leaves later scans for a manua
   await expect(page.locator('[data-ocr-page="1"]')).toHaveCount(1);
   await expect(page.locator('[data-ocr-page="13"]')).toHaveCount(0);
   await page.getByRole('button', { name: 'Original', exact: true }).click();
-  // Scope "Next page" to the Footer contentinfo region: the Header renders an identical
-  // nav[aria-label="Page navigation"] with its own "Next page" button.
-  const footerNav = page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('button', { name: 'Next page' });
-  for (let index = 1; index < 12; index++) await footerNav.click();
+  // docs/desktop-reader.md §2.2: at this desktop width the Header nav is the sole owner, so "Next
+  // page" resolves without a region scope. A Footer scope here would fail, which is the point.
+  // This spec runs in both projects, so the band comes from the project fixture (the repo idiom
+  // in pdf-stability.spec.ts / reader-p0.spec.ts), never from a measured viewport width.
+  const isMobileBand = test.info().project.use.isMobile === true;
+  const headerNav = page.getByRole('navigation', { name: 'Page navigation' });
+  await expect(headerNav).toHaveCount(1);
+  for (let index = 1; index < 12; index++) await headerNav.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByRole('button', { name: 'Current PDF page' })).toContainText('12 / 13');
+  // docs/desktop-reader.md §2.2: the Header is the only owner at >=1024px, so the Footer must not
+  // render a second PageNavigation there. At <=1023px the Footer still owns it, so this absence
+  // assertion is scoped to the band the test itself already runs in.
+  await expect(headerNav.getByRole('button', { name: 'Next page' })).toHaveCount(1);
+  if (isMobileBand) {
+    await expect(page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('navigation', { name: 'Page navigation' })).toHaveCount(1);
+  } else {
+    await expect(page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('navigation', { name: 'Page navigation' })).toHaveCount(0);
+  }
   await openDocumentTools(page);
   // The canonical OCR Next action carries aria-label="OCR next"
   await page.getByRole('button', { name: 'OCR next' }).click();

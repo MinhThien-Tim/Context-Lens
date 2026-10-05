@@ -93,7 +93,7 @@ export function ReaderToolbar({
   totalPages,
   onPrevPage,
   onNextPage,
-  onGoToPage,
+  onOpenGoTo,
   zoomLevel,
   zoomMode,
   onZoomOut,
@@ -117,7 +117,8 @@ export function ReaderToolbar({
   totalPages?: number;
   onPrevPage?: () => void;
   onNextPage?: () => void;
-  onGoToPage?: (page: number) => void;
+  /** docs/desktop-reader.md §2.2: the Header is the sole opener of `Go to location` at >=1024px. */
+  onOpenGoTo?: () => void;
   zoomLevel?: number;
   zoomMode?: 'auto' | 'custom';
   onZoomOut?: () => void;
@@ -155,7 +156,13 @@ export function ReaderToolbar({
           {/* Page navigation group */}
           <nav class="page-navigation" aria-label="Page navigation">
             <button class="icon-button" aria-label="Previous page" disabled={page! <= 1} onClick={onPrevPage}><PrevPageIcon /></button>
-            <button class="text-button page-count" aria-label={`Page ${page} of ${totalPages}`} title={`Go to page ${page} of ${totalPages}`} onClick={() => onGoToPage?.(page!)}>{page} / {totalPages}</button>
+            {/* docs/desktop-reader.md §2.2: the Header owns PDF page navigation alone at >=1024px.
+                The accessible name is the stable 'Current PDF page' handle the Footer uses at
+                <=1023px, so both bands expose one name for the same action; the full sentence
+                moves to title/aria-description so nothing is lost from the old label.
+                Activating it opens `Go to location` (not a direct jump): the Footer no longer
+                navigates in this band, so this button is the only reachable opener there. */}
+            <button class="text-button page-count" aria-label="Current PDF page" aria-description={`Page ${page} of ${totalPages}`} title={`Page ${page} of ${totalPages}`} onClick={onOpenGoTo}>{page} / {totalPages}</button>
             <button class="icon-button" aria-label="Next page" disabled={page! >= totalPages!} onClick={onNextPage}><NextPageIcon /></button>
           </nav>
           

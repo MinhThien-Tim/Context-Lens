@@ -17,8 +17,8 @@ export type ReaderGeometry = {
   footerTop: number;
   headerBottom: number;
   headerOpacity: number;
-  page: string | null;
-  percent: string | null;
+  page: string;
+  percent: string;
   slotIds: string;
 };
 
@@ -46,6 +46,16 @@ export async function readerGeometry(page: Page): Promise<ReaderGeometry> {
     }
     const firstLine = document.querySelector('.pdf-text-layer span, .pdf-reading-text');
         const firstRect = box(firstLine);
+      // docs/desktop-reader.md §2.2: the page-count control is named 'Current PDF page' in both
+      // bands, and the progress track is unconditional in ReaderProgress. A missing node is a real
+      // product failure, so it throws instead of silently degrading to null and letting a caller
+      // assert null === null.
+      const pageCount = document.querySelector('[aria-label="Current PDF page"]');
+      if (!pageCount) throw new Error('current PDF page control is not rendered');
+      const progressTrack = document.querySelector('.reading-progress-track');
+      if (!progressTrack) throw new Error('reading progress track is not rendered');
+      const percent = progressTrack.getAttribute('aria-valuenow');
+      if (percent === null) throw new Error('reading progress track has no aria-valuenow');
         return {
           viewportTop: viewportRect.top,
       viewportHeight: viewportRect.height,
@@ -55,8 +65,8 @@ export async function readerGeometry(page: Page): Promise<ReaderGeometry> {
       footerTop: box(footer)?.top ?? NaN,
       headerBottom: box(header)?.bottom ?? NaN,
       headerOpacity: header ? Number(getComputedStyle(header).opacity) : NaN,
-      page: document.querySelector('[aria-label="Current PDF page"]')?.textContent ?? null,
-      percent: document.querySelector('.reading-progress-track')?.getAttribute('aria-valuenow') ?? null,
+      page: pageCount.textContent ?? '',
+      percent,
       slotIds,
     };
   }, SCROLL_SELECTOR);

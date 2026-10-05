@@ -604,9 +604,6 @@ export function App() {
     const onNextPage = () => {
       if (currentPage && totalPages && currentPage < totalPages) jumpPdfPage(currentPage + 1);
     };
-    const onGoToPage = (page: number) => {
-      if (totalPages && page >= 1 && page <= totalPages) jumpPdfPage(page);
-    };
     const onZoomOut = () => {
       setPreferences(current => ({ ...current, pdfZoomMode: 'custom', pdfCustomScale: Math.max(0.1, current.pdfCustomScale * 0.85) }));
     };
@@ -653,7 +650,7 @@ export function App() {
           totalPages={totalPages}
           onPrevPage={onPrevPage}
           onNextPage={onNextPage}
-          onGoToPage={onGoToPage}
+          onOpenGoTo={() => setGoToOpen(true)}
           zoomLevel={Math.round(customScale * 100)}
                   zoomMode={zoomMode === 'fit-width' ? 'auto' : 'custom'}
                   onZoomOut={onZoomOut}
@@ -687,7 +684,12 @@ export function App() {
           one More trigger and one zoom host. At >=1024px both live in the Header toolbar; at <=1023px the
           Footer owns them. `markupActive` only decorates the band that actually renders the trigger. */}
       <ReaderProgress showPercentage={isPdf} progress={progress} ocr={activeOcrProgress ? { progress: progressPercent, completed: activeOcrProgress.completed, total: activeOcrProgress.total } : null} zoom={pdfSurface && pdfMode === 'original' && !desktop ? <span class="pdf-footer-zoom-host" /> : null} moreTrigger={!desktop ? <ReaderMore items={readerMoreItems} markupActive={activeMarkupTool !== null} /> : undefined}>
-        {documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf' ? <PageNavigation page={currentLocation.page} total={documentRecord.pageOffsets?.length ?? 1} onPrevious={() => jumpPdfPage(currentLocation.page - 1)} onNext={() => jumpPdfPage(currentLocation.page + 1)} onOpen={() => setGoToOpen(true)} /> : <DocumentPosition document={documentRecord} location={currentLocation} onOpen={() => setGoToOpen(true)} />}
+        {documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf'
+          // docs/desktop-reader.md §3 (:37): page navigation is owned solely by the Header
+          // ReaderToolbar at >=1024px, so the Footer must not render a second copy there.
+          // The Footer keeps only the progress/percentage there; mobile is unchanged.
+          ? !desktop && <PageNavigation page={currentLocation.page} total={documentRecord.pageOffsets?.length ?? 1} onPrevious={() => jumpPdfPage(currentLocation.page - 1)} onNext={() => jumpPdfPage(currentLocation.page + 1)} onOpen={() => setGoToOpen(true)} />
+          : <DocumentPosition document={documentRecord} location={currentLocation} onOpen={() => setGoToOpen(true)} />}
       </ReaderProgress>
       {contextPanelOpen && !lookupOpen && !showNotes && <ContextPanel onClose={closeContext} onNote={() => openNotes(null)} />}
       <LookupBottomSheet quickMode={preferences.lookupQuickMode} onQuickModeChange={lookupQuickMode => setPreferences(current => ({ ...current, lookupQuickMode }))} placement={preferences.lookupPopupPlacement} onPlacementChange={lookupPopupPlacement => setPreferences(current => ({ ...current, lookupPopupPlacement }))} displayMode={lookupDisplay} preferredView={preferences.lookupViewMode} onDisplayModeChange={changeLookupDisplay} anchor={activeSelection?.anchor} selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} selectionText={activeSelection?.text} debug={preferences.interfaceMode === 'advanced' && engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} geminiConnected={geminiVerified && aiSettings.provider === 'gemini'} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} quickPending={quickPending} offline={!online} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={closeContext} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary().catch(() => setError("Unable to save vocabulary. Please try again."))} onAddNote={() => openNotes(activeSelection)} saved={saved} collectionTitle={collectionTitle(documentRecord ?? {})} />
