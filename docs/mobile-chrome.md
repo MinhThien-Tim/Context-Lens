@@ -63,8 +63,8 @@ Owns exactly three things, and nothing else:
 2. **Document title** — bounded, ellipsized, full title in `title`.
 3. **Original / Reading** — PDF only, the single mode control (§10).
 
-Absent from the mobile Header: Search, a FAB, a secondary action row, Markup, Text/theme, Notes,
-Language engines, Document tools, Click-to-lookup, and any per-action overflow. Every one of those
+Absent from the mobile Header: Search, a FAB, a secondary action row, Markup, Text, Notes,
+Languages, Document, Click lookup, and any per-action overflow. Every one of those
 is reached through More instead. Do not reintroduce an L1 action layer in the Header.
 
 ## 5. Footer (≤1023 px)
@@ -78,8 +78,12 @@ is reached through More instead. Do not reintroduce an L1 action layer in the He
 
 - Zoom is a direct control. It is not a popup, not a menu, and not inside More. The mobile
   `.pdf-more` zoom popup is deleted.
+- This table describes the **mobile band only** (≤1023 px). At ≥1024 px the Footer does not render a
+  zoom control at all: `.pdf-footer-zoom-host` is gated on `!desktop`, and the zoom stepper lives in
+  the Header toolbar per [desktop-reader.md](desktop-reader.md) §3. Ownership is singular in both
+  bands, but the band that owns it differs — see §12 for the reconciled split.
 - At 320 px the Footer keeps progress, the zoom stepper, More and — only when active — OCR status.
-  Click-to-lookup is **not** an independent Footer action there; it lives in More. The Footer must
+  Click lookup is **not** an independent Footer action there; it lives in More. The Footer must
   not overflow horizontally at any width in the band.
 - Every Footer control meets the 44 px hit target.
 
@@ -111,10 +115,25 @@ There is exactly one conceptual More disclosure, rendered by one shared componen
 At wider mobile widths the sheet is centered and max-width constrained; it does not become a popover
 and it does not gain a second action layer. Escape closes it (§9.5); focus is trapped while open.
 
-Exactly the eight approved items of contract §9.3, in order: Contents, Context, Notes, Markup, Text
-and theme, Language engines, Document tools (which also carries the OCR controls, §9.7 — never as
-separate OCR entries), Click word lookup. Nothing else is added, and each is present exactly once in
-the Reader. `src/app/App.tsx` builds this list as `readerMoreItems`.
+Exactly the eight approved items of contract §9.3, in this order: **Contents**, **Context**, **Notes**,
+**Markup**, **Text**, **Languages**, **Document**, **Click lookup**. `Document` is the one entry that
+also carries the OCR controls (§9.7) — OCR is never a separate More entry, and no duplicate OCR entry
+may exist anywhere in the inventory. Nothing else is added, and each is present exactly once in the
+Reader. `src/app/App.tsx` builds this list as `readerMoreItems`.
+
+**Label change, 2026-10-05 (owner decision).** Four labels were shortened for a narrow sheet and a
+desktop popover; the underlying actions are unchanged. Each replaced an older, longer label:
+
+| New label | Replaces |
+| --- | --- |
+| `Document` | `Document tools` |
+| `Text` | `Text and theme` |
+| `Languages` | `Language engines` |
+| `Click lookup` | `Click word lookup` |
+
+The eight-item count, the order and the ownership of every action are unchanged by this rename; only
+the visible strings change. `Document tools` remains the correct name of the **surface** (dialog) and
+must not be renamed for consistency — only the More menu item label changed.
 
 ## 7. Action ownership (canonical host per action)
 
@@ -126,7 +145,7 @@ the Reader. `src/app/App.tsx` builds this list as `readerMoreItems`.
 | PDF zoom | Footer (direct stepper) |
 | More | Footer |
 | Active OCR status | Footer, only while active |
-| Contents, Context, Markup, Text and theme, Notes, Language engines, Document tools, Click-to-lookup | More |
+| Contents, Context, Markup, Text, Notes, Languages, Document, Click lookup | More |
 
 After migration no action may be duplicated merely to satisfy an older test.
 
@@ -200,6 +219,7 @@ roles/labels; it does not mutate classes, synthesize scroll events, or use magic
 | Footer owns a direct zoom stepper, never a zoom menu | §8.2, §8.3 |
 | Every Footer control meets 44 px | §7.5, §8.6 |
 | OCR next lives only in Document tools via More | §9.7, §12.11 |
+| More exposes exactly the eight §9.3 items, in order, with the §6 labels | §9.3, §6 |
 | Progress/location owned by the Footer at every mobile width | §8.1, §8.5 |
 
 ### 10.1 Helper rules
@@ -227,7 +247,18 @@ These are deliberately **not** implemented here and must not be invented in Mobi
 - `surface` participates in the Reader chrome effect's dependencies. A surface identity change
   resets quiet, which is correct for a mode switch but is a coupling worth revisiting if a
   future phase restores across surface changes.
-- Zoom is a direct Footer stepper — decrease, level readout, increase — at **every** density, so
-  desktop and mobile share one control with one owner and there is no zoom popup at any width.
-  The former desktop preset popover (`.pdf-more-menu`) and the mobile zoom menu are both deleted;
-  see [desktop-reader.md](desktop-reader.md) §3.
+- More has one trigger per density band, matching the band that already owns the surrounding chrome:
+  the Footer at ≤1023px (§8.1/§9.4) and the Header toolbar at ≥1024px ([desktop-reader.md](desktop-reader.md)
+  §2). This supersedes the earlier §5 wording that permitted a desktop-only More popover.
+- Zoom is a **direct** control at every density — decrease, level readout, increase — and it is never
+  a popup or a menu at any width. The former desktop preset popover (`.pdf-more-menu`) and the mobile
+  zoom menu are both deleted; see [desktop-reader.md](desktop-reader.md) §3.
+- Zoom ownership follows the density split rather than being uniform in *location*: the Footer renders
+  the `.pdf-footer-zoom-host` only at ≤1023px, and [desktop-reader.md](desktop-reader.md) §3 keeps a
+  zoom control in the desktop Header toolbar (a preset `<select>` flanked by the decrease/increase
+  buttons — the same direct-control shape, not a menu). App.tsx therefore gates the Footer zoom host
+  on `!desktop` and gates the Footer More trigger on `!desktop`, so no band renders two zoom
+  controls or two More triggers. This supersedes the earlier §5 wording that described the Footer
+  stepper without qualifying it to the mobile band. Approved as a rollback of `40e807d`
+  (DesktopReader Toolbar) in the PDF/OCR Controls phase, reconciling `40e807d`'s own
+  `desktop-reader.md` §3 against the Footer zoom host it left rendering unconditionally.

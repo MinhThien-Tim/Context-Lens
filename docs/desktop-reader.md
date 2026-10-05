@@ -42,7 +42,7 @@ One toolbar band with clear functional groups. The toolbar owns all desktop read
 | Reader/document tools | `ReaderToolbar` | Contents, Notes, Markup, Print |
 | More/overflow | `ReaderMore` | Secondary actions |
 
-Every secondary action stays in **More** (§9.3): Context, Text and theme, Language engines, Document tools, Click word lookup. Desktop does **not** gain an always-visible action rail, an L1 layer, or a second toolbar band. Simple/Advanced only changes disclosure and density (§11) — it never changes which band owns an action (§11.5).
+Every secondary action stays in **More** (§9.3): Contents, Context, Notes, Markup, Text, Languages, Document, Click lookup. Desktop does **not** gain an always-visible action rail, an L1 layer, or a second toolbar band. Simple/Advanced only changes disclosure and density (§11) — it never changes which band owns an action (§11.5). The labels are the ones fixed by [mobile-chrome.md](mobile-chrome.md) §6 (2026-10-05 rename); `Document` names the menu item, while `Document tools` remains the name of the surface it opens.
 
 **Popup rule.** More is the **only** popup architecture (§3.6). `.pdf-more`, `.pdf-more-menu` and the `.pdf-toolbar` band are deleted, not restyled. Desktop zoom is a direct selector + stepper; it never opens a menu (§8.3).
 

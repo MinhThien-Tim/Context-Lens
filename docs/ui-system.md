@@ -78,7 +78,7 @@ Mobile presentation gaps belong to the MobileChrome phase.
 | Side panel | Contents and context render as columns (`reader-shell.has-contents` / `.has-context`) | Drawers/sheets; `App.tsx` auto-closes Contents when the lookup sheet or notes open |
 | Lookup result | Quick popup; explicit Full opens Context Inspector | Quick bottom sheet; Full expands the same sheet |
 | Notes | Side panel | Full-height panel (`NotesPanel`) |
-| Toolbar | Back, bounded document title and Original–Reading in the Header band; page/location, progress, percentage, direct PDF zoom stepper, OCR status and the single **More** disclosure in the Footer band. Every secondary action (Contents, Context, Markup, Text and theme, Notes, Language engines, Document tools, Click-to-lookup) is reached once through **More**, presented as a popover ≥1024 px. See [desktop-reader.md](desktop-reader.md) | Back/title/Original–Reading in the overlay Header; every secondary action is reached once through the Footer **More** disclosure, presented as a bottom sheet ≤1023 px and a popover ≥1024 px |
+| Toolbar | Back, bounded document title and Original–Reading in the Header band; page/location, progress, percentage, direct PDF zoom stepper, OCR status and the single **More** disclosure in the Footer band. Every secondary action (Contents, Context, Notes, Markup, Text, Languages, Document, Click lookup) is reached once through **More**, presented as a popover ≥1024 px. See [desktop-reader.md](desktop-reader.md) | Back/title/Original–Reading in the overlay Header; every secondary action is reached once through the Footer **More** disclosure, presented as a bottom sheet ≤1023 px and a popover ≥1024 px |
 | Contents / Go to | Keyboard `T` and `G` (guarded by `keyboardCanNavigate`) | Visible Contents button / bottom location button |
 | PDF paging | Bottom `PageNavigation` and guarded arrow keys | Bottom touch navigation / Go to page |
 
@@ -97,7 +97,7 @@ existing text-source, OCR language, recognition and queue actions. Under the fro
 is retired as a Header/L1 action and is a document-tools action meaning "run OCR on remaining
 unprocessed pages"; OCR queue semantics are unchanged. Original keeps a centered PDF canvas with a
 zoom control in both densities: zoom out, current level, zoom in. Under the frozen contract the
-footer Zoom **menu** is retired and replaced by a direct Footer stepper in both densities; there is
+footer Zoom **menu** is retired and replaced by a direct stepper in both densities; there is
 no separate desktop zoom bar and no zoom popup at any width. Reading retains the shared structured
 pages with comfortable margins
 and no card border per page.
@@ -254,7 +254,15 @@ subsystem verification. See the canonical
 | Onboarding and guide language | `src/onboarding/ContextLensOnboarding.tsx`, `src/onboarding/store.ts` |
 | Offline status and readiness UI | `src/components/OfflineBadge.tsx`, `src/documents/offline.ts`, `src/app/App.tsx` (`online`) |
 
-Both densities expose Contents, Markup and Document tools through the single **More** disclosure; Markup opens the existing tools and Note. The mobile Header carries only Back, the document title, and Original/Reading for PDF, and the mobile Footer owns progress, location, the direct PDF zoom stepper, the More trigger, and OCR status only while an OCR run is active.
+Both densities expose the eight approved secondary actions — Contents, Context, Notes, Markup, Text,
+Languages, Document, Click lookup — through the single **More** disclosure. Markup opens the
+existing tools and Notes. The mobile Header carries only Back, the document title, and
+Original/Reading for PDF, and the mobile Footer owns progress, location, the direct PDF zoom
+stepper, the More trigger, and OCR status only while an OCR run is active. PDF zoom is a direct
+stepper in both bands, anchored in the Footer at ≤1023 px and in the Header toolbar at ≥1024 px; it
+is never a popup or a menu at any width. See [mobile-chrome.md](mobile-chrome.md) §5/§6/§12 for the
+density split and the 2026-10-05 label rename (`Document`, `Text`, `Languages`, `Click lookup`
+replace `Document tools`, `Text and theme`, `Language engines`, `Click word lookup`).
 Titles omit known file extensions and subtitles after a colon, with visual ellipsis and a full-title tooltip.
 Secondary actions remain in the reader overflow menu. Advanced adds the Context toggle;
 lookup content, notes and processing capabilities remain available through the existing components.
