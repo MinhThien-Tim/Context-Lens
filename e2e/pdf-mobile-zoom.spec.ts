@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
 
-test('Original mobile zoom preserves reading and selection geometry', async ({ page }) => {
+test('Original mobile zoom preserves reading and selection geometry @pdf', async ({ page }) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'mobile-zoom.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });
   await page.locator('.pdf-mode-switch').getByRole('button', { name: /Original|Trang gốc/ }).click();

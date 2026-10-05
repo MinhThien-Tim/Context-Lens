@@ -3,7 +3,7 @@ import { pdfFixture } from './pdfFixture';
 
 test.use({ deviceScaleFactor: 2 });
 
-test('Original PDF keeps the dominant page at display resolution', async ({ page }, info) => {
+test('Original PDF keeps the dominant page at display resolution @pdf', async ({ page }, info) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'resolution.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });
   await page.getByRole('button', { name: 'Original', exact: true }).first().click();

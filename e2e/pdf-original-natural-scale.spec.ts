@@ -3,7 +3,7 @@ import { pdfFixture } from './pdfFixture';
 
 test.use({ deviceScaleFactor: 2 });
 
-test('desktop natural scale, explicit zoom, canvas resolution and text geometry', async ({ page }) => {
+test('desktop natural scale, explicit zoom, canvas resolution and text geometry @pdf', async ({ page }) => {
   await page.setViewportSize({ width: 1728, height: 900 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'natural.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });

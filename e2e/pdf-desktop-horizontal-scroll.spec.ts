@@ -18,7 +18,7 @@ const settled = async (page: Page) => {
 };
 
 for (const width of [1024, 1366, 1920]) {
-  test(`desktop Original PDF reaches both horizontal edges after zoom @${width}`, async ({ page }) => {
+  test(`desktop Original PDF reaches both horizontal edges after zoom @${width} @pdf`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
     await page.locator('input[type=file]').setInputFiles({

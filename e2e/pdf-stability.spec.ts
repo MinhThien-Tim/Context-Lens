@@ -10,7 +10,7 @@ async function openPdf(page: Page, count = 64) {
   await expect(page.locator('.pdf-text-layer').first().locator('span').first()).toBeVisible();
 }
 
-test('blank and rotated pages keep their page number across both views', async ({ page }) => {
+test('blank and rotated pages keep their page number across both views @pdf', async ({ page }) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'mixed-pages.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3, 2, 3) });
   await page.getByRole('button', { name: 'Original', exact: true }).first().click();
@@ -70,7 +70,7 @@ async function selectAcrossSpans(page: Page) {
   await expect(page.getByRole('toolbar', { name: 'Selected text actions' })).toBeVisible();
 }
 
-test('native forward/reverse selection, Explain, Highlight restore, Note and Copy', async ({ page }, info) => {
+test('native forward/reverse selection, Explain, Highlight restore, Note and Copy @pdf', async ({ page }, info) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await openPdf(page, 3);
@@ -104,7 +104,7 @@ test('native forward/reverse selection, Explain, Highlight restore, Note and Cop
   expect(errors).toEqual([]);
 });
 
-test('50-page scroll has bounded canvases and no passive programmatic scrolls', async ({ page }, info) => {
+test('50-page scroll has bounded canvases and no passive programmatic scrolls @pdf', async ({ page }, info) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.addInitScript(() => {
     const metrics = { writes: 0, scrollCommands: 0, longTasks: 0, longTaskMs: 0 };

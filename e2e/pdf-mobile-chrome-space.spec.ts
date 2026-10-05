@@ -7,7 +7,7 @@ import { pdfFixture } from './pdfFixture';
 // approved Overlay (O) model where the header overlays the reading surface.
 // Its assertions are left intact on purpose: the replacement is the new
 // selector-independent contract in e2e/pdf-reader-chrome-a12.spec.ts.
-test.fixme('REWRITE (T0c): encodes the reserved-strip chrome model and fakes chrome via classList; superseded by pdf-reader-chrome-a12.spec.ts', async ({ page }) => {
+test.fixme('REWRITE (T0c): encodes the reserved-strip chrome model and fakes chrome via classList; superseded by pdf-reader-chrome-a12.spec.ts @pdf', async ({ page }) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'chrome.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });
   await page.locator('.pdf-mode-switch').getByRole('button', { name: /Original|Trang gốc/ }).click();

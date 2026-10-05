@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
 
-test('Original PDF default page matches native mobile DPR within the pixel budget', async ({ page }, info) => {
+test('Original PDF default page matches native mobile DPR within the pixel budget @pdf', async ({ page }, info) => {
   test.skip(info.project.name !== 'mobile-chromium');
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'native-dpr.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });

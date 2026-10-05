@@ -8,7 +8,7 @@ import { pdfFixture } from './pdfFixture';
 // Under the approved contract chrome responds to real scroll (and focus), never
 // to tap, so this step must be rebuilt on real input rather than repaired.
 // Its "Lookup still works while chrome is quiet" assertions remain valid.
-test.fixme('REWRITE (T0c): fakes quiet chrome via synthetic touchmove/scroll events; must be rebuilt on real input', async ({ page }) => {
+test.fixme('REWRITE (T0c): fakes quiet chrome via synthetic touchmove/scroll events; must be rebuilt on real input @pdf', async ({ page }) => {
   test.skip(!test.info().project.use.isMobile, 'Mobile touchscreen only');
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'click.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });

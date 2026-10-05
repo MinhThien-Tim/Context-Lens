@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
 test.use({ deviceScaleFactor: 2 });
 
-test('first desktop canvas uses real bounds and dominant DPR before zoom', async ({ page }) => {
+test('first desktop canvas uses real bounds and dominant DPR before zoom @pdf', async ({ page }) => {
   await page.setViewportSize({ width: 1728, height: 900 });
   await page.goto('/');
   await page.evaluate(() => {
