@@ -1,12 +1,21 @@
-﻿import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
+
+// §9.7 — document tools and OCR controls are ONE surface reached through More.
+// §9.3 (AMENDMENT 2026-10-05) — the More ITEM is `Document`; `Document tools` remains
+// only the dialog's accessible name. The old item label `Document tools` is retired.
+async function openDocumentTools(page: Page) {
+  await page.getByRole('button', { name: 'Reader menu' }).click();
+  await page.getByRole('menuitem', { name: 'Document', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: /Document tools|Công cụ/ })).toBeVisible();
+}
 
 // QUARANTINED (T0c, REWRITE): drives chrome with `classList.add('chrome-quiet')`
 // and asserts reserved-strip geometry that is false under the approved Overlay
 // model. Separately, its `/OCR.*6/` assertion at :46 is stale against the
 // 12-page OCR window shipped in 0230896 — that label migration is T0d scope and
 // is deliberately NOT fixed here.
-test.fixme('REWRITE (T0c): reserved-strip geometry + stale /OCR.*6/ label (T0d); superseded by pdf-reader-chrome-a12.spec.ts', async ({ page }) => {
+test.fixme('REWRITE (T0c): reserved-strip geometry + stale /OCR.*6/ label (T0d); superseded by pdf-reader-chrome-a12.spec.ts @pdf', async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto('/');
   await page.getByRole('button', { name: 'VN', exact: true }).click();
@@ -38,7 +47,8 @@ test.fixme('REWRITE (T0c): reserved-strip geometry + stale /OCR.*6/ label (T0d);
       for (const selector of ['.reader-header-leading', '.reader-header-actions']) {
         expect(await page.locator(selector).evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
       }
-      await expect(page.getByRole('button', { name: 'OCR next', exact: true })).toBeVisible();
+      // OCR Next is NOT in the Header — it lives only in Document tools (§12.11).
+      await expect(page.getByRole('button', { name: 'OCR next', exact: true })).toHaveCount(0);
     }
     if (width <= 767) {
       expect(layout.headerBottom).toBeLessThanOrEqual(88);
@@ -46,10 +56,9 @@ test.fixme('REWRITE (T0c): reserved-strip geometry + stale /OCR.*6/ label (T0d);
         expect((await page.locator(selector).boundingBox())!.y + (await page.locator(selector).boundingBox())!.height).toBeLessThanOrEqual(88);
       }
     }
-    await page.locator('.pdf-reading-options-toggle').click();
-    await expect(page.locator('.pdf-reading-options')).toBeVisible();
-    await expect(page.locator('.pdf-reading-options').getByRole('button', { name: /OCR.*6/ })).toBeVisible();
-    await page.locator('.pdf-reading-options').getByRole('button', { name: 'Close document tools', exact: true }).click();
+    await openDocumentTools(page);
+    await expect(page.getByRole('button', { name: /Find and OCR the remaining scanned pages/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Close document tools', exact: true }).click();
     await mode.getByRole('button', { name: 'Trang g' }).click();
     await expect(page.locator('.pdf-canvas').first()).toBeVisible();
     await page.screenshot({ path: `tmp/phase2/pdf-original-${width}.png` });
@@ -89,5 +98,6 @@ test.fixme('REWRITE (T0c): reserved-strip geometry + stale /OCR.*6/ label (T0d);
   await expect(page.locator('.pdf-mode-switch').getByRole('button', { name: 'Reading' })).toBeVisible();
   await page.setViewportSize({ width: 320, height: 850 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await expect(page.getByRole('button', { name: 'OCR next', exact: true })).toBeVisible();
+  // OCR Next is NOT in the Header — it lives only in Document tools (§12.11).
+  await expect(page.getByRole('button', { name: 'OCR next', exact: true })).toHaveCount(0);
 });
