@@ -1,7 +1,15 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { pdfScanFixture } from './pdfScanFixture';
 
-test('measures a fixed OCR raster with small print', async ({ page }) => {
+// §9.7 — document tools and OCR controls are ONE surface reached through More.
+// The menu item is labelled `Document` since the 2026-10-05 rename (mobile-chrome.md §6).
+async function openDocumentTools(page: Page) {
+  await page.getByRole('button', { name: 'Reader menu' }).click();
+  await page.getByRole('menuitem', { name: 'Document', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: /Document tools|Công cụ/ })).toBeVisible();
+}
+
+test('measures a fixed OCR raster with small print @pdf @heavy', async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto('/');
   const jpeg = await page.evaluate(() => {
@@ -14,8 +22,8 @@ test('measures a fixed OCR raster with small print', async ({ page }) => {
   const heapBefore = await page.evaluate(() => (performance as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ?? null);
   const started = Date.now();
   await page.locator('input[type=file]').setInputFiles({ name: 'raster.pdf', mimeType: 'application/pdf', buffer: pdfScanFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
-  await expect(page.locator('.pdf-queue-status')).toHaveCount(0, { timeout: 75_000 });
-  await page.locator('.pdf-reading-options-toggle').click();
+  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 75_000 });
+  await openDocumentTools(page);
   await expect(page.getByRole('menuitem', { name: 'Chữ OCR' })).toBeEnabled({ timeout: 75_000 });
   const durationMs = Date.now() - started;
   await page.getByRole('menuitem', { name: 'Chữ OCR' }).click();

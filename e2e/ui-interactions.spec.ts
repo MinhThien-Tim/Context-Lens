@@ -224,8 +224,9 @@ for (const width of [320, 360, 390, 430]) {
     await expect(page.getByRole('button', { name: 'Note', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Done', exact: true }).click();
     await page.getByRole('button', { name: 'Reader menu' }).click();
-    await expect(page.getByRole('menuitem', { name: 'Text and theme' })).toBeVisible();
-    await page.getByRole('menuitem', { name: 'Text and theme' }).click();
+    // mobile-chrome.md §6 — renamed 2026-10-05 from `Text and theme`.
+        await expect(page.getByRole('menuitem', { name: 'Text', exact: true })).toBeVisible();
+        await page.getByRole('menuitem', { name: 'Text', exact: true }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
@@ -277,7 +278,8 @@ for (const width of [1024, 1280, 1366, 1440, 1920, 390]) {
       await expect(page.locator('.notes-panel')).toBeVisible();
       await page.locator('.notes-panel').getByRole('button', { name: 'Close notes', exact: true }).click();
       if (width >= 1024) await expect(shell).toHaveClass(/has-contents/);
-      await moreAction('Text and theme');
+      // mobile-chrome.md §6 — renamed 2026-10-05 from `Text and theme`.
+      await moreAction('Text');
       await page.getByRole('dialog', { name: 'Reader settings' }).getByRole('button', { name: mode === 'Simple' ? 'Advanced' : 'Simple', exact: true }).click();
       await expect(shell).toHaveAttribute('data-interface-mode', mode === 'Simple' ? 'advanced' : 'simple');
       await page.getByRole('button', { name: 'Close reader settings', exact: true }).click();

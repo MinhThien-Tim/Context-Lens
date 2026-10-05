@@ -131,7 +131,11 @@ test('reader presets and manual typography controls fit one phone viewport', asy
   await page.getByRole('button', { name: /Preview & read/ }).click();
   const reader = page.locator('.reader-text');
   await expect(reader).toBeVisible();
-  await page.getByRole('button', { name: 'Reading appearance', exact: true }).click();
+  // mobile-chrome.md §6 + reader-behavior-contract §7.2: at 390px the Header owns only Back,
+  // title and PDF mode, so reader settings is reached through More -> `Text` (renamed
+  // 2026-10-05 from `Text and theme`; the old `Reading appearance` Header button no longer exists).
+  await page.getByRole('button', { name: 'Reader menu', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Text', exact: true }).click();
   const settings = page.getByRole('dialog', { name: 'Reader settings' });
   await settings.getByRole('button', { name: 'News', exact: true }).click();
   await expect(reader).toHaveCSS('font-size', '18px');
@@ -200,8 +204,12 @@ test('switching density in reader preserves reading position', async ({ page }) 
   for (const mode of ['Advanced', 'Simple']) {
     const before = await page.evaluate(() => scrollY);
     const position = await page.locator('.reader-progress').innerText();
-    await page.getByRole('button', { name: 'Reading appearance', exact: true }).click();
-    await page.getByRole('dialog', { name: 'Reader settings' }).getByRole('button', { name: mode, exact: true }).click();
+    // mobile-chrome.md §6 + reader-behavior-contract §7.2: at 390px the Header owns only Back,
+        // title and PDF mode, so reader settings is reached through More -> `Text` (renamed
+        // 2026-10-05 from `Text and theme`; the old `Reading appearance` Header button no longer exists).
+        await page.getByRole('button', { name: 'Reader menu', exact: true }).click();
+        await page.getByRole('menuitem', { name: 'Text', exact: true }).click();
+        await page.getByRole('dialog', { name: 'Reader settings' }).getByRole('button', { name: mode, exact: true }).click();
     await page.getByRole('button', { name: 'Close reader settings', exact: true }).click();
     expect(Math.abs(await page.evaluate(() => scrollY) - before)).toBeLessThan(2);
     await expect(page.locator('.reader-progress')).toHaveText(position);

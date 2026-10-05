@@ -3,9 +3,11 @@ import { test, expect, type Page } from '@playwright/test';
 // §9.7 — document tools and OCR controls are ONE surface reached through More. The old
 // `.pdf-reading-options-toggle` no longer has a renderer (removed in 34f4ca1/75497f9); opening
 // Document tools is the canonical entry, exactly as mobile-chrome.spec.ts asserts.
+// The menu item is labelled `Document` since the 2026-10-05 rename (mobile-chrome.md §6);
+// `Document tools` is still the dialog's accessible name.
 async function openDocumentTools(page: Page) {
   await page.getByRole('button', { name: 'Reader menu' }).click();
-  await page.getByRole('menuitem', { name: 'Document tools', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Document', exact: true }).click();
   await expect(page.getByRole('dialog', { name: /Document tools|Công cụ/ })).toBeVisible();
 }
 
@@ -28,7 +30,7 @@ async function readOcr(page: Page) {
 import { pdfScanFixture } from './pdfScanFixture';
 import { pdfMixedFixture } from './pdfMixedFixture';
 
-test('lets a reader choose PDF or OCR text on a page with a text layer', async ({ page }) => {
+test('lets a reader choose PDF or OCR text on a page with a text layer @pdf @heavy', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/');
   const jpeg = await page.evaluate(() => {
@@ -56,7 +58,7 @@ test('lets a reader choose PDF or OCR text on a page with a text layer', async (
     expect(layout.footerTop).toBeGreaterThan(layout.headerBottom);
     expect(layout.pageHeight).toBeGreaterThan(0);
     await expect(page.locator('.pdf-toolbar')).toHaveCount(0);
-  await expect(page.locator('.pdf-queue-status')).toHaveCount(0, { timeout: 90_000 });
+  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
   await beginOcr(page);
   await readOcr(page);
   await expect(page.locator('[data-ocr-page="1"]')).toHaveCount(1);
@@ -70,7 +72,7 @@ test('lets a reader choose PDF or OCR text on a page with a text layer', async (
   await expect(page.locator('[data-ocr-page="1"]')).toHaveCount(1);
 });
 
-test('keeps extracted and scanned pages separate across modes and reopening', async ({ page }) => {
+test('keeps extracted and scanned pages separate across modes and reopening @pdf @heavy', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/');
   const jpeg = await page.evaluate(() => {
@@ -84,10 +86,10 @@ test('keeps extracted and scanned pages separate across modes and reopening', as
   await page.locator('input[type=file]').setInputFiles({ name: 'mixed-ocr.pdf', mimeType: 'application/pdf', buffer: pdfMixedFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
   await page.getByRole('button', { name: 'Original', exact: true }).click();
   await expect(page.getByLabel('Current PDF page')).toContainText('1 / 2');
-  await expect(page.locator('.pdf-queue-status')).toHaveCount(0, { timeout: 90_000 });
+  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
   await openDocumentTools(page);
-    await expect(page.getByRole('button', { name: 'OCR next' })).toBeVisible();
-    await page.getByRole('button', { name: 'Close document tools', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'OCR next' })).toBeVisible();
+  await page.getByRole('button', { name: 'Close document tools', exact: true }).click();
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByLabel('Current PDF page')).toContainText('2 / 2');
   await page.getByRole('button', { name: 'Reading', exact: true }).click();
@@ -124,7 +126,7 @@ test('keeps extracted and scanned pages separate across modes and reopening', as
   await expect(page.locator('.pdf-canvas').last()).toBeVisible();
 });
 
-test('loads Vietnamese language data only after selecting bilingual OCR', async ({ page }) => {
+test('loads Vietnamese language data only after selecting bilingual OCR @pdf @heavy', async ({ page }) => {
   test.setTimeout(240_000);
   const transfers: Array<{ url: string; bytes: number }> = [];
   page.on('requestfinished', request => {
@@ -142,7 +144,7 @@ test('loads Vietnamese language data only after selecting bilingual OCR', async 
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'bilingual.pdf', mimeType: 'application/pdf', buffer: pdfScanFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
   await page.getByRole('button', { name: 'Original', exact: true }).click();
-  await expect(page.locator('.pdf-queue-status')).toHaveCount(0, { timeout: 90_000 });
+  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
   // Preloading is asynchronous, so poll the transfer log instead of sampling it once.
   await expect.poll(() => transfers.some(item => item.url.includes('/eng.traineddata.gz')), { timeout: 90_000 }).toBe(true);
   expect(transfers.some(item => item.url.includes('/vie.traineddata.gz'))).toBe(false);
@@ -162,7 +164,7 @@ test('loads Vietnamese language data only after selecting bilingual OCR', async 
   await expect(page.locator('.pdf-ocr-text')).toContainText('English');
 });
 
-test('recognizes one scanned page, reads and looks up its text, then reuses the saved result', async ({ page }) => {
+test('recognizes one scanned page, reads and looks up its text, then reuses the saved result @pdf @heavy', async ({ page }) => {
   test.setTimeout(240_000);
   const transfers: Array<{ url: string; bytes: number }> = [];
   page.on('requestfinished', request => {
@@ -182,7 +184,7 @@ test('recognizes one scanned page, reads and looks up its text, then reuses the 
   await expect(page.getByRole('button', { name: 'Original', exact: true }).first()).toBeVisible();
   const heapBefore = await page.evaluate(() => (performance as any).memory?.usedJSHeapSize ?? null);
   const ocrStart = Date.now();
-  await expect(page.locator('.pdf-queue-status')).toHaveCount(0, { timeout: 90_000 });
+  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
   await page.getByRole('button', { name: 'Reading', exact: true }).click();
   const ocrMs = Date.now() - ocrStart;
   const heapAfter = await page.evaluate(() => (performance as any).memory?.usedJSHeapSize ?? null);
@@ -223,7 +225,7 @@ test('recognizes one scanned page, reads and looks up its text, then reuses the 
   })).toBe(0);
 });
 
-test('cancels OCR and can retry the same scanned page', async ({ page }) => {
+test('cancels OCR and can retry the same scanned page @pdf @heavy', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/');
   const jpeg = await page.evaluate(() => {
@@ -246,7 +248,7 @@ test('cancels OCR and can retry the same scanned page', async ({ page }) => {
   await beginOcr(page);
 });
 
-test('keeps a blurred two-column scan available beside its recognized text', async ({ page }) => {
+test('keeps a blurred two-column scan available beside its recognized text @pdf @heavy', async ({ page }) => {
   test.setTimeout(240_000);
   await page.goto('/');
   const jpeg = await page.evaluate(() => {
@@ -260,7 +262,7 @@ test('keeps a blurred two-column scan available beside its recognized text', asy
     return canvas.toDataURL('image/jpeg', .78).split(',')[1];
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'blurred-columns.pdf', mimeType: 'application/pdf', buffer: pdfScanFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
-  await expect(page.locator('.pdf-queue-status')).toHaveCount(0, { timeout: 90_000 });
+  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
   await readOcr(page);
   const recognized = await page.locator('.pdf-ocr-text').textContent();
   expect(recognized).toContain('COLUMN');
