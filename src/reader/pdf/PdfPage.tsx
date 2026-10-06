@@ -356,13 +356,12 @@ export function PdfPage({ pdf, pageNumber, scale, active, renderPixels = MAX_CAN
     <div ref={annotationRef} class="pdf-annotation-layer" />
     <div ref={overlayRef} class="context-overlay" aria-hidden="true" />
     {pending && createPortal(<div class="selection-actions pdf-original-actions" role="toolbar" aria-label="Selected text actions" onPointerDown={event => event.preventDefault()}>
-      <button class="selection-lookup" onClick={() => onLookup(pending)}>Define</button>
-      {onHighlight && activeMarkupTool !== 'eraser' && <button class="selection-markup" onClick={() => applyMarkup(pending, activeMarkupTool ?? 'highlight')}>{activeMarkupTool === 'underline' ? 'Underline' : 'Highlight'}</button>}
-      {activeMarkupTool === 'eraser' && onErase && <button class="selection-markup" onClick={() => applyMarkup(pending, 'eraser')}>Erase</button>}
-      {onAddNote && <button onClick={() => onAddNote(pending)}>Note</button>}
-      <details class="selection-more"><summary>More</summary><button onClick={() => void navigator.clipboard?.writeText(pending.text)}>Copy</button></details>
-      <button aria-label="Close selection actions" onClick={() => { setPending(null); window.getSelection()?.removeAllRanges(); }}>?</button>
-    </div>, document.body)}
+          <button class="selection-lookup" onClick={() => onLookup(pending)}>Define</button>
+          {onHighlight && activeMarkupTool !== 'eraser' && <button class="selection-markup" onClick={() => applyMarkup(pending, activeMarkupTool ?? 'highlight')}>{activeMarkupTool === 'underline' ? 'Underline' : 'Highlight'}</button>}
+          {activeMarkupTool === 'eraser' && onErase && <button class="selection-markup" onClick={() => applyMarkup(pending, 'eraser')}>Erase</button>}
+          {onAddNote && <button onClick={() => onAddNote(pending)}>Note</button>}
+          <button aria-label="Close selection actions" onClick={() => { setPending(null); window.getSelection()?.removeAllRanges(); }}>?</button>
+        </div>, document.body)}
   </section>;
 }
 

@@ -180,7 +180,8 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 - On desktop, double-clicking a single word in the Original text layer keeps native selection
   and opens Quick through the same indexed lookup handler. Phrase and drag selections keep
   the action bar for Define, Highlight and Note when no markup tool is active. With Highlight,
-  Pen or Eraser active, completing a text selection applies that tool immediately.
+  Pen or Eraser active, completing a text selection applies that tool immediately. The action
+  bar exposes exactly Define, Highlight, Note and Close — no Copy, no More disclosure.
 - Reading Mode: `readingSelectionAdapter.ts` maps rendered blocks back to `documentRecord.content`;
   a 160 ms `selectionchange` debounce produces the selection, and the click that follows a
   selection is ignored once (`ignoreClick`). Define consumes that selection and clears its native

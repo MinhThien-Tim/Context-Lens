@@ -79,15 +79,14 @@ Mobile presentation gaps belong to the MobileChrome phase.
 | Lookup result | Quick popup; explicit Full opens Context Inspector | Quick bottom sheet; Full expands the same sheet |
 | Notes | Side panel | Full-height panel (`NotesPanel`) |
 | Toolbar | Back, bounded document title and Original–Reading in the Header band; page/location, progress, percentage, direct PDF zoom stepper, OCR status and the single **More** disclosure in the Footer band. Every secondary action (Contents, Context, Notes, Markup, Text, Languages, Document, Click lookup) is reached once through **More**, presented as a popover ≥1024 px. See [desktop-reader.md](desktop-reader.md) | Back/title/Original–Reading in the overlay Header; every secondary action is reached once through the Footer **More** disclosure, presented as a bottom sheet ≤1023 px and a popover ≥1024 px |
-| Contents / Go to | Keyboard `T` and `G` (guarded by `keyboardCanNavigate`) | Visible Contents button / bottom location button |
+| Contents / Go to | Keyboard `T` and `G` (guarded by `keyboardCanNavigate`); tapping a Contents entry navigates | Visible Contents button / bottom location button (page indicator opens Go to location) |
 | PDF paging | Bottom `PageNavigation` and guarded arrow keys | Bottom touch navigation / Go to page |
 
 
 Simple starts with both panels closed and diagnostics hidden. Advanced desktop opens Document by
 default; Context opens on an explicit toggle or Full expansion. A Simple/Advanced change resets panel
 visibility but preserves document location. Location restoration runs only on document changes;
-renderer/breakpoint changes reuse the current location rather than the initial record position. Document provides Contents and, for PDF, Pages; Go to
-location and existing Notes remain accessible. No search engine or new highlight browser is added.
+renderer/breakpoint changes reuse the current location rather than the initial record position. Document provides Contents and, for PDF, Pages; Go to location is reached from the page indicator; existing Notes remain accessible. No search engine or new highlight browser is added.
 Desktop columns use bounded responsive token widths and leave the reader more than half the screen
 with both open at supported desktop widths. No resize handles or width animation are introduced.
 Mobile opens one panel at a time with the existing focus trap and Escape behavior.
@@ -149,8 +148,7 @@ Mobile Quick grows with content up to 72dvh; Full uses 88dvh with safe-area padd
 scrolling body and the existing `useDialog` focus trap. Expansion does not touch document location.
 Browser page zoom moves and scales the visual viewport. The mobile lookup sheet follows its visible
 offset and dimensions while compensating for page scale; PDF control zoom affects only page rendering.
-Selection actions use Define, Highlight and Note first; existing copy/color and translation
-capabilities remain available. `useDialog` (`src/components/useDialog.ts`) owns Escape and focus
+Selection actions expose exactly Define, Highlight, Note and Close — no Copy, no More disclosure. `useDialog` (`src/components/useDialog.ts`) owns Escape and focus
 restoration; only mobile surfaces trap focus. Focus traps include disclosure summaries and exclude
 controls inside closed disclosures.
 
