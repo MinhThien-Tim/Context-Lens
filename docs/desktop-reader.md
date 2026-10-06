@@ -130,6 +130,11 @@ Zoom stepping is owned by `PdfViewer`'s `stepZoom` (via `stepDesktopPdfScale`) a
 the Header selector only requests a step and reports the resulting scale. No component multiplies
 the stored custom scale by a factor of its own.
 
+**Step symmetry (2026-10-05, owner decision).** `stepDesktopPdfScale` snaps to
+`fitWidthScale * 1.25` only on the **first** step out of an automatic mode (`natural`,
+`fit-width`, `fit-page`). Once the scale is `custom`, every step is the fixed symmetric factor
+`fitWidthScale * .25`, so stepping out and back in returns to the scale it started from.
+
 ## 4. CSS ownership
 
 Desktop presentation lives in [`src/styles.desktop-reader.css`](../src/styles.desktop-reader.css), guarded by `@media (min-width: 1024px)`. Dead rules for markup that no longer renders — `.reader-primary-tools`, `.reader-header-position`, `.toolbar-button`, `.pdf-toolbar`, `.pdf-zoom-presets`, `.pdf-more-menu`, `.pdf-footer-zoom-host` — are deleted rather than left inert. The shared [`src/reader-layout.css`](../src/reader-layout.css) keeps only band-neutral rules. The `.pdf-toolbar` hide rule in [`src/styles.mobile-reader.css`](../src/styles.mobile-reader.css) goes with the element.
