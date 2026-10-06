@@ -19,18 +19,31 @@ VERIFICATION HINT
 OPEN QUESTIONS / RISKS (omit when none)
 
 ## Planner handoff
-TASK
-FINDINGS
+GOAL
+CURRENT CONTRACT
 SCOPE
-RELEVANT FILES
-PRESERVE / INVARIANTS
-OUT OF SCOPE
-IMPLEMENTATION DIRECTION
-CHANGE CLASS / RISK
+DEPENDENCIES
+IMPLEMENTATION
 VERIFICATION
-ACCEPTANCE CRITERIA
-DOC IMPACT
-OPEN QUESTIONS / RISKS (omit when none)
+REPORT
+
+## Phase report
+GOAL
+CURRENT CONTRACT
+SCOPE
+DEPENDENCIES
+IMPLEMENTATION
+VERIFICATION
+REPORT
+
+## Cleanup report
+GOAL
+CURRENT CONTRACT
+SCOPE
+DEPENDENCIES
+IMPLEMENTATION
+VERIFICATION
+REPORT
 
 Keep either form to facts and references needed by the next fresh role context. Do not include
 conversation history, reasoning logs, full terminal output, or code already available in the repo.

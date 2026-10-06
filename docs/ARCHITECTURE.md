@@ -133,6 +133,8 @@ Verified against current code. Preserve these when modifying.
 11. **No silent reload on update.** The PWA uses `registerType: 'prompt'`; `src/main.tsx` only signals
     `context-lens:update-ready`, and the app reloads through its explicit Reload control via `applyUpdate(true)`.
 
+See [Change propagation](docs/change-dependencies.md) for the rule that governs how edits affect dependent layers.
+
 ## Task routing
 
 Default path: `AGENTS.md` → this file → **one** row below → the source files that doc names. Read more than one
