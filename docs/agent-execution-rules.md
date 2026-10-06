@@ -28,6 +28,9 @@ INVARIANTS AT RISK (ARCHITECTURE.md; COST & QUOTA GUARDRAILS.md) · CHANGE CLASS
   config change.
 - Do not delete or rename files, components, exports, tests or docs unless the task says so; show `rg` proof of
   no remaining users first.
+- A doc describes only what **main actually contains**. Every file, script, config key and command a doc names
+  must exist on `main`, and a missing one is either created or removed from the doc — in the same task. A doc
+  pointing at a file that was never committed, or renamed away, is worse than no doc.
 - Frozen contracts are never edited to match code. Contract changes need owner approval first.
 - Do not call a defect "pre-existing" or "deferred" without `git log -S` / `git show` evidence.
 - Update the domain doc in the same task only when architecture, ownership, boundaries, control/data flow,
@@ -81,6 +84,22 @@ the string from memory.
 
 When you notice you repeated a call: stop, do not re-send, continue from existing results. Do not narrate the
 correction at length.
+
+### Zero-result evidence
+
+A zero-result search (`rg`, `git log -S`, `git log --diff-filter=A`) is **not** the claim "does not exist". A
+pattern, a path filter and a revision range each hide matches silently. Before a zero result is used as
+evidence, confirm it with a **second, independent method**:
+
+| Question | Method A | Method B |
+| --- | --- | --- |
+| Does this symbol/file exist? | `rg` over the repo | `git ls-files`, or `git log --all --diff-filter=A -- <path>` |
+| Which commit changed this? | `git log -S'<token>'` | `git log --all -G'<regex>' -- <path>` |
+
+Then state only what the two results together prove: *"no match under `rg` (repo) or `git log --all -G`"*, not
+*"the file does not exist"*. A second method that agrees on a zero result still proves only that the union of
+both searches found nothing. Incidents: `git add --renormalize --dry-run` (stages, does not dry-run),
+`git show … | Out-String` (inserts CRLF on Windows, reporting bare-LF blobs as CRLF).
 
 ### Search and output overflow
 
@@ -154,10 +173,18 @@ already covered by Vitest.
 - A test may be deleted only if the behavior is intentionally retired (cite spec) or a replacement lands in the
   same commit.
 - Build the condition explicitly (e.g. a wide-page PDF fixture); never rely on viewport, fixture size or timing.
+- An e2e helper **throws** when an element is absent; it never returns `null` or an empty locator. A helper that
+  swallows the miss converts a clear `element(s) not found` into a later assertion on a different surface.
+- Classify a missing element by **band before anything else**: measure `closest('header')` / `closest('footer')` of
+  the target (or the container the band owns) first. The same control is Header-owned at `>=1024px` and
+  Footer-owned in the mobile band, so an unlocated element is a band-routing fact, not a missing control.
 - Measure in the state claimed (100% before 150%). No `waitForTimeout`; poll a real condition (`expect.poll`).
 - One test per viewport, no `for` loop over viewports. Name tests with the contract section (`§9.2: ...`).
 - Tests are in `tsconfig`; prop and type changes break `tsc`.
 - Tests never reach the network: stub `fetch`, use `fake-indexeddb` via `src/test/setup.ts`.
+- A fix is verified **at the tier that detected the bug**: a browser bug in a `@pdf`/`@heavy` spec is re-run as
+  that spec, not as the Vitest suite that cannot exercise it. Verifying a browser fix with a pass that never
+  loads the surface proves nothing.
 
 **Contract sync.** Behavior change order: spec → code → tests → docs, as separate commits that each typecheck.
 UI labels, roles, aria-names and selectors that tests use are contract; change them with their tests in the same
@@ -173,6 +200,11 @@ node in the DOM, re-check CSS scoped to its old ancestor. One owner per control 
   `git restore` on files you did not edit, `git stash drop`, force push, rewriting pushed history, amending
   pushed commits, `taskkill /IM node.exe`.
 - Probe/debug files go in `.tmp/` or `test-results/` (gitignored), never the repo root; delete them at task end.
+- **Compare against another revision with a worktree**, never `git stash`: stash mutates the one working tree
+  the task depends on and loses untracked or ignored files. `git worktree add --detach <dir> <rev>` reads a past
+  revision without touching the current tree; junction `node_modules` from the main checkout to avoid a reinstall.
+  Prune with `git worktree list` + `git worktree prune`; a registered entry whose directory is gone still lists
+  and `git worktree remove` reports "is not a working tree" until `.git/worktrees/<name>` is deleted.
 - Never leave a half-applied change: finish the step, or revert exactly your own edits and say so.
 - **Commits:** one logical change per commit; never mix product code, CSS, tests, docs/spec, `.gitignore`.
   Commit as soon as the task is accepted and its verification is green. Order: spec → code → tests.
@@ -278,6 +310,11 @@ coverage**, **unrelated regression**.
 - Claiming a commit caused a regression → paste the offending diff hunk.
 - Product or contract decisions are escalated with options and a recommendation; never guessed. Record the
   answer in the spec before coding. If a fix is blocked on a decision, finish everything else, then report it.
+- **Register IDs are immutable.** Once an ID (`C7`, `§9.2`, `ADR-3`) is issued it is never reused, renumbered or
+  recycled for a different item, even in a later task document. IDs are also not unique across documents:
+  `C19` exists only in `docs/tasks/cleanup-fast-finish-task.md`, while a different document reuses `C1x`–`C3x`
+  for an unrelated taxonomy. Always resolve an ID against its source document before acting on it.
+- An item left **OPEN** in a register must appear in the handoff's next-steps list with its ID, or it is lost.
 
 ## 10. Code changes on evidence
 
@@ -320,6 +357,12 @@ Do not ask a follow-up agent to rescan the repository; point at the files listed
 ## 13. Windows / PowerShell
 
 - Use `rg` and `git --no-pager`. Search ASCII identifiers, not Vietnamese strings.
+- Never write a repo file with `Get-Content | Set-Content` (or `>`/`Out-File`): it rewrites line endings, drops
+  the final newline and can inject a BOM. Edit through the editor, or read raw bytes to measure.
+- Never wrap `git commit` in `if ($?)`. `$?` reflects the *previous* command, so a preceding `Write-Host` or
+  pipeline sets it false and silently skips the commit. Gate on the command that matters, or just run it.
+- `Tee-Object` writes UTF-16 and `Out-File -Encoding utf8` injects a BOM. For anything a tool parses
+  (`git commit -F`, a patch, a diff), use `-Encoding ascii` or `| Out-Null`.
 - Read non-ASCII files with the file viewer, not `cat` through the shell.
 - Quote paths, use `-LiteralPath`; do not rely on `**` globbing, use `rg --glob`.
 - Use native PowerShell (`Get-ChildItem`, not `dir`).
