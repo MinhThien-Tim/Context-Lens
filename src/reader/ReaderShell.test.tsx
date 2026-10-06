@@ -110,7 +110,7 @@ it.each([[1024, false], [390, true]])('keeps controls visible on desktop or whil
 it('closes the focused Context panel on Escape while keeping Document open', () => {
   mount(1024);
   const closeDocument = vi.fn(), closeContext = vi.fn();
-  act(() => render(<><ContentsPanel sections={[]} offset={0} onClose={closeDocument} onJump={vi.fn()} onGoTo={vi.fn()} onNotes={vi.fn()} /><ContextPanel onClose={closeContext} onNote={vi.fn()} /></>, host));
+  act(() => render(<><ContentsPanel sections={[]} offset={0} onClose={closeDocument} onJump={vi.fn()} onNotes={vi.fn()} /><ContextPanel onClose={closeContext} onNote={vi.fn()} /></>, host));
   act(() => { (host.querySelector('.context-panel button') as HTMLButtonElement).focus(); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); });
   expect(closeContext).toHaveBeenCalledOnce();
   expect(closeDocument).not.toHaveBeenCalled();

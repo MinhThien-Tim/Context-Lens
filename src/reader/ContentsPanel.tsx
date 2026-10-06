@@ -3,9 +3,9 @@ import type { DocumentSection } from '../documents/sections';
 import { useDesktop } from '../components/useDesktop';
 import { useDialog } from '../components/useDialog';
 
-export function ContentsPanel({ sections, offset, onJump, onClose, pageCount, page, onPage, onGoTo, onNotes }: {
+export function ContentsPanel({ sections, offset, onJump, onClose, pageCount, page, onPage, onNotes }: {
   sections: DocumentSection[]; offset: number; onJump: (offset: number) => void; onClose: () => void;
-  pageCount?: number; page?: number; onPage?: (page: number) => void; onGoTo: () => void; onNotes: () => void;
+  pageCount?: number; page?: number; onPage?: (page: number) => void; onNotes: () => void;
 }) {
   const desktop = useDesktop();
   const ref = useDialog(onClose, true, !desktop);
@@ -24,7 +24,7 @@ export function ContentsPanel({ sections, offset, onJump, onClose, pageCount, pa
         {destination === 'pages' && pageCount ? <nav aria-label="Document pages">{Array.from({ length: pageCount }, (_, index) => index + 1).map(number => <button key={number} class="contents-item" aria-current={number === page ? 'page' : undefined} onClick={() => navigate(() => onPage?.(number))}>Page {number}</button>)}</nav>
           : !sections.length ? <p class="section-empty">No table of contents found</p> : <nav aria-label="Document contents">{sections.map(item => <button key={item.id} class="contents-item" style={{ paddingLeft: `${12 + Math.min(6, item.level - 1) * 14}px` }} aria-current={item.id === current ? 'location' : undefined} disabled={item.offset === undefined} onClick={() => { if (item.offset !== undefined) navigate(() => onJump(item.offset!)); }}><span>{item.title}</span>{(item.page ?? item.chapter) && <small>{item.page ? `p. ${item.pageLabel ?? item.page}` : `ch. ${item.chapter}`}</small>}</button>)}</nav>}
       </div>
-      <div class="document-panel-actions"><button class="text-button" onClick={() => navigate(onGoTo)}>Go to location</button><button class="text-button" onClick={onNotes}>Notes</button></div>
+      <div class="document-panel-actions"><button class="text-button" onClick={onNotes}>Notes</button></div>
     </section>
   </>;
 }
