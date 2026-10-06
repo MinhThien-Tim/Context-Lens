@@ -26,7 +26,11 @@ test('OCRs only inked poor pages in bounded slices and clears their cache @pdf @
     return { blank, ink: canvas.toDataURL('image/jpeg', .9).split(',')[1] };
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'queue.pdf', mimeType: 'application/pdf', buffer: pdfQueueFixture(Buffer.from(images.ink, 'base64'), 1224, 1584, Buffer.from(images.blank, 'base64')) });
-  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toBeVisible();
+  // Import of the 13-page fixture must finish before the reader can start the preload; the
+  // progressbar measured ~3.5s after setInputFiles (laptop, 2026-10-06), so the 5s default
+  // expect.timeout left almost no headroom and expired mid-import. Matches the 30_000 already
+  // used by the slice assertion below; no global timeout, worker or retry setting is changed.
+  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toBeVisible({ timeout: 30_000 });
   // Use the Footer OCR progressbar (canonical active OCR status surface) instead of broad getByRole('status')
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toContainText(/\/3/, { timeout: 30_000 });
   // Pause/Continue buttons are in Document Tools dialog; open it first
