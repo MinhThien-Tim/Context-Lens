@@ -79,7 +79,7 @@ test('native forward/reverse selection, Explain, Highlight restore, Note and Cop
     await page.getByRole('button', { name: 'Close selection actions' }).click();
   }
   await selectPhrase(page);
-  await page.getByRole('button', { name: 'Highlight', exact: true }).click();
+    await page.getByRole('toolbar', { name: 'Selected text actions' }).getByRole('button', { name: 'Highlight', exact: true }).click();
   await expect(page.locator('.pdf-saved-highlight').first()).toBeVisible();
   await selectPhrase(page);
   await page.getByRole('button', { name: 'Explain', exact: true }).click();
