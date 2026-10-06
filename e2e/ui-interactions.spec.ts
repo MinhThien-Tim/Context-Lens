@@ -127,8 +127,8 @@ for (const width of [1366, 320, 360, 390, 430]) {
     await expect(sheet.getByRole('button', { name: 'Show more', exact: true })).toBeVisible();
     await expect(sheet).toHaveClass(/quick/);
     await expect(sheet.getByRole('button', { name: 'Pronounce word' })).toBeVisible();
-    await expect(sheet.locator('.inspector-pronunciation .language-cycle')).toContainText('EN+VI');
-    await expect(sheet.locator('.inspector-pronunciation .language-cycle span')).toHaveText('↻');
+    await expect(sheet.locator('.inspector-lookup-tools .language-cycle')).toContainText('EN+VI');
+    await expect(sheet.locator('.inspector-lookup-tools .language-cycle span')).toHaveText('↻');
     await expect(sheet.locator('.inspector-header-actions [aria-label="Add note"]')).toHaveText('Note');
     const position = await page.evaluate(() => scrollY);
     await sheet.getByRole('button', { name: 'Save word', exact: true }).click();
