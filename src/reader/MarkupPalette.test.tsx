@@ -11,7 +11,8 @@ it('keeps tool and color selection independent until the palette is closed', () 
   act(() => document.querySelector<HTMLButtonElement>('[aria-label="Use pink"]')!.click());
   expect(onColorChange).toHaveBeenCalledWith('pink');
   expect(onToolChange).toHaveBeenCalledWith('highlight');
-  act(() => Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Pen')!.click());
+  // docs/desktop-reader.md §2.1: the tool that sets `underline` is named Underline, not Pen.
+  act(() => Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Underline')!.click());
   expect(onToolChange).toHaveBeenCalledWith('underline');
   act(() => Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Done')!.click());
   expect(onClose).toHaveBeenCalledOnce();

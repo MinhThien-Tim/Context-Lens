@@ -87,3 +87,34 @@ test('§3.1: each fixed selector choice sets the actual scale, and a stepped-to 
   await expect(level.locator('option')).toHaveCount(5);
   expect(await level.inputValue()).toBe('150');
 });
+
+  // docs/desktop-reader.md §2.1: the desktop Markup group keeps direct access to Highlight,
+  // Underline and Erase with pressed state. §6.1 names the required coverage.
+  test('§2.1: the Header Underline tool presses on click and underlines PDF text at 1280px @pdf', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await openOriginalPdf(page, 'underline-1280.pdf');
+
+    const markupTools = page.getByRole('group', { name: 'Markup tools' });
+    const underline = markupTools.getByRole('button', { name: 'Underline', exact: true });
+
+    await expect(underline).toBeVisible();
+    await expect(underline).toHaveAttribute('aria-pressed', 'false');
+
+    await underline.click();
+    await expect(underline).toHaveAttribute('aria-pressed', 'true');
+    await expect(markupTools.getByRole('button', { name: 'Highlight', exact: true })).toHaveAttribute('aria-pressed', 'false');
+    await expect(markupTools.getByRole('button', { name: 'Erase', exact: true })).toHaveAttribute('aria-pressed', 'false');
+
+    // The pressed tool must do the work, not just report state: select text on the rendered page
+    // and the saved annotation carries the underline style.
+    const span = page.locator('.pdf-page-slot[data-pdf-page="1"] .pdf-text-layer span').filter({ hasText: 'The decision had surprised' }).first();
+    await expect(span).toBeVisible();
+    const box = await span.boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.move(box!.x + 1, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.width - 1, box!.y + box!.height / 2, { steps: 12 });
+    await page.mouse.up();
+
+    await expect(page.locator('.pdf-saved-highlight.underline').first()).toBeVisible();
+  });

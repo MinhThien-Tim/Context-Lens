@@ -4,6 +4,7 @@ import { createPortal } from 'preact/compat';
 import { useDesktop } from '../components/useDesktop';
 import { useDialog } from '../components/useDialog';
 import type { PdfZoomMode } from './pdf/navigation';
+import type { MarkupTool } from './MarkupPalette';
 
 /** docs/desktop-reader.md §3.1: the five fixed selector choices. */
 const FIXED_ZOOM_PERCENTS = [75, 100, 125, 150] as const;
@@ -54,8 +55,9 @@ export function HighlightIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5l4.5 4.5-7.5 7.5-4.5-4.5z"/><path d="M7.5 12L6 17.5 11.5 16"/><path d="M14 20.5h6"/></svg>;
 }
 
-export function PenIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4l4 4L8.5 19.5 4 20l.5-4.5z"/><path d="M13.5 6.5l4 4"/></svg>;
+/** docs/desktop-reader.md §2.1: renamed from `PenIcon`; the control sets the `underline` tool. */
+export function UnderlineIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v6a5 5 0 0 0 10 0V4"/><path d="M6 20h12"/><path d="M7 4h10"/></svg>;
 }
 
 export function EraseIcon() {
@@ -110,10 +112,11 @@ export function ReaderToolbar({
   onMarkup,
   onPrint,
   onHighlight,
-  onPen,
+    onUnderline,
   onErase,
   moreItems,
-  markupActive = false
+    markupActive = false,
+    activeMarkupTool = null
 }: { 
   title: string; 
   onBack: () => void; 
@@ -137,11 +140,13 @@ export function ReaderToolbar({
   onMarkup?: () => void;
   onPrint?: () => void;
   onHighlight?: () => void;
-  onPen?: () => void;
+    onUnderline?: () => void;
   onErase?: () => void;
   moreItems?: Array<{ label: string; onSelect: () => void; pressed?: boolean }>;
   markupActive?: boolean;
-}) {
+    /** docs/desktop-reader.md §2.1: pressed state per Markup tool (Highlight, Underline, Erase). */
+    activeMarkupTool?: MarkupTool | null;
+  }) {
   const desktop = useDesktop();
   // docs/desktop-reader.md §3.1: the displayed value is the actual rendering scale, which stepping
   // can move off the fixed list. One dynamic option carries it so the select never shows blank.
@@ -216,9 +221,9 @@ export function ReaderToolbar({
           
           {/* Markup tools group */}
           <div class="reader-markup-tools" role="group" aria-label="Markup tools">
-            <button class="icon-button" aria-label="Highlight" onClick={onHighlight}><HighlightIcon /></button>
-            <button class="icon-button" aria-label="Pen" onClick={onPen}><PenIcon /></button>
-            <button class="icon-button" aria-label="Erase" onClick={onErase}><EraseIcon /></button>
+            <button class="icon-button" aria-label="Highlight" aria-pressed={activeMarkupTool === 'highlight'} onClick={onHighlight}><HighlightIcon /></button>
+                        <button class="icon-button" aria-label="Underline" aria-pressed={activeMarkupTool === 'underline'} onClick={onUnderline}><UnderlineIcon /></button>
+                        <button class="icon-button" aria-label="Erase" aria-pressed={activeMarkupTool === 'eraser'} onClick={onErase}><EraseIcon /></button>
           </div>
                   </>
                 )}

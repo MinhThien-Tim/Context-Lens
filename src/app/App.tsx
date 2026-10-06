@@ -626,7 +626,7 @@ export function App() {
         const onMarkup = () => setHighlightToolsOpen(true);
         const onPrint = () => window.print();
         const onHighlight = () => setActiveMarkupTool('highlight');
-                const onPen = () => setActiveMarkupTool('underline');
+                const onUnderline = () => setActiveMarkupTool('underline');
                 const onErase = () => setActiveMarkupTool('eraser');
 
         // Contract §9.3 + mobile-chrome.md §6: exactly these eight items, in this order. `Document`
@@ -665,11 +665,12 @@ export function App() {
                   onMarkup={onMarkup}
                   onPrint={onPrint}
                   onHighlight={onHighlight}
-                  onPen={onPen}
+                  onUnderline={onUnderline}
                   onErase={onErase}
                   moreItems={readerMoreItems}
-                          markupActive={activeMarkupTool !== null}
-                        />
+                                    markupActive={activeMarkupTool !== null}
+                                    activeMarkupTool={activeMarkupTool}
+                                          />
       {highlightToolsOpen && <MarkupPalette onNote={() => { setHighlightToolsOpen(false); openNotes(null); }} tool={activeMarkupTool} color={activeMarkupColor} onToolChange={setActiveMarkupTool} onColorChange={setActiveMarkupColor} onClose={() => setHighlightToolsOpen(false)} />}
       {showReaderSettings && <ReaderSettings value={preferences} onChange={setPreferences} onClose={() => setShowReaderSettings(false)} />}
       {goToOpen && <GoToLocation document={documentRecord} onClose={() => setGoToOpen(false)} onJump={jump} onPage={jumpPdfPage} />}
