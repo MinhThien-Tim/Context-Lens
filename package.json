@@ -33,7 +33,9 @@
     "verify:storage": "npm run typecheck && vitest run src/db src/storage src/notes/store src/vocabulary",
     "verify:ui": "npm run check:css && npm run typecheck && vitest run src/components src/onboarding src/app src/notes/NotesPanel --exclude \"**/LookupBottomSheet*\" --exclude \"**/OfflineBadge*\" --exclude \"**/dictionaryDisplay*\" --exclude \"**/lookupPopupPlacement*\"",
     "verify:offline": "npm run typecheck && vitest run src/documents/offline src/components/OfflineBadge src/components/LookupBottomSheet.offline",
-    "verify:full": "npm run verify:contracts && npm run typecheck && vitest run && npm run build"
+    "verify:fast": "npm run verify:contracts && npm run check:css && npm run typecheck && vitest run",
+    "verify:full": "npm run verify:contracts && npm run typecheck && vitest run && npm run build",
+    "verify": "npm run verify:full"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",

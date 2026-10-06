@@ -144,7 +144,9 @@ changes, not the default, and the per-class defaults are not duplicated here.
 | Storage | `npm run verify:storage` | `src/db`, `src/storage`, `src/notes/store`, `src/vocabulary` |
 | UI | `npm run verify:ui` | `src/components`, `src/onboarding`, `src/app`, `src/notes/NotesPanel`, excluding lookup/offline components |
 | Offline | `npm run verify:offline` | `src/documents/offline`, `src/components/OfflineBadge`, `src/components/LookupBottomSheet.offline` |
+| Full suite, no build | `npm run verify:fast` | `verify:contracts` + `check:css` + `typecheck` + full `vitest run` |
 | Everything | `npm run verify:full` | `verify:contracts` + `typecheck` + full `vitest run` + `build` (bundle and precache checks) |
+| Everything (alias) | `npm run verify` | Alias for `npm run verify:full` |
 
 `npm run verify:contracts` checks PWA update/chunk exclusions, Worker route/default config,
 production-build budget hooks, and parity between `package.json` verify scripts and

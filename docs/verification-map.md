@@ -20,7 +20,9 @@ then choose the narrowest applicable command; full regression is escalation only
 | Storage | `npm run verify:storage` | Database, storage, notes store, vocabulary |
 | UI | `npm run verify:ui` | Components, onboarding, app, NotesPanel (script exclusions apply; runs `check:css` first) |
 | Offline | `npm run verify:offline` | Offline document and status surfaces |
-| Full regression | `npm run verify:full` | Contract checks, full Vitest suite, typecheck, and build |
+| Full regression | `npm run verify:fast` | Contract checks, CSS syntax, full Vitest suite, and typecheck; no production build |
+| Full regression (with build) | `npm run verify:full` | Contract checks, full Vitest suite, typecheck, and build |
+| Default alias | `npm run verify` | Alias for the with-build regression gate |
 
 ## Change classes
 
