@@ -114,6 +114,22 @@ The zoom selector exposes exactly these choices:
 
 Selecting an explicit percentage switches to custom scale mode and renders at that percentage. Selecting Automatic restores the automatic/fit behavior. The displayed value always represents the actual PDF rendering scale.
 
+The five entries above are the **fixed** choices and are always present. Because the displayed
+value is the actual rendering scale, stepping (`Zoom in` / `Zoom out`) can land on a scale that is
+none of the five — `stepDesktopPdfScale` moves in `fitWidthScale * .25` steps, not in 25-point
+increments. When that happens the selector must expose the current actual scale as **one additional
+dynamic option** so the select can display the real value instead of blanking or snapping. The
+dynamic option:
+
+- is rendered only while its value differs from all five fixed choices;
+- keeps the same numeric label as the fixed entries (`<actual>%`) so the displayed value stays the
+  actual scale, and is never a second "Automatic";
+- disappears again as soon as the scale returns to one of the five fixed choices.
+
+Zoom stepping is owned by `PdfViewer`'s `stepZoom` (via `stepDesktopPdfScale`) at every density;
+the Header selector only requests a step and reports the resulting scale. No component multiplies
+the stored custom scale by a factor of its own.
+
 ## 4. CSS ownership
 
 Desktop presentation lives in [`src/styles.desktop-reader.css`](../src/styles.desktop-reader.css), guarded by `@media (min-width: 1024px)`. Dead rules for markup that no longer renders — `.reader-primary-tools`, `.reader-header-position`, `.toolbar-button`, `.pdf-toolbar`, `.pdf-zoom-presets`, `.pdf-more-menu`, `.pdf-footer-zoom-host` — are deleted rather than left inert. The shared [`src/reader-layout.css`](../src/reader-layout.css) keeps only band-neutral rules. The `.pdf-toolbar` hide rule in [`src/styles.mobile-reader.css`](../src/styles.mobile-reader.css) goes with the element.
@@ -153,5 +169,5 @@ Behavioral tests assert semantics — accessible names, roles, ownership across 
 - Header: complete desktop toolbar exists; Highlight/Underline/Erase available with accessible names; no duplicate canonical action hosts; exactly one `Current PDF page`, `Previous page` and `Next page` at ≥1024px (§2.2), and exactly one of each inside the Footer at ≤1023px
 - Page navigation: at ≥1024px activating `Current PDF page` opens the `Go to location` dialog, entering a page number and confirming changes the current page (§2.2); the Footer at ≤1023px opens the same dialog
 - More: opens downward by default; remains visible; not clipped/covered; opening does not alter Reader document geometry; compact action labels present; secondary actions accessible
-- Zoom: selector exposes Automatic, 75%, 100%, 125%, 150%; selecting each explicit value changes actual PDF rendering scale; Automatic restores automatic behavior; current selection reflected in control; zoom does not change current page identity; rendered page geometry corresponds to selected scale
+- Zoom: selector exposes Automatic, 75%, 100%, 125%, 150%; selecting each explicit value changes actual PDF rendering scale; Automatic restores automatic behavior; current selection reflected in control; zoom does not change current page identity; rendered page geometry corresponds to selected scale; `Zoom in` increases the rendered slot width and `Zoom out` decreases it, and the displayed percentage equals `slotWidth / pageWidth`; a stepped-to non-fixed scale appears as exactly one additional dynamic option
 - Responsive desktop: behavioral checks at 1024px, 1280px, 1366px, 1440px, 1920px
