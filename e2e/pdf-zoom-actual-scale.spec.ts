@@ -41,11 +41,15 @@ test('§3.1: Header Zoom in increases and Zoom out decreases the rendered slot w
   await zoomOut.click();
   await expect.poll(async () => slotWidth(page)).toBeLessThan(afterIn);
 
-  // No round-trip assertion: `stepDesktopPdfScale` deliberately snaps upward to
-  // `fitWidthScale * 1.25` before it starts stepping, so up-then-down is not symmetric.
-  // Only the two directions §6.1 names are asserted, plus the displayed percentage.
+  // Round trip in `custom` is symmetric (docs/desktop-reader.md §3.1). The asymmetric snap only
+    // applies on the first step out of Automatic, so a single in-then-out pair must be measured there.
+    const automatic = await slotWidth(page);
+    await zoomIn.click();
+    await expect.poll(async () => slotWidth(page)).not.toBe(automatic);
+    await zoomOut.click();
+    await expect.poll(async () => slotWidth(page)).toBeCloseTo(automatic, 0);
 
-  // §6.1: the displayed percentage is the actual rendered scale, not the stored preference.
+    // §6.1: the displayed percentage is the actual rendered scale, not the stored preference.
   const displayed = Number((await level.inputValue()).replace('%', ''));
   const measured = (await slotWidth(page)) / FIXTURE_PAGE_WIDTH;
   expect(Math.round(measured * 100)).toBe(displayed);
