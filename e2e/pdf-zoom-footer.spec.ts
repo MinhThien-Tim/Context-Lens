@@ -153,6 +153,30 @@ test('the Header Current PDF page button opens Go to location at 1280px @pdf', a
   await expect(page.getByRole('button', { name: 'Current PDF page' })).toHaveText('3 / 3');
 });
 
+// docs/ui-system.md:82 — "page indicator opens Go to location". The Header band is asserted by
+// the test above; this is the same contract at ≤1023px, where App.tsx:696 renders PageNavigation
+// (not the Header ReaderToolbar), so the opener and the jump must be proven in that band too.
+test('the Footer Current PDF page button opens Go to location at 390px @pdf', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.locator('input[type=file]').setInputFiles({ name: 'go-to-390.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3) });
+  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
+
+  // The Footer owns this indicator in this band; the Header does not render a second copy.
+  const footerNav = page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('navigation', { name: 'Page navigation' });
+  await expect(footerNav.getByRole('button', { name: 'Current PDF page' })).toHaveCount(1);
+
+  await footerNav.getByRole('button', { name: 'Current PDF page' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Go to location' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('spinbutton').fill('3');
+  await dialog.getByRole('button', { name: 'Go', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator('[data-pdf-page="3"] .pdf-canvas')).toBeVisible();
+  await expect(footerNav.getByRole('button', { name: 'Current PDF page' })).toHaveText('3 / 3');
+});
+
 test('PDF page navigation is owned by the Footer alone at 390px @pdf', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
