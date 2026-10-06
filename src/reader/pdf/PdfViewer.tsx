@@ -18,7 +18,7 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desk
   const [mobileZoom, setMobileZoom] = useState<PdfZoomMode>('fit-width');
   const effectiveZoom = desktop ? zoomMode : mobileZoom;
   const changeZoom = (mode: PdfZoomMode) => { if (desktop) onZoomMode(mode); else setMobileZoom(mode); };
-  const { pdf, error, passwordRequired, password, setPassword, submitPassword } = usePdfDocument(documentRecord.data);  const [sizes, setSizes] = useState<Record<number, PdfPageSize>>({});
+  const { pdf, error, passwordRequired, passwordError, password, setPassword, submitPassword } = usePdfDocument(documentRecord.data);  const [sizes, setSizes] = useState<Record<number, PdfPageSize>>({});
   const ready = Boolean(pdf && Object.keys(sizes).length === pdf.numPages);
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -136,7 +136,7 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desk
     const resize = new ResizeObserver(entries => { const rect = entries[0]?.contentRect; if (rect && rect.width > 0 && rect.height > 0) setBounds(current => current?.width === rect.width && current.height === rect.height ? current : { width: rect.width, height: rect.height }); });
     resize.observe(root); return () => resize.disconnect();
   }, [pdf, ready]);
-  if (passwordRequired) return <form class="pdf-state" onSubmit={event => { event.preventDefault(); submitPassword(); }}><h2>Password-protected PDF</h2><label>Password<input type="password" value={password} onInput={event => setPassword(event.currentTarget.value)} autoFocus /></label><button class="primary-button" type="submit">Open PDF</button></form>;
+  if (passwordRequired) return <form class="pdf-state" onSubmit={event => { event.preventDefault(); submitPassword(); }}><h2>Password-protected PDF</h2><label>Password<input type="password" value={password} onInput={event => setPassword(event.currentTarget.value)} autoFocus /></label>{passwordError && <p role="alert">{passwordError}</p>}<button class="primary-button" type="submit">Open PDF</button></form>;
   if (error || geometryError) return <div class="pdf-state" role="alert"><h2>PDF could not be opened</h2><p>{error ?? geometryError}</p></div>;
   if (!pdf || !ready) return <div class="pdf-state" role="status">Opening PDF…</div>;
   return <div class="pdf-viewer-wrap">
