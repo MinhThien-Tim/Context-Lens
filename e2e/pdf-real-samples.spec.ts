@@ -1,13 +1,21 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// §9.7 — document tools and OCR controls are ONE surface reached through More.
+async function openDocumentTools(page: Page) {
+  await page.getByRole('button', { name: 'Reader menu' }).click();
+    // Menu item label is "Document" (not "Document tools") per App.tsx readerMoreItems
+    await page.getByRole('menuitem', { name: 'Document', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: /Document tools|Công cụ/ })).toBeVisible();
+}
+
 async function beginOcr(page: Page) {
-  await page.locator('.pdf-reading-options-toggle').click();
-  await page.getByRole('menuitem', { name: 'Nhận dạng chữ trang này' }).click();
+  await openDocumentTools(page);
+  await page.getByRole('button', { name: 'Nhận dạng chữ trang này', exact: true }).click();
 }
 
 async function readOcr(page: Page) {
-  await page.locator('.pdf-reading-options-toggle').click();
-  const option = page.locator('.pdf-reading-options button').nth(1);
+  await openDocumentTools(page);
+  const option = page.getByRole('button', { name: /^Chữ OCR/ });
   await expect(option).toBeEnabled({ timeout: 10_000 });
   await option.click();
 }
@@ -15,7 +23,7 @@ async function readOcr(page: Page) {
 const textPdf = process.env.PDF_QA_TEXT_PATH;
 const scanPdf = process.env.PDF_QA_SCAN_PATH;
 
-test('reviews the supplied title page and manually compares OCR with PDF text', async ({ page }) => {
+test('reviews the supplied title page and manually compares OCR with PDF text @pdf @heavy', async ({ page }) => {
   test.skip(!textPdf, 'Set PDF_QA_TEXT_PATH to run the local sample');
   test.setTimeout(240_000);
   await page.goto('/');
@@ -38,13 +46,13 @@ test('reviews the supplied title page and manually compares OCR with PDF text', 
   await test.info().attach('title-page-ocr', { body: await page.locator('[data-ocr-page="5"] .pdf-ocr-text').textContent() ?? '', contentType: 'text/plain' });
 });
 
-test('reads the supplied scan through OCR and returns to its original page', async ({ page }) => {
+test('reads the supplied scan through OCR and returns to its original page @pdf @heavy', async ({ page }) => {
   test.skip(!scanPdf, 'Set PDF_QA_SCAN_PATH to run the local sample');
   test.setTimeout(240_000);
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles(scanPdf!);
   await expect(page.getByLabel('Current PDF page')).toContainText(/1 \/ \d+/);
-  await expect(page.locator('.pdf-queue-status')).toHaveCount(0, { timeout: 120_000 });
+  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 120_000 });
   await readOcr(page);
   const recognized = await page.locator('[data-ocr-page="1"] .pdf-ocr-text').textContent();
   expect(recognized?.trim().length).toBeGreaterThan(20);
@@ -54,7 +62,7 @@ test('reads the supplied scan through OCR and returns to its original page', asy
   await expect(page.locator('.pdf-canvas').first()).toBeVisible();
 });
 
-test('keeps several body pages of the supplied text PDF readable without OCR', async ({ page }) => {
+test('keeps several body pages of the supplied text PDF readable without OCR @pdf', async ({ page }) => {
   test.skip(!textPdf, 'Set PDF_QA_TEXT_PATH to run the local sample');
   test.setTimeout(180_000);
   await page.goto('/');
@@ -67,15 +75,22 @@ test('keeps several body pages of the supplied text PDF readable without OCR', a
   await expect(page.locator('.pdf-ocr-page')).toHaveCount(0);
 });
 
-test('runs a bounded OCR slice on body pages of the supplied scan', async ({ page }) => {
+test('runs a bounded OCR slice on body pages of the supplied scan @pdf @heavy', async ({ page }) => {
   test.skip(!scanPdf, 'Set PDF_QA_SCAN_PATH to run the local sample');
   test.setTimeout(240_000);
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles(scanPdf!);
-  await expect(page.locator('.pdf-queue-status')).toHaveCount(0, { timeout: 120_000 });
-  await page.locator('.pdf-reading-options-toggle').click();
-  await page.getByRole('menuitem', { name: 'OCR 3 trang tiếp' }).click();
-  await expect(page.locator('.pdf-queue-status')).toContainText('Không có trang scan cần OCR');
+  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 120_000 });
+  await openDocumentTools(page);
+  // The control's accessible name is the stable "OCR next"; the descriptive sentence is its title,
+  // and `getByRole` matches the accessible name, so the name is the reliable handle.
+  await page.getByRole('button', { name: 'OCR next' }).click();
+    // The action closes the dialog via onClose(); re-open before reading its status paragraph.
+      await openDocumentTools(page);
+      // Scope to the dialog's own role="status"; the Reader renders other live regions elsewhere.
+      // The paragraph only exists once a run has reported, and its copy is the localised
+      // "Completed N/M" line (PdfModeSwitch.tsx), not the retired "no pages left" phrasing.
+      await expect(page.getByRole('dialog', { name: /Document tools|Công cụ/ }).getByRole('status')).toContainText(/Completed \d+\/\d+/);
   await page.getByRole('button', { name: 'Reading', exact: true }).click();
   await expect(page.locator('.pdf-ocr-page').first()).toBeVisible();
   await expect(page.locator('.pdf-ocr-page')).toHaveCount(7);
