@@ -24,9 +24,9 @@ test('Original PDF keeps the dominant page at display resolution @pdf', async ({
   });
   const initial = await measure();
   console.log(`${info.project.name} initial`, JSON.stringify(initial));
-  if (info.project.use.isMobile) await page.getByRole('button', { name: 'PDF options' }).click();
+  // Zoom is a direct stepper in both bands (mobile-chrome.md §5 / desktop-reader.md §3), so no
+  // disclosure is opened: the Footer host at <=1023px, the Header toolbar at >=1024px.
   for (let i = 0; i < 8; i++) await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
-  if (info.project.use.isMobile) await page.getByRole('button', { name: 'PDF options' }).click();
   const zoomed = await measure();
   console.log(`${info.project.name} zoomed`, JSON.stringify(zoomed));
   await page.mouse.move(page.viewportSize()!.width / 2, page.viewportSize()!.height / 2);
