@@ -138,3 +138,37 @@ test('preloads at most the first twelve pages and leaves later scans for a manua
   await page.getByRole('button', { name: 'Reading', exact: true }).click();
   await expect(page.locator('[data-ocr-page="13"]')).toHaveCount(1);
 });
+
+// §9 (docs/reader.md "Explicit runs auto-continue"): startCurrent(page) OCRs the selected page
+// first and then continues from page + 1 in 12-page windows to the end of the document, never
+// revisiting an earlier page. Standing on an ineligible page (valid extracted text) therefore
+// produces no work for that page, and every later scan is reached only by the auto-continue walk.
+// The document has 14 pages so the walk must cross the first window boundary (pages 2-13 are
+// ink-free blanks) to reach the single eligible scan on page 14; pages 2-13 carry no image, so
+// the first-12 preload can neither trigger nor interfere (App.tsx preload trigger requires an
+// ocrCandidate page among the first twelve).
+test('§9 auto-continues an explicit run past the ineligible page it started on @pdf @heavy', async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.goto('/');
+  const jpeg = await page.evaluate(() => {
+    const canvas = document.createElement('canvas'); canvas.width = 1224; canvas.height = 1584;
+    const context = canvas.getContext('2d')!; context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = '#111'; context.font = 'bold 48px Arial'; context.fillText('THE LAST CHAPTER', 80, 180);
+    return canvas.toDataURL('image/jpeg', .9).split(',')[1];
+  });
+  const kinds = Array.from({ length: 14 }, (_, index) => index === 0 ? 'text' as const : index === 13 ? 'scan' as const : 'blank' as const);
+  await page.locator('input[type=file]').setInputFiles({ name: 'auto-continue.pdf', mimeType: 'application/pdf', buffer: pdfQueueFixture(Buffer.from(jpeg, 'base64'), 1224, 1584, undefined, kinds) });
+  // Reading Mode is reachable because page 1 carries extracted text (pdfHasReadableText).
+  await openDocumentTools(page);
+  // The per-page OCR action lives in the Document tools dialog, not on the More menu.
+  await page.getByRole('button', { name: 'Nhận dạng chữ trang này' }).click();
+  // The action closes the dialog. Wait for the run to appear and then to finish rather than
+  // asserting an absence that is also the pre-run state.
+  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 120_000 });
+  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  // Only page 14 was an OCR candidate: the started-on page is never OCRed and never revisited.
+  await expect(page.locator('.pdf-ocr-page')).toHaveCount(1);
+  await expect(page.locator('[data-ocr-page="14"]')).toHaveCount(1);
+  await expect(page.locator('[data-ocr-page="1"]')).toHaveCount(0);
+});
