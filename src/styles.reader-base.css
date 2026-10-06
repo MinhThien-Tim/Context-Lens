@@ -48,10 +48,6 @@
 .pdf-state label { display:grid; gap:6px; margin:16px 0; }
 .pdf-state input { min-height:44px; padding:0 10px; }
 .pdf-reading-view { height:calc(100dvh - 56px); display:flex; flex-direction:column; background:var(--reading-surface); font-family:var(--reader-font); font-size:var(--reader-size); line-height:var(--reader-leading); }
-.pdf-reading-navigation { z-index:4; min-height:48px; display:flex; align-items:center; justify-content:center; gap:12px; padding:2px max(12px,env(safe-area-inset-right)) 2px max(12px,env(safe-area-inset-left)); border-bottom:1px solid var(--border); background:color-mix(in srgb,var(--reading-surface) 94%,transparent); backdrop-filter:blur(8px); }
-.pdf-reading-navigation button { min-width:44px; min-height:44px; border:0; background:transparent; color:var(--text); font-size:22px; }
-.pdf-reading-navigation span { min-width:112px; text-align:center; font:600 13px/1.2 var(--font-ui); }
-.pdf-reading-navigation .pdf-reading-original { margin-left:auto; width:auto; padding:0 8px; color:var(--accent); font-size:13px; }
 .pdf-reading-scroll { flex:1; min-height:0; overflow:auto; scroll-padding-top:12px; }
 .pdf-reading-scroll.highlight-mode-active .pdf-reading-content,.pdf-reading-scroll.highlight-mode-active .pdf-reading-content * { cursor:text; }
 .pdf-reading-scroll.highlight-mode-active .pdf-reading-content::selection,.pdf-reading-scroll.highlight-mode-active .pdf-reading-content *::selection { background:#ffdb75; color:#171717; }
