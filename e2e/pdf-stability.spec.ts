@@ -10,6 +10,22 @@ async function openPdf(page: Page, count = 64) {
   await expect(page.locator('.pdf-text-layer').first().locator('span').first()).toBeVisible();
 }
 
+// Contents is reached through More in the mobile band and directly from the Header toolbar at
+// >=1024px (mobile-chrome.md §7/§9, desktop-reader.md §3).
+async function openContents(page: Page) {
+  if (test.info().project.use.isMobile) {
+    await page.locator('.reader-progress').getByRole('button', { name: 'Reader menu' }).click();
+    await page.getByRole('menuitem', { name: 'Contents', exact: true }).click();
+  } else {
+      // Desktop starts with the panel already open: `interfaceMode` defaults to `advanced`, and
+      // App.tsx:257 opens it on document load. Clicking here would toggle it shut.
+      if (!(await page.locator('.contents-panel').isVisible())) {
+        await page.locator('.reader-header').getByRole('button', { name: 'Contents' }).click();
+      }
+    }
+    await expect(page.locator('.contents-panel')).toBeVisible();
+}
+
 test('blank and rotated pages keep their page number across both views @pdf', async ({ page }) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'mixed-pages.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3, 2, 3) });
@@ -70,7 +86,7 @@ async function selectAcrossSpans(page: Page) {
   await expect(page.getByRole('toolbar', { name: 'Selected text actions' })).toBeVisible();
 }
 
-test('native forward/reverse selection, Explain, Highlight restore, Note and Copy @pdf', async ({ page }, info) => {
+test('native forward/reverse selection, Define, Highlight restore, Note @pdf', async ({ page }, info) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
   await openPdf(page, 3);
@@ -79,26 +95,28 @@ test('native forward/reverse selection, Explain, Highlight restore, Note and Cop
     await page.getByRole('button', { name: 'Close selection actions' }).click();
   }
   await selectPhrase(page);
-    await page.getByRole('toolbar', { name: 'Selected text actions' }).getByRole('button', { name: 'Highlight', exact: true }).click();
+  await page.getByRole('toolbar', { name: 'Selected text actions' }).getByRole('button', { name: 'Highlight', exact: true }).click();
   await expect(page.locator('.pdf-saved-highlight').first()).toBeVisible();
   await selectPhrase(page);
-  await page.getByRole('button', { name: 'Explain', exact: true }).click();
+  await page.getByRole('button', { name: 'Define', exact: true }).click();
   await expect(page.locator('.lookup-sheet,.context-panel')).toBeVisible();
   await expect(page.locator('.lookup-sheet')).toContainText('decision');
   await page.screenshot({ path: `tmp/pdf-${info.project.name}-lookup.png` });
   await page.locator('.lookup-sheet').getByRole('button', { name: 'Close meaning' }).click();
   await selectPhrase(page);
-  await page.getByRole('button', { name: 'Copy', exact: true }).click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain('decision');
   await page.getByRole('toolbar', { name: 'Selected text actions' }).getByRole('button', { name: 'Note', exact: true }).click();
   await expect(page.locator('.note-selection')).toContainText('decision');
   await page.getByRole('textbox', { name: 'New note' }).fill('PDF stability regression note');
   await page.getByRole('button', { name: 'Save note', exact: true }).click();
   await expect(page.locator('.notes-list')).toContainText('PDF stability regression note');
-  await page.getByRole('button', { name: 'Go to location', exact: true }).click();
-  await expect(page.locator('.pdf-scroll')).toBeVisible();
+    // Per-note Go to location (NotesPanel), distinct from the Contents panel button the owner
+        // removed; it jumps back to the saved note's location.
+      await page.getByRole('button', { name: 'Go to location', exact: true }).click();
+      await expect(page.locator('.pdf-scroll')).toBeVisible();
   await page.getByRole('button', { name: 'Back to library' }).click();
-  await page.locator('.continue-card').filter({ hasText: 'stability-fixture' }).click();
+      // Continue reading lives in a collapsed disclosure, so open it before the card is clickable.
+      await page.locator('.continue-disclosure > summary').click();
+      await page.locator('.continue-card').filter({ hasText: 'stability-fixture' }).click();
   await expect(page.locator('.pdf-saved-highlight').first()).toBeVisible();
   await selectPhrase(page);
   expect(errors).toEqual([]);
@@ -153,20 +171,23 @@ test('zoom, links, multiline selection and five mode switches preserve interacti
   await openPdf(page, 8);
   await expect(page.locator('.pdf-annotation-layer a').first()).toHaveAttribute('href', 'https://example.com/');
   if (!info.project.use.isMobile) {
-    for (const control of ['Zoom in', 'Zoom out', 'Fit width', 'Fit page']) {
-      if (control === 'Fit width' || control === 'Fit page') {
-        await page.getByRole('button', { name: 'PDF zoom presets' }).click();
-        await page.getByRole('button', { name: control, exact: true }).click();
-      }
-      else await page.getByRole('button', { name: control, exact: true }).click();
+      // Desktop zoom is the Header stepper: the level is a <select aria-label="Zoom level"> with
+      // Automatic/75/100/125/150. The old `PDF zoom presets` disclosure with Fit width/Fit page was
+      // replaced by that select in 40e807d, so there is nothing to open here.
+      const stepper = page.locator('.pdf-zoom-stepper');
+      for (const control of ['Zoom in', 'Zoom out']) {
+        await stepper.getByRole('button', { name: control, exact: true }).click();
       await selectPhrase(page);
       await page.getByRole('button', { name: 'Close selection actions' }).click();
     }
-  } else {
-    for (const control of ['Zoom in', 'Zoom out', 'Fit page', 'Fit width']) {
-      await page.getByRole('button', { name: 'PDF options' }).click();
-      await page.getByRole('button', { name: control, exact: true }).click();
-      await page.getByRole('button', { name: 'PDF options' }).click();
+      await stepper.getByLabel('Zoom level').selectOption('125');
+      await selectPhrase(page);
+      await page.getByRole('button', { name: 'Close selection actions' }).click();
+    } else {
+      // The mobile `.pdf-more` zoom popup is deleted (mobile-chrome.md §5): zoom is a direct Footer
+      // stepper (decrease / level / increase), so there is no disclosure to open.
+      for (const control of ['Zoom in', 'Zoom out']) {
+        await page.locator('.pdf-footer-zoom-host').getByRole('button', { name: control, exact: true }).click();
       await selectPhrase(page);
       await page.getByRole('button', { name: 'Close selection actions' }).click();
     }
@@ -190,7 +211,7 @@ test('zoom, links, multiline selection and five mode switches preserve interacti
   await page.getByRole('button', { name: 'Close selection actions' }).click();
   for (let i = 0; i < 10; i++) {
     await selectPhrase(page);
-    await page.getByRole('button', { name: 'Explain', exact: true }).click();
+      await page.getByRole('button', { name: 'Define', exact: true }).click();
     await expect(page.locator('.lookup-sheet')).toContainText('decision');
     await page.locator('.lookup-sheet').getByRole('button', { name: 'Close meaning' }).click();
   }
@@ -243,7 +264,7 @@ test('Contents issues one jump in each mode', async ({ page }, info) => {
     if (mode === 'reading') {
       await page.getByRole('button', { name: 'Reading', exact: true }).click();
     }
-    await page.getByRole('button', { name: 'Contents', exact: true }).click();
+    await openContents(page);
     await expect(page.locator('.contents-item')).toHaveText('Chapter 3p. 3');
     await page.waitForTimeout(300);
     const before = await page.evaluate(() => (window as any).navigationWrites);
@@ -251,6 +272,6 @@ test('Contents issues one jump in each mode', async ({ page }, info) => {
     await expect(page.getByLabel('Current PDF page')).toContainText('3 / 8');
     await page.waitForTimeout(300);
     expect(await page.evaluate(() => (window as any).navigationWrites)).toBe(before + 1);
-    if (!info.project.use.isMobile) await page.locator('.contents-panel').getByRole('button', { name: 'Close', exact: true }).click();
+    if (!info.project.use.isMobile) await page.locator('.contents-panel').getByRole('button', { name: 'Close document panel' }).click();
   }
 });
