@@ -24,9 +24,12 @@ test('measures a fixed OCR raster with small print @pdf @heavy', async ({ page }
   await page.locator('input[type=file]').setInputFiles({ name: 'raster.pdf', mimeType: 'application/pdf', buffer: pdfScanFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 75_000 });
   await openDocumentTools(page);
-  await expect(page.getByRole('menuitem', { name: 'Chữ OCR' })).toBeEnabled({ timeout: 75_000 });
+  // docs/pdf-ocr-controls.md: the OCR source controls are buttons inside the Document tools dialog,
+  // never menu items (3490a22 removed the menuitem role). `Chữ OCR` is a hardcoded Vietnamese label
+  // (C26), so match it by prefix rather than renaming the app label this phase.
+  await expect(page.getByRole('button', { name: /^Chữ OCR/ })).toBeEnabled({ timeout: 75_000 });
   const durationMs = Date.now() - started;
-  await page.getByRole('menuitem', { name: 'Chữ OCR' }).click();
+  await page.getByRole('button', { name: /^Chữ OCR/ }).click();
   const recognized = await page.locator('.pdf-ocr-text').textContent();
   const heapAfter = await page.evaluate(() => (performance as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize ?? null);
   expect(recognized?.match(/careful reader/gi)?.length).toBeGreaterThanOrEqual(24);
