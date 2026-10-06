@@ -2,10 +2,19 @@ import { test, expect, type Page } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
 
 /**
+ * Mobile-band contract (docs/mobile-chrome.md §5:79-84): at ≤1023 px the Footer owns the direct
+ * zoom stepper; at ≥1024 px the Footer renders no zoom control at all and the Header toolbar owns it
+ * (desktop-reader.md §3, verified by probe: laptop 1366px resolves 'Zoom out' inside <header>,
+ * mobile 412px inside <footer>). This file therefore pins a mobile viewport explicitly instead of
+ * inheriting the project's viewport — under `laptop` the inherited 1366x900 put it in the desktop
+ * band, where this file's Footer assertions describe a control that does not exist.
+ *
  * One viewport per test on purpose (standing rules §1.3): a failure inside a
  * viewport loop is unattributable, so every resize target is its own test and
  * the report names the size that broke.
  */
+test.use({ viewport: { width: 393, height: 850 } });
+
 const RESIZE_TARGETS = [
   { label: 'narrow 320x850', width: 320, height: 850 },
   { label: 'landscape 850x393', width: 850, height: 393 },
@@ -34,7 +43,10 @@ test('Original mobile zoom preserves reading and selection geometry @pdf', async
   // options popup and its Fit width / Fit page entries are gone from this band.
   const stepper = page.getByRole('button', { name: 'Zoom out', exact: true });
   await expect(stepper).toBeVisible();
-  await expect(page.getByRole('button', { name: 'PDF options' })).toHaveCount(0);
+    // §5:79-84 — the stepper belongs to the Footer in this band, and the deleted
+    // mobile PDF options popup is not reintroduced as a replacement.
+    await expect(stepper.locator('xpath=ancestor::footer')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'PDF options' })).toHaveCount(0);
   const fitted = await width();
   await stepper.click();
   await expect.poll(width).toBeLessThan(fitted);
@@ -62,10 +74,11 @@ test('Original mobile zoom preserves reading and selection geometry @pdf', async
     expect(await scroll.evaluate(el => el.scrollTop)).toBe(before);
     await expect(position).toHaveText('3 / 8');
     // docs/reader.md: "Desktop custom scale is bounded to 0.1-6, while mobile custom scale remains
-    // bounded to 0.1-3." Twenty Zoom In clicks from a fitted page run into that ceiling, so the
-    // ceiling is band-specific: a single hard-coded constant makes the assertion wrong on the other
-    // band. The band comes from the project device, never from a measured viewport width.
-    const scaleCeiling = test.info().project.use.isMobile === true ? 3 : 6;
+        // bounded to 0.1-3." Twenty Zoom In clicks from a fitted page run into that ceiling. This file
+        // pins a <=1023px viewport (above), so the app is in the mobile band on every project and the
+        // ceiling is 3 here. Reading it off the project device instead would silently assert 6 under
+        // `laptop`, a band this file never enters.
+        const scaleCeiling = 3;
     for (let n = 0; n < 20; n++) await page.getByRole('button', { name: 'Zoom in', exact: true }).click();
     await expect.poll(() => page.locator('[data-pdf-page="3"]').evaluate(el => el.getBoundingClientRect().width)).toBeCloseTo(612 * scaleCeiling, 0);
     const pan = await scroll.evaluate(el => {

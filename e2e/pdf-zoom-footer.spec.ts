@@ -29,8 +29,11 @@ for (const mode of ['simple', 'advanced'] as const) {
       await expect(page.locator('.pdf-toolbar')).toHaveCount(0);
       await expect(page.locator('.pdf-more-menu')).toHaveCount(0);
 
-      // Verify selector has the expected options
-      await expect(zoomSelector.locator('option')).toHaveCount(5);
+      // Verify selector has the expected options. §3.1 (docs/desktop-reader.md): the four fixed
+      // percentages plus "Automatic" are always present; a sixth entry appears only while the
+      // actual scale is off the fixed list, so the count is 5 or 6 and never a blank select.
+      await expect.poll(async () => zoomSelector.locator('option').count()).toBeGreaterThanOrEqual(5);
+      expect([5, 6]).toContain(await zoomSelector.locator('option').count());
       await expect(zoomSelector.locator('option[value="auto"]')).toHaveText('Automatic');
       await expect(zoomSelector.locator('option[value="75"]')).toHaveText('75%');
       await expect(zoomSelector.locator('option[value="100"]')).toHaveText('100%');
@@ -43,9 +46,11 @@ for (const mode of ['simple', 'advanced'] as const) {
       expect(boxes[0]!.x).toBeLessThan(boxes[1]!.x);
       expect(boxes[1]!.x).toBeLessThan(boxes[2]!.x);
 
-      // Initial value should be "auto" (fit-width) or a percentage
+      // Initial value should be "auto" (fit-width) or a percentage, including a dynamic
+      // stepped-to value (§3.1), never an empty string.
       const initialValue = await zoomSelector.inputValue();
-      expect(['auto', '75', '100', '125', '150']).toContain(initialValue);
+      expect(initialValue).not.toBe('');
+      expect(initialValue === 'auto' || /^\d+$/.test(initialValue)).toBe(true);
 
       // Changing zoom via the selector (the primary UI) updates the value
       // Select 150% - this is a discrete option in the selector
