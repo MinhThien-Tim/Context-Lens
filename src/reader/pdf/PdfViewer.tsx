@@ -13,7 +13,7 @@ import { MAX_CANVAS_PIXELS, NEIGHBOR_CANVAS_PIXELS } from './renderBudget';
 
 const DEFAULT_SIZE = { width: 612, height: 792 };
 
-export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desktopCustomScale = 1, onDesktopCustomScale, clickLookup = true, activeMarkupTool, activeMarkupColor = 'yellow', onLocation, onLookup, onAddNote, navigationToken = 0, onHighlight, onErase, ocrBusy = false }: { interfaceMode?: 'simple' | 'advanced'; navigationToken?: number; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: import('../../db/database').ReaderHighlight['color']; onHighlight?: (highlight: import('../../db/database').ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; documentRecord: DocumentRecord; location: PdfDocumentLocation; zoomMode: PdfZoomMode; onZoomMode: (mode: PdfZoomMode) => void; desktopCustomScale?: number; onDesktopCustomScale?: (scale: number) => void; clickLookup?: boolean; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void; ocrBusy?: boolean }) {
+export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desktopCustomScale = 1, onDesktopCustomScale, onActualScale, onZoomStepReady, clickLookup = true, activeMarkupTool, activeMarkupColor = 'yellow', onLocation, onLookup, onAddNote, navigationToken = 0, onHighlight, onErase, ocrBusy = false }: { interfaceMode?: 'simple' | 'advanced'; navigationToken?: number; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: import('../../db/database').ReaderHighlight['color']; onHighlight?: (highlight: import('../../db/database').ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; documentRecord: DocumentRecord; location: PdfDocumentLocation; zoomMode: PdfZoomMode; onZoomMode: (mode: PdfZoomMode) => void; desktopCustomScale?: number; onDesktopCustomScale?: (scale: number) => void; onActualScale?: (scale: number) => void; onZoomStepReady?: (step: (direction: -1 | 1) => void) => void; clickLookup?: boolean; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void; ocrBusy?: boolean }) {
   const desktop = useDesktop();
   const [mobileZoom, setMobileZoom] = useState<PdfZoomMode>('fit-width');
   const effectiveZoom = desktop ? zoomMode : mobileZoom;
@@ -87,6 +87,18 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desk
     changeZoom('custom');
   };
   const geometryKey = `${effectiveZoom}:${selectedCustomScale}:${bounds?.width}:${bounds?.height}`;
+  const actualScale = scaleFor(sizes[visible] ?? DEFAULT_SIZE);
+  // docs/desktop-reader.md §3/§3.1: PdfViewer owns `scaleFor` and `stepZoom`, and the Header selector
+  // shows the actual rendering scale. App.tsx holds no measured bounds and no visible-page size, so
+  // it cannot re-derive either value: both are published out through stable callbacks instead of a
+  // ref, and the refs below keep those callbacks out of the effect dependencies so an inline
+  // arrow in App cannot re-fire the effect on every render.
+  const actualScaleSink = useRef(onActualScale);
+  const stepSink = useRef(onZoomStepReady);
+  const stepRef = useRef(stepZoom);
+  useEffect(() => { actualScaleSink.current = onActualScale; stepSink.current = onZoomStepReady; stepRef.current = stepZoom; });
+  useEffect(() => { if (desktop) actualScaleSink.current?.(actualScale); }, [actualScale, desktop]);
+  useEffect(() => { if (desktop) stepSink.current?.((direction: -1 | 1) => stepRef.current(direction)); }, [desktop]);
   // The previous page can still be visible when tracking advances. Keep both
   // neighbors within the existing three-canvas budget; OCR keeps only one.
 
@@ -134,7 +146,7 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desk
         // host too, so desktop and mobile share one stepper and one owner.
         const directStepper = <div class="pdf-zoom-stepper">
           <button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button>
-          <span aria-label="Zoom level" aria-live="off">{Math.round(scaleFor(sizes[visible] ?? DEFAULT_SIZE) * 100)}%</span>
+          <span aria-label="Zoom level" aria-live="off">{Math.round(actualScale * 100)}%</span>
           <button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button>
         </div>;
         return footerZoomHost ? createPortal(directStepper, footerZoomHost) : null;

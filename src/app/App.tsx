@@ -17,7 +17,7 @@ import { createLocationPersistence } from '../reader/pdf/locationPersistence';
 import { PdfViewer } from '../reader/pdf/PdfViewer';
 import { PdfDocumentTools, PdfModeSwitch } from '../reader/pdf/PdfModeSwitch';
 import { usePdfOcrQueue } from '../reader/pdf/usePdfOcrQueue';
-import { pdfOffsetForPage, pdfPageForOffset, calculatePdfScale, stepDesktopPdfScale } from '../reader/pdf/navigation';
+import { pdfOffsetForPage, pdfPageForOffset } from '../reader/pdf/navigation';
 import { PdfReadingView } from '../reader/pdf-reading/PdfReadingView';
 import { eraseHighlights, upsertHighlight } from '../reader/pdf-reading/highlights';
 import { pdfHasReadableText } from '../reader/pdf-reading/structuredPages';
@@ -103,6 +103,13 @@ export function App() {
   // Contract §9.7: document tools and OCR controls are ONE More action opening ONE surface.
   const [documentToolsOpen, setDocumentToolsOpen] = useState(false);
   const [pdfNavigationToken, setPdfNavigationToken] = useState(0);
+  // docs/desktop-reader.md §3.1: the Header selector shows the actual PDF rendering scale and
+  // `PdfViewer` is the only place that can measure it, so the viewer reports it upward. `null` means
+  // "not measured yet"; the Footer keeps its own readout and mobile keeps `PdfViewer`-local zoom.
+  const [actualPdfScale, setActualPdfScale] = useState<number | null>(null);
+  // `PdfViewer` also owns stepping (`stepZoom`). The toolbar is a sibling of the viewer in the JSX
+  // tree, so the viewer publishes a stable step function here instead of App reaching into it.
+  const [pdfZoomStep, setPdfZoomStep] = useState<((direction: -1 | 1) => void) | null>(null);
   const [currentLocation, setCurrentLocation] = useState<DocumentLocation>(initialTextLocation());
   const [noteLocation, setNoteLocation] = useState<DocumentLocation>(initialTextLocation());
   const [noteSelection, setNoteSelection] = useState<ReaderSelection | null>(null);
@@ -595,7 +602,6 @@ export function App() {
     const totalPages = documentRecord.pageOffsets?.length;
     const currentPage = currentLocation.kind === 'pdf' ? currentLocation.page : undefined;
     const zoomMode = preferences.pdfZoomMode;
-    const customScale = preferences.pdfCustomScale;
 
     // Desktop toolbar callbacks
     const onPrevPage = () => {
@@ -604,12 +610,10 @@ export function App() {
     const onNextPage = () => {
       if (currentPage && totalPages && currentPage < totalPages) jumpPdfPage(currentPage + 1);
     };
-    const onZoomOut = () => {
-      setPreferences(current => ({ ...current, pdfZoomMode: 'custom', pdfCustomScale: Math.max(0.1, current.pdfCustomScale * 0.85) }));
-    };
-    const onZoomIn = () => {
-      setPreferences(current => ({ ...current, pdfZoomMode: 'custom', pdfCustomScale: Math.min(6, current.pdfCustomScale * 1.15) }));
-    };
+    // docs/desktop-reader.md §3.1: stepping is owned by `PdfViewer.stepZoom` at every density;
+    // App must not multiply the stored custom scale by a factor of its own.
+    const onZoomOut = () => { pdfZoomStep?.(-1); };
+    const onZoomIn = () => { pdfZoomStep?.(1); };
         const onZoomSelect = (mode: 'auto' | 'custom', value?: number) => {
           if (mode === 'auto') {
             setPreferences(current => ({ ...current, pdfZoomMode: 'fit-width' }));
@@ -651,8 +655,8 @@ export function App() {
           onPrevPage={onPrevPage}
           onNextPage={onNextPage}
           onOpenGoTo={() => setGoToOpen(true)}
-          zoomLevel={Math.round(customScale * 100)}
-                  zoomMode={zoomMode === 'fit-width' ? 'auto' : 'custom'}
+          zoomLevel={actualPdfScale === null ? undefined : Math.round(actualPdfScale * 100)}
+                  zoomMode={zoomMode}
                   onZoomOut={onZoomOut}
                   onZoomIn={onZoomIn}
                   onZoomSelect={onZoomSelect}
@@ -675,7 +679,7 @@ export function App() {
       <div class="reader-viewport">
       {documentRecord.source && <div class="reader-source">{documentRecord.source.author && <span>{documentRecord.source.author}</span>}{documentRecord.source.siteName && <span>{documentRecord.source.siteName}</span>}{documentRecord.source.url && <a href={documentRecord.source.url} target="_blank" rel="noreferrer noopener">Original ↗</a>}</div>}
       {documentRecord.kind === 'pdf' && pdfMode === 'original' && currentLocation.kind === 'pdf'
-        ? <PdfViewer interfaceMode={preferences.interfaceMode} key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} zoomMode={desktop ? preferences.pdfZoomMode : 'fit-width'} desktopCustomScale={preferences.pdfCustomScale} onDesktopCustomScale={pdfCustomScale => setPreferences(current => ({ ...current, pdfCustomScale }))} clickLookup={originalClickLookup} ocrBusy={Boolean(ocrQueue.status && !['error', 'done'].includes(ocrQueue.status.state))} onZoomMode={pdfZoomMode => setPreferences(current => ({ ...current, pdfZoomMode }))} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
+        ? <PdfViewer interfaceMode={preferences.interfaceMode} key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} zoomMode={desktop ? preferences.pdfZoomMode : 'fit-width'} desktopCustomScale={preferences.pdfCustomScale} onDesktopCustomScale={pdfCustomScale => setPreferences(current => ({ ...current, pdfCustomScale }))} onActualScale={setActualPdfScale} onZoomStepReady={setPdfZoomStep} clickLookup={originalClickLookup} ocrBusy={Boolean(ocrQueue.status && !['error', 'done'].includes(ocrQueue.status.state))} onZoomMode={pdfZoomMode => setPreferences(current => ({ ...current, pdfZoomMode }))} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
         : documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf'
         ? <PdfReadingView key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} style={readerStyle} ocrPages={ocrPages} ocrLanguage={ocrLanguage} onTextSource={(page, source) => { const pdfTextSources = { ...documentRecord.pdfTextSources, [page]: source }; setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfTextSources } : current); void db.documents.update(documentRecord.id, { pdfTextSources }); }} onOpenOriginal={() => changePdfViewMode('original')} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset, ocrPage, ocrLanguage) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset, ocrPage, ocrLanguage); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
         : <TextReader offsets={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets : documentRecord.chapterOffsets} onAddNote={selection => openNotes(selection)} content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />}

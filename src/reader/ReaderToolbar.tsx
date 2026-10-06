@@ -3,6 +3,12 @@ import type { ComponentChildren } from 'preact';
 import { createPortal } from 'preact/compat';
 import { useDesktop } from '../components/useDesktop';
 import { useDialog } from '../components/useDialog';
+import type { PdfZoomMode } from './pdf/navigation';
+
+/** docs/desktop-reader.md §3.1: the five fixed selector choices. */
+const FIXED_ZOOM_PERCENTS = [75, 100, 125, 150] as const;
+/** The modes behind the select's single "Automatic" entry. */
+const AUTOMATIC_ZOOM_MODES: PdfZoomMode[] = ['natural', 'fit-width', 'fit-page'];
 
 function BackIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>;
@@ -120,7 +126,9 @@ export function ReaderToolbar({
   /** docs/desktop-reader.md §2.2: the Header is the sole opener of `Go to location` at >=1024px. */
   onOpenGoTo?: () => void;
   zoomLevel?: number;
-  zoomMode?: 'auto' | 'custom';
+  /** docs/desktop-reader.md §3.1: the full `PdfZoomMode` union. The select only renders an
+   *  "Automatic" entry for the automatic/fit modes; every other mode is a concrete scale. */
+  zoomMode?: PdfZoomMode;
   onZoomOut?: () => void;
   onZoomIn?: () => void;
   onZoomSelect?: (mode: 'auto' | 'custom', value?: number) => void;
@@ -135,6 +143,11 @@ export function ReaderToolbar({
   markupActive?: boolean;
 }) {
   const desktop = useDesktop();
+  // docs/desktop-reader.md §3.1: the displayed value is the actual rendering scale, which stepping
+  // can move off the fixed list. One dynamic option carries it so the select never shows blank.
+  const actualPercent = zoomLevel === undefined ? null : Math.round(zoomLevel);
+  const isAutomatic = zoomMode !== undefined && AUTOMATIC_ZOOM_MODES.includes(zoomMode);
+  const hasDynamicZoom = actualPercent !== null && !isAutomatic && !(FIXED_ZOOM_PERCENTS as readonly number[]).includes(actualPercent);
 
   // Only render desktop toolbar groups at ≥1024px
   const showDesktopToolbar = desktop && (page !== undefined && totalPages !== undefined);
@@ -172,7 +185,7 @@ export function ReaderToolbar({
             <div class="zoom-selector">
               <select 
                 aria-label="Zoom level" 
-                value={zoomMode === 'auto' ? 'auto' : String(zoomLevel)}
+                value={isAutomatic ? 'auto' : String(zoomLevel)}
                 onChange={(e: Event) => {
                   const value = (e.target as HTMLSelectElement).value;
                   if (value === 'auto') {
@@ -187,6 +200,7 @@ export function ReaderToolbar({
                 <option value="100">100%</option>
                 <option value="125">125%</option>
                 <option value="150">150%</option>
+                {hasDynamicZoom && <option value={String(actualPercent)}>{actualPercent}%</option>}
               </select>
             </div>
             <button class="icon-button" aria-label="Zoom in" onClick={onZoomIn}><ZoomInIcon /></button>
