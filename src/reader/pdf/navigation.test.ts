@@ -11,10 +11,19 @@ describe('PDF navigation', () => {
   it('reaches 125% fit width on the first desktop zoom from default', () => {
     const fit = calculatePdfScale('fit-width', 1, 1920, 900, 612, 792);
     const natural = calculatePdfScale('natural', 1, 1920, 900, 612, 792);
-    const zoomed = stepDesktopPdfScale(natural, fit, 1);
+    const zoomed = stepDesktopPdfScale(natural, fit, 1, 'natural');
     expect(zoomed).toBeCloseTo(fit * 1.25);
     expect(calculatePdfScale('custom', zoomed, 1920, 900, 612, 792, 6) * 612).toBeGreaterThan(1920);
-    expect(stepDesktopPdfScale(zoomed, fit, 1)).toBeCloseTo(fit * 1.5);
+    // The snap applies only to the first step out of an automatic mode; the next step in `custom`
+    // uses the fixed symmetric factor instead (docs/desktop-reader.md §3.1).
+    expect(stepDesktopPdfScale(zoomed, fit, 1, 'custom')).toBeCloseTo(zoomed + fit * .25);
+  });
+
+  it('steps symmetrically in custom so out-then-in returns to the starting scale', () => {
+    const fit = calculatePdfScale('fit-width', 1, 1280, 900, 612, 792);
+    const start = stepDesktopPdfScale(fit, fit, -1, 'custom');
+    const back = stepDesktopPdfScale(start, fit, 1, 'custom');
+    expect(back).toBeCloseTo(fit);
   });
   it('maps pages and text offsets in both directions, including blank pages', () => {
     const offsets = [0, 12, 12, 40];

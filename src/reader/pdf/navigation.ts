@@ -4,9 +4,13 @@ export function stepPdfScale(currentScale: number, direction: -1 | 1): number {
   return Math.min(3, Math.max(.1, currentScale + direction * .15));
 }
 
-export function stepDesktopPdfScale(currentScale: number, fitWidthScale: number, direction: -1 | 1): number {
+/** docs/desktop-reader.md §3.1: snapping to `fitWidthScale * 1.25` happens only on the first step
+ *  out of an automatic mode. In `custom` every step is the fixed symmetric factor `fitWidthScale * .25`,
+ *  so stepping out and back in returns to the scale it started from. */
+export function stepDesktopPdfScale(currentScale: number, fitWidthScale: number, direction: -1 | 1, mode: PdfZoomMode = 'custom'): number {
   const step = fitWidthScale * .25;
-  const next = direction === 1 && currentScale < fitWidthScale * 1.25
+  const automatic = mode === 'natural' || mode === 'fit-width' || mode === 'fit-page';
+  const next = direction === 1 && automatic && currentScale < fitWidthScale * 1.25
     ? fitWidthScale * 1.25
     : currentScale + direction * step;
   return Math.min(6, Math.max(.1, next));

@@ -82,7 +82,7 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desk
     const size = sizes[visible] ?? DEFAULT_SIZE;
     const current = scaleFor(size);
     const fitWidth = calculatePdfScale('fit-width', 1, bounds?.width ?? 0, bounds?.height ?? 0, size.width, size.height);
-    const next = desktop ? stepDesktopPdfScale(current, fitWidth, direction) : stepPdfScale(current, direction);
+    const next = desktop ? stepDesktopPdfScale(current, fitWidth, direction, effectiveZoom) : stepPdfScale(current, direction);
     if (desktop) onDesktopCustomScale?.(next); else setCustomScale(next);
     changeZoom('custom');
   };
