@@ -340,7 +340,14 @@ test.describe('MobileChrome — quiet and reveal', () => {
       await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeGreaterThan(0.9);
 
       const beforeJump = await textChrome(page);
-      await page.locator('.contents-panel').getByRole('button', { name: 'Go to location' }).click();
+      // 2cc6c49 removed the Contents-panel "Go to location" button. The dialog it opened is
+      // unchanged and stays reachable for a text document through the Footer's position button
+      // (App.tsx renders DocumentPosition for every non-PDF kind), which is the sanctioned opener
+      // in this band. The sheet is a blocking overlay, so Escape dismisses it first (§9.5) and the
+      // jump then runs from the Footer. The jump itself is the same programmatic jump either way.
+      await page.keyboard.press('Escape');
+      await expect(page.locator('.contents-panel')).toBeHidden();
+      await page.locator('.reader-progress').getByRole('button', { name: /^Go to location: / }).click();
       const goto = page.getByRole('dialog', { name: /Go to|Lookup/ }).first();
       if (await goto.count()) {
         const field = goto.getByRole('spinbutton').first();
