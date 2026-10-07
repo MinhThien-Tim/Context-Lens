@@ -12,6 +12,16 @@
  * landscape pairs 844x390 and 915x412. There is no tablet band; 1024px is the
  * sole responsive authority.
  *
+ * Contract coverage (docs/reader-behavior-contract.md v2) — tags only, the
+ * assertions themselves are unchanged from the pre-redesign spec:
+ *   CHR-2  quiet is visual and never changes content height, scrollTop, page
+ *          identity, location or any geometry       -> quiet/reveal round trip
+ *   GEO-1  viewport box top+height unchanged across quiet/reveal           -> both above
+ *   GEO-2  page identity and reported location stable                     -> matrix, top return
+ *   GEO-3  open order scrollTop 0 -> reconciliation -> settle             -> quiet/reveal round trip
+ *   GEO-4  first readable line at or below the header bottom edge         -> first readable line
+ *   GEO-5  a revealed header overlaps no more than its own height         -> revealed header overlap
+ *
  * Execution tier: PDF-NORMAL
  *   PW_TIER=pdf-normal npx playwright test --config playwright.tiers.config.ts e2e/pdf-reader-chrome-a12.spec.ts
  */
@@ -39,7 +49,7 @@ async function openPdf(page: import('@playwright/test').Page, width: number, hei
   await page
     .locator('input[type=file]')
     .setInputFiles({ name: 'a12.pdf', mimeType: 'application/pdf', buffer: pdfFixture(12) });
-  await togglePdfMode(page, 'Original');
+  await togglePdfMode(page, 'text');
   await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
   await page.waitForTimeout(300);
 }
@@ -70,14 +80,14 @@ async function chromeRoundTrip(page: import('@playwright/test').Page) {
 }
 
 test.describe('A12 — PDF viewport geometry survives chrome transitions', () => {
-  test('quiet/reveal round trip keeps the viewport box and page identity (390) @pdf', async ({ page }) => {
+  test('quiet/reveal round trip keeps the viewport box and page identity (390) @pdf @CHR-2 @GEO-1 @GEO-2 @GEO-3', async ({ page }) => {
     test.setTimeout(90_000);
     await openPdf(page, 390, 844);
     await chromeRoundTrip(page);
   });
 
   for (const size of MATRIX) {
-    test(`viewport box and page identity are stable at ${size.name} @pdf`, async ({ page }) => {
+    test(`viewport box and page identity are stable at ${size.name} @pdf @GEO-1 @GEO-2`, async ({ page }) => {
       test.setTimeout(90_000);
       await openPdf(page, size.width, size.height);
 
@@ -91,7 +101,7 @@ test.describe('A12 — PDF viewport geometry survives chrome transitions', () =>
     });
   }
 
-  test('opening and closing Lookup does not move the viewport box (390) @pdf', async ({ page }) => {
+  test('opening and closing Lookup does not move the viewport box (390) @pdf @GEO-1', async ({ page }) => {
     test.setTimeout(90_000);
     await openPdf(page, 390, 844);
 
@@ -102,7 +112,7 @@ test.describe('A12 — PDF viewport geometry survives chrome transitions', () =>
     await expectViewportStable(page, before);
   });
 
-  test('returning to the true top keeps the same page, percent and offset @pdf', async ({ page }) => {
+  test('returning to the true top keeps the same page, percent and offset @pdf @GEO-2 @GEO-3', async ({ page }) => {
     test.setTimeout(90_000);
     await openPdf(page, 390, 844);
 
@@ -118,7 +128,7 @@ test.describe('A12 — PDF viewport geometry survives chrome transitions', () =>
     expect(after.slotIds, 'page identity changed after returning to the top').toBe(atTop.slotIds);
   });
 
-  test('a revealed header overlays the viewport box but never more than its own height @pdf', async ({ page }) => {
+  test('a revealed header overlays the viewport box but never more than its own height @pdf @GEO-1 @GEO-5', async ({ page }) => {
     test.setTimeout(90_000);
     await openPdf(page, 390, 844);
 
@@ -141,7 +151,7 @@ test.describe('A12 — PDF viewport geometry survives chrome transitions', () =>
     ).toBeLessThanOrEqual(headerHeight + 0.5);
   });
 
-  test('the first readable line is clear of the header at scrollTop 0 @pdf', async ({ page }) => {
+  test('the first readable line is clear of the header at scrollTop 0 @pdf @GEO-4', async ({ page }) => {
     test.setTimeout(90_000);
     await openPdf(page, 390, 844);
     await scrollToTop(page);

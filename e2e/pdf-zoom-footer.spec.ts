@@ -1,21 +1,24 @@
 import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
 import { useInterfaceMode } from './interfaceMode';
+import { goToLocationConfirm, goToLocationPageInput, modeControl, openGoToLocation } from './readerNames';
 
-// Contract §8.2/§8.3 (U3) and docs/desktop-reader.md §3: PDF zoom is a direct Header toolbar control at
-// desktop (≥1024px) — decrease, level selector, increase. It is never a popup, never opens a menu, and
-// never appears in More. This spec asserts behavior and ownership, not the retired `.pdf-toolbar`
-// band or its `.pdf-more` preset popover.
+// Contract FTR-2 and docs/desktop-reader.md §3: at ≥1024px the Header owns the decrease, level and
+// increase controls. It is never a popup, never opens a menu, and never appears in More. This spec
+// asserts behavior and ownership, not the retired `.pdf-toolbar` band or its `.pdf-more` preset
+// popover.
+//
+// The test is about zoom, not density, so it uses one default interface density rather than
+// iterating both. P2b drops the density parameter from `useInterfaceMode` entirely.
 const desktopWidths = [1024, 1280, 1366, 1440, 1920];
 
-for (const mode of ['simple', 'advanced'] as const) {
-  for (const width of desktopWidths) {
-    test(`desktop ${mode} exposes a direct Header toolbar zoom stepper at ${width}px @pdf`, async ({ page }) => {
+for (const width of desktopWidths) {
+    test(`desktop exposes a direct Header toolbar zoom stepper at ${width}px @pdf @FTR-2`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
-      await useInterfaceMode(page, mode);
+      await useInterfaceMode(page, 'simple');
       await page.locator('input[type=file]').setInputFiles({ name: 'zoom-footer.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
-      await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+      await modeControl(page, 'text').click();
       await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
 
       // Ownership: the stepper lives in the Header toolbar band, and the retired toolbar band is gone.
@@ -76,29 +79,29 @@ for (const mode of ['simple', 'advanced'] as const) {
       const menu = page.getByRole('menu', { name: 'Reader actions' });
       await expect(menu).toBeVisible();
       for (const forbidden of ['Zoom in', 'Zoom out', 'Zoom level', 'Fit width', 'Fit page', 'Default']) {
-        await expect(menu.getByRole('menuitem', { name: forbidden, exact: true })).toHaveCount(0);
+              await expect(menu.getByRole('menuitem', { name: forbidden, exact: true })).toHaveCount(0);
+            }
+            await page.keyboard.press('Escape');
+          });
       }
-      await page.keyboard.press('Escape');
-    });
-  }
-}
 
-// docs/desktop-reader.md §2.2: `Current PDF page` is the sole opener of `Go to location` at >=1024px,
-// so gating the Footer nav by `!desktop` cannot leave the dialog unreachable in that band. This
+// docs/desktop-reader.md §2.2: the page-number button opens `Go to location` at >=1024px, so
+// gating the Footer nav by `!desktop` cannot leave the dialog unreachable in that band. This
 // asserts the control reaches the documented destination (not a direct jump), because the Footer
 // that used to open it no longer exists here.
+//
+// Untagged: NAV-1, which makes the Header the sole opener above 1024px, is a P2b rule. The opener
+// name goes through `openGoToLocation`, so P2b renames it once.
 test('the Header Current PDF page button opens Go to location at 1280px @pdf', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'go-to-1280.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+    await modeControl(page, 'text').click();
   await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Current PDF page' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Go to location' });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole('spinbutton').fill('3');
-  await dialog.getByRole('button', { name: 'Go', exact: true }).click();
+  const dialog = await openGoToLocation(page);
+  await goToLocationPageInput(dialog).fill('3');
+  await goToLocationConfirm(dialog).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('[data-pdf-page="3"] .pdf-canvas')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Current PDF page' })).toHaveText('3 / 3');
@@ -111,19 +114,17 @@ test('the Footer Current PDF page button opens Go to location at 390px @pdf', as
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'go-to-390.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+    await modeControl(page, 'text').click();
   await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
 
   // The Footer owns this indicator in this band; the Header does not render a second copy.
-  const footerNav = page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('navigation', { name: 'Page navigation' });
-  await expect(footerNav.getByRole('button', { name: 'Current PDF page' })).toHaveCount(1);
+    const footerNav = page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('navigation', { name: 'Page navigation' });
+    await expect(footerNav.getByRole('button', { name: 'Current PDF page' })).toHaveCount(1);
 
-  await footerNav.getByRole('button', { name: 'Current PDF page' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Go to location' });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole('spinbutton').fill('3');
-  await dialog.getByRole('button', { name: 'Go', exact: true }).click();
-  await expect(dialog).toHaveCount(0);
-  await expect(page.locator('[data-pdf-page="3"] .pdf-canvas')).toBeVisible();
-  await expect(footerNav.getByRole('button', { name: 'Current PDF page' })).toHaveText('3 / 3');
-  });
+    const dialog = await openGoToLocation(page);
+    await goToLocationPageInput(dialog).fill('3');
+    await goToLocationConfirm(dialog).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.locator('[data-pdf-page="3"] .pdf-canvas')).toBeVisible();
+    await expect(footerNav.getByRole('button', { name: 'Current PDF page' })).toHaveText('3 / 3');
+    });

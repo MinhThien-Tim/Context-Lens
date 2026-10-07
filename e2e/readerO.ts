@@ -7,6 +7,7 @@
  * never fake user input — `readerScrollBy` drives real browser input only.
  */
 import { expect, type Page } from '@playwright/test';
+import { modeControl, type ReaderMode } from './readerNames';
 
 export type ReaderGeometry = {
   viewportTop: number;
@@ -217,10 +218,10 @@ export async function readerScrollOffset(page: Page) {
   return page.evaluate(selector => document.querySelector<HTMLElement>(selector)?.scrollTop ?? 0, SCROLL_SELECTOR);
 }
 
-export async function togglePdfMode(page: Page, mode: 'Original' | 'Reading') {
+export async function togglePdfMode(page: Page, mode: ReaderMode) {
   // The Footer control can be scrolled out of reach on a short surface; scrolling it into view with
   // real input is a prerequisite for activating it, not a chrome assertion.
-  const button = page.locator('.pdf-mode-switch').getByRole('button', { name: mode === 'Original' ? /Original|Trang gốc/ : /Reading/ });
+  const button = modeControl(page, mode);
   await button.scrollIntoViewIfNeeded();
   await button.click();
   await waitForReaderSurface(page);

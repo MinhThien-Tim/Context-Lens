@@ -107,7 +107,10 @@ it.each([[1024, false], [390, true]])('keeps controls visible on desktop or whil
   scrollSteps(scroll, [20, 60]);
   expect(isQuiet()).toBe(false);
 });
-it('closes the focused Context panel on Escape while keeping Document open', () => {
+// BACK-1 (overlay half): Escape closes the topmost overlay and leaves the one beneath it open.
+// A11Y-3: the panel that held focus is the one that closes. The history-ownership half of BACK-1
+// is an open item and is deliberately not asserted here.
+it('closes the focused Context panel on Escape while keeping Document open @BACK-1 @A11Y-3', () => {
   mount(1024);
   const closeDocument = vi.fn(), closeContext = vi.fn();
   act(() => render(<><ContentsPanel sections={[]} offset={0} onClose={closeDocument} onJump={vi.fn()} onNotes={vi.fn()} /><ContextPanel onClose={closeContext} onNote={vi.fn()} /></>, host));
@@ -115,7 +118,9 @@ it('closes the focused Context panel on Escape while keeping Document open', () 
   expect(closeContext).toHaveBeenCalledOnce();
   expect(closeDocument).not.toHaveBeenCalled();
 });
-it('supports keyboard menu navigation and restores focus on Escape', () => {
+// A11Y-3: the menu takes focus on open, arrows move it, Escape closes it and returns focus to the
+// control that opened it.
+it('supports keyboard menu navigation and restores focus on Escape @A11Y-3', () => {
   mount(1024);
   act(() => render(<ReaderMore items={[{ label: 'Contents', onSelect: vi.fn() }, { label: 'Markup', onSelect: vi.fn() }]} />, host));
   const trigger = host.querySelector<HTMLButtonElement>('[aria-label="Reader menu"]')!;
@@ -174,6 +179,7 @@ it.each([390, 1024])('keeps the Header to Back, title, and mode while More owns 
 
 // U2/§7.2/§9.3/§9.7/§12.11: OCR next is a document-tools action reached from More, never a Header
 // action, and exactly one control in the Reader performs it.
+// Deliberately untagged: OCR next retires in P4, so this is not a More inventory (MORE-3) claim.
 it('OCR next lives only in the document-tools surface opened from More', () => {
   mount(1024);
   const next = vi.fn(), noop = vi.fn();

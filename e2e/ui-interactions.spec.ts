@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { useInterfaceMode } from './interfaceMode';
 
-test('desktop Quick stays contained at selection edges with long bilingual content', async ({ page }) => {
+test('desktop Quick stays contained at selection edges with long bilingual content @LOOK-1', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 850 });
   await page.goto('/');
-  await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill('We maintain public confidence through careful work.');
+  await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill('The movement of the points on the page is obvious.');
   await page.getByRole('button', { name: /Preview & read/ }).click();
   const sheet = page.locator('.lookup-sheet');
   for (const [left, top] of [[12, 80], [720, 80], [12, 740], [720, 740]]) {
@@ -13,17 +13,41 @@ test('desktop Quick stays contained at selection edges with long bilingual conte
       Object.assign(paragraph.style, { position: 'fixed', left: `${position[0]}px`, top: `${position[1]}px`, width: '280px', margin: '0', padding: '0' });
     }, [left, top]);
     await page.locator('.reader-text').evaluate(root => {
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      let node = walker.nextNode()!;
-      while (!node.textContent!.includes('maintain')) node = walker.nextNode()!;
-      const start = node.textContent!.indexOf('maintain');
-      const range = document.createRange(); range.setStart(node, start); range.setEnd(node, start + 8);
-      const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
-      root.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    });
-    await page.locator('.selection-actions').getByRole('button', { name: 'Define', exact: true }).click();
-    await expect(sheet.locator('.sense-definition').first()).toBeVisible();
-    await sheet.locator('.sense-definition,.sense-vi').evaluateAll(elements => {
+          const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+          let node = walker.nextNode()!;
+          while (!node.textContent!.includes('movement')) node = walker.nextNode()!;
+          const start = node.textContent!.indexOf('movement');
+          const range = document.createRange(); range.setStart(node, start); range.setEnd(node, start + 'movement'.length);
+          const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
+          root.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+        });
+        await page.locator('.selection-actions').getByRole('button', { name: 'Define', exact: true }).click();
+        await expect(sheet.locator('.sense-definition').first()).toBeVisible();
+
+        // LOOK-1: the sheet shows the entry glosses for the explanation language it is actually in.
+        // The English view has none, because an English gloss is the definition itself. The Vietnamese
+        // and bilingual views carry the entry-level meanings, and they are shown, never hidden behind a
+        // disclosure. The cycle button is the only language opener on this surface; on the default
+        // Simple card it sits inside the More actions disclosure, so open that before using it.
+        await sheet.locator('.explain-more-actions > summary').click();
+        const cycle = sheet.locator('.language-cycle');
+        await expect(cycle).toBeVisible();
+        // The stored explanation language decides where the cycle starts, so drive it to the
+        // language under test instead of assuming which one comes first.
+        const cycleTo = async (language: 'en' | 'vi' | 'bilingual') => {
+          for (let step = 0; step < 3 && await sheet.locator(`.quick-explanation[data-language="${language}"]`).count() === 0; step++) await cycle.click();
+          await expect(sheet.locator(`.quick-explanation[data-language="${language}"]`)).toHaveCount(1);
+        };
+        await cycleTo('en');
+        await expect(sheet.locator('.entry-glosses')).toHaveCount(0);
+        for (const language of ['vi', 'bilingual'] as const) {
+          await cycleTo(language);
+          await expect(sheet.locator('.entry-glosses')).toBeVisible();
+          expect(await sheet.locator('.entry-glosses').evaluate(el => el.closest('details'))).toBeNull();
+        }
+        await sheet.locator('.explain-more-actions > summary').click();
+
+        await sheet.locator('.sense-definition,.sense-vi').evaluateAll(elements => {
       for (const el of elements) el.textContent += ' Long English definition và nghĩa tiếng Việt liên kết.'.repeat(50);
     });
     const bounds = await sheet.boundingBox();
