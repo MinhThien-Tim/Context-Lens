@@ -36,7 +36,7 @@ disagrees with it, this file is the defect. Rule IDs below (HDR-1, INP-2…) ref
 - Returns early when `desktop`, `controlsLocked`, `contentsOpen` or `contextOpen` (CHR-3, CHR-4).
 - A live selection or any `OVERLAY_OPEN` surface zeroes travel and suppresses the transition. `OVERLAY_OPEN` = `.reader-more-menu`, `.pdf-reading-options`, `.pdf-reading-selection-wrap`, `.pdf-reading-selection-actions`, `.selection-actions`; the Markup palette joins it in P2b.
 - Quiet hides Header **and** Footer at ≤1023px (progress line included). Both overlay the reading surface; static top and bottom padding lives inside the scroll container.
-- Reveal-only control: `<button class="reader-reveal" aria-label="Show reading controls">`, a fixed overlay outside the scroll flow, rendered only while quiet (INP-4). No `aria-haspopup`, no `aria-expanded`.
+- Reveal-only control: `<button class="reader-reveal" aria-label="Show reading controls">`, a fixed overlay outside the scroll flow, rendered only while quiet (INP-4). No `aria-haspopup`, no `aria-expanded`. It sits bottom-right inside the safe-area inset; P2b records the exact offset after the 320px and landscape checks.
 - `onFocusCapture` reveals only when focus enters `CHROME`; focus on the reading surface, text or selection handles never does.
 
 ## 4. Programmatic scroll attribution
@@ -51,7 +51,7 @@ disagrees with it, this file is the defect. Rule IDs below (HDR-1, INP-2…) ref
 | Surface | Mobile ≤1023px | Desktop ≥1024px |
 | --- | --- | --- |
 | Header | Back · title · `Text \| PDF` | Library · title ⌄ (File switcher) · `Text \| PDF` (centred) · zoom − level + · Contents · Highlight Underline Erase · `Aa` · More trigger |
-| Footer | One full-width single-row bar: Contents · page number · Markup · More; hairline progress line on its top edge; `Aa ···` overlay while quiet (Header and Footer are both hidden then) | Thin single-row band: page number · progress line · OCR status while active |
+| Footer | One full-width single-row bar: Contents · page number · Markup · More (visible text labels); hairline progress line on its top edge; `Aa ···` overlay while quiet (Header and Footer are both hidden then) | Thin single-row band: page number · progress line · OCR status while active |
 | More | Bottom sheet with backdrop, width-capped at 768–1023px, Escape closes, focus trapped | Popover from the Header trigger |
 | Contents (Header icon on desktop, Footer bar on mobile) | One panel at a time (drawer/sheet) | Document column (Contents, Pages) |
 | Context | Opens only from Lookup "Show more" | Context Inspector column, same trigger |
