@@ -30,7 +30,7 @@ function mount(width = 390, locked = false, surface: 'text' | 'original' | 'read
   const body = surface === 'original'
     ? <div class="pdf-scroll"><div class="pdf-page"><button>Page control</button></div></div>
     : <div class="pdf-reading-scroll"><button>Reading control</button></div>;
-  act(() => render(<ReaderShell interfaceMode="simple" surface={surface} contentsOpen={false} contextOpen={false} controlsLocked={locked}><header class="reader-header"><button>Back</button></header>{body}<footer class="reader-progress"><button>Zoom out</button></footer></ReaderShell>, host));
+  act(() => render(<ReaderShell surface={surface} contentsOpen={false} contextOpen={false} controlsLocked={locked}><header class="reader-header"><button>Back</button></header>{body}<footer class="reader-progress"><button>Zoom out</button></footer></ReaderShell>, host));
   return { scroll: host.querySelector<HTMLDivElement>(surface === 'original' ? '.pdf-scroll' : '.pdf-reading-scroll')!, queries };
 }
 // Real user scroll only (§5.2/§5.4): the wheel marks the following deltas as user travel, and the

@@ -1,4 +1,4 @@
-import { useDesktop } from '../components/useDesktop';
+﻿import { useDesktop } from '../components/useDesktop';
 import { ReaderShell } from '../reader/ReaderShell';
 import { ReaderProgress } from '../reader/ReaderProgress';
 import { ContextPanel } from '../reader/ContextPanel';
@@ -100,10 +100,10 @@ export function App() {
   const [contentsOpen, setContentsOpen] = useState(false);
   const [contextPanelOpen, setContextPanelOpen] = useState(false);
   const [goToOpen, setGoToOpen] = useState(false);
-  // Contract §9.7: document tools and OCR controls are ONE More action opening ONE surface.
+  // Contract Â§9.7: document tools and OCR controls are ONE More action opening ONE surface.
   const [documentToolsOpen, setDocumentToolsOpen] = useState(false);
   const [pdfNavigationToken, setPdfNavigationToken] = useState(0);
-  // docs/desktop-reader.md §3.1: the Header selector shows the actual PDF rendering scale and
+  // docs/desktop-reader.md Â§3.1: the Header selector shows the actual PDF rendering scale and
   // `PdfViewer` is the only place that can measure it, so the viewer reports it upward. `null` means
   // "not measured yet"; the Footer keeps its own readout and mobile keeps `PdfViewer`-local zoom.
   const [actualPdfScale, setActualPdfScale] = useState<number | null>(null);
@@ -253,12 +253,12 @@ export function App() {
   }), [preferences.fontSize, preferences.lineHeight, preferences.fontFamily, preferences.readingMargin]);
 
   useEffect(() => {
-    setContentsOpen(Boolean(documentRecord && desktop && preferences.interfaceMode === 'advanced'));
+      setContentsOpen(Boolean(documentRecord && desktop));
     setContextPanelOpen(false); setLookupOpen(false); setShowNotes(false);
-  }, [preferences.interfaceMode]);
+    }, [desktop, documentRecord?.id]);
   useEffect(() => {
     requestRef.current?.abort(); contextRequestRef.current?.abort();
-    setContentsOpen(Boolean(documentRecord && desktop && preferences.interfaceMode === 'advanced'));
+      setContentsOpen(Boolean(documentRecord && desktop));
     setContextPanelOpen(false); setLookupOpen(false); setShowNotes(false);
     setLookup(null); setActiveSelection(null); setContextResult(null);
     setShowReaderSettings(false); setHighlightToolsOpen(false); setGoToOpen(false);
@@ -497,11 +497,7 @@ export function App() {
   const dismissOnboarding = () => { setShowOnboardingCard(false); void markContextLensOnboardingSeen(); };
   const changeGuideLanguage = (value: GuideLanguage) => { setGuideLanguage(value); void saveGuideLanguage(value); };
 
-  useEffect(() => {
-    if (preferences.interfaceMode === 'advanced') void import('../home-advanced.css');
-  }, [preferences.interfaceMode]);
-
-  const continueReadingSection = <ContinueReading documents={continueDocs} advanced={preferences.interfaceMode === 'advanced'}
+  const continueReadingSection = <ContinueReading documents={continueDocs}
     positionLabel={doc => positionLabel(doc, doc.location)} kindLabel={documentKindLabel}
     onOpen={doc => void openDocument(doc)} onDismiss={doc => {
       void dismissContinueReading(doc.id).then(() => setContinueDocs(items => items.filter(item => item.id !== doc.id)))
@@ -509,31 +505,27 @@ export function App() {
     }} />;
 
   if (!documentRecord) return (
-    <main class="home-shell" data-interface-mode={preferences.interfaceMode}>
-      {!online && <div class="status-banner" role="status">Offline mode · Saved documents and cached meanings remain available.</div>}
-      {updateReady && <button class="status-banner update-banner" onClick={() => window.dispatchEvent(new Event('context-lens:apply-update'))}>An update is ready · Reload</button>}
-      {preferences.interfaceMode === 'simple' ? <>
+    <main class="home-shell">
+      {!online && <div class="status-banner" role="status">Offline mode Â· Saved documents and cached meanings remain available.</div>}
+      {updateReady && <button class="status-banner update-banner" onClick={() => window.dispatchEvent(new Event('context-lens:apply-update'))}>An update is ready Â· Reload</button>}
       <header class="brand-header">
-        <div class="brand-lockup"><div class="brand-mark">C</div><div><h1>Context Lens</h1><p>Read English. Stay in context.</p></div></div>
-        <nav class="home-nav" aria-label="Library tools">
-          <button class="nav-button" aria-label="Saved words" onClick={() => setShowVocabulary(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12a2 2 0 0 1 2 2v14l-8-3.5L4 20V6a2 2 0 0 1 2-2Z"/></svg><span>Saved words</span></button>
-          <button class="nav-button" aria-label="Storage" onClick={() => setShowDataManagement(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M6 3h12l2 4v13H4V7l2-4Zm3 8h6"/></svg><span>Storage</span></button>
-          <button class="nav-button" aria-label="Settings" onClick={() => setShowApiSettings(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M4.9 4.9 7 7m10 10 2.1 2.1M2 12h3m14 0h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span>Settings</span></button>
-          <button class="nav-button nav-button-guide" aria-label="Guide" onClick={openOnboarding}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.5 2.5 0 1 1 3.6 2.25c-.85.45-1.3.95-1.3 1.75m0 3h.01"/></svg><span>Guide</span></button>
-          <LookupStatistics />
-          <LanguageToggle language={guideLanguage} onChange={changeGuideLanguage} />
-          <div class="home-theme-toggle" role="group" aria-label="Interface density">
-            {(['simple', 'advanced'] as const).map(mode => <button disabled={!preferencesLoaded} aria-pressed={preferences.interfaceMode === mode} onClick={() => setPreferences({ ...preferences, interfaceMode: mode })}>{mode === 'simple' ? 'Simple' : 'Advanced'}</button>)}
-          </div>
-          <label class="appearance-control">Appearance <select disabled={!preferencesLoaded} aria-label="Appearance" value={preferences.theme} onChange={event => setPreferences({ ...preferences, theme: event.currentTarget.value as AppPreferences['theme'] })}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
-        </nav>
-      </header>
+              <div class="brand-lockup"><div class="brand-mark">C</div><div><h1>Context Lens</h1><p>Read English. Stay in context.</p></div></div>
+              <nav class="home-nav" aria-label="Library tools">
+                <button class="nav-button" aria-label="Saved words" onClick={() => setShowVocabulary(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12a2 2 0 0 1 2 2v14l-8-3.5L4 20V6a2 2 0 0 1 2-2Z"/></svg><span>Saved words</span></button>
+                <button class="nav-button" aria-label="Storage" onClick={() => setShowDataManagement(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M6 3h12l2 4v13H4V7l2-4Zm3 8h6"/></svg><span>Storage</span></button>
+                <button class="nav-button" aria-label="Settings" onClick={() => setShowApiSettings(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M4.9 4.9 7 7m10 10 2.1 2.1M2 12h3m14 0h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span>Settings</span></button>
+                <button class="nav-button nav-button-guide" aria-label="Guide" onClick={openOnboarding}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.5 2.5 0 1 1 3.6 2.25c-.85.45-1.3.95-1.3 1.75m0 3h.01"/></svg><span>Guide</span></button>
+                <LookupStatistics />
+                <LanguageToggle language={guideLanguage} onChange={changeGuideLanguage} />
+                <label class="appearance-control">Appearance <select disabled={!preferencesLoaded} aria-label="Appearance" value={preferences.theme} onChange={event => setPreferences({ ...preferences, theme: event.currentTarget.value as AppPreferences['theme'] })}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+              </nav>
+            </header>
       <section class="home-intro"><p class="eyebrow">Your reading space</p><h2>Start reading.</h2><p>Paste a passage or open a document. Select any word or phrase when you need context.</p></section>
       <div key="home-primary-actions" class="primary-actions">
         <PasteComposer disabled={importing} initialText={sharedDraft} onCreate={imported => void storeImportedDocument(imported)} />
         <section class="action-card import-card">
           <div class="action-card-heading"><span class="action-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V3m0 0L7 8m5-5 5 5M4 14v6h16v-6"/></svg></span><div><p class="eyebrow">Your files</p><h2>Import a book or document</h2><p>TXT, Markdown, PDF, EPUB, or DOCX.</p></div></div>
-          <label class="document-drop"><input class="visually-hidden" type="file" disabled={importing} accept=".txt,.md,.markdown,.pdf,.epub,.docx,text/plain,text/markdown,application/pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => void importTextFile(event.currentTarget.files?.[0])} /><span>{importing ? 'Importing…' : 'Choose a document'}</span><small>5 MB for text · 50 MB for books</small></label>
+          <label class="document-drop"><input class="visually-hidden" type="file" disabled={importing} accept=".txt,.md,.markdown,.pdf,.epub,.docx,text/plain,text/markdown,application/pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => void importTextFile(event.currentTarget.files?.[0])} /><span>{importing ? 'Importingâ€¦' : 'Choose a document'}</span><small>5 MB for text Â· 50 MB for books</small></label>
           <div class="import-form"><label for="article-url">Or import an article URL</label><div><input id="article-url" type="url" inputMode="url" value={articleUrl} onInput={(event) => setArticleUrl(event.currentTarget.value)} placeholder="https://example.com/article" /><button class="secondary-button" onClick={importArticleUrl} disabled={!articleUrl.trim() || importing}>Import URL</button></div></div>
           {importError && <p class="import-error" role="alert">{importError}</p>}
           {importProgress && <div class="import-progress" role="status"><span>{importProgress}</span><button onClick={() => importControllerRef.current?.abort()}>Cancel</button></div>}
@@ -543,51 +535,11 @@ export function App() {
       <section class="library-section">
         <div class="section-heading"><div><p class="eyebrow">Library</p><h2>All documents</h2></div></div>
         <div class="library-tools"><label class="library-search"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input value={libraryQuery} onInput={event => setLibraryQuery(event.currentTarget.value)} placeholder="Search by title" aria-label="Search library" /></label><select aria-label="Filter document type" value={libraryKind} onChange={event => setLibraryKind(event.currentTarget.value as typeof libraryKind)}><option value="all">All types</option><option value="pdf">PDF</option><option value="epub">EPUB</option><option value="docx">DOCX</option><option value="article">Articles</option><option value="text">Text</option><option value="markdown">Markdown</option></select></div>
-        {libraryLoading && !libraryDocs.length ? <p class="section-empty" role="status">Loading your library…</p> : libraryDocs.length ? <div class="library-grid">{libraryDocs.map(doc => <article class="library-card"><button class="library-open" onClick={() => void openDocument(doc)}><span class={`document-badge kind-${doc.kind}`}>{documentKindLabel(doc)}</span><strong>{doc.title}</strong><small>{documentPositionDetail(doc)}</small><OfflineBadge document={doc} /><span class="mini-progress"><i style={{ width: `${Math.round(doc.location.progress * 100)}%` }} /></span></button><button class="icon-button library-delete" aria-label={`Delete ${doc.title}`} onClick={() => { if (confirm(`Delete “${doc.title}” and its notes from this device?`)) { void db.transaction('rw', [db.documents, db.notes, db.pdfOcr], async () => { await db.documents.delete(doc.id); await db.notes.where('documentId').equals(doc.id).delete(); await db.pdfOcr.where('documentId').equals(doc.id).delete(); }).then(async () => { await refreshLibrary(); setContinueDocs(items => items.filter(item => item.id !== doc.id)); }); } }}>×</button></article>)}</div> : <p class="section-empty">{libraryQuery || libraryKind !== 'all' ? 'No documents match this search.' : 'Your imported documents will appear here.'}</p>}
+        {libraryLoading && !libraryDocs.length ? <p class="section-empty" role="status">Loading your libraryâ€¦</p> : libraryDocs.length ? <div class="library-grid">{libraryDocs.map(doc => <article class="library-card"><button class="library-open" onClick={() => void openDocument(doc)}><span class={`document-badge kind-${doc.kind}`}>{documentKindLabel(doc)}</span><strong>{doc.title}</strong><small>{documentPositionDetail(doc)}</small><OfflineBadge document={doc} /><span class="mini-progress"><i style={{ width: `${Math.round(doc.location.progress * 100)}%` }} /></span></button><button class="icon-button library-delete" aria-label={`Delete ${doc.title}`} onClick={() => { if (confirm(`Delete â€œ${doc.title}â€ and its notes from this device?`)) { void db.transaction('rw', [db.documents, db.notes, db.pdfOcr], async () => { await db.documents.delete(doc.id); await db.notes.where('documentId').equals(doc.id).delete(); await db.pdfOcr.where('documentId').equals(doc.id).delete(); }).then(async () => { await refreshLibrary(); setContinueDocs(items => items.filter(item => item.id !== doc.id)); }); } }}>Ã—</button></article>)}</div> : <p class="section-empty">{libraryQuery || libraryKind !== 'all' ? 'No documents match this search.' : 'Your imported documents will appear here.'}</p>}
         {libraryHasMore && <button class="secondary-button load-more" disabled={libraryLoading} onClick={() => { void loadMoreLibrary(); }}>Load more</button>}
       </section>
       {showOnboardingCard && <OnboardingCard language={guideLanguage} onOpen={openOnboarding} onDismiss={dismissOnboarding} />}
       <p class="home-note">Documents stay on this device. For offline use, wait for the first online load to finish and open each book once.</p>
-      </> : <>
-      <header class="brand-header">
-        <div class="brand-lockup"><div class="brand-mark">C</div><div><h1>Context Lens</h1><p>Read English. Stay in context.</p></div></div>
-        <nav class="home-nav" aria-label="Library tools">
-          <button class="nav-button" aria-label="Saved words" onClick={() => setShowVocabulary(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12a2 2 0 0 1 2 2v14l-8-3.5L4 20V6a2 2 0 0 1 2-2Z"/></svg><span>Saved words</span></button>
-          <button class="nav-button" aria-label="Storage" onClick={() => setShowDataManagement(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M6 3h12l2 4v13H4V7l2-4Zm3 8h6"/></svg><span>Storage</span></button>
-          <button class="nav-button" aria-label="Settings" onClick={() => setShowApiSettings(true)}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M4.9 4.9 7 7m10 10 2.1 2.1M2 12h3m14 0h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg><span>Settings</span></button>
-          <button class="nav-button nav-button-guide" aria-label="Guide" onClick={openOnboarding}><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.5 2.5 0 1 1 3.6 2.25c-.85.45-1.3.95-1.3 1.75m0 3h.01"/></svg><span>Guide</span></button>
-          {preferences.interfaceMode === 'advanced' ? <div class="home-diagnostics"><LookupStatistics /></div> : <details class="home-advanced"><summary>Tools</summary><div class="home-advanced-tools"><p class="eyebrow">Diagnostics</p><LookupStatistics /></div></details>}
-
-        </nav>
-      </header>
-      <section class="home-preferences" aria-label="Reading preferences"><div><span class="preference-label">Reading</span><button class="text-button" onClick={() => setShowReaderSettings(true)}>Typography</button></div>          <LanguageToggle language={guideLanguage} onChange={changeGuideLanguage} />
-          <div class="home-theme-toggle" role="group" aria-label="Interface density">
-            {(['simple', 'advanced'] as const).map(mode => <button disabled={!preferencesLoaded} aria-pressed={preferences.interfaceMode === mode} onClick={() => setPreferences({ ...preferences, interfaceMode: mode })}>{mode === 'simple' ? 'Simple' : 'Advanced'}</button>)}
-          </div>
-          <label class="appearance-control">Appearance <select disabled={!preferencesLoaded} aria-label="Appearance" value={preferences.theme} onChange={event => setPreferences({ ...preferences, theme: event.currentTarget.value as AppPreferences['theme'] })}><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label></section>
-      <section class="home-intro"><p class="eyebrow">Your reading space</p><h2>Start reading.</h2><p>Open a book or paste a passage. Read at your own pace.</p><div class="home-entry-actions"><a class="primary-button" href="#import-document">Import document</a><a class="secondary-button" href="#paste-text">Paste text</a><a class="text-button" href="#library">Library</a></div></section>
-      {continueDocs.length > 0 && continueReadingSection}
-      <div key="home-primary-actions" class="primary-actions">
-        <PasteComposer disabled={importing} initialText={sharedDraft} onCreate={imported => void storeImportedDocument(imported)} />
-        <section id="import-document" class="action-card import-card">
-          <div class="action-card-heading"><span class="action-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V3m0 0L7 8m5-5 5 5M4 14v6h16v-6"/></svg></span><div><p class="eyebrow">Your files</p><h2>Import a book or document</h2><p>TXT, Markdown, PDF, EPUB, or DOCX.</p></div></div>
-          <label class="document-drop"><input class="visually-hidden" type="file" disabled={importing} accept=".txt,.md,.markdown,.pdf,.epub,.docx,text/plain,text/markdown,application/pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => void importTextFile(event.currentTarget.files?.[0])} /><span>{importing ? 'Importing…' : 'Choose a document'}</span><small>5 MB for text · 50 MB for books</small></label>
-          <div class="import-form"><label for="article-url">Or import an article URL</label><div><input id="article-url" type="url" inputMode="url" value={articleUrl} onInput={(event) => setArticleUrl(event.currentTarget.value)} placeholder="https://example.com/article" /><button class="secondary-button" onClick={importArticleUrl} disabled={!articleUrl.trim() || importing}>Import URL</button></div></div>
-          {importError && <p class="import-error" role="alert">{importError}</p>}
-          {importProgress && <div class="import-progress" role="status"><span>{importProgress}</span><button onClick={() => importControllerRef.current?.abort()}>Cancel</button></div>}
-        </section>
-      </div>
-
-      <section id="library" class="library-section">
-        <div class="section-heading"><div><p class="eyebrow">Library</p><h2>All documents</h2></div></div>
-        <div class="library-tools"><label class="library-search"><svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input value={libraryQuery} onInput={event => setLibraryQuery(event.currentTarget.value)} placeholder="Search by title" aria-label="Search library" /></label><select aria-label="Filter document type" value={libraryKind} onChange={event => setLibraryKind(event.currentTarget.value as typeof libraryKind)}><option value="all">All types</option><option value="pdf">PDF</option><option value="epub">EPUB</option><option value="docx">DOCX</option><option value="article">Articles</option><option value="text">Text</option><option value="markdown">Markdown</option></select></div>
-        {libraryLoading && !libraryDocs.length ? <p class="section-empty" role="status">Loading your library…</p> : libraryDocs.length ? <div class="library-grid">{libraryDocs.map(doc => <article class="library-card"><button class="library-open" onClick={() => void openDocument(doc)}><DocumentIdentity document={doc} detail={documentPositionDetail(doc)} kindLabel={documentKindLabel(doc)} /></button><button title={`Delete ${doc.title}`} class="icon-button library-delete" aria-label={`Delete ${doc.title}`} onClick={() => { if (confirm(`Delete “${doc.title}” and its notes from this device?`)) { void db.transaction('rw', [db.documents, db.notes, db.pdfOcr], async () => { await db.documents.delete(doc.id); await db.notes.where('documentId').equals(doc.id).delete(); await db.pdfOcr.where('documentId').equals(doc.id).delete(); }).then(async () => { await refreshLibrary(); setContinueDocs(items => items.filter(item => item.id !== doc.id)); }); } }}><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7m4-7v7"/></svg></button></article>)}</div> : <p class="section-empty">{libraryQuery || libraryKind !== 'all' ? 'No documents match this search.' : 'Your imported documents will appear here.'}</p>}
-        {libraryHasMore && <button class="secondary-button load-more" disabled={libraryLoading} onClick={() => { void loadMoreLibrary(); }}>Load more</button>}
-      </section>
-      {showOnboardingCard && <OnboardingCard language={guideLanguage} onOpen={openOnboarding} onDismiss={dismissOnboarding} />}
-      <p class="home-note">Documents stay on this device. For offline use, wait for the first online load to finish and open each book once.</p>
-      {showReaderSettings && <ReaderSettings value={preferences} onChange={setPreferences} onClose={() => setShowReaderSettings(false)} />}
-      </>}
       {showOnboarding && <ContextLensOnboarding language={guideLanguage} onLanguageChange={changeGuideLanguage} onClose={() => setShowOnboarding(false)} />}
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} initialVerified={geminiVerified} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
       {showVocabulary && <VocabularyLibrary records={vocabulary} onClose={() => setShowVocabulary(false)} onDelete={(id) => { void db.vocabulary.delete(id); setVocabulary((items) => items.filter((item) => item.id !== id)); }} />}
@@ -610,7 +562,7 @@ export function App() {
     const onNextPage = () => {
       if (currentPage && totalPages && currentPage < totalPages) jumpPdfPage(currentPage + 1);
     };
-    // docs/desktop-reader.md §3.1: stepping is owned by `PdfViewer.stepZoom` at every density;
+    // docs/desktop-reader.md Â§3.1: stepping is owned by `PdfViewer.stepZoom` at every density;
     // App must not multiply the stored custom scale by a factor of its own.
     const onZoomOut = () => { pdfZoomStep?.(-1); };
     const onZoomIn = () => { pdfZoomStep?.(1); };
@@ -629,8 +581,8 @@ export function App() {
                 const onUnderline = () => setActiveMarkupTool('underline');
                 const onErase = () => setActiveMarkupTool('eraser');
 
-        // Contract §9.3 + mobile-chrome.md §6: exactly these eight items, in this order. `Document`
-                // is the single OCR entry (§9.7) — a separate `OCR` item duplicated it and is removed.
+        // Contract Â§9.3 + mobile-chrome.md Â§6: exactly these eight items, in this order. `Document`
+                // is the single OCR entry (Â§9.7) â€” a separate `OCR` item duplicated it and is removed.
                 // Grouped with icons for compact presentation
                 const readerMoreItems: ReaderMoreItem[] = [
                   { label: 'Contents', onSelect: toggleDocumentPanel, icon: <ContentsIcon />, group: 'Navigation' },
@@ -643,9 +595,9 @@ export function App() {
           { label: 'Click lookup', pressed: originalClickLookup, onSelect: () => setOriginalClickLookup(value => !value), icon: <ClickLookupIcon />, group: 'Tools' },
         ];
     return (
-      <ReaderShell interfaceMode={preferences.interfaceMode} surface={documentRecord.kind === 'pdf' ? pdfMode : 'text'} controlsLocked={lookupOpen || showNotes || showReaderSettings || showApiSettings || goToOpen || highlightToolsOpen || documentToolsOpen || activeMarkupTool !== null} contentsOpen={contentsOpen} contextOpen={contextPanelOpen}>
-        {!online && <div class="reader-offline" role="status">Offline · Local only</div>}
-        {/* DesktopReader toolbar: single band at ≥1024px with navigation, page/location, zoom, Original/Reading, tools, More */}
+      <ReaderShell surface={documentRecord.kind === 'pdf' ? pdfMode : 'text'} controlsLocked={lookupOpen || showNotes || showReaderSettings || showApiSettings || goToOpen || highlightToolsOpen || documentToolsOpen || activeMarkupTool !== null} contentsOpen={contentsOpen} contextOpen={contextPanelOpen}>
+        {!online && <div class="reader-offline" role="status">Offline Â· Local only</div>}
+        {/* DesktopReader toolbar: single band at â‰¥1024px with navigation, page/location, zoom, Original/Reading, tools, More */}
         <ReaderToolbar
           title={documentRecord.title}
           onBack={() => void closeDocument()}
@@ -675,29 +627,29 @@ export function App() {
       {showReaderSettings && <ReaderSettings value={preferences} onChange={setPreferences} onClose={() => setShowReaderSettings(false)} />}
       {goToOpen && <GoToLocation document={documentRecord} onClose={() => setGoToOpen(false)} onJump={jump} onPage={jumpPdfPage} />}
       {contentsOpen && <ContentsPanel pageCount={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets?.length : undefined} page={currentLocation.kind === 'pdf' ? currentLocation.page : undefined} onPage={jumpPdfPage} onNotes={() => openNotes(null)} sections={sections} offset={currentLocation.absoluteOffset ?? 0} onJump={jump} onClose={() => setContentsOpen(false)} />}
-      {pdfSurface && <PdfDocumentTools open={documentToolsOpen} onClose={() => setDocumentToolsOpen(false)} uiLanguage={guideLanguage} hasPdfText={Boolean(documentRecord.pdfPages?.[currentLocation.page - 1]?.plainText.trim())} hasOcr={ocrPages.some(record => record.page === currentLocation.page && record.language === ocrLanguage)} language={ocrLanguage} onSource={source => choosePdfTextSource(currentLocation.page, source)} onLanguage={language => { setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfOcrLanguage: language } : current); void db.documents.update(documentRecord.id, { pdfOcrLanguage: language }); }} onRecognizeCurrent={() => { void ocrQueue.startCurrent(currentLocation.page); }} onRecognizeNext={() => { void ocrQueue.startNextUnprocessed(currentLocation.page); }} queueStatus={ocrQueue.status} onPause={ocrQueue.pause} onContinue={ocrQueue.continueQueue} onCancel={ocrQueue.cancel} hasAnyOcr={ocrPages.length > 0} onClear={() => { if (confirm('Xóa kết quả OCR của tài liệu này khỏi thiết bị?')) void ocrQueue.clear(); }} />}
+      {pdfSurface && <PdfDocumentTools open={documentToolsOpen} onClose={() => setDocumentToolsOpen(false)} uiLanguage={guideLanguage} hasPdfText={Boolean(documentRecord.pdfPages?.[currentLocation.page - 1]?.plainText.trim())} hasOcr={ocrPages.some(record => record.page === currentLocation.page && record.language === ocrLanguage)} language={ocrLanguage} onSource={source => choosePdfTextSource(currentLocation.page, source)} onLanguage={language => { setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfOcrLanguage: language } : current); void db.documents.update(documentRecord.id, { pdfOcrLanguage: language }); }} onRecognizeCurrent={() => { void ocrQueue.startCurrent(currentLocation.page); }} onRecognizeNext={() => { void ocrQueue.startNextUnprocessed(currentLocation.page); }} queueStatus={ocrQueue.status} onPause={ocrQueue.pause} onContinue={ocrQueue.continueQueue} onCancel={ocrQueue.cancel} hasAnyOcr={ocrPages.length > 0} onClear={() => { if (confirm('XÃ³a káº¿t quáº£ OCR cá»§a tÃ i liá»‡u nÃ y khá»i thiáº¿t bá»‹?')) void ocrQueue.clear(); }} />}
       <div class="visually-hidden" role="status" aria-live="polite">{jumpAnnouncement}</div>
       <div class="reader-viewport">
-      {documentRecord.source && <div class="reader-source">{documentRecord.source.author && <span>{documentRecord.source.author}</span>}{documentRecord.source.siteName && <span>{documentRecord.source.siteName}</span>}{documentRecord.source.url && <a href={documentRecord.source.url} target="_blank" rel="noreferrer noopener">Original ↗</a>}</div>}
+      {documentRecord.source && <div class="reader-source">{documentRecord.source.author && <span>{documentRecord.source.author}</span>}{documentRecord.source.siteName && <span>{documentRecord.source.siteName}</span>}{documentRecord.source.url && <a href={documentRecord.source.url} target="_blank" rel="noreferrer noopener">Original â†—</a>}</div>}
       {documentRecord.kind === 'pdf' && pdfMode === 'original' && currentLocation.kind === 'pdf'
-        ? <PdfViewer interfaceMode={preferences.interfaceMode} key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} zoomMode={desktop ? preferences.pdfZoomMode : 'fit-width'} desktopCustomScale={preferences.pdfCustomScale} onDesktopCustomScale={pdfCustomScale => setPreferences(current => ({ ...current, pdfCustomScale }))} onActualScale={setActualPdfScale} onZoomStepReady={step => setPdfZoomStep(() => step)} clickLookup={originalClickLookup} ocrBusy={Boolean(ocrQueue.status && !['error', 'done'].includes(ocrQueue.status.state))} onZoomMode={pdfZoomMode => setPreferences(current => ({ ...current, pdfZoomMode }))} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
+        ? <PdfViewer key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} zoomMode={desktop ? preferences.pdfZoomMode : 'fit-width'} desktopCustomScale={preferences.pdfCustomScale} onDesktopCustomScale={pdfCustomScale => setPreferences(current => ({ ...current, pdfCustomScale }))} onActualScale={setActualPdfScale} onZoomStepReady={step => setPdfZoomStep(() => step)} clickLookup={originalClickLookup} ocrBusy={Boolean(ocrQueue.status && !['error', 'done'].includes(ocrQueue.status.state))} onZoomMode={pdfZoomMode => setPreferences(current => ({ ...current, pdfZoomMode }))} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
         : documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf'
         ? <PdfReadingView key={documentRecord.id} documentRecord={documentRecord} location={currentLocation} style={readerStyle} ocrPages={ocrPages} ocrLanguage={ocrLanguage} onTextSource={(page, source) => { const pdfTextSources = { ...documentRecord.pdfTextSources, [page]: source }; setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfTextSources } : current); void db.documents.update(documentRecord.id, { pdfTextSources }); }} onOpenOriginal={() => changePdfViewMode('original')} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} navigationToken={pdfNavigationToken} onLocation={trackPdfLocation} onLookup={runLookup} onAddNote={selection => openNotes(selection)} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset, ocrPage, ocrLanguage) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset, ocrPage, ocrLanguage); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />
         : <TextReader offsets={documentRecord.kind === 'pdf' ? documentRecord.pageOffsets : documentRecord.chapterOffsets} onAddNote={selection => openNotes(selection)} content={documentRecord.content} safeHtml={documentRecord.safeHtml} onLookup={runLookup} style={readerStyle} highlights={documentRecord.highlights} activeMarkupTool={activeMarkupTool} activeMarkupColor={activeMarkupColor} onHighlight={highlight => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = upsertHighlight(current.highlights ?? [], highlight); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} onErase={(startOffset, endOffset) => setDocumentRecord(current => { if (!current || current.id !== documentRecord.id) return current; const highlights = eraseHighlights(current.highlights ?? [], startOffset, endOffset); void db.documents.update(current.id, { highlights, updatedAt: Date.now() }); return { ...current, highlights }; })} />}
       </div>
-      {/* Contract §8.1/§8.2 + docs/desktop-reader.md §2-3 (rollback of 40e807d): each band owns exactly
+      {/* Contract Â§8.1/Â§8.2 + docs/desktop-reader.md Â§2-3 (rollback of 40e807d): each band owns exactly
           one More trigger and one zoom host. At >=1024px both live in the Header toolbar; at <=1023px the
           Footer owns them. `markupActive` only decorates the band that actually renders the trigger. */}
       <ReaderProgress showPercentage={isPdf} progress={progress} ocr={activeOcrProgress ? { progress: progressPercent, completed: activeOcrProgress.completed, total: activeOcrProgress.total } : null} zoom={pdfSurface && pdfMode === 'original' && !desktop ? <span class="pdf-footer-zoom-host" /> : null} moreTrigger={!desktop ? <ReaderMore items={readerMoreItems} markupActive={activeMarkupTool !== null} /> : undefined}>
         {documentRecord.kind === 'pdf' && currentLocation.kind === 'pdf'
-          // docs/desktop-reader.md §3 (:37): page navigation is owned solely by the Header
+          // docs/desktop-reader.md Â§3 (:37): page navigation is owned solely by the Header
           // ReaderToolbar at >=1024px, so the Footer must not render a second copy there.
           // The Footer keeps only the progress/percentage there; mobile is unchanged.
           ? !desktop && <PageNavigation page={currentLocation.page} total={documentRecord.pageOffsets?.length ?? 1} onPrevious={() => jumpPdfPage(currentLocation.page - 1)} onNext={() => jumpPdfPage(currentLocation.page + 1)} onOpen={() => setGoToOpen(true)} />
           : <DocumentPosition document={documentRecord} location={currentLocation} onOpen={() => setGoToOpen(true)} />}
       </ReaderProgress>
       {contextPanelOpen && !lookupOpen && !showNotes && <ContextPanel onClose={closeContext} onNote={() => openNotes(null)} />}
-      <LookupBottomSheet quickMode={preferences.lookupQuickMode} onQuickModeChange={lookupQuickMode => setPreferences(current => ({ ...current, lookupQuickMode }))} placement={preferences.lookupPopupPlacement} onPlacementChange={lookupPopupPlacement => setPreferences(current => ({ ...current, lookupPopupPlacement }))} displayMode={lookupDisplay} preferredView={preferences.lookupViewMode} onDisplayModeChange={changeLookupDisplay} anchor={activeSelection?.anchor} selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} selectionText={activeSelection?.text} debug={preferences.interfaceMode === 'advanced' && engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} geminiConnected={geminiVerified && aiSettings.provider === 'gemini'} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} quickPending={quickPending} offline={!online} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={closeContext} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary().catch(() => setError("Unable to save vocabulary. Please try again."))} onAddNote={() => openNotes(activeSelection)} saved={saved} collectionTitle={collectionTitle(documentRecord ?? {})} />
+      <LookupBottomSheet quickMode={preferences.lookupQuickMode} onQuickModeChange={lookupQuickMode => setPreferences(current => ({ ...current, lookupQuickMode }))} placement={preferences.lookupPopupPlacement} onPlacementChange={lookupPopupPlacement => setPreferences(current => ({ ...current, lookupPopupPlacement }))} displayMode={lookupDisplay} preferredView={preferences.lookupViewMode} onDisplayModeChange={changeLookupDisplay} anchor={activeSelection?.anchor} selectionKey={`${activeSelection?.offset}:${activeSelection?.text}`} selectionText={activeSelection?.text} debug={engineSettings.debugMode} contextResult={contextResult} onExplain={explainSelection} geminiConnected={geminiVerified && aiSettings.provider === 'gemini'} onTranslateSentence={translateSelectedSentence} open={lookupOpen} result={lookup} quickPending={quickPending} offline={!online} loading={loading} error={error} mode={preferences.languageMode} onModeChange={changeMode} onClose={closeContext} onOpenSettings={() => setShowApiSettings(true)} onSpeak={pronounceEnglish} onToggleSave={() => void toggleVocabulary().catch(() => setError("Unable to save vocabulary. Please try again."))} onAddNote={() => openNotes(activeSelection)} saved={saved} collectionTitle={collectionTitle(documentRecord ?? {})} />
       {showApiSettings && <ApiSettings initialEngines={engineSettings} initial={aiSettings} initialVerified={geminiVerified} health={lookupService.diagnostics()} onClose={() => setShowApiSettings(false)} onSave={saveSetup} />}
       {showNotes && <NotesPanel document={documentRecord} selection={noteSelection} location={noteLocation} onJump={location => { if (location.kind === 'pdf') { if (location.textSource) { const pdfTextSources = { ...documentRecord.pdfTextSources, [location.page]: location.textSource }; setDocumentRecord(current => current?.id === documentRecord.id ? { ...current, pdfTextSources } : current); void db.documents.update(documentRecord.id, { pdfTextSources }); } pdfPersistence.flush(); setPdfNavigationToken(value => value + 1); setCurrentLocation(location); setProgress(location.progress); setPreferences(current => desktop ? { ...current, pdfViewMode: location.viewMode ?? 'reading' } : { ...current, pdfMobileViewMode: location.viewMode ?? 'reading' }); return; } const offset = location.absoluteOffset ?? (location.kind === 'epub' ? documentRecord.chapterOffsets?.[location.chapter - 1] : undefined); if (offset !== undefined) jump(offset); else window.scrollTo({ top: location.scrollY, behavior: 'auto' }); }} onClose={closeContext} />}
     </ReaderShell>

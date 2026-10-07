@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
-import { useInterfaceMode } from './interfaceMode';
 import { goToLocationConfirm, goToLocationPageInput, modeControl, openGoToLocation } from './readerNames';
 
 // Contract FTR-2 and docs/desktop-reader.md §3: at ≥1024px the Header owns the decrease, level and
@@ -8,15 +7,13 @@ import { goToLocationConfirm, goToLocationPageInput, modeControl, openGoToLocati
 // asserts behavior and ownership, not the retired `.pdf-toolbar` band or its `.pdf-more` preset
 // popover.
 //
-// The test is about zoom, not density, so it uses one default interface density rather than
-// iterating both. P2b drops the density parameter from `useInterfaceMode` entirely.
+// The test is about zoom, not density, so it runs once at the default single interface.
 const desktopWidths = [1024, 1280, 1366, 1440, 1920];
 
 for (const width of desktopWidths) {
     test(`desktop exposes a direct Header toolbar zoom stepper at ${width}px @pdf @FTR-2`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
-      await useInterfaceMode(page, 'simple');
       await page.locator('input[type=file]').setInputFiles({ name: 'zoom-footer.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
       await modeControl(page, 'text').click();
       await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();

@@ -17,8 +17,8 @@ async function openContents(page: Page) {
     await page.locator('.reader-progress').getByRole('button', { name: 'Reader menu' }).click();
     await page.getByRole('menuitem', { name: 'Contents', exact: true }).click();
   } else {
-      // Desktop starts with the panel already open: `interfaceMode` defaults to `advanced`, and
-      // App.tsx:257 opens it on document load. Clicking here would toggle it shut.
+      // Desktop starts with the panel already open: App.tsx opens it on document load for
+      // `desktop`. Clicking here would toggle it shut.
       if (!(await page.locator('.contents-panel').isVisible())) {
         await page.locator('.reader-header').getByRole('button', { name: 'Contents' }).click();
       }

@@ -6,12 +6,12 @@ import type { DocumentRecord } from '../db/database';
 
 const doc: DocumentRecord = { id: 'book', title: 'Book', kind: 'text', content: 'Text', createdAt: 1, updatedAt: 1, location: { kind: 'text', scrollY: 10, progress: 0.5, updatedAt: 1 } };
 
-describe.each([false, true])('Continue reading (advanced=%s)', advanced => {
+describe('Continue reading', () => {
   it('starts collapsed, supports disclosure and dismisses without opening', () => {
     const host = document.createElement('div'); document.body.append(host);
     const onOpen = vi.fn(); const onDismiss = vi.fn();
     try {
-      act(() => render(<ContinueReading documents={[doc]} advanced={advanced} onOpen={onOpen} onDismiss={onDismiss} positionLabel={() => 'Page 2 / 4'} kindLabel={() => 'Text'} />, host));
+      act(() => render(<ContinueReading documents={[doc]} onOpen={onOpen} onDismiss={onDismiss} positionLabel={() => 'Page 2 / 4'} kindLabel={() => 'Text'} />, host));
       const details = host.querySelector('details')!;
       expect(details.open).toBe(false);
       host.querySelector('summary')!.click();

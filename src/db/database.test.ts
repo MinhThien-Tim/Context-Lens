@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+﻿import { afterEach, describe, expect, it } from 'vitest';
 import Dexie from 'dexie';
 import { db, defaultPreferences, loadPreferences, savePreferences, ContextLensDatabase } from './database';
 
@@ -156,50 +156,40 @@ describe('reader interface preferences', () => {
     await db.settings.put({ key: 'reader-preferences', value: { ...defaultPreferences, lookupViewMode } });
     expect((await loadPreferences()).lookupViewMode).toBe('quick');
   });
-  it('defaults to Advanced and System without legacy settings', async () => {
+  it('defaults appearance and typography without legacy settings @ARCH-2', async () => {
     await db.settings.clear();
     expect(await loadPreferences()).toEqual(defaultPreferences);
   });
-  it('does not overwrite an existing persisted Simple choice with the Advanced default', async () => {
-    await db.settings.put({ key: 'reader-preferences', value: { ...defaultPreferences, interfaceMode: 'simple' } });
+  it('drops a stored interfaceMode without error and keeps every other preference @ARCH-2', async () => {
+    await db.settings.put({ key: 'reader-preferences', value: { ...defaultPreferences, interfaceMode: 'advanced', theme: 'dark', fontSize: 23 } });
     const loaded = await loadPreferences();
-    expect(loaded.interfaceMode).toBe('simple');
-    expect((await db.settings.get('reader-preferences'))?.value).toMatchObject({ interfaceMode: 'simple' });
+    expect('interfaceMode' in loaded).toBe(false);
+    expect(loaded).toMatchObject({ theme: 'dark', fontSize: 23 });
+    expect((await db.settings.get('reader-preferences'))?.value).toMatchObject({ theme: 'dark', fontSize: 23 });
+    expect('interfaceMode' in ((await db.settings.get('reader-preferences'))?.value as object)).toBe(false);
   });
-  it('does not overwrite an existing persisted Advanced choice with the Advanced default', async () => {
+  it.each(['simple', 'advanced'])('migrates a stored %s interfaceMode to the single shell @ARCH-2', async mode => {
+    await db.settings.put({ key: 'reader-preferences', value: { ...defaultPreferences, interfaceMode: mode } });
+    expect(await loadPreferences()).toEqual(defaultPreferences);
+  });
+  it('does not re-add interfaceMode when preferences are saved again @ARCH-2', async () => {
     await db.settings.put({ key: 'reader-preferences', value: { ...defaultPreferences, interfaceMode: 'advanced' } });
-    const loaded = await loadPreferences();
-    expect(loaded.interfaceMode).toBe('advanced');
-    expect((await db.settings.get('reader-preferences'))?.value).toMatchObject({ interfaceMode: 'advanced' });
+    await loadPreferences();
+    await savePreferences({ ...defaultPreferences, theme: 'light' });
+    expect('interfaceMode' in ((await db.settings.get('reader-preferences'))?.value as object)).toBe(false);
+    expect(await loadPreferences()).toMatchObject({ theme: 'light' });
   });
-  it('round-trips Simple through savePreferences and reload', async () => {
-    await savePreferences({ ...defaultPreferences, interfaceMode: 'simple' });
-    expect((await loadPreferences()).interfaceMode).toBe('simple');
-  });
-  it('round-trips Advanced through savePreferences and reload', async () => {
-    await savePreferences({ ...defaultPreferences, interfaceMode: 'advanced' });
-    expect((await loadPreferences()).interfaceMode).toBe('advanced');
-  });
-  it.each([['calm', 'advanced'], ['bright', 'advanced']])('migrates %s without changing appearance', async (legacy, mode) => {
+  it.each(['calm', 'bright'])('migrates a legacy %s homepage theme without changing appearance or typography', async legacy => {
     await db.settings.put({ key: 'homepage.theme', value: legacy });
-    const { interfaceMode: _, ...oldPreferences } = defaultPreferences;
-    await db.settings.put({ key: 'reader-preferences', value: { ...oldPreferences, theme: 'dark', fontSize: 23 } });
-    expect(await loadPreferences()).toMatchObject({ interfaceMode: mode, theme: 'dark', fontSize: 23 });
+    await db.settings.put({ key: 'reader-preferences', value: { theme: 'dark', fontSize: 23 } });
+    expect(await loadPreferences()).toMatchObject({ theme: 'dark', fontSize: 23 });
     expect(await db.settings.get('homepage.theme')).toBeUndefined();
-    expect((await db.settings.get('reader-preferences'))?.value).toMatchObject({ interfaceMode: mode });
   });
-  it('preserves explicit density over legacy and persists appearance independently', async () => {
-    await db.settings.put({ key: 'homepage.theme', value: 'bright' });
-    await savePreferences({ ...defaultPreferences, interfaceMode: 'simple', theme: 'light' });
-    expect(await loadPreferences()).toMatchObject({ interfaceMode: 'simple', theme: 'light' });
-    await savePreferences({ ...defaultPreferences, interfaceMode: 'advanced', theme: 'system' });
-    expect(await loadPreferences()).toMatchObject({ interfaceMode: 'advanced', theme: 'system' });
+  it('normalizes invalid appearance in reader preferences @ARCH-4', async () => {
+      await db.settings.put({ key: 'reader-preferences', value: { theme: 'unknown' } });
+      expect(await loadPreferences()).toMatchObject({ theme: 'system' });
+    });
   });
-  it('normalizes legacy density and invalid appearance in reader preferences', async () => {
-    await db.settings.put({ key: 'reader-preferences', value: { interfaceMode: 'bright', theme: 'unknown' } });
-    expect(await loadPreferences()).toMatchObject({ interfaceMode: 'advanced', theme: 'system' });
-  });
-});
 
 it('defaults Quick to Simple and preserves explicit Standard independently of other preferences', async () => {
   expect(defaultPreferences.lookupQuickMode).toBe('simple');

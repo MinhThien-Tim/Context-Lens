@@ -25,7 +25,9 @@ export function ReaderSettings({ value, onChange, onClose }: { value: AppPrefere
         {(Object.keys(readingPresets) as (keyof typeof readingPresets)[]).map(key => <button aria-pressed={preset === key} class={preset === key ? 'active' : ''} onClick={() => applyPreset(key)}>{key === 'academic' ? 'Academic' : key.charAt(0).toUpperCase() + key.slice(1)}</button>)}
       </div></fieldset>
       <fieldset class="settings-group"><legend>Interface</legend><div class="segmented">
-        {(['simple', 'advanced'] as const).map(mode => <button aria-pressed={value.interfaceMode === mode} class={value.interfaceMode === mode ? 'active' : ''} onClick={() => set('interfaceMode', mode)}>{mode === 'simple' ? 'Simple' : 'Advanced'}</button>)}
+        {/* ARCH-2: the Simple/Advanced density control is gone with `interfaceMode`. The group is
+            kept so the panel keeps its "Interface" heading slot until P3 replaces this panel with
+            Appearance, Colours and Font (APP-6); Theme owns this panel from P2b (THEME-1). */}
       </div></fieldset>
       <div class="reader-range"><label htmlFor="reader-font-size">Text size</label><output aria-live="polite">{value.fontSize}px</output><input id="reader-font-size" aria-label="Text size" type="range" min="16" max="26" value={value.fontSize} onInput={(event) => set('fontSize', Number(event.currentTarget.value))} /></div>
       <div class="reader-range"><label htmlFor="reader-line-height">Line height</label><output aria-live="polite">{value.lineHeight.toFixed(2)}</output><input id="reader-line-height" aria-label="Line height" type="range" min="1.4" max="2.1" step="0.05" value={value.lineHeight} onInput={(event) => set('lineHeight', Number(event.currentTarget.value))} /></div>

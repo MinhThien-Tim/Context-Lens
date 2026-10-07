@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { useInterfaceMode } from './interfaceMode';
 
 test('desktop Quick stays contained at selection edges with long bilingual content @LOOK-1', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 850 });
@@ -210,30 +209,27 @@ for (const width of [1366, 320, 360, 390, 430]) {
   });
 }
 
-test('interface density and appearance remain independent and persist', async ({ page }) => {
+// P2b removed the Simple/Advanced density switch, so this no longer asserts that appearance and
+// density stay independent. What survives is the appearance contract itself: the preference
+// persists across opening a reader and across reload, and system/light/dark all resolve.
+test('appearance preference persists across the reader and reload', async ({ page }) => {
   await page.goto('/');
-  const advanced = page.getByRole('button', { name: 'Advanced', exact: true });
-  await expect(advanced).toBeEnabled();
-    await useInterfaceMode(page, 'advanced');
   await page.getByLabel('Appearance', { exact: true }).selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill('A quiet reader helps people understand a difficult passage.');
   await page.getByRole('button', { name: /Preview & read/ }).click();
-  await expect(page.locator('.reader-shell')).toHaveAttribute('data-interface-mode', 'advanced');
+  await expect(page.locator('.reader-shell')).toHaveAttribute('data-theme', 'dark');
   await page.reload();
-  await expect(advanced).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('Appearance', { exact: true })).toHaveValue('dark');
-    await page.getByRole('group', { name: 'Interface density' }).getByRole('button', { name: 'Simple', exact: true }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.getByLabel('Appearance', { exact: true }).selectOption('system');
   expect(await page.locator('html').evaluate(el => getComputedStyle(el).colorScheme)).toBe('dark');
   await page.getByLabel('Appearance', { exact: true }).selectOption('light');
   expect(await page.locator('html').evaluate(el => getComputedStyle(el).colorScheme)).toBe('light');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-});
+  });
 
-for (const width of [320, 360, 390, 430]) {
+  for (const width of [320, 360, 390, 430]) {
   test(`reading controls remain reachable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 780 });
     await page.goto('/');
@@ -257,19 +253,16 @@ for (const width of [320, 360, 390, 430]) {
 }
 
 for (const width of [1024, 1280, 1366, 1440, 1920, 390]) {
-  for (const mode of ['Simple', 'Advanced']) {
-    test(`reader shell ${mode} at ${width}px keeps panels independent and navigation usable`, async ({ page }) => {
+    test(`reader shell at ${width}px keeps panels independent and navigation usable`, async ({ page }) => {
       await page.setViewportSize({ width, height: 850 });
       await page.goto('/');
-      await expect(page.getByRole('button', { name: mode, exact: true })).toBeEnabled();
-      await page.getByRole('button', { name: mode, exact: true }).click();
       await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill('A quiet reader helps people understand a difficult passage.');
       await page.getByRole('button', { name: /Preview & read/ }).click();
       const shell = page.locator('.reader-shell');
-      const desktopAdvanced = width >= 1024 && mode === 'Advanced';
-      await expect(shell).toHaveClass(desktopAdvanced ? /has-contents/ : /^(?!.*has-contents).*$/);
+            const desktop = width >= 1024;
+            await expect(shell).toHaveClass(desktop ? /has-contents/ : /^(?!.*has-contents).*$/);
       await expect(shell).not.toHaveClass(/has-context/);
-      await page.screenshot({ path: `tmp/phase2/reader-${mode.toLowerCase()}-${width}.png` });
+            await page.screenshot({ path: `tmp/phase2/reader-${width}.png` });
       // §7.2/§9.3/§9.4: at every width the Header owns only Back, title and PDF mode, so every
       // secondary action is reached through the single More disclosure. Only the label differs.
       const moreAction = async (name: string) => {
@@ -279,13 +272,13 @@ for (const width of [1024, 1280, 1366, 1440, 1920, 390]) {
       const action = async (panel: 'Document' | 'Context') => {
         await moreAction(panel === 'Document' ? 'Contents' : 'Context');
       };
-      if (desktopAdvanced) await action('Document');
+      if (desktop) await action('Document');
       await action('Document');
       await expect(page.locator('.contents-panel')).toBeVisible();
       if (width < 1024) await page.locator('.contents-panel').getByRole('button', { name: 'Close document panel', exact: true }).click();
       await action('Context');
       await expect(page.locator('.context-panel')).toBeVisible();
-      await page.screenshot({ path: `tmp/phase2/panels-${mode.toLowerCase()}-${width}.png` });
+            await page.screenshot({ path: `tmp/phase2/panels-${width}.png` });
       if (width >= 1024) {
         await expect(shell).toHaveClass(/has-contents/);
         expect(await page.locator('.reader-viewport').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(width / 2);
@@ -304,15 +297,15 @@ for (const width of [1024, 1280, 1366, 1440, 1920, 390]) {
       if (width >= 1024) await expect(shell).toHaveClass(/has-contents/);
       // mobile-chrome.md §6 — renamed 2026-10-05 from `Text and theme`.
       await moreAction('Text');
-      await page.getByRole('dialog', { name: 'Reader settings' }).getByRole('button', { name: mode === 'Simple' ? 'Advanced' : 'Simple', exact: true }).click();
-      await expect(shell).toHaveAttribute('data-interface-mode', mode === 'Simple' ? 'advanced' : 'simple');
-      await page.getByRole('button', { name: 'Close reader settings', exact: true }).click();
+            await page.getByRole('dialog', { name: 'Reader settings' }).getByRole('button', { name: 'News', exact: true }).click();
+            // ARCH-2: there is no Simple/Advanced left to switch, so the single shell carries no mode hook.
+            await expect(shell).not.toHaveAttribute('data-interface-mode');
+            await page.getByRole('button', { name: 'Close reader settings', exact: true }).click();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       const footer = await page.locator('.reader-progress').boundingBox();
       expect(footer!.y + footer!.height).toBeLessThanOrEqual(851);
-    });
-  }
-}
+          });
+      }
 
 test('mobile reading chrome hides on scroll and reveals without changing position', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 780 });

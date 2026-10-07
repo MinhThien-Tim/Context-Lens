@@ -20,8 +20,8 @@ const CHROME = '.reader-header,.reader-progress,.reader-reveal';
 // architecture, so the former `.pdf-more-menu` entries are gone with the deleted PDF zoom popover.
 const OVERLAY_OPEN = '.reader-more-menu,.pdf-reading-options,.pdf-reading-selection-wrap,.pdf-reading-selection-actions,.selection-actions';
 
-export function ReaderShell({ children, contentsOpen, contextOpen, interfaceMode, surface, controlsLocked = false }: {
-  interfaceMode: 'simple' | 'advanced'; children: ComponentChildren; contentsOpen: boolean; contextOpen: boolean;
+export function ReaderShell({ children, contentsOpen, contextOpen, surface, controlsLocked = false }: {
+  children: ComponentChildren; contentsOpen: boolean; contextOpen: boolean;
   surface: 'text' | 'original' | 'reading'; controlsLocked?: boolean;
 }) {
   const desktop = useDesktop();
@@ -89,7 +89,7 @@ export function ReaderShell({ children, contentsOpen, contextOpen, interfaceMode
     };
   }, [desktop, contentsOpen, contextOpen, controlsLocked, surface]);
 
-  return <div ref={root} data-interface-mode={interfaceMode} data-reader-surface={surface} class={`reader-shell ${contentsOpen ? 'has-contents' : ''} ${contextOpen ? 'has-context' : ''} ${quiet ? 'chrome-quiet' : ''}`} onFocusCapture={(event) => { if (event.target instanceof Element && event.target.closest(CHROME)) { resetTravel.current(); setQuiet(false); } }}>
+  return <div ref={root} data-reader-surface={surface} class={`reader-shell ${contentsOpen ? 'has-contents' : ''} ${contextOpen ? 'has-context' : ''} ${quiet ? 'chrome-quiet' : ''}`} onFocusCapture={(event) => { if (event.target instanceof Element && event.target.closest(CHROME)) { resetTravel.current(); setQuiet(false); } }}>
     {children}
     {quiet && <button class="reader-reveal" aria-label="Show reading controls" onClick={() => { resetTravel.current(); setQuiet(false); }}>Aa &#183;&#183;&#183;</button>}
   </div>;
