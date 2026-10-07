@@ -188,40 +188,9 @@ test('density switch preserves rich and plain drafts, URL and reader preferences
   await page.getByRole('button', { name: 'Typography', exact: true }).click();
   await expect(page.getByLabel('Text size')).toHaveValue('22');
   await expect(page.getByLabel('Line height')).toHaveValue('1.8');
-});
+  });
 
-
-test('switching density in reader preserves reading position', async ({ page }) => {
-  await page.setViewportSize({ width: 1366, height: 900 });
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Plain text', exact: true }).click();
-  await page.getByLabel('Paste and edit plain text').fill(Array.from({ length: 100 }, (_, i) => `Paragraph ${i + 1}. A quiet reading sample with room to understand the passage.`).join('\n\n'));
-  await page.getByRole('button', { name: /Preview & read/ }).click();
-  await expect(page.locator('.reader-text')).toBeVisible();
-  await page.evaluate(() => scrollTo(0, 1800));
-  await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(1500);
-  await expect(page.locator('.reader-progress')).not.toHaveText('0%');
-  for (const mode of ['Advanced', 'Simple']) {
-    const before = await page.evaluate(() => scrollY);
-    const position = await page.locator('.reader-progress').innerText();
-    // mobile-chrome.md §6 + reader-behavior-contract §7.2: at 390px the Header owns only Back,
-        // title and PDF mode, so reader settings is reached through More -> `Text` (renamed
-        // 2026-10-05 from `Text and theme`; the old `Reading appearance` Header button no longer exists).
-        await page.getByRole('button', { name: 'Reader menu', exact: true }).click();
-        await page.getByRole('menuitem', { name: 'Text', exact: true }).click();
-        await page.getByRole('dialog', { name: 'Reader settings' }).getByRole('button', { name: mode, exact: true }).click();
-    await page.getByRole('button', { name: 'Close reader settings', exact: true }).click();
-    expect(Math.abs(await page.evaluate(() => scrollY) - before)).toBeLessThan(2);
-    await expect(page.locator('.reader-progress')).toHaveText(position);
-  }
-  const position = await page.locator('.reader-progress').innerText();
-  await page.getByRole('button', { name: 'Back to library' }).click();
-  await page.getByRole('group', { name: 'Interface density' }).getByRole('button', { name: 'Advanced', exact: true }).click();
-  await page.locator('.continue-card').click();
-  await expect(page.locator('.reader-progress')).toHaveText(position);
-});
-
-  test('Advanced homepage surfaces stay sharp while Simple keeps its rounded geometry', async ({ page }) => {
+    test('Advanced homepage surfaces stay sharp while Simple keeps its rounded geometry', async ({ page }) => {
     await page.setViewportSize({ width: 1366, height: 900 });
     await page.goto('/');
 

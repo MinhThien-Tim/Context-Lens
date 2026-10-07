@@ -212,14 +212,16 @@ During `preparing`, `running`, `paused`:
 | `usePdfOcrQueue.test.tsx` — "never preloads scans after the first twelve text pages" | **KEEP** | Correct behavior, no change needed |
 | `usePdfOcrQueue.test.tsx` — "continues automatically through every 12-page window" | **KEEP** | Correct behavior |
 | `usePdfOcrQueue.test.tsx` — "finishes a short final batch" | **KEEP** | Correct behavior |
-| `ReaderShell.test.tsx` — "OCR next lives only in the document-tools surface" | **REWRITE** | Asserts the retired item name; becomes the P4 ownership test |
+| `ReaderShell.test.tsx` — "OCR next lives only in the document-tools surface" | **KEEP** (P2a commit B) | Asserts the `Document` More entry and the document-tools surface; kept untagged, because the `OCR next` item name retires in P4 |
 | `PdfModeSwitch.ocr.test.tsx` — all tests | **KEEP** | Already correct, asserts semantic ownership |
 | `e2e/pdf-ocr-queue.spec.ts` | **REWRITE** | Stale "OCR 6 trang" / "OCR 3 trang" labels, dead `.pdf-queue-status` selectors |
-| `e2e/pdf-mode-layout.spec.ts` | **DELETE-OBSOLETE** | Quarantined with `test.fixme`, drives obsolete chrome-quiet model, stale `/OCR.*6/` |
+| `e2e/pdf-mode-layout.spec.ts` | **DELETED (P2a commit B)** | Was `test.fixme`; drove the obsolete chrome-quiet/reserved-footer model and a stale `/OCR.*6/` label. No replacement: the live coverage lives in `pdf-reader-chrome-a12.spec.ts` and the P2b tests |
+| `e2e/pdf-mobile-chrome-space.spec.ts` | **DELETED (P2a commit B)** | Was `test.fixme`; pinned synthetic-chrome space invariants that the real-scroll chrome tests in `mobile-chrome.spec.ts` now cover |
+| `e2e/spike-overlay-o.spec.ts` | **DELETED (P2a commit B)** | Feasibility spike for the retired reserved-footer overlay model; superseded by `pdf-reader-chrome-a12.spec.ts` and the P2b tests. `e2e/readerO.ts` is kept; its rename is P7 |
 | `e2e/pdf-ocr.spec.ts` | **REWRITE** | Dead `.pdf-reading-options-toggle` selector, dead `.pdf-queue-status` selectors |
 | `e2e/pdf-ocr-raster.spec.ts` | **REWRITE** | Dead `.pdf-reading-options-toggle` selector, dead `.pdf-queue-status` selector |
 | `e2e/pdf-real-samples.spec.ts` | **REWRITE** | Dead `.pdf-reading-options-toggle` selector, stale "OCR 3 trang" label, dead `.pdf-queue-status` selectors |
-| `e2e/pdf-zoom-footer.spec.ts` | **CLASSIFY in commit B** (delete if it only asserts the mobile Footer zoom host or stepper; keep and retarget any desktop Header zoom coverage) | Filename retained until commit B decides; the Footer zoom host and its portal are `[P2b]` deletions |
+| `e2e/pdf-zoom-footer.spec.ts` | **SPLIT (P2a commit B)** — kept with 4 tests, desktop Header zoom ×10 rewritten to `@FTR-2` | Deleted the mobile Footer stepper, the mobile/desktop page-navigation-ownership tests and the zoom-host count test (all assert the `[P2b]`-retired Footer zoom host and its portal). Kept both `Current PDF page` → `Go to location` openers, untagged until P2b, via the new `openGoToLocation` helper |
 
 ### 9.2 Required coverage
 

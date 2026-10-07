@@ -37,9 +37,11 @@ Rendered by the `if (!documentRecord)` branch in `src/app/App.tsx`. Sections, in
 
 - Status banners: offline notice, and a service-worker "update ready" action driven by the
   `context-lens:update-ready` / `context-lens:apply-update` window events from `src/main.tsx`.
-- `brand-header`: brand lockup and Saved words, Storage, Settings (the reading-setup dialog,
-  `src/settings/ApiSettings.tsx`), Guide, with the original language, density, appearance and
-  Diagnostics controls in Simple. Advanced exposes Diagnostics directly.
+- `brand-header`: brand lockup and Saved words, Storage, Settings (the `Language engines`
+  dialog — the reading-setup dialog in `src/settings/ApiSettings.tsx`, whose eyebrow reads
+  `Reading setup` and whose heading reads `Language engines`), Guide, with the original
+  language, density, appearance and Diagnostics controls in Simple. Advanced exposes
+  Diagnostics directly.
 - Advanced-only `home-preferences`: independent density, appearance, guide language, and Typography entry
   (reuses `ReaderSettings`; no second preference state).
 - Advanced has a compact opening area with Import document, Paste text and Library anchor links; Simple retains its original introduction.

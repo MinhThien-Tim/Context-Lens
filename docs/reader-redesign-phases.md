@@ -47,7 +47,7 @@ Acceptance = the contract rule IDs in [reader-behavior-contract.md](reader-behav
 - **Goal.** HDR-*, FTR-*, NAV-1, MOB-*, THEME-1, MORE-*, MODE-*, GEO-*, ARCH-2, ARCH-3 hold; the old chrome is gone.
 - **Order.** (1) Remove `interfaceMode` (preference migration, App branches, `data-interface-mode`, Advanced Home, `home-advanced.css`, density control). (2) Geometry: make the reading viewport full height at all times; Header and Footer overlay it with static padding inside the scroll container; delete the reserved Footer band and the Original-PDF resize-on-quiet logic. (3) Mobile: Header = Back · title · `Text \| PDF`; Footer = one full-width bar (Contents · page number · Markup · More) with a hairline progress line; quiet hides both; delete the mobile zoom host, stepper and custom-scale code. (4) Desktop Header: regroup per HDR-5 (keep zoom −/level/+ and the Markup group), delete the Notes, Markup-dialog and Print buttons, previous/next and the page count; add `Aa` (opens the existing reading settings); rename Original/Reading to Text \| PDF; desktop Footer = page number + thin progress line + OCR status. (5) More per MORE-2 for each band. (6) Delete obsolete components, CSS and specs per `reader-chrome.md` §7. (7) One test per rule ID. (8) Stale-reference search.
 - **Notes rule.** Leave `NotesPanel`, the notes store and the selection Note action untouched (ARCH-7); only the More entry goes.
-- **Don't.** Touch colours, fonts, OCR behavior, lookup copy, or implement pinch (Z2). Leave the OCR widget exactly as it is. **Known interim:** until Z2 ships, mobile PDF has no in-app scale control (fit-width only).
+- **Don't.** Touch colours, fonts, OCR behavior, lookup copy, or implement pinch (Z2). Leave the OCR widget exactly as it is. Do not remove the Home Settings entry that opens the Language engines dialog (it is how engines are configured so lookups run); `e2e/homepage.spec.ts` utilities test guards it. **Known interim:** until Z2 ships, mobile PDF has no in-app scale control (fit-width only).
 - **Decided for P2b (closed 2026-10-07).** Mobile Footer items carry visible text labels; `Aa ···` sits bottom-right inside the safe-area inset (record the offset after the 320px and landscape checks); the Contents panel offers Contents and Pages only, with no Outline tab and no clock icon.
 - **Gate.** `check:css` → `verify:reader` → `verify:pdf` → `verify:ui`; viewports 320, 390, 767, 768, 1023, 1024, 844×390, 915×412, 1280×800. Report: Header title width at 320 in both fonts, last-line clearance above the Footer at 320 and 844×390, and that quiet shows text only at 390.
 
@@ -97,7 +97,7 @@ Acceptance = the contract rule IDs in [reader-behavior-contract.md](reader-behav
 ## P6 — Home residue
 
 - **Goal.** Home runs on the P3 tokens with no leftover density or Advanced code.
-- **Do.** Remove residue only; no new Home design until a mockup exists.
+- **Do.** Home has its own phase and its own mockup before any new design; until a mockup exists, remove residue only. The Settings entry that opens the Language engines dialog stays at every point in the series.
 - **Gate.** `verify:ui`.
 
 ## P7 — Final cleanup

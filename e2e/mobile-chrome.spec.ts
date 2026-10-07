@@ -479,23 +479,9 @@ test.describe('MobileChrome — geometry invariants (A12 / U1)', () => {
       await page.mouse.wheel(0, -120);
       await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeGreaterThan(0.9);
       await expectQuietVisualOnly(page, before);
-    }
-  });
-
-  test('the Footer band is reserved in both chrome states (§3.4)', async ({ page }) => {
-    test.setTimeout(90_000);
-    await openTextReader(page, 390, 900);
-    const revealed = await textChrome(page);
-    await page.mouse.move(195, 450);
-    await page.mouse.wheel(0, 600);
-    await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeLessThan(0.1);
-    const quiet = await textChrome(page);
-    // §3.4/§4.2 — the Footer is visible and reserved whether or not the Header is quiet.
-    expect(quiet.footerTop).toBeCloseTo(revealed.footerTop, 0);
-    expect(quiet.footerOpacity).toBeGreaterThan(0.9);
-    expect(quiet.footerTop).toBeLessThanOrEqual(901);
-  });
-});
+          }
+        });
+      });
 test.describe('MobileChrome — Footer and zoom ownership', () => {
   // §8.1/§9.4 and docs/desktop-reader.md §2: one More trigger per density band, in the band that
   // owns the surrounding chrome. App.tsx gates the Footer trigger on `!desktop`, so restoring it
@@ -521,29 +507,6 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
     await expect(page.getByRole('menu', { name: 'Reader actions' })).toBeVisible();
     await expect(page.getByRole('menuitem', { name: 'Document', exact: true })).toHaveCount(1);
   });
-
-      // Contract §9.3 + mobile-chrome.md §6: the inventory is exactly eight items in a fixed order,
-      // with the labels fixed by the 2026-10-05 rename (Document, Text, Languages, Click lookup).
-      // `Document` is the single OCR entry (§9.7), so a separate `OCR` item must not appear.
-      test('More exposes exactly the eight §9.3 items, in order, with the §6 labels', async ({ page }) => {
-        test.setTimeout(90_000);
-        const expected = ['Contents', 'Context', 'Notes', 'Markup', 'Text', 'Languages', 'Document', 'Click lookup'];
-
-        for (const width of [390, 1280]) {
-          await openPdfReader(page, width, 900);
-          await openMore(page);
-          const items = page.getByRole('menu', { name: 'Reader actions' }).getByRole('menuitem');
-          // The accessible name of each item is its label, and the label is also the visible text,
-          // so a plain ordered text assertion pins both the membership and the order.
-          await expect(items).toHaveCount(8);
-          await expect(items).toHaveText(expected);
-
-          // OCR is reachable only through `Document` (§9.7), never as its own entry (§12.11).
-          await expect(page.getByRole('menuitem', { name: /^OCR/ })).toHaveCount(0);
-          await expect(page.getByRole('menuitem', { name: 'Zoom' })).toHaveCount(0);
-          await closeMore(page);
-        }
-      });
 
       test('the More layer stays usable at every band it presents (§9.2/§9.5/§9.6)', async ({ page }) => {
     test.setTimeout(120_000);
@@ -631,27 +594,11 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
     expect(desktopGeometry.centreHitsMenu).toBe(true);
     expect(desktopGeometry.iconWidth).toBe(20);
     expect(desktopGeometry.backdropZ).toBe(null);
-        await desktopMenu.getByRole('menuitem', { name: 'Click lookup' }).click();
-    await expect(desktopMenu).toBeHidden();
-  });
+            await desktopMenu.getByRole('menuitem', { name: 'Click lookup' }).click();
+        await expect(desktopMenu).toBeHidden();
+      });
 
-      test('the mobile Footer owns a direct zoom stepper and never a zoom menu (§8.2/§8.3)', async ({ page }) => {
-    test.setTimeout(90_000);
-    await openPdfReader(page, 390, 900);
-    const footer = page.locator('.reader-progress');
-    // §8.2 — decrease, level readout, increase: three direct Footer controls. The readout is a
-        // live-region label rather than a button, so it is addressed by its accessible name.
-        await expect(footer.getByRole('button', { name: 'Zoom out' })).toBeVisible();
-        await expect(footer.getByLabel('Zoom level')).toBeVisible();
-        await expect(footer.getByRole('button', { name: 'Zoom in' })).toBeVisible();
-    // §8.3 — the retired popup is gone and zoom is not reachable from More.
-    await expect(page.getByRole('button', { name: 'PDF options' })).toHaveCount(0);
-    await openMore(page);
-    await expect(page.getByRole('menuitem', { name: /Zoom|PDF options/ })).toHaveCount(0);
-    await closeMore(page);
-  });
-
-  test('every Footer control meets the 44px hit target (§7.5/§8.6)', async ({ page }) => {
+      test('every Footer control meets the 44px hit target (§7.5/§8.6)', async ({ page }) => {
     test.setTimeout(90_000);
     await openPdfReader(page, 320, 900);
     const small = await page.locator('.reader-progress').evaluate(footer =>

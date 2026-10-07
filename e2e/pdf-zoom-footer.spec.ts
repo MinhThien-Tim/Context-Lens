@@ -83,55 +83,6 @@ for (const mode of ['simple', 'advanced'] as const) {
   }
 }
 
-// §8.2 says the Footer owns zoom at mobile density, so the mobile band keeps the same control.
-test('mobile keeps the same direct Footer zoom stepper @pdf', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
-  await page.locator('input[type=file]').setInputFiles({ name: 'zoom-footer-mobile.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
-  await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
-
-  const footer = page.locator('.reader-progress');
-  const level = footer.getByLabel('Zoom level');
-  await expect(footer.getByRole('button', { name: 'Zoom out' })).toBeVisible();
-  await expect(footer.getByRole('button', { name: 'Zoom in' })).toBeVisible();
-  await expect(level).toHaveText(/^\d+%$/);
-  await expect(page.locator('.pdf-toolbar')).toHaveCount(0);
-});
-
-// docs/desktop-reader.md §2.2: PDF page navigation has exactly one owner per band and the
-// page-count control is named `Current PDF page` in both. This is the same single-owner rule
-// §3 applies to zoom, asserted for the stepper group, so the Header and the Footer can never
-// both answer to `Next page` (the defect that made `getByRole('button', { name: 'Next page' })`
-// ambiguous and fail in strict mode).
-test('PDF page navigation is owned by the Header alone at 1280px @pdf', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto('/');
-  await page.locator('input[type=file]').setInputFiles({ name: 'page-nav-1280.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
-  await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
-
-  // Exactly one stepper group, and it is the Header's.
-  await expect(page.getByRole('navigation', { name: 'Page navigation' })).toHaveCount(1);
-  await expect(page.locator('.reader-header').getByRole('navigation', { name: 'Page navigation' })).toHaveCount(1);
-  // One of each control across the whole page: no duplicate answers for a screen reader.
-  await expect(page.getByRole('button', { name: 'Next page' })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'Previous page' })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'Current PDF page' })).toHaveCount(1);
-  // The Footer keeps its own reading navigation (progress/percentage) but no stepper.
-  await expect(page.getByRole('contentinfo', { name: 'Reading navigation' })).toBeVisible();
-  await expect(page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('navigation', { name: 'Page navigation' })).toHaveCount(0);
-  await expect(page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('button', { name: 'Next page' })).toHaveCount(0);
-
-  // The stable name is the same handle at both bands, and it still shows page/total.
-  const pageCount = page.getByRole('button', { name: 'Current PDF page' });
-  await expect(pageCount).toHaveText('1 / 3');
-  // The full sentence moved to the description rather than being dropped.
-  await expect(pageCount).toHaveAttribute('aria-description', 'Page 1 of 3');
-  await page.getByRole('button', { name: 'Next page' }).click();
-  await expect(pageCount).toHaveText('2 / 3');
-});
-
 // docs/desktop-reader.md §2.2: `Current PDF page` is the sole opener of `Go to location` at >=1024px,
 // so gating the Footer nav by `!desktop` cannot leave the dialog unreachable in that band. This
 // asserts the control reaches the documented destination (not a direct jump), because the Footer
@@ -175,41 +126,4 @@ test('the Footer Current PDF page button opens Go to location at 390px @pdf', as
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('[data-pdf-page="3"] .pdf-canvas')).toBeVisible();
   await expect(footerNav.getByRole('button', { name: 'Current PDF page' })).toHaveText('3 / 3');
-});
-
-test('PDF page navigation is owned by the Footer alone at 390px @pdf', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
-  await page.locator('input[type=file]').setInputFiles({ name: 'page-nav-390.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
-  await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
-
-  // Exactly one of each, and every one of them is inside the Footer contentinfo region.
-  await expect(page.getByRole('button', { name: 'Next page' })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'Previous page' })).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'Current PDF page' })).toHaveCount(1);
-  const footerNav = page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('navigation', { name: 'Page navigation' });
-  await expect(footerNav).toHaveCount(1);
-  await expect(footerNav.getByRole('button', { name: 'Next page' })).toHaveCount(1);
-  await expect(footerNav.getByRole('button', { name: 'Current PDF page' })).toHaveCount(1);
-  // The Header stepper is absent at this density.
-  await expect(page.locator('.reader-header').getByRole('navigation', { name: 'Page navigation' })).toHaveCount(0);
-});
-
-// docs/desktop-reader.md §3 and docs/mobile-chrome.md §8.2: zoom has exactly one owner per density
-// band, and the Footer owns it only at ≤1023px. App.tsx gates `.pdf-footer-zoom-host` on `!desktop`,
-// restoring the contract wording that `40e807d` loosened to "every density".
-test('the Footer zoom host exists exactly once at 390px and not at all at 1280px @pdf', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
-  await page.locator('input[type=file]').setInputFiles({ name: 'zoom-owner-390.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
-  await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
-  await expect(page.locator('.pdf-footer-zoom-host')).toHaveCount(1);
-  // One control, not two: the desktop preset <select> must not also be present in this band.
-  await expect(page.locator('.reader-header .zoom-selector select')).toHaveCount(0);
-
-  await page.setViewportSize({ width: 1280, height: 900 });
-  await expect(page.locator('.pdf-footer-zoom-host')).toHaveCount(0);
-  await expect(page.locator('.reader-header .zoom-selector select')).toHaveCount(1);
-});
+  });
