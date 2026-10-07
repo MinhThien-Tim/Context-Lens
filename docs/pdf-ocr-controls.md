@@ -219,7 +219,7 @@ During `preparing`, `running`, `paused`:
 | `e2e/pdf-ocr.spec.ts` | **REWRITE** | Dead `.pdf-reading-options-toggle` selector, dead `.pdf-queue-status` selectors |
 | `e2e/pdf-ocr-raster.spec.ts` | **REWRITE** | Dead `.pdf-reading-options-toggle` selector, dead `.pdf-queue-status` selector |
 | `e2e/pdf-real-samples.spec.ts` | **REWRITE** | Dead `.pdf-reading-options-toggle` selector, stale "OCR 3 trang" label, dead `.pdf-queue-status` selectors |
-| `e2e/pdf-zoom-footer.spec.ts` | **KEEP** | Already updated for Header toolbar zoom; the filename is renamed with the Footer zoom host in commit B |
+| `e2e/pdf-zoom-footer.spec.ts` | **CLASSIFY in commit B** (delete if it only asserts the mobile Footer zoom host or stepper; keep and retarget any desktop Header zoom coverage) | Filename retained until commit B decides; the Footer zoom host and its portal are `[P2b]` deletions |
 
 ### 9.2 Required coverage
 
