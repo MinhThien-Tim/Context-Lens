@@ -40,19 +40,17 @@ Rendered by the `if (!documentRecord)` branch in `src/app/App.tsx`. Sections, in
 - `brand-header`: brand lockup and Saved words, Storage, Settings (the `Language engines`
   dialog — the reading-setup dialog in `src/settings/ApiSettings.tsx`, whose eyebrow reads
   `Reading setup` and whose heading reads `Language engines`), Guide, with the original
-  language, density, appearance and Diagnostics controls in Simple. Advanced exposes
-  Diagnostics directly.
-- Advanced-only `home-preferences`: independent density, appearance, guide language, and Typography entry
-  (reuses `ReaderSettings`; no second preference state).
-- Advanced has a compact opening area with Import document, Paste text and Library anchor links; Simple retains its original introduction.
-- Advanced Continue-reading appears before import/paste only when history exists. Simple retains Continue after import/paste, including its empty state and original cards. Advanced document lists reuse presentational
+  language and appearance controls, plus `LookupStatistics`.
+- `home-preferences`: appearance and guide language. Reader typography is reached through the
+  Reader `Aa` control, which reuses `ReaderSettings`; there is no second preference state.
+- Home has one opening area with Import document, Paste text and Library anchor links, and one Continue-reading section after import/paste, including its empty state and cards. Document lists reuse presentational
   `DocumentIdentity` for local title-initial covers, existing location/progress, and updated date.
   The current document model has no cover/thumbnail field; no extraction or external service is added.
-  Both densities use the default-closed `ContinueReading` disclosure with a bounded scrolling list.
+  `ContinueReading` is the default-closed disclosure with a bounded scrolling list.
   Its sibling dismiss controls call `src/app/continueReading.ts`; App owns the displayed documents.
-- `PasteComposer` and the existing file/article import surface, with stable anchor targets. Simple retains two framed entry surfaces: Paste on the left, Import on the right at tablet/desktop widths; phones stack Paste first.
+- `PasteComposer` and the existing file/article import surface, with stable anchor targets. Two framed entry surfaces: Paste on the left, Import on the right at tablet/desktop widths; phones stack Paste first.
 - Library: title search, kind filter, `Load more` through `queryDocumentLibrary`, and existing
-  per-document transactional delete. Simple retains its original responsive card grid; Advanced uses a compact list with aligned metadata/progress. Phones retain a vertical list.
+  per-document transactional delete. The responsive card grid keeps its rounded geometry; phones retain a vertical list.
 - `OnboardingCard` until dismissed, then `ContextLensOnboarding` as a modal.
 - `home-note` privacy line.
 
