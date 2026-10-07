@@ -1,6 +1,6 @@
 # PDF stability handoff ? 2026-09-21
 
-Scope: stabilize the two PDF modes (now `Text | PDF`). No Phase 4?5 features or redesign.
+Scope: stabilize existing Original/Reading modes. No Phase 4?5 features or redesign.
 Baseline: `727ec9c` on `main`; working tree was clean. Existing reading-selection bundle verified successfully (incremental, with its stated prerequisite).
 
 ## Reproduced causes and fixes

@@ -1,4 +1,4 @@
-# Translation and context engines
+# Language engines
 
 Context Lens is a reading assistant with two independent routers. Translation never invokes an LLM by default. Existing document importers, reading positions, dictionary packs, vocabulary exports, backups, and extension URL handoff remain in place.
 
