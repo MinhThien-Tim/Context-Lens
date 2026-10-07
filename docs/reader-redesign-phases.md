@@ -76,6 +76,10 @@ Acceptance = the contract rule IDs in [reader-behavior-contract.md](reader-behav
 - **Goal.** APP-1…APP-5.
 - **Do.** (1) Pick the two bundled font families, record licence and source, add woff2 locally, verify with `document.fonts.check` (not by name in the UI). (2) Define the four reader tokens plus the separate lookup accent. (3) The Theme panel (`Aa` on desktop, More → Theme on mobile) groups Appearance, Colours and Font. (4) Theme panel scrolls inside itself. (5) Migrate `system` → resolved Light/Dark. (6) Record the remaining colour-swatch hex values before coding. (7) One font setting drives reading and interface typography (APP-3); check the 320px chrome in both fonts.
 - **Check.** Contrast of heading/body/accent against both backgrounds goes in the report. `#C88E69` on `#F7F4EB` is likely below AA for text: use it for labels and accents only unless the check passes.
+- **Carried forward from P2b.** The `ARCH-4` row landed in P2b (`src/db/database.test.ts`) asserts that an invalid
+  `appearance` normalises to `system`. Step 5 here migrates `system` to a resolved Light/Dark value, so that
+  assertion is expected to change in P3 — update the test with the migration rather than preserving it, and keep
+  the rule (invalid input never persists) even though its expected value does.
 - **Reference visuals.** The review-board directions A (warm paper) and C (ink and amber) are the Light and Dark presentation of APP-2; B is dropped. Mockups must follow APP-3 (one font drives interface and reading).
 - **Gate.** `check:css`, `verify:ui`.
 

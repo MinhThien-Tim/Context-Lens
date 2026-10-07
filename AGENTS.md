@@ -31,4 +31,11 @@ the role files); they never reproduce them. Role files in the repo, not editor-s
 source of truth, so Cline, Codex, Copilot, Claude Code and similar agents share the same reviewable
 instructions. Artifacts under `docs/tasks/` contain only what a fresh context needs.
 
+## Editing rules (hard rules)
+
+Use the `edit` tool for TypeScript and TypeScript-flavoured content. Never write or patch them through a
+PowerShell here-string: `@'…'@` in this shell mangles backtick template literals and splices lines, which has
+already corrupted `e2e/ui-interactions.spec.ts` once. Use `Out-File -Encoding ascii` only to stash command
+output for reading, never to author source.
+
 Subsystem commands: [`docs/verification-map.md`](docs/verification-map.md).
