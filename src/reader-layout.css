@@ -31,12 +31,12 @@ body:has(.reader-shell) { background:var(--reading-surface); }
 .reader-shell .reader-more-menu button { width:100%; min-height:44px; padding:0 var(--space-3); background:transparent; border:0; text-align:left; color:var(--primary-text); font-size:13px; }
 .reader-shell .reader-more-menu button:hover,.reader-shell .reader-more-menu button:focus-visible { background:var(--subtle-surface); }
 .reader-shell .markup-indicator { color:var(--notes); }
-.reader-shell .reader-viewport { min-width:0; min-height:calc(100dvh - var(--reader-header-height)); background:var(--reading-surface); margin-left:var(--left-panel); margin-right:var(--right-panel); }
+.reader-shell .reader-viewport { min-width:0; min-height:100dvh; background:var(--reading-surface); margin-left:var(--left-panel); margin-right:var(--right-panel); }
 .reader-shell .reader-text { width:min(calc(100% - 64px),var(--reading-width),var(--reading-chars)); margin:0 auto; padding-top:clamp(32px,5vh,64px); padding-bottom:max(50vh,calc(100dvh - 130px)); }
 .reader-shell .pdf-reading-page { padding-top:clamp(32px,5vh,56px); border-bottom:0; }
 .reader-shell .pdf-reading-page > header { opacity:.7; letter-spacing:.04em; }
 .reader-shell[data-reader-surface="original"] .reader-viewport,.reader-shell[data-reader-surface="reading"] .reader-viewport { min-height:0; }
-.reader-shell .pdf-viewer-wrap,.reader-shell .pdf-reading-view { height:calc(100dvh - var(--reader-header-height) - var(--reader-footer-height)); min-height:0; }
+.reader-shell .pdf-viewer-wrap,.reader-shell .pdf-reading-view { height:100dvh; min-height:0; }
 .reader-shell .pdf-viewer-wrap { background:var(--subtle-surface); }
 .reader-shell .pdf-scroll { padding:var(--space-4); }
 .reader-shell .pdf-page-slot { box-shadow:var(--shadow); }
@@ -95,8 +95,9 @@ body:has(.reader-shell) { background:var(--reading-surface); }
   .reader-shell .notes-panel { top:0; bottom:0; height:100dvh; max-height:100dvh; border-radius:0; }
   .reader-shell .pdf-reading-options { position:fixed; top:auto; bottom:max(8px,env(safe-area-inset-bottom)); left:8px; right:8px; width:auto; max-height:75dvh; z-index:40; }
   .reader-shell.chrome-quiet .reader-header { transform:translateY(-100%); opacity:0; pointer-events:none; }
-  /* §4.x/§6: quiet is a Header-only visual state. The Footer band stays visible and reserved on
-     every surface, so quieting never hides the only route to More, zoom, or the reveal control. */
+  .reader-shell.chrome-quiet .reader-progress { transform:translateY(100%); opacity:0; pointer-events:none; }
+  /* §4.x/§6: quiet hides both Header and Footer together. The reading viewport is full height
+     at all times and never moves, so quieting is visual only and the PDF does not shift. */
   .reader-reveal { position:fixed; right:12px; bottom:calc(var(--reader-footer-height) + 8px); z-index:17; min-width:56px; min-height:44px; padding:0 var(--space-3); border:1px solid var(--border); border-radius:var(--radius-control); background:var(--reading-surface); color:var(--secondary-text); box-shadow:var(--shadow); font:13px var(--font-ui); }
 }
 

@@ -31,12 +31,8 @@
   .reader-shell.reader-shell .reader-viewport { margin: 0; min-height: 100dvh; }
   .reader-shell.reader-shell .pdf-viewer-wrap,
   .reader-shell.reader-shell .pdf-reading-view { height: 100dvh; min-height: 0; }
-  .reader-shell.reader-shell[data-reader-surface="original"] .reader-viewport,
-  .reader-shell.reader-shell[data-reader-surface="reading"] .reader-viewport { position: relative; top: var(--reader-header-height); }
-  .reader-shell.reader-shell[data-reader-surface="original"] .reader-viewport { min-height: 0; }
-  .reader-shell.reader-shell[data-reader-surface="original"] .pdf-viewer-wrap { height: calc(100dvh - var(--reader-header-height)); }
-    .reader-shell.reader-shell .pdf-reading-scroll { padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); box-sizing: border-box; }
-  .reader-shell.reader-shell .pdf-scroll { padding-top: 48px; padding-bottom: calc(var(--reader-header-height) + var(--reader-footer-height)); }
+  .reader-shell.reader-shell .pdf-reading-scroll { padding-bottom: calc(var(--reader-footer-height) + env(safe-area-inset-bottom)); box-sizing: border-box; }
+  .reader-shell.reader-shell .pdf-scroll { padding-top: calc(var(--reader-header-height) + 12px); padding-bottom: calc(var(--reader-footer-height) + env(safe-area-inset-bottom)); box-sizing: border-box; }
   .reader-shell.reader-shell[data-reader-surface="original"] .pdf-scroll { padding-top: 4px; }
     /* §8.2/§8.3/§9.6: at <=1023px zoom is a direct Footer control (decrease / level / increase).
        It is never a popup and never appears in More, so the mobile zoom host is a plain Footer slot. */
@@ -50,9 +46,9 @@
   .reader-shell.reader-shell .pdf-reading-page { box-sizing: border-box; width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding: 12px max(var(--reader-page-padding, 18px), env(safe-area-inset-right)) 32px max(var(--reader-page-padding, 18px), env(safe-area-inset-left)); }
   .reader-shell.reader-shell .pdf-reading-page > header { margin-bottom: 12px; }
   .reader-shell.reader-shell .reader-progress { padding-top: 0; padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right)); gap: 4px; }
-  /* §6.9 (MobileChrome placement): the reveal-only control anchors directly above the reserved
-     Footer band. The mobile override that pinned it to the viewport bottom is removed, so it can
-     never overlap the Footer controls it shares space with, at any mobile width. */
+  /* §6.9 (MobileChrome placement): the reveal-only control anchors above the Footer band.
+     It is repositioned by the mobile Footer layout below; this rule only drops the shadow so it
+     reads as part of the chrome, not as a floating surface. */
   .reader-shell.reader-shell .reader-reveal { box-shadow: none; }
 
   /* Centered/max-width treatment for wider mobile widths (768-1023px).
