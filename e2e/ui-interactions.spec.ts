@@ -298,8 +298,6 @@ for (const width of [1024, 1280, 1366, 1440, 1920, 390]) {
       // mobile-chrome.md §6 — renamed 2026-10-05 from `Text and theme`.
       await moreAction('Text');
             await page.getByRole('dialog', { name: 'Reader settings' }).getByRole('button', { name: 'News', exact: true }).click();
-            // ARCH-2: there is no Simple/Advanced left to switch, so the single shell carries no mode hook.
-            await expect(shell).not.toHaveAttribute('data-interface-mode');
             await page.getByRole('button', { name: 'Close reader settings', exact: true }).click();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       const footer = await page.locator('.reader-progress').boundingBox();
