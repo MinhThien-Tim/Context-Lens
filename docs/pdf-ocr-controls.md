@@ -1,22 +1,22 @@
 # PDF/OCR Controls — Implementation Spec
 
-**Status:** Active · **Authority:** [`reader-behavior-contract.md`](./reader-behavior-contract.md) (frozen, wins over this doc) · **Phase:** PDF/OCR Controls
+**Status:** Active · **Authority:** [`reader-behavior-contract.md`](./reader-behavior-contract.md) (frozen, wins over this doc) · **Phase:** P4 (OCR behavior); PDF scale ownership follows P2b and Z2
 
-This is the implementation-facing source of truth for PDF-specific controls and OCR behavior in the Reader. It owns zoom presets, Original/Reading presentation, OCR preload, OCR continuation, OCR Next ownership, OCR status lifecycle, and the PDF-specific More actions. It does **not** redesign the Reader chrome architecture, the OCR queue engine, or the responsive model — those are fixed by the frozen contract and [`reader.md`](./reader.md).
+This document records PDF and OCR implementation behavior. Reader chrome ownership is specified in [reader-chrome.md](reader-chrome.md) and [reader-behavior-contract.md](reader-behavior-contract.md). It does **not** redesign the Reader chrome architecture, the OCR queue engine, or the responsive model — those are fixed by the frozen contract and [`reader.md`](./reader.md).
 
 ## 1. Scope and ownership
 
 ### 1.1 What this spec owns
-- PDF zoom presets and the zoom control (desktop Header selector + mobile Footer stepper).
-- Original/Reading presentation control (single control, presentation-only).
+- Current implementation scale pipeline and target zoom behavior, with P2b removing mobile controls and Z2 owning pinch.
+- The presentation control retains stored `original` / `reading` values; visible labels become Text / PDF in P2b.
 - OCR initial preload (first 12 candidate pages).
 - OCR automatic continuation (consecutive 12-page windows until exhaustion).
-- OCR Next — exactly one canonical entry point under More → Document tools.
+- Explicit OCR start action in Document until P4 moves controls to the OCR More item.
 - OCR status — one canonical presentation with correct active/terminal lifecycle.
-- PDF-specific More actions (Document tools entry).
+- PDF-specific More actions, with Document as the current surface name.
 
 ### 1.2 What this spec does NOT own
-- Reader chrome architecture (Header/Footer/More layout) — see [`reader-chrome-foundation.md`](./reader-chrome-foundation.md).
+- Reader chrome architecture (Header/Footer/More layout) — see [`reader-chrome.md`](reader-chrome.md) and [`reader-behavior-contract.md`](reader-behavior-contract.md).
 - OCR queue engine internals (worker, eligibility, cache, storage guard) — see [`reader.md`](./reader.md) §"OCR integration".
 - Responsive model — `useDesktop()` / 1024px is the sole authority (contract §1.3).
 - Icon family or general Header layout — only PDF/OCR control integration is in scope.
@@ -28,6 +28,8 @@ This is the implementation-facing source of truth for PDF-specific controls and 
 - PDF/OCR controls may present differently by viewport, but must represent the same underlying actions/state.
 
 ## 3. PDF zoom
+
+**[P2b]** The current mobile Footer stepper and custom-scale state are legacy and are removed in P2b. Until pinch ships **[Z2]**, mobile PDF uses fit-width only.
 
 ### 3.1 Zoom presets
 The zoom control exposes exactly these choices:
@@ -43,8 +45,10 @@ The zoom control exposes exactly these choices:
 `Automatic` is **not** treated as another arbitrary percentage — it connects to the existing fit/automatic-scale semantics.
 
 ### 3.2 Zoom control ownership
+
+**[P2b]** Current mobile control ownership below records the code being removed; target ownership is desktop Header only.
 - **Desktop (≥1024px):** `ReaderToolbar` owns the zoom selector + stepper in the Header toolbar band. `PdfViewer` computes `stepZoom` and `scaleFor` but does **not** render a zoom control band of its own. The Footer does **not** own a zoom host at desktop.
-- **Mobile (≤1023px):** `ReaderProgress` (Footer) owns the zoom host. `PdfViewer` portals a direct stepper into `.pdf-footer-zoom-host`.
+- **Mobile (≤1023px):** Current code owns a Footer stepper. It is removed in P2b; mobile PDF remains fit-width until pinch is implemented in Z2.
 - There is **one canonical zoom control** per viewport. No second zoom state, no duplicate control.
 
 ### 3.3 Zoom behavior requirements
@@ -52,20 +56,22 @@ Selecting a preset must:
 1. Update the PDF rendering scale (not merely the displayed number).
 2. Visibly reflect the selected preset in the control.
 3. Preserve the current document/page context where the existing architecture allows.
-4. Work consistently with Original/Reading presentation.
+4. Work consistently with Text/PDF presentation.
 5. Not create a second independent zoom state.
 
 ### 3.4 Zoom state model
 - `preferences.pdfZoomMode`: `'fit-width' | 'fit-page' | 'natural' | 'custom'`.
-- `preferences.pdfCustomScale`: number (bounded 0.1–6 desktop, 0.1–3 mobile).
+- `preferences.pdfCustomScale`: number (current implementation bounds are 0.1–6 desktop and 0.1–3 mobile; mobile custom scale is removed in P2b).
 - `onZoomSelect('auto')` → sets `pdfZoomMode = 'fit-width'`.
 - `onZoomSelect('custom', value)` → sets `pdfZoomMode = 'custom'`, `pdfCustomScale = value / 100`.
-- Mobile zoom is session-local and resets to `fit-width` on document open.
+- Current mobile zoom is session-local and resets to `fit-width` on document open; this stepper/custom scale is removed in P2b.
 
-## 4. Original / Reading
+## 4. Text / PDF
 
 ### 4.1 Single control
-Original/Reading is the single PDF presentation control, owned by `PdfModeSwitch` via `primaryActions` in the Header. It is presentation-only — it does not couple to zoom state.
+
+**[P2b]** The current code label is Text/PDF; target labels are Text/PDF, while stored values remain unchanged.
+The single PDF presentation control is owned by `PdfModeSwitch` via `primaryActions` in the Header. Stored values remain `original` / `reading`; visible labels become Text / PDF in P2b. It is presentation-only and does not couple to zoom state.
 
 ### 4.2 Unavailable readable text
 When readable text is unavailable (`canRead` is false):
@@ -73,26 +79,28 @@ When readable text is unavailable (`canRead` is false):
 - The control remains visible so the user understands the mode exists but is not available.
 
 ### 4.3 Source choice
-Per-page text source (`pdf` vs `ocr`) is chosen in Document tools, not in the mode switch.
+Per-page text source (`pdf` vs `ocr`) is chosen in the Document surface (current name: Document), not in the mode switch.
 
 ## 5. OCR lifecycle
+
+**[P4]** The Footer active status stays visible only during `preparing | running | paused`. Queue, source and run actions move from Document to the OCR More item in P4. The terminal-success shape and announcement remain open.
 
 ### 5.1 Lifecycle classes
 "OCR active" means the union of `preparing`, `running`, `paused`. All behavior is defined over queue **state**, never over localized status text.
 
 | Class | States | Reader-visible meaning | Run controls | Status surfaces |
 |---|---|---|---|---|
-| Active / resumable | `preparing`, `running`, `paused` | A run exists and can continue or be resumed | Start-remaining, Pause/Resume, Cancel | Footer progress **and** document-tools status |
-| Terminal success, work remains | `done` with `exhausted: false` | The run finished the window(s) it walked; untouched pages remain | Start-remaining **enabled** | Document-tools status **only** |
-| Terminal success, exhausted | `done` with `exhausted: true` | An explicit run walked every window and found no further candidates | Start-remaining **disabled** | Document-tools status **only** |
-| Terminal error | `error` | The run failed | Start-remaining enabled (retry) | Document-tools status **only** |
+| Active / resumable | `preparing`, `running`, `paused` | A run exists and can continue or be resumed | Start-remaining, Pause/Resume, Cancel | Footer progress **and** Document-surface status |
+| Terminal success, work remains | `done` with `exhausted: false` | The run finished the window(s) it walked; untouched pages remain | Start-remaining **enabled** | Document-surface status **only** |
+| Terminal success, exhausted | `done` with `exhausted: true` | An explicit run walked every window and found no further candidates | Start-remaining **disabled** | Document-surface status **only** |
+| Terminal error | `error` | The run failed | Start-remaining enabled (retry) | Document-surface status **only** |
 | Cancelled / cleared | cancelled, or OCR results cleared | No run; queued work discarded | Start-remaining enabled | **None** |
 
 `exhausted` is a **structural** flag on `OcrQueueStatus`, not a message probe. It is the single
 source of truth for "no OCR work left" and replaces the removed localized-string comparison.
 
 ### 5.2 Preload (initial automatic)
-- The Reader **MUST** preload the **first 12 candidate pages** on document open.
+- The Reader **MUST** preload the **first 12 candidate pages** on document open. This local preload does not start a run; only an explicit user action starts OCR, then continuation proceeds through 12-page windows.
 - The preload loop iterates pages 1–12, skipping pages that already carry PDF text, and collects up to `OCR_AUTO_BATCH_SIZE` (12) candidates.
 - The hard-coded `pending.length >= 6` cap is a **defect** — it must be `pending.length >= OCR_AUTO_BATCH_SIZE`.
 - Preload **MUST** remain local-only: no upstream request, no quota reservation, no Worker API call.
@@ -116,7 +124,7 @@ source of truth for "no OCR work left" and replaces the removed localized-string
   - an **explicit** run (`current` / `next`) walks every 12-page window of the whole document, so
     finishing it structurally exhausts the document → `exhausted: true`;
   - an **initial preload** stops after one bounded 12-page window and must leave later pages
-    reachable through `OCR Next` → `exhausted: false`;
+    reachable through `explicit OCR run` → `exhausted: false`;
   - a run that found zero candidates → `exhausted: mode !== 'preload'`.
 
 ### 5.6 No work
@@ -129,11 +137,13 @@ source of truth for "no OCR work left" and replaces the removed localized-string
 - A failed run **MUST** keep previously produced results.
 - A failed run **MUST** offer the §5.8 entry point for retry.
 
-## 6. OCR Next ownership
+## 6. OCR start ownership
 
 ### 6.1 Canonical entry point
-- `OCR Next` (labeled "Run OCR on remaining pages") **MUST** live in the document-tools surface reached from More.
-- It **MUST NOT** be a per-window "next" advance, **MUST NOT** be an L1/Header action, and **MUST NOT** live outside document tools.
+
+**[P4]** In current code this action is hosted in Document; the target moves it to the OCR More item.
+- `explicit OCR run` (labeled "Run OCR on remaining pages") **MUST** live in the Document surface reached from More.
+- It **MUST NOT** be a per-window "next" advance, **MUST NOT** be an L1/Header action, and **MUST NOT** live outside Document.
 - It serves as the start-after-preload, restart-after-cancel, and recover-after-error entry point.
 - There is **exactly one canonical user-facing entry point**. No competing Header OCR action. No second OCR toolbar.
 
@@ -143,15 +153,15 @@ source of truth for "no OCR work left" and replaces the removed localized-string
 - The label does **not** specify a page count — the action processes all remaining pages in 12-page windows.
 
 ### 6.3 Disabled state
-- `OCR Next` is **disabled** while a run is active (`preparing`, `running`, `paused`).
-- `OCR Next` is **disabled** on terminal success **only when** `done` carries `exhausted: true`.
-- `OCR Next` is **enabled** on terminal success with `exhausted: false` (a finished preload window
+- `explicit OCR run` is **disabled** while a run is active (`preparing`, `running`, `paused`).
+- `explicit OCR run` is **disabled** on terminal success **only when** `done` carries `exhausted: true`.
+- `explicit OCR run` is **enabled** on terminal success with `exhausted: false` (a finished preload window
   always leaves later pages reachable), on terminal error, on cancelled/cleared, and on idle (no run).
 
 ## 7. OCR status ownership
 
 ### 7.1 Canonical status surface
-- **Document tools** (reached from More) is the canonical OCR status surface.
+- **Document** (reached from More) is the canonical OCR status surface.
 - The **Footer** shows OCR status **only** while a run is active (`preparing`, `running`, `paused`).
 - The Footer OCR surface is a progress indicator, not a permanent control or navigation element.
 - No second competing status host remains.
@@ -165,20 +175,24 @@ During `preparing`, `running`, `paused`:
 ### 7.3 Terminal states
 - Terminal success, terminal error, and cancelled/cleared states **MUST NOT** leave stale "active" status in the Footer.
 - The Footer OCR surface **MUST** be absent for idle, terminal success, terminal error, and cancelled/cleared.
-- Errors remain observable in document tools where the lifecycle requires them, but must not masquerade as active OCR.
+- Errors remain observable in Document where the lifecycle requires them, but must not masquerade as active OCR.
 
 ### 7.4 Status detection
 - Status is detected from queue **state** (`queueStatus.state`), never from localized strings.
 - The string-coupled predicate `queueStatus.message === 'Không còn trang cần OCR.'` **MUST** be removed.
 
-## 8. Document Tools and More
+## 8. Document and More
+
+The user-facing More item is named `Document`; “Document” refers only to the existing surface name in the current implementation.
 
 ### 8.1 Single entry
-- Document Tools is reached through More → "Document tools" (en) / "Công cụ tài liệu" (vi).
-- This is the single-entry ownership. No competing PDF/OCR entry point.
+- The current Document surface is reached through More → “Document” (en) / “Công cụ tài liệu” (vi).
+- This is the current single-entry ownership. In P4 OCR controls move to the OCR More item; no duplicate PDF/OCR entry point is added.
 
-### 8.2 OCR actions in Document tools
-- OCR controls are `button`s inside the Document tools dialog, not `menuitem`s. The former
+### 8.2 OCR actions in Document
+
+**[P4]** This is the current placement; the target OCR More item owns run and queue controls.
+- OCR controls are `button`s inside the Document dialog, not `menuitem`s. The former
   `role="menu"` / `role="menuitem"` container was replaced by `role="dialog"` in `3490a22`
   (2026-09-27); tests must select them by button role.
 - "Recognize current page" — OCRs the current page only.
@@ -188,11 +202,15 @@ During `preparing`, `running`, `paused`:
 - Per-page text source choice (PDF vs OCR) — available when both sources exist.
 
 ### 8.3 Status presentation
-- Document tools shows the OCR status as a `<p role="status">` block.
+
+**[P4]** The Footer presents active run status beside page number/progress with no percentage; this is hidden on terminal success, error, cancel and clear.
+- Document shows the OCR status as a `<p role="status">` block.
 - This does **not** create a second competing menu/dialog.
 - Non-OCR document-tool functionality (source choice, language, clear) remains intact.
 
 ## 9. Test migration
+
+This section records implementation history; Reader target behavior is governed by the contract.
 
 ### 9.1 Classification
 | Test | Classification | Reason |
@@ -201,7 +219,7 @@ During `preparing`, `running`, `paused`:
 | `usePdfOcrQueue.test.tsx` — "never preloads scans after the first twelve text pages" | **KEEP** | Correct behavior, no change needed |
 | `usePdfOcrQueue.test.tsx` — "continues automatically through every 12-page window" | **KEEP** | Correct behavior |
 | `usePdfOcrQueue.test.tsx` — "finishes a short final batch" | **KEEP** | Correct behavior |
-| `ReaderShell.test.tsx` — "OCR next lives only in the document-tools surface" | **KEEP** | Already correct, asserts semantic ownership |
+| `ReaderShell.test.tsx` — "explicit OCR run lives only in the Document surface" | **KEEP** | Already correct, asserts semantic ownership |
 | `PdfModeSwitch.ocr.test.tsx` — all tests | **KEEP** | Already correct, asserts semantic ownership |
 | `e2e/pdf-ocr-queue.spec.ts` | **REWRITE** | Stale "OCR 6 trang" / "OCR 3 trang" labels, dead `.pdf-queue-status` selectors |
 | `e2e/pdf-mode-layout.spec.ts` | **DELETE-OBSOLETE** | Quarantined with `test.fixme`, drives obsolete chrome-quiet model, stale `/OCR.*6/` |
@@ -226,11 +244,11 @@ During `preparing`, `running`, `paused`:
 #### OCR continuation
 - 12-page windows continue automatically.
 - > 12-page document completes through subsequent windows.
-- Explicit OCR Next starts the appropriate remaining work.
+- Explicit explicit OCR run starts the appropriate remaining work.
 - User does not need to manually launch every 12-page window.
 
 #### OCR ownership
-- Exactly one canonical OCR Next entry.
+- Exactly one canonical explicit OCR run entry.
 - No competing Header OCR action.
 - More exposes the action.
 
@@ -238,7 +256,7 @@ During `preparing`, `running`, `paused`:
 - preparing; running; paused; successful completion; cancellation; error.
 - Verify status ownership and disappearance/transition semantically.
 
-#### Original/Reading
+#### Presentation
 - Single control.
 - No duplicate mode control.
 - Unavailable readable text is not a silent no-op.
@@ -255,9 +273,9 @@ During `preparing`, `running`, `paused`:
 | Concern | Source file |
 |---|---|
 | OCR queue (preload, continuation, states) | `src/reader/pdf/usePdfOcrQueue.ts` |
-| OCR Next label, status rendering, string-coupling | `src/reader/pdf/PdfModeSwitch.tsx` |
-| Zoom callbacks, active OCR progress, Document tools wiring | `src/app/App.tsx` |
+| explicit OCR run label, status rendering, string-coupling | `src/reader/pdf/PdfModeSwitch.tsx` |
+| Zoom callbacks, active OCR progress, Document wiring | `src/app/App.tsx` |
 | Desktop zoom selector + stepper | `src/reader/ReaderToolbar.tsx` |
-| Footer OCR status + zoom host | `src/reader/ReaderProgress.tsx` |
-| PDF rendering scale, footer zoom portal | `src/reader/pdf/PdfViewer.tsx` |
+| Footer OCR status + current zoom host | `src/reader/ReaderProgress.tsx` |
+| PDF rendering scale and current footer zoom portal | `src/reader/pdf/PdfViewer.tsx` |
 | Zoom scale calculations | `src/reader/pdf/navigation.ts` |

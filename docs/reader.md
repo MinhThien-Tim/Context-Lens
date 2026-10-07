@@ -1,7 +1,11 @@
 # Reader Architecture
 
 Scope: reader surfaces, PDF loading, page model, selection, markup, OCR integration.
-Related: [ARCHITECTURE.md](ARCHITECTURE.md), [ui-system.md](ui-system.md), [data-storage.md](data-storage.md).
+Related: [ARCHITECTURE.md](ARCHITECTURE.md), [ui-system.md](ui-system.md), [data-storage.md](data-storage.md), [reader-chrome.md](reader-chrome.md), [reader-behavior-contract.md](reader-behavior-contract.md).
+
+> **Status.** Chrome passages follow [reader-behavior-contract.md](reader-behavior-contract.md). The code catches up in P2b; see [reader-redesign-phases.md](reader-redesign-phases.md).
+>
+> Passages tagged **[P2b]**, **[P2c]**, **[P3]**, **[P4]** or **[Z2]** describe the approved target and are not yet true in code.
 
 ## Three reader surfaces
 
@@ -42,30 +46,12 @@ It renders plain `content` or sanitized `safeHtml` (markdown/article), and reuse
 | Rendering | `PdfPage.tsx` canvas + PDF.js text layer | `PdfReadingPage.tsx` / `PdfOcrReadingPage.tsx` DOM blocks |
 | Page model source | PDF.js live document geometry (`PdfViewer` sizes map) | `PdfStructuredPage` from `db.documents.pdfPages` |
 | Selection mapping | `src/reader/pdf/selectionAdapter.ts` + `PdfTextIndex` (PDF.js DOM ↔ canonical offsets) | `src/reader/pdf-reading/readingSelectionAdapter.ts` (DOM ↔ `documentRecord.content`) |
-| Zoom | `calculatePdfScale` natural / fit-width / fit-page / custom; direct Footer stepper at every density | Reader typography only (`--reader-size`, `--reader-leading`, `--reader-font`) |
+| Zoom | **[P2b]** `calculatePdfScale` natural / fit-width / fit-page / custom; desktop Header stepper; mobile has no control until pinch **[Z2]** | Reader typography only (`--reader-size`, `--reader-leading`, `--reader-font`) |
 | OCR display | Never overlays OCR on the original page | Renders OCR text for pages that need it |
-| Extra chrome | Header Original/Reading + Document tools via More, Footer zoom stepper | Header Original/Reading + Document tools via More, reading typography |
+| Extra chrome | **[P2b]** Header Text/PDF + desktop zoom, Contents, markup tools, Aa; Footer page number and progress; Document via More | **[P2b]** Header Text/PDF; reading typography via Theme |
 | Page mounting | Dominant viewport page + immediate previous/next pages, at most three canvases; neighbors skipped while OCR is busy | All pages in one scroll container |
 
-Both PDF surfaces share the shell bottom `PageNavigation`; the header Original/Reading segment
-contains only the two view choices, with OCR/source controls in a separate Document tools popover.
-The Header overlays the reading surface and reserves no header space; the Footer stays visible and
-is backed by a bottom height token, so the overlay never shifts content or scroll mapping.
-Phones ≤1023 px place the Original PDF scroll surface directly below the compact fixed header.
-Quiet chrome moves it to the top and expands its height to the full viewport without changing scrollTop.
-Chrome quiets after accumulated downward reading travel and reveals after accumulated upward travel or
-on reaching the content top, using one shared threshold; a tap never changes chrome state, and only
-focus entering real Reader chrome reveals it. Ordinary reading flicks therefore leave the header and
-footer quiet while deliberate upward travel recovers the controls. Open reading overlays — including
-the OCR `.pdf-reading-selection-actions` bar — and the More bottom sheet block quieting. The exact
-rules, constants and the removed confirmed-tap reveal are specified in
-[reader-chrome-foundation.md](reader-chrome-foundation.md), derived from
-[reader-behavior-contract.md](reader-behavior-contract.md) §4–§6. Mobile Header/Footer/More composition
-is specified in [mobile-chrome.md](mobile-chrome.md).
-The mobile Original PDF zoom control is a direct Footer control — decrease, level readout, increase —
-and the former footer Zoom **menu** is retired; it is not reachable from More.
-Reading Mode retains its stable full-height scroll surface and visual header offset.
-Bottom content padding keeps the last page reachable above the overlaid footer.
+**[P2b]** Both PDF modes share one chrome, specified in [reader-chrome.md](reader-chrome.md) and governed by [reader-behavior-contract.md](reader-behavior-contract.md). Header and Footer overlay the reading surface and reserve no space; static padding sits inside the scroll container, so chrome never shifts content or scroll mapping. The single Header `Text | PDF` control switches mode (stored values stay `reading` / `original`). Desktop zoom is a direct Header stepper; mobile has no zoom control. At ≤1023px quiet chrome hides Header and Footer together after accumulated downward travel and reveals them after accumulated upward travel, at the content top, on focus entering chrome, or through the reveal-only `Aa ···` control; taps never change chrome state. Open overlays (More, selection actions, Markup palette) block quieting. **[P2c]** Reading Mode keeps a stable full-height scroll surface with bottom padding so the last page stays reachable above the Footer.
 
 Mode choice: `pdfViewMode` (desktop) / `pdfMobileViewMode` (mobile) preferences, overridable by
 `DocumentRecord.location.viewMode`. Reading Mode is forced back to Original when there is neither
@@ -111,8 +97,7 @@ disabled under the same condition.
   remain `fit-page`. Zoom buttons step from the displayed scale of the visible page,
   including fit modes. The first desktop Zoom In from a fitted page reaches 125% of fit width,
   exposing horizontal overflow; subsequent steps change by 25% of fit width. Desktop custom scale
-  is bounded to 0.1–6, while mobile custom scale remains bounded to 0.1–3. Mobile zoom remains session-local and resets to fit-width
-  when the viewer remounts. Pinch gestures and margin cropping are not implemented.
+  is bounded to 0.1–6. The mobile custom scale (0.1–3) and its session-local stepper are legacy **[P2b: deleted]**; until pinch ships **[Z2]** mobile PDF renders at fit-width. Margin cropping is not implemented.
 - Scrolling: `usePdfScroll` reports the page crossing the viewport top + its page fraction;
   `PdfViewer` converts that into a document `absoluteOffset` using `pageOffsets`, then persists
   a debounced location. Visibility hysteresis is reported separately. Original PDF canvas mounting
@@ -176,7 +161,7 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 ```
 
 - Text reader: caret hit-testing (`rangeFromPoint`) plus native drag / long-press selection.
-- Original Reader: `selectionAdapter.ts` converts a PDF.js text-layer range through `PdfTextIndex`. On mobile, the session-local **Click word lookup** control defaults on and is a More action; it is no longer an independent Footer action at narrow widths. The Footer stays visible when Original chrome quiets. A short, stationary single-finger tap on an actual text glyph maps the word through the same index and opens Quick directly; turning Click off leaves native selection available without tap lookup. Scroll, long press, multi-touch, links and empty page space do not trigger tap lookup. Quiet chrome does not move the Original PDF viewport during contact.
+- PDF Reader: `selectionAdapter.ts` converts a PDF.js text-layer range through `PdfTextIndex`. On mobile, **[P2b]** **Click lookup** is a session-local More toggle (default on; MORE-6). While it is on, a short, stationary single-finger tap on an actual text glyph maps the word through the same index and opens Quick directly; with it off, native selection remains and tap lookup is disabled. Scroll, long press, multi-touch, links and empty page space never trigger tap lookup. Chrome transitions never move the PDF viewport during contact (chrome overlays a full-height viewport, CHR-1).
 - On desktop, double-clicking a single word in the Original text layer keeps native selection
   and opens Quick through the same indexed lookup handler. Phrase and drag selections keep
   the action bar for Define, Highlight and Note when no markup tool is active. With Highlight,
@@ -242,12 +227,8 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
   switch remain available.
 - Per-page text source choice: `DocumentRecord.pdfTextSources[page] = 'pdf' | 'ocr'`, toggled by
   `PdfModeSwitch.onSource` and honored by `PdfReadingView.selectedOcr`.
-- Active OCR progress is an ambient status in `ReaderProgress` (`activeOcrProgress` in `App.tsx`), separate
-  from reading percentage, shown only while an OCR run is active/resumable (`preparing | running | paused`)
-  and hidden on terminal success, terminal error, cancel and clear. Document tools — reached through More —
-  is the canonical OCR status surface; Queue/source/OCR actions live there too.
-- Out of scope by design: whole-book OCR, selectable OCR overlays on the original PDF page, and
-  vision-API fallback.
+- **[P4]** While an OCR run is active (`preparing | running | paused`) the Footer shows a non-interactive status beside the page number and progress line (OCR-3; no percentage). It is hidden on terminal success, terminal error, cancel and clear. Until P4 the queue, source and run actions live in Document (via More); from **[P4]** they live in the OCR More item.
+- Out of scope by design: unattended whole-book OCR. The first 12 candidate pages may be preloaded locally; a full OCR run starts only from an explicit user action and then continues through the remaining 12-page windows automatically. Also out of scope: selectable OCR overlays on the original PDF page and vision-API fallback.
 - Delivery: worker, core and `eng` / `vie` trained data are served from the same origin and are
   requested only when a queue run starts — a PDF with good text never downloads them. `vie` is
   fetched only for the English + Vietnamese choice. `vite.config.ts` `globIgnores` keeps `**/ocr/**`
@@ -258,7 +239,7 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 - Accuracy limits: recognition can still be wrong for ligatures or disconnected type, faint scans,
   two-column layouts and Vietnamese diacritics (for example `học` returning `hoc`). The Original
   page always remains openable as the cross-check reference. Peak memory, thermal and battery cost on
-    physical phones is still unmeasured, so explicit runs advance one 12-page window at a time and the
+  physical phones is still unmeasured, so explicit runs advance one 12-page window at a time and the
     user can pause or cancel between pages.
 
 ## Invariants
@@ -295,6 +276,12 @@ All surfaces emit the same `ReaderSelection` (`src/reader/TextReader.tsx`):
 11. **Shift+arrow selection is not navigation.** `src/reader/pdf/navigation.ts` must not treat
     modifier-based selection as a page jump. Notes record a canonical offset plus a within-page
     fraction.
+12. **Chrome is an overlay. [P2b]** Header and Footer never reserve space or resize the reading viewport; static padding inside the scroll container keeps the first and last lines clear (CHR-1, GEO-4, GEO-6). Visibility changes only through the paths in INP-1; tap never toggles it.
+13. **Switching documents is a close-then-open lifecycle. [P2c]** A document change flushes the previous location (invariant 10), aborts the OCR queue and lookup, resets panel state and runs the open lifecycle again (GEO-3). The File switcher adds no second open path.
+
+## Current implementation — PDF scale pipeline
+
+Audit of `8ec43ca`; Z1 verifies. This describes current code, not target behavior. Scale is computed in `PdfViewer` (`calculatePdfScale`, desktop stepper state and legacy mobile zoom) and passed to `PdfPage`, which derives the PDF.js viewport and `canvasBackingSize`, owns render tasks and cancellation, the per-render text layer and highlight overlay. `usePdfScroll` maps scroll geometry to page, page offset and location. Any scale change (the stepper now, pinch in Z2) must keep the bitmap, text layer, overlay geometry, page slot sizes and scroll location consistent. Z1 verifies this and measures render cost; no performance figure is known from source inspection.
 
 ## Important files
 

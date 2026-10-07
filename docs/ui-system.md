@@ -5,36 +5,32 @@ Related: [ARCHITECTURE.md](ARCHITECTURE.md), [reader.md](reader.md).
 
 ## Structure at a glance
 
+> **Status.** Chrome passages follow [reader-behavior-contract.md](reader-behavior-contract.md). The code catches up in P2b; see [reader-redesign-phases.md](reader-redesign-phases.md).
+>
+> Passages tagged **[P2b]**, **[P2c]**, **[P3]**, **[P4]** or **[Z2]** describe the approved target and are not yet true in code.
+
 ```text
 src/main.tsx
   └─ <App>                                  src/app/App.tsx   ← composition + state owner
-       ├─ HOME  <main class="home-shell" data-interface-mode>
+       ├─ HOME  <main class="home-shell">
        │    brand-header / home-nav
        │    PasteComposer + import sources
        │    continue-reading, library grid (search + kind filter + load more)
        │    OnboardingCard / ContextLensOnboarding
        │    modals: ApiSettings, VocabularyLibrary, DataManagement
-       └─ READER <ReaderShell interfaceMode surface contentsOpen contextOpen>
-            ReaderToolbar (Back, document title; PDF: Original/Reading — exactly and only, §7.1)
-                        ReaderProgress (bottom location/page navigation, percent, direct zoom stepper,
-                                       secondary OCR status, Reader menu/More trigger)
-                        reader-viewport  → TextReader | PdfViewer | PdfReadingView
-                        panels: ContentsPanel (Document), ContextPanel (empty), LookupBottomSheet, NotesPanel
-                        overlays: MarkupPalette, ReaderSettings, GoToLocation, Document tools (via More)
+       └─ READER <ReaderShell surface contentsOpen contextOpen>
+          ReaderToolbar (mobile: Back, title, Text|PDF; desktop: Library, title + File switcher, Text|PDF,
+                         zoom, Contents, Markup tools, Aa, More) [P2b; File switcher P2c]
+          ReaderProgress (single-row bar; mobile: Contents, page number, Markup, More, hairline progress,
+                          reveal-only Aa ···; desktop: page number, progress line, OCR status while active [P4])
+          reader-viewport → TextReader | PdfViewer | PdfReadingView
+          panels: ContentsPanel, LookupBottomSheet (Context Inspector opens from Show more)
+          overlays: MarkupPalette, Theme panel (ReaderSettings), GoToLocation, Document (via More)
+          NotesPanel stays in the tree but has no chrome entry (ARCH-7); saved notes are unreachable
+          in Reader until a separate task decides.
 ```
 
-`ReaderShell` exposes `data-interface-mode` and `data-reader-surface`, plus panel classes.
-It owns only transient mobile chrome visibility, and it is specified by
-[reader-behavior-contract.md](reader-behavior-contract.md) §4–§6 and
-[reader-chrome-foundation.md](reader-chrome-foundation.md). In short: accumulated **downward** reading
-scroll quiets the header/footer and accumulated **upward** travel reveals them, using one shared
-threshold; taps never change chrome state; only focus entering real Reader chrome reveals it. Quiet is
-visual only — it never changes content height, scrollTop, page identity or layout geometry. Open
-panels, selection, settings and any open reading overlay (including the OCR
-`.pdf-reading-selection-actions` bar) keep controls visible. It observes existing scroll events, never
-navigation. The full rules, thresholds and the obsolete tap-reveal rule that was removed in
-ChromeFoundation are recorded in the ChromeFoundation spec.
-
+`ReaderShell` exposes `data-reader-surface` and panel classes. It owns only transient mobile chrome visibility; rules and constants are in [reader-chrome.md](reader-chrome.md).
 ## Homepage (`home-shell`)
 
 Rendered by the `if (!documentRecord)` branch in `src/app/App.tsx`. Sections, in render order:
@@ -57,55 +53,25 @@ Rendered by the `if (!documentRecord)` branch in `src/app/App.tsx`. Sections, in
 - `OnboardingCard` until dismissed, then `ContextLensOnboarding` as a modal.
 - `home-note` privacy line.
 
-Density is `AppPreferences.interfaceMode` (`simple` / `advanced`, default Simple), persisted
-in `reader-preferences` and exposed as `data-interface-mode`. `loadPreferences` migrates
-legacy `homepage.theme`: Calm to Simple, Bright to Advanced, preserving appearance and
-typography. Explicit new density wins; normalized settings are written and the old key removed
-atomically. Invalid appearance defaults to System.
+**[P2b]** There is one Home layout. The `interfaceMode` preference is removed; `loadPreferences` migrates stored density values, preserving appearance and typography, and the Home keeps the former Simple controls minus density.
 
 ## Reader layout
 
-Desktop uses a reading canvas between independent Document and Context columns. Mobile below
-1024 px uses a compact header, bottom page navigation and modal drawers/sheets. There is no tablet
-band: 768–1023 px is Mobile presentation. `useDesktop()` (`src/components/useDesktop.ts`) is a single
-`matchMedia('(min-width: 1024px)')` subscription and is the sole Reader responsive authority; the
-obsolete 768 px Reader breakpoint has been removed rather than re-targeted. See
-[reader-chrome-foundation.md](reader-chrome-foundation.md) for the foundation rules and for which
-Mobile presentation gaps belong to the MobileChrome phase.
+Mobile at ≤1023 px uses a compact Header (Back, title, Text | PDF), a one-row Footer bar and modal drawers/sheets; quiet hides Header and Footer together **[P2b]**. Desktop uses a reading canvas between independent Document and Context columns. `useDesktop()` (`src/components/useDesktop.ts`) is the sole Reader responsive authority. See [reader-chrome.md](reader-chrome.md) and [reader-behavior-contract.md](reader-behavior-contract.md).
 
 | Area | Desktop | Mobile |
 | --- | --- | --- |
-| Side panel | Contents and context render as columns (`reader-shell.has-contents` / `.has-context`) | Drawers/sheets; `App.tsx` auto-closes Contents when the lookup sheet or notes open |
-| Lookup result | Quick popup; explicit Full opens Context Inspector | Quick bottom sheet; Full expands the same sheet |
-| Notes | Side panel | Full-height panel (`NotesPanel`) |
-| Toolbar | Back, bounded document title and Original–Reading in the Header band; page/location, progress, percentage, direct PDF zoom stepper, OCR status and the single **More** disclosure in the Footer band. Every secondary action (Contents, Context, Notes, Markup, Text, Languages, Document, Click lookup) is reached once through **More**, presented as a popover ≥1024 px. See [desktop-reader.md](desktop-reader.md) | Back/title/Original–Reading in the overlay Header; every secondary action is reached once through the Footer **More** disclosure, presented as a bottom sheet ≤1023 px and a popover ≥1024 px |
-| Contents / Go to | Keyboard `T` and `G` (guarded by `keyboardCanNavigate`); tapping a Contents entry navigates | Visible Contents button / bottom location button (page indicator opens Go to location) |
-| PDF paging | Bottom `PageNavigation` and guarded arrow keys | Bottom touch navigation / Go to page |
+| Notes | No chrome entry (ARCH-7); `NotesPanel` retained | Same |
+| Header | Library · title ⌄ (File switcher, P2c) · Text \| PDF · zoom − level + · Contents · Highlight Underline Erase · `Aa` · More **[P2b]** | Back · title · Text \| PDF **[P2b]** |
+| Footer | Page number (opens Go to location) · thin progress line · OCR status while active **[P4]** | One-row bar: Contents · page number · Markup · More · hairline progress; hidden with Header while quiet **[P2b]** |
+| Contents / Go to | Contents icon in Header; an entry navigates; page number opens Go to location; keyboard `T` and `G` unchanged | Contents icon in Footer; same behavior |
+| PDF paging | Page number is the only page control; scrolling and guarded arrow keys remain | Same |
+| Zoom | Header − level + (PDF mode only) | None **[Z2: pinch]** |
+| Theme | `Aa` Header button opens Theme panel **[P3]** | More → Theme **[P3]** |
 
+Mobile Header at 320px allows only the title to shrink; verify both fonts. Footer items retain visible text labels. Geometry is overlay-based: static top and bottom padding stays inside the scroll container (CHR-1, GEO-4, GEO-6). Switching documents flushes location, aborts OCR and lookup, resets panel state, then runs the existing open lifecycle **[P2c]**.
 
-Simple starts with both panels closed and diagnostics hidden. Advanced desktop opens Document by
-default; Context opens on an explicit toggle or Full expansion. A Simple/Advanced change resets panel
-visibility but preserves document location. Location restoration runs only on document changes;
-renderer/breakpoint changes reuse the current location rather than the initial record position. Document provides Contents and, for PDF, Pages; Go to location is reached from the page indicator; existing Notes remain accessible. No search engine or new highlight browser is added.
-Desktop columns use bounded responsive token widths and leave the reader more than half the screen
-with both open at supported desktop widths. No resize handles or width animation are introduced.
-Mobile opens one panel at a time with the existing focus trap and Escape behavior.
-
-The top PDF control contains only Original/Reading; the adjacent Document tools popover contains
-existing text-source, OCR language, recognition and queue actions. Under the frozen contract OCR next
-is retired as a Header/L1 action and is a document-tools action meaning "run OCR on remaining
-unprocessed pages"; OCR queue semantics are unchanged. Original keeps a centered PDF canvas with a
-zoom control in both densities: zoom out, current level, zoom in. Under the frozen contract the
-footer Zoom **menu** is retired and replaced by a direct stepper in both densities; there is
-no separate desktop zoom bar and no zoom popup at any width. Reading retains the shared structured
-pages with comfortable margins
-and no card border per page.
-`ReaderProgress` always reports reading progress separately from optional OCR status. PDF page
-navigation is rendered once at the bottom; non-PDF location opens the existing Go to dialog.
-Header/footer size variables determine PDF viewport height; quiet chrome is visual only — opacity and
-transform, never viewport size, content height or scrollTop (contract §4.2, A12). Text chrome overlays
-window-scrolled content. Long text continues to use window scrolling and the existing location contract.
-
+Both panels start closed. The Document column provides Contents and, for PDF, Pages. The Context Inspector opens only from Lookup Show more. Until P4, Document (via More) holds text-source, extraction and OCR actions; from P4, OCR actions move to the OCR More item **[P4]**. Desktop zoom is a direct Header stepper; mobile has no zoom control until pinch **[Z2]**.
 `LookupBottomSheet` presents the Quick/Full display mode supplied by App. New lookups use the saved
 `AppPreferences.lookupViewMode` (Quick by default): a selection-anchored Quick popup on desktop
 (both densities) or a modal bottom sheet on mobile, or Full when the reader last chose Show more.
@@ -196,6 +162,7 @@ offline" / "Dùng Context Lens khi ngoại tuyến"), following the existing `gu
 
 There is no global store. Ownership rules:
 
+- The File switcher owns only its transient search and filter UI; the list session comes from `useLibrary` and opening goes through App **[P2c]**.
 - `src/app/useLibrary.ts` owns the Library list session: title query, kind filter, paged documents,
   loading state, and first-page refresh. `App.tsx` renders both Library variants and owns document
   opening, transactional deletion, and Continue reading.
@@ -207,29 +174,28 @@ There is no global store. Ownership rules:
 - `lookupService` (`src/lookup/service.ts`) is a module singleton, created once and reconfigured
   from settings.
 - Feature components own only transient UI state: `MarkupPalette` tool/color, `LookupBottomSheet`
-  disclosures (Quick/Full follows App's `lookupDisplay`), `ReaderToolbar` overflow menu, `ReaderShell` mobile chrome visibility, `PdfViewer` mobile zoom and page sizes,
+  disclosures (Quick/Full follows App's `lookupDisplay`), `ReaderToolbar` overflow menu, `ReaderShell` mobile chrome visibility, `PdfViewer` scale and page sizes,
   `usePdfOcrQueue` queue status, `VocabularyLibrary` and `DataManagement` modals.
 - Data is not mirrored into component state: the reader holds a `DocumentRecord` and re-renders
   after `db.documents.update`.
-- Reading typography and page margins are passed as CSS custom properties from the `readerStyle`
-  memo in `App.tsx`. `ReaderSettings` provides Book, News and Academic presets plus manual controls;
-  size, line height, font, margin and appearance use the existing `reader-preferences` record, with
-  no per-document or location state.
+- Reading typography and page margins are passed as CSS custom properties from the `readerStyle` memo in `App.tsx`. `ReaderSettings` provides theme and typography controls; the fate of the Book, News and Academic presets remains open for P3. Size, line height, font, margin and appearance use the existing `reader-preferences` record, with no per-document or location state.
 
 ## Theme system
 
-- `src/styles.css` contains shared styling and the original Simple homepage, imported once from `src/main.tsx`. `src/reader-layout.css` loads before opening a document and imports `src/styles.reader-base.css` first for reader markup, PDF Original/Reading presentation, controls and PDF.js text layers, followed by the responsive reader sheets and layout/inspector overrides. Base rules retain their original relative order; shared settings and mixed shared/lookup rules remain global. Both CSS chunks remain in the service-worker precache. `src/home-advanced.css` is loaded on demand for Advanced and scopes its rules to the Advanced home shell.
+- `src/styles.css` contains shared styling and the Home layout, imported once from `src/main.tsx`. `src/reader-layout.css` loads before opening a document and imports `src/styles.reader-base.css` first for reader markup, PDF presentation, controls and PDF.js text layers, followed by the responsive reader sheets and layout/inspector overrides. Base rules retain their original relative order; shared settings and mixed shared/lookup rules remain global. Both CSS chunks remain in the service-worker precache.
 - `src/styles.mobile-reader.css` is imported first by the lazy `reader-layout.css`, after shared styles, and scopes mobile reader/lookup presentation to **≤1023 px**, so 768–1023 px is covered by the same mobile presentation as narrower phones. Shell specificity preserves its overrides over the following reader-layout rules. Linked bilingual meanings stack per sense; unmatched entry glosses remain separate. Quick and Full size to content up to their respective caps.
 - `src/styles.desktop-reader.css` is imported next by the lazy `reader-layout.css` and scopes reader presentation to ≥1024 px, with shell specificity that survives the following reader-layout rules. Both responsive stylesheets load before opening a document and remain in the service-worker precache, outside the initial homepage bundle. It owns compact desktop chrome and bounded panel sizing; both open panels share less than half the viewport. Quick keeps its shared 440 px positioning contract and stacked linked senses; Full can use paired columns when its own container reaches 390 px. Shared structure and mobile presentation remain in their existing stylesheets.
 - Design tokens are CSS variables on `:root` (palette, surfaces, `--reading-surface`,
   `--elevated-surface`, `--primary-text`, `--secondary-text`, `--border`, `--selection`,
   `--danger`, `--overlay`, `--shadow`).
-- Theme selection is `data-theme` on `:root` with values `light`, `dark`, `system`; `system` is
-  handled by `@media (prefers-color-scheme: dark)`. `AppPreferences.theme` is persisted in
-  `db.settings` under `reader-preferences` via `loadPreferences` / `savePreferences`.
-- System follows the OS color scheme on all surfaces; density never overrides appearance. Home Advanced uses a subtly cooler surface mix; Simple keeps warm paper. Paste has a distinct blue accent in both modes, while Import retains green. Reader palette remains shared.
-- Reader surfaces deliberately reuse the same semantic tokens in light, dark, and system. Do not
-  introduce a second palette for the reader.
+- Theme selection is `data-theme` on `:root`. Today the values are `light`, `dark` and `system` (handled by `@media (prefers-color-scheme: dark)`). **[P3]** Appearance becomes Light | Dark; a stored `system` is resolved once at migration (APP-1). The reader tokens become Heading/Title, Body, Accent and Page background, plus a separate lookup accent (APP-2, APP-5). `AppPreferences.theme` is persisted in `db.settings` under `reader-preferences` via `loadPreferences` / `savePreferences`.
+- System follows the OS color scheme on all surfaces. Paste has a distinct blue accent in both modes, while Import retains green. Reader palette remains shared.
+- Reader surfaces deliberately reuse the same semantic tokens in light and dark. Do not introduce a second palette for the reader.
+- Book, News and Academic presets in `ReaderSettings`: their fate is decided with the Theme panel in P3 (contract open item 7).
+- Foundation tokens cover semantic surfaces/text, spacing, radii, shadows, touch height, sidebar width bounds and reading width.
+- One bundled local Sans | Serif font setting drives interface and reading typography (APP-3) **[P3]**.
+
+
 
 ## Where to make a change
 
@@ -241,7 +207,10 @@ subsystem verification. See the canonical
 | Change | Location |
 | --- | --- |
 | New homepage section, import source, or library control | `src/app/App.tsx` home branch, plus a component in `src/components/` |
-| Reader chrome, panel arrangement, keyboard shortcuts | `src/reader/ReaderShell.tsx`, `src/reader/ReaderToolbar.tsx`, `src/reader/ReaderProgress.tsx`, `src/app/App.tsx`; see [mobile-chrome.md](mobile-chrome.md) |
+| Reader chrome, panel arrangement, keyboard shortcuts | `src/reader/ReaderShell.tsx`, `src/reader/ReaderToolbar.tsx`, `src/reader/ReaderProgress.tsx`, `src/app/App.tsx`; see [reader-chrome.md](reader-chrome.md) and [reader-behavior-contract.md](reader-behavior-contract.md) |
+| File switcher **[P2c]** | new `src/reader/FileSwitcher.tsx` using the `useLibrary` session through a list component shared with Home; opening stays in `App.tsx` |
+| Theme panel (`Aa`, More → Theme) | `src/components/ReaderSettings.tsx` |
+| Reader Footer bar and page number | `src/reader/ReaderProgress.tsx`, `src/reader/DocumentPosition.tsx` |
 | Lookup card content or expansion behavior | `src/components/LookupBottomSheet.tsx`, `QuickExplain.tsx`, `ExpandedExplain.tsx`, `LanguageTabs.tsx` |
 | Reading typography, theme tokens, responsive rules | `src/styles.css` + `src/components/ReaderSettings.tsx` |
 | PDF controls, mode switch, page navigation | `src/reader/pdf/PdfViewer.tsx`, `src/reader/pdf/PdfModeSwitch.tsx`, `src/reader/DocumentPosition.tsx` |
@@ -252,20 +221,7 @@ subsystem verification. See the canonical
 | Onboarding and guide language | `src/onboarding/ContextLensOnboarding.tsx`, `src/onboarding/store.ts` |
 | Offline status and readiness UI | `src/components/OfflineBadge.tsx`, `src/documents/offline.ts`, `src/app/App.tsx` (`online`) |
 
-Both densities expose the eight approved secondary actions — Contents, Context, Notes, Markup, Text,
-Languages, Document, Click lookup — through the single **More** disclosure. Markup opens the
-existing tools and Notes. The mobile Header carries only Back, the document title, and
-Original/Reading for PDF, and the mobile Footer owns progress, location, the direct PDF zoom
-stepper, the More trigger, and OCR status only while an OCR run is active. PDF zoom is a direct
-stepper in both bands, anchored in the Footer at ≤1023 px and in the Header toolbar at ≥1024 px; it
-is never a popup or a menu at any width. See [mobile-chrome.md](mobile-chrome.md) §5/§6/§12 for the
-density split and the 2026-10-05 label rename (`Document`, `Text`, `Languages`, `Click lookup`
-replace `Document tools`, `Text and theme`, `Language engines`, `Click word lookup`).
 Titles omit known file extensions and subtitles after a colon, with visual ellipsis and a full-title tooltip.
-Secondary actions remain in the reader overflow menu. Advanced adds the Context toggle;
-lookup content, notes and processing capabilities remain available through the existing components.
-Foundation tokens cover semantic surfaces/text, spacing, radii, shadows, touch height, sidebar
-width bounds and reading width. UI uses `--font-ui`; reading uses `--font-reading` by default.
 
 Individual CSS declarations are intentionally not documented here; this file records ownership only.
 
@@ -275,9 +231,11 @@ Individual CSS declarations are intentionally not documented here; this file rec
    source inside a component.
 2. New UI goes through `App.tsx` state and props; components stay presentational.
 3. Styling changes stay in the shared or scoped presentation stylesheets and reuse existing tokens.
-4. Appearance state is `preferences.theme` → `data-theme`, independent of `preferences.interfaceMode`.
+4. Appearance state is `preferences.theme` → `data-theme`; there is no density mode.
 5. Modal surfaces keep the `useDialog` focus trap and Escape behavior.
 6. Selection-anchored UI must tolerate re-anchoring when the reader scrolls.
+7. More is the only menu architecture; Contents, Markup, Theme, the File switcher and Go to location are panels, palettes or dialogs (FTR-4).
+8. No action is reachable from two places (MORE-4).
 
 ## Important files
 

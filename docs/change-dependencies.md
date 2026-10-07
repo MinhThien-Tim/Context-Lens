@@ -15,6 +15,9 @@ Before editing, identify its dependents. After editing, update every affected la
 - A test change must preserve or deliberately update its `@tag`; never leave a stale tag or selector after changing what the test covers.
 
 ## Reader Routing Table
+
+Reader architecture and behavior route to [reader-chrome.md](reader-chrome.md) and [reader-behavior-contract.md](reader-behavior-contract.md).
+
 | Change Type | Locator Strategy | Accessible Name | Title/@tag | Section Reference | Helper/Selector |
 |-------------|------------------|-----------------|------------|-------------------|-----------------|
 | Add         | New symbol       | New label       | New @tag   | New section       | New helper      |
