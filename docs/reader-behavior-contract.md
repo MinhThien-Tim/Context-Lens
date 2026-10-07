@@ -34,9 +34,9 @@ Unmarked rules are true after Phase 2b.
 | INP-1 | Only real wheel, touch drag or paging keys over the reading surface may quiet or reveal. Programmatic scroll, page jump, zoom, mode change, geometry reconciliation, restoration, tap, click, double-tap, long-press, edge swipe, Back and idle timers never do. |
 | INP-2 | Quiet = accumulated downward travel ≥32px and `scrollTop` >40px. Reveal = accumulated upward travel ≥32px, or `scrollTop` ≤40px. One shared constant in opposite directions; the accumulator resets on a direction change; a single event of any size never reveals. Wheel and touch are identical. |
 | INP-3 | Focus entering chrome reveals it and keeps it revealed; leaving chrome restores the prior state. Focus anywhere else never reveals. |
-| INP-4 | `Aa ···` (accessible name "Show reading controls") is the reveal-only escape: mobile and quiet only, keyboard operable, never quiets, not a toggle, menu, popup or FAB, removed once chrome is visible, never the primary path. It is not the desktop `Aa` Theme button. |
+| INP-4 | `Aa ···` (accessible name "Show reading controls") is the reveal-only escape: mobile and quiet only, keyboard operable, never quiets, not a toggle, menu, popup or FAB, removed once chrome is visible, never the primary path. It sits at the bottom-right inside the safe-area inset. It is not the desktop `Aa` Theme button. |
 | MOB-1 | At ≤1023px, while quiet, only the reading text is visible (plus the OS bars): Header, Footer and its progress line are all hidden. Text runs edge to edge between its side margins. |
-| MOB-2 | The mobile Footer is one full-width single-row bar — Contents · page number · Markup · More — with a hairline progress line on its top edge. It shows no percentage and no zoom control. |
+| MOB-2 | The mobile Footer is one full-width single-row bar — Contents · page number · Markup · More, with visible text labels — and a hairline progress line on its top edge. It shows no percentage and no zoom control. |
 | MOB-3 | Mobile reveal follows scroll direction: scrolling down quiets Header and Footer together; scrolling up (INP-2) reveals both together; the top of the document always reveals. Tap never toggles chrome, because tap belongs to lookup and selection. |
 
 ## 3. Header, Footer, More
@@ -46,7 +46,7 @@ Unmarked rules are true after Phase 2b.
 | HDR-1 | The mobile Header owns exactly: Back, document title, `Text \| PDF` (PDF only). The desktop Header owns exactly: Library (Back), the title (File switcher trigger), `Text \| PDF`, zoom (decrease, level, increase), Contents, the Markup tool group (Highlight, Underline, Erase), `Aa` (Theme) and More. |
 | HDR-2 | The title identifies the document (extension and `: subtitle` trimmed, ellipsized, full title in `title`). It is not interactive on mobile; at ≥1024px it is the File switcher trigger (FILE-1). |
 | HDR-3 | Never in the Header at any band: Search, FAB, OCR actions, Notes, Context, Print, a Markup dialog button, previous/next page buttons, a page number, a second mode bar. At ≤1023px also never: zoom, Contents, Markup tools, `Aa`. |
-| HDR-4 | The Contents icon lives in the Header at ≥1024px and in the Footer bar at ≤1023px; never both, never in More. It opens the Contents panel; tapping an entry navigates; there is no "Go to location" button inside Contents. |
+| HDR-4 | The Contents icon lives in the Header at ≥1024px and in the Footer bar at ≤1023px; never both, never in More. It opens the Contents panel; tapping an entry navigates; there is no "Go to location" button inside Contents. The panel offers Contents and, for PDF, Pages; there is no Outline tab. |
 | HDR-5 | The desktop Header is grouped, left to right: **navigation** (Library · title ⌄), **mode** (`Text \| PDF`, centred), **tools** (zoom · Contents · Highlight Underline Erase · `Aa` · More), groups divided by separators and tools kept in that order. |
 | FILE-1 [P2c] | At ≥1024px, activating the title opens the File switcher: a panel (never a menu) with title search, a kind filter (All, PDF, Text), the paged document list and Load more. Choosing a document opens it in place after the current location is saved, with no return to Home. Back closes the panel first. Not available at ≤1023px. |
 | FTR-1 | At ≤1023px the Footer is one full-width single-row bar owning: Contents; the page number (the location button, opens Go to location); Markup; More; with a hairline progress line on its top edge. At ≥1024px the Footer is a thin single-row band owning the page number (location button), a thin progress line and OCR status while active. Neither band shows a percentage or previous/next page buttons. A document without pages shows a Go-to icon in place of the number. |
@@ -73,7 +73,7 @@ Unmarked rules are true after Phase 2b.
 | ID | Rule |
 | --- | --- |
 | APP-1 | Appearance = Light \| Dark. A stored `system` value is resolved to Light or Dark once, at migration. One reader palette; Home reuses the same semantic tokens. |
-| APP-2 | Reader tokens: **Heading/Title**, **Body**, **Accent**, **Page background**. Light: `#A24B31` · `#22211D` · `#C88E69` · `#F7F4EB`. Dark: `#C88E69` · `#FFFFFF` · `#C88E69` · `#121110`. The six reading-preset swatches follow the mockup; their remaining hex values are recorded in the P3 task before coding. |
+| APP-2 | Reader tokens: **Heading/Title**, **Body**, **Accent**, **Page background**. Light: `#A24B31` · `#22211D` · `#C88E69` · `#F7F4EB`. Dark: `#C88E69` · `#FFFFFF` · `#C88E69` · `#121110`. The six colour swatches follow the mockup; their remaining hex values are recorded in the P3 task before coding. |
 | APP-3 | Fonts = Sans \| Serif, bundled locally (woff2 in the repo, no CDN) with generic fallbacks. **One font setting drives both the reading text and the interface typography** (chrome, panels, Home), so the interface never mixes an unrelated UI font with the reading font; page numbers use tabular figures. Chrome layouts are verified at 320px in both fonts. The two chosen families and their licences are recorded in docs. |
 | APP-4 | The Theme panel has a bounded height and scrolls inside itself: no page scroll chaining, no horizontal overflow, same contract on both bands. |
 | APP-5 | The Lookup popup accent is its own token, independent of the Reader Heading token. |
@@ -84,7 +84,7 @@ Unmarked rules are true after Phase 2b.
 | ID | Rule |
 | --- | --- |
 | OCR-1 | Preload the first 12 candidate pages (local only). An explicit run processes 12-page windows from the first unprocessed page. |
-| OCR-2 | Once a run starts it continues to exhaustion on its own. There is no "OCR next" or "continue" control. |
+| OCR-2 | A run starts only from an explicit user action; the first-12 preload never starts one. Once started it continues to exhaustion on its own. There is no "OCR next" or "continue" control. |
 | OCR-3 | "Active" = preparing, running or paused, decided on queue state and never on localized text. The Footer status exists only while active (paused counts) and is a non-interactive indicator. |
 | OCR-4 | Pause, resume and cancel live in OCR (More). Cancel ends the run and leaves the document readable. |
 | OCR-5 | Terminal success, terminal error and "nothing to OCR" are explicit observable states, distinct from idle. Error keeps earlier results and offers retry. |
@@ -115,17 +115,28 @@ Unmarked rules are true after Phase 2b.
 - Matrix: 320, 390, 767, 768, 1023, 1024, 844×390, 915×412, 1280×800.
 - Assert geometry only where geometry is the requirement (GEO-*).
 
-## 8. Open items
+## 8. Open items and closed decisions
+
+Open:
 
 | # | Item | Owner | Decide before |
 | --- | --- | --- | --- |
-| 1 | Back history ownership (`pushState` / `popstate` / router). | P5 | P5 |
-| 2 | Does an OCR run auto-start beyond the first 12 pages, or only continue after an explicit start? (Phone battery cost is unmeasured.) | owner | P4 |
-| 3 | Shape of the terminal-success state; announcement wording. | P4 | P4 |
-| 4 | The mockup's ⏲ icon in the mobile Footer and the Outline tab in Contents are not adopted; Outline is treated as PDF Pages until the owner says otherwise. | owner | P2b |
-| 5 | Z1 audit and benchmark results (where PDF scale lives, whether text/annotation geometry must be synchronized, render cost on a mid-range Android) decide whether ZOOM-2 ships. | Z1 | Z2 |
+| 1 | Back history ownership (`pushState` / `popstate` / router). Start with a read-only audit of every existing handler. | P5 | P5 |
+| 2 | Shape of the terminal-success OCR state; announcement wording. | P4 | P4 |
+| 3 | Z1 audit and benchmark results (where PDF scale lives, whether text/annotation geometry must be synchronized, render cost on a mid-range Android) decide whether ZOOM-2 ships. | Z1 | Z2 |
+| 4 | Fate of the Book / News / Academic presets in `ReaderSettings` once the Theme panel groups Appearance, Colours and Font. | owner | P3 |
 
-Closed 2026-10-06: Notes — see ARCH-7. Consequence to accept: until a separate task decides the feature's fate, saved notes have no Reader entry point.
+Closed (owner decisions; an agent never reopens these):
+
+| Date | Decision | Rule |
+| --- | --- | --- |
+| 2026-10-06 | Notes is not a chrome action; implementation, data and the selection Note action are untouched. Saved notes have no Reader entry until a separate task decides. | ARCH-7 |
+| 2026-10-07 | OCR never starts on its own beyond the first-12 local preload: a run starts only from an explicit user action, then continues through 12-page windows to exhaustion. | OCR-1, OCR-2 |
+| 2026-10-07 | The Contents panel offers Contents and (PDF) Pages. No Outline tab; no clock icon in the Footer. | HDR-4 |
+| 2026-10-07 | The reveal-only `Aa ···` sits bottom-right inside the safe-area inset; P2b records the exact offset after the 320px and landscape checks. | INP-4 |
+| 2026-10-07 | Mobile Footer items carry visible text labels; revisit icons only if the 320px check fails. | MOB-2 |
+| 2026-10-07 | One font setting drives reading and interface (APP-3 stands). Reference visuals must comply; chrome legibility at small sizes in Serif is verified in P3. | APP-3 |
+| 2026-10-07 | Review-board directions A (warm paper) and C (ink and amber) are the Light and Dark presentation of APP-2. Direction B is not adopted. | APP-2 |
 
 ## 9. Design ownership
 

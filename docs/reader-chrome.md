@@ -36,7 +36,7 @@ disagrees with it, this file is the defect. Rule IDs below (HDR-1, INP-2…) ref
 - Returns early when `desktop`, `controlsLocked`, `contentsOpen` or `contextOpen` (CHR-3, CHR-4).
 - A live selection or any `OVERLAY_OPEN` surface zeroes travel and suppresses the transition. `OVERLAY_OPEN` = `.reader-more-menu`, `.pdf-reading-options`, `.pdf-reading-selection-wrap`, `.pdf-reading-selection-actions`, `.selection-actions`; the Markup palette joins it in P2b.
 - Quiet hides Header **and** Footer at ≤1023px (progress line included). Both overlay the reading surface; static top and bottom padding lives inside the scroll container.
-- Reveal-only control: `<button class="reader-reveal" aria-label="Show reading controls">`, a fixed overlay outside the scroll flow, rendered only while quiet (INP-4). No `aria-haspopup`, no `aria-expanded`.
+- Reveal-only control: `<button class="reader-reveal" aria-label="Show reading controls">`, a fixed overlay outside the scroll flow, rendered only while quiet (INP-4). No `aria-haspopup`, no `aria-expanded`. It sits bottom-right inside the safe-area inset; P2b records the exact offset after the 320px and landscape checks.
 - `onFocusCapture` reveals only when focus enters `CHROME`; focus on the reading surface, text or selection handles never does.
 
 ## 4. Programmatic scroll attribution
@@ -51,7 +51,7 @@ disagrees with it, this file is the defect. Rule IDs below (HDR-1, INP-2…) ref
 | Surface | Mobile ≤1023px | Desktop ≥1024px |
 | --- | --- | --- |
 | Header | Back · title · `Text \| PDF` | Library · title ⌄ (File switcher) · `Text \| PDF` (centred) · zoom − level + · Contents · Highlight Underline Erase · `Aa` · More trigger |
-| Footer | One full-width single-row bar: Contents · page number · Markup · More; hairline progress line on its top edge; `Aa ···` overlay while quiet (Header and Footer are both hidden then) | Thin single-row band: page number · progress line · OCR status while active |
+| Footer | One full-width single-row bar: Contents · page number · Markup · More (visible text labels); hairline progress line on its top edge; `Aa ···` overlay while quiet (Header and Footer are both hidden then) | Thin single-row band: page number · progress line · OCR status while active |
 | More | Bottom sheet with backdrop, width-capped at 768–1023px, Escape closes, focus trapped | Popover from the Header trigger |
 | Contents (Header icon on desktop, Footer bar on mobile) | One panel at a time (drawer/sheet) | Document column (Contents, Pages) |
 | Context | Opens only from Lookup "Show more" | Context Inspector column, same trigger |
@@ -79,7 +79,7 @@ Notes on the table:
 | Group | Rules |
 | --- | --- |
 | Band boundary at 767 / 768 / 1023 / 1024; the only media query the Reader issues is 1024px | ARCH-1, CHR-3 |
-| Real scroll quiets, Footer stays visible; upward travel reveals, a small correction does not; touch ≡ wheel | INP-1, INP-2, CHR-2 |
+| Real scroll quiets Header and Footer together; upward travel reveals both, a small correction does not; touch ≡ wheel | INP-1, INP-2, CHR-2 |
 | Tap, programmatic jump, zoom, mode switch and scrolling inside More never drive chrome | INP-1, MODE-1 |
 | Focus into chrome reveals; focus into the reading surface does not | INP-3 |
 | `Aa ···` is reveal-only, keyboard operable, operable at 320 and landscape | INP-4 |
@@ -116,12 +116,12 @@ Helper rules:
 Structure only. Colours, fonts and tokens belong to Phase 3 (APP-*) and are not specified here.
 
 **Layout**
-- The Header is one compact horizontal band; the Footer uses one stable control rhythm (same spacing between controls in both rows).
+- The Header is one compact horizontal band; the Footer is one row with even control spacing.
 - Flat Reader chrome: no card or shadow-heavy treatment on Header or Footer.
 - Desktop Header keeps its current compact toolbar rhythm, regrouped per HDR-5 (navigation, mode, tools). P2b removes controls, adds `Aa` and the File-switcher affordance and renames labels; it does not restyle.
 - Immersive reading on mobile: while quiet only text is visible; chrome returns with an upward scroll as one compact Header and one full-width Footer bar. This takes its behavior from the reference readers (scroll-direction reveal, hairline progress); the floating-pill form explored in the reference image is not adopted.
 - One font setting drives interface and reading typography (APP-3); the two modes look alike and differ only where their function differs (MODE-3).
-- Mobile favours direct recognition (icon + accessible name) over text labels. Desktop keeps the same hierarchy with more horizontal room; it does not add controls.
+- The mobile Footer carries visible text labels (MOB-2); icon-only controls elsewhere carry accessible names. Desktop keeps the same hierarchy with more horizontal room; it does not add controls.
 
 **Surfaces**
 - More: compact bottom sheet on mobile, compact popover on desktop, same inventory and order.

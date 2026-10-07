@@ -15,12 +15,20 @@ Before editing, identify its dependents. After editing, update every affected la
 - A test change must preserve or deliberately update its `@tag`; never leave a stale tag or selector after changing what the test covers.
 
 ## Reader Routing Table
-| Change Type | Locator Strategy | Accessible Name | Title/@tag | Section Reference | Helper/Selector |
-|-------------|------------------|-----------------|------------|-------------------|-----------------|
-| Add         | New symbol       | New label       | New @tag   | New section       | New helper      |
-| Remove      | Deleted symbol   | Removed label   | Removed @tag | Removed section   | Removed helper  |
-| Rename      | Updated symbol   | Updated label   | Updated @tag | Updated section   | Updated helper  |
-| Move        | New path symbol  | Same label      | Same @tag  | New section       | Same helper     |
+
+Reader architecture and behavior route to [reader-chrome.md](reader-chrome.md) and
+[reader-behavior-contract.md](reader-behavior-contract.md). Owners are from [reader-chrome.md](reader-chrome.md) §1.
+
+| Change | Check |
+| --- | --- |
+| Header control | `ReaderToolbar` → `reader-chrome.md` §5 → HDR-* tests |
+| Footer control (page number, Contents, Markup, More) | `ReaderProgress` → FTR-*, NAV-1, MOB-2 tests |
+| More item | `readerMoreItems` in `App.tsx` → MORE-2 per band → More tests |
+| Theme panel (`Aa`, More → Theme) | `ReaderSettings` → THEME-1, APP-* tests |
+| Quiet / reveal | `ReaderShell`, `programmaticScroll.ts` → INP-*, MOB-* tests |
+| Mode name or switch | `PdfModeSwitch` → ARCH-3, MODE-* tests |
+| Zoom | `PdfViewer`, `ReaderToolbar` → FTR-2, ZOOM-2 |
+| File switcher (P2c) | `FileSwitcher`, `useLibrary` → FILE-1 tests |
 
 ## Rename/Removal Checklist
 - [ ] Implementation updated/removed
@@ -34,12 +42,14 @@ Before editing, identify its dependents. After editing, update every affected la
 - [ ] @tag preserved or deliberately updated in tests
 
 ## Test Contract
-- **Locator:** How the test finds the element/symbol
-- **Accessible name:** What assistive technologies announce
-- **Title/@tag:** Test metadata for tracking
-- **Section reference:** Where in docs the behavior is specified
-- **Helper/selector:** Reusable test utility
-- **Completion:** Verification that change is fully propagated
+Each row above names a **locator** (the owner that renders or wires the control), a **doc reference**
+(where the behavior is specified) and the **test tags** that must be re-run or updated. A change to any
+row's owner invalidates the whole row, not just the edited cell.
+
+- **Locator:** the owner from the routing table — start there when searching for a stale reference.
+- **Accessible name:** the announced name, when the change touches a labeled control.
+- **Title/@tag:** test metadata for tracking; rule IDs are the tags.
+- **Completion:** verification that the change is fully propagated.
 
 ## Completion
 After implementation, verify by:

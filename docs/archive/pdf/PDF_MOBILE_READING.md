@@ -22,7 +22,7 @@ The automated baseline passed TypeScript and the existing PDF/reader tests. Play
 - Confirm the header and PDF navigation never wrap or require horizontal scrolling.
 - On Android Chrome, long-press a word, drag both handles, then use Explain, Note and Copy.
 - Change browser chrome height and confirm the `100dvh` reading surface remains usable above the safe area.
-- Switch Original/Reading and use Contents, page navigation and a note jump on the same page.
+- Switch `Text | PDF` and use Contents, page navigation and a note jump on the same page.
 - Check light, dark and system themes.
 
 ## Limits
