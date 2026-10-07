@@ -1,10 +1,10 @@
 # Tóm tắt session — Reader redesign (Context Lens)
 
-Cập nhật: 2026-10-07. Nguồn sự thật cho thiết kế là [reader-behavior-contract.md](reader-behavior-contract.md), [reader-chrome.md](reader-chrome.md), [reader-redesign-phases.md](reader-redesign-phases.md) và [change-dependencies.md](change-dependencies.md); file này chỉ là bản đồ và nhật ký quyết định.
+Cập nhật: 2026-10-07. Nguồn sự thật cho thiết kế là 4 file docs đi kèm; file này chỉ là bản đồ và nhật ký quyết định.
 
 ## 1. Bối cảnh và kết luận
 
-- Repo: nhánh `rebuild/reader-v2`, tip `8ec43ca` ("docs new for reader-v2"); `f264c3e` là baseline (tag `pre-rebuild`). Docs đã là đích; **code Reader vẫn là chrome cũ** (`interfaceMode`, nút Notes/Markup/Print, zoom Footer mobile). R0 và R0b hoàn tất (một worktree, luật change-propagation, `change-dependencies.md`, task template 7 trường, `verify:fast` xanh).
+- Repo: nhánh `rebuild/reader-v2`, tip `4ac6b87` ("docs new for reader-v2"); `f264c3e` là baseline (tag `pre-rebuild`). Docs đã là đích; **code Reader vẫn là chrome cũ** (`interfaceMode`, nút Notes/Markup/Print, zoom Footer mobile). R0 và R0b hoàn tất (một worktree, luật change-propagation, `change-dependencies.md`, task template 7 trường, `verify:fast` xanh).
 - Kết luận: **làm lại thay vì sửa baseline**. Lý do: (1) 3 trong 5 regression (C, D, E) kiểm tra chrome sắp bị thay; (2) regression A (nút Simple disabled) tự biến mất khi bỏ `interfaceMode`; (3) số liệu cũ bị nhiễu bởi worktree junction `node_modules`; (4) thiếu luật lan truyền thay đổi nên test lệch dần. Ngoại lệ phải giữ: **B** (`.lookup-sheet .entry-glosses` không hiện) là hành vi thật, giữ thành test `LOOK-1`.
 
 ## 2. Kiến trúc docs đích
@@ -44,6 +44,8 @@ Xoá `reader-chrome-foundation.md`, `mobile-chrome.md`, `desktop-reader.md`. **K
 **Zoom**
 - Desktop giữ −/level/+. Mobile bỏ stepper; pinch với render lại sau khi ổn định là task sau (Z1 audit và benchmark, rồi Z2). Giữa P2b và Z2, PDF mobile chỉ có fit-width.
 
+**Chốt thêm 2026-10-07:** OCR không tự chạy quá 12 trang preload, chỉ chạy từ hành động tường minh rồi đi hết; panel Contents chỉ có Contents và Pages (không tab Outline, không icon đồng hồ); `Aa ···` ở dưới phải trong safe-area; Footer mobile dùng nhãn chữ; một font cho chữ đọc và giao diện (`APP-3`, bản mẫu phải theo); hướng A (Light) và C (Dark) là cặp thị giác của `APP-2`, bỏ B.
+
 ## 4. Kế hoạch phase
 
 `P2a` docs + test nền (không đổi UI) → `P2b` chrome và `interfaceMode` → `P2c` File switcher → `Z1` audit/benchmark (chỉ đọc, chạy song song được) → `Z2` pinch → `P3` Theme/font/màu → `P4` OCR → `P5` popup tra từ → `P6` dọn Home → `P7` dọn cuối → `S1` spike bút/canvas (chưa lên lịch).
@@ -58,11 +60,10 @@ Cách chạy: mỗi phase một task 7 trường; xong khi các rule ID qua và 
 
 ## 6. Mục còn mở
 
-| # | Mục | Phase |
+| # | Mục | Quyết định trước |
 | --- | --- | --- |
-| 1 | Chủ sở hữu history của Back (bắt đầu bằng audit chỉ đọc các handler hiện có) | P5 |
+| 1 | Chủ sở hữu history của nút Back (bắt đầu bằng audit chỉ đọc các handler hiện có) | P5 |
 | 2 | Hình dạng trạng thái OCR hoàn tất; lời thông báo | P4 |
 | 3 | Kết quả Z1 quyết định Z2 có làm không | Z2 |
 | 4 | Số phận preset Book/News/Academic khi Theme gom Appearance, Colours, Font | P3 |
-
-Đã chốt: Notes không phải action chrome; OCR không tự chạy ngoài preload cục bộ 12 trang đầu, và run tường minh tiếp tục theo cửa sổ 12 trang đến hết; Contents/Pages là hai mục duy nhất, không Outline/clock icon; `Aa ···` ở dưới phải trong safe-area (offset chính xác được ghi ở P2b); Footer mobile dùng nhãn chữ; một font setting điều khiển chữ đọc và giao diện; A/C là Light/Dark của APP-2, B không được chọn.
+| 5 | Notes: ghi chú đã lưu không còn lối vào trong Reader; cần task riêng quyết định xoá hay thêm một lối vào | sau P2b |

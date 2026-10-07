@@ -1,13 +1,9 @@
 # Reader Chrome
 
 Implementation-facing spec for the Reader chrome at both bands. It **replaces**
-three retired Reader chrome specs (their history stays in git).
+`reader-chrome-foundation.md`, `mobile-chrome.md` and `desktop-reader.md` (their history stays in git).
 Product behavior is defined only in [reader-behavior-contract.md](reader-behavior-contract.md); if this file
 disagrees with it, this file is the defect. Rule IDs below (HDR-1, INP-2…) refer to that contract.
-
-> **Status.** This spec describes the approved target. The code catches up in P2b; the File switcher is P2c, Theme is P3, OCR chrome is P4, and mobile pinch is Z2.
->
-> Target passages tagged **[P2b]**, **[P2c]**, **[P3]**, **[P4]** or **[Z2]** are not yet true in code.
 
 ## 1. Ownership map
 
@@ -75,8 +71,8 @@ Notes on the table:
 ## 7. CSS ownership and deletions
 
 - Mobile presentation: `src/styles.mobile-reader.css`. Desktop presentation: `src/styles.desktop-reader.css`. Band-neutral rules: `src/reader-layout.css`.
-- Deleted in P2b (component, CSS, tests and docs together, no aliases): from the desktop Header the Notes, Markup-dialog and Print buttons, the previous/next page buttons and the page count; the mobile zoom host, stepper and custom-scale code; the reserved Footer band and the resize-on-quiet logic for PDF; any secondary PDF bar; `.pdf-toolbar`, `.pdf-zoom-presets`, `.pdf-more-menu`; the Context, Notes, Markup and Contents More items and, at ≥1024px, the Theme More item; the Context-panel entry. Kept: the desktop zoom stepper and `.reader-markup-tools`; `.reader-tools` keeps only Contents.
-- Deleted in P2b with the density preference: `data-interface-mode` hooks, `home-advanced.css`, the Advanced-only Home sections and the density control.
+- Deleted in P2b (component, CSS, tests and docs together, no aliases): from the desktop Header the Notes, Markup-dialog and Print buttons, the previous/next page buttons and the page count; the mobile zoom host, stepper and custom-scale code; the reserved Footer band and the resize-on-quiet logic for Original PDF; any PDF/Original secondary bar; `.pdf-toolbar`, `.pdf-zoom-presets`, `.pdf-more-menu`; the Context, Notes, Markup and Contents More items and, at ≥1024px, the Theme More item; the Context-panel entry. Kept: the desktop zoom stepper and `.reader-markup-tools`; `.reader-tools` keeps only Contents.
+- Deleted in P2b with `interfaceMode`: `data-interface-mode` hooks, `home-advanced.css`, the Advanced-only Home sections and the density control.
 
 ## 8. Test obligations
 
