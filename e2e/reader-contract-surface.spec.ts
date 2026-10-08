@@ -6,6 +6,10 @@
  * Coverage (docs/reader-behavior-contract.md v2):
  *   ARCH-5  no Reader FAB, Search or Form Fill entry at any band; the
  *           Context-panel-entry half waits for P2b
+ *   ARCH-7  Notes has no Header and no More entry; its entries are the Contents
+ *           panel Notes action, the Context panel `Open notes` and the selection
+ *           Note action, so a note saved through one of them reopens in the same
+ *           overlay with its text intact
  *   MODE-1  changing Text <-> PDF never alters content, extraction, OCR state,
  *           page identity, geometry or chrome state
  *   MODE-2  with no readable text the mode control is hidden or disabled with a
@@ -17,9 +21,9 @@
  * Every control name reached here goes through `readerNames`, so P2b renames a
  * name once. Nothing in this spec asserts the retired reserved-strip chrome.
  *
- * Execution tier: split by tag, as always. ARCH-5 uses a text document and
-  * carries no @pdf, so it runs in FAST; MODE-1, MODE-2 and FTR-3 are PDF-bound:
-  *   PW_TIER=fast       npx playwright test --config playwright.tiers.config.ts e2e/reader-contract-surface.spec.ts --grep @ARCH-5
+  * Execution tier: split by tag, as always. ARCH-5 and ARCH-7 use a text document
+  * and carry no @pdf, so they run in FAST; MODE-1, MODE-2 and FTR-3 are PDF-bound:
+  *   PW_TIER=fast       npx playwright test --config playwright.tiers.config.ts e2e/reader-contract-surface.spec.ts --grep "@ARCH-5|@ARCH-7"
   *   PW_TIER=pdf-normal npx playwright test --config playwright.tiers.config.ts e2e/reader-contract-surface.spec.ts
  */
 import { test, expect, type Page } from '@playwright/test';
@@ -83,6 +87,88 @@ test.describe('ARCH-5 — no FAB, Search or Form Fill in the Reader', () => {
       for (const name of forbidden) {
         await expect(page.getByRole('menuitem', { name, exact: true })).toHaveCount(0);
       }
+    });
+  }
+});
+
+test.describe('ARCH-7 — Notes has no chrome entry and reopens the same overlay', () => {
+  // 320px is the contract's tightest band and 1280px the desktop column band.
+  // ARCH-7 names both, so this test carries its own band list rather than
+  // reusing the ARCH-5 one. A text document keeps it in the fast tier; the
+  // paginated half of the panel (Contents and Pages) is asserted in pdf-ocr.
+  for (const [band, width, height] of [
+    ['mobile 320px', 320, 720],
+    ['desktop 1280px', 1280, 900],
+  ] as const) {
+    test(`a note saved from the selection Note action reopens through the Contents panel Notes action at ${band} @ARCH-7`, async ({ page }) => {
+      test.setTimeout(90_000);
+      const desktop = width >= 1024;
+      const passage = Array.from({ length: 12 }, (_, i) => `Paragraph ${i + 1}. A quiet reader keeps every note where it wrote it down.`).join('\n\n');
+      await page.setViewportSize({ width, height });
+      await page.goto('/');
+      await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill(passage);
+      await page.getByRole('button', { name: /Preview & read/ }).click();
+      await expect(page.locator('.reader-text')).toBeVisible();
+
+      // ARCH-7, the absent half: Notes is not a Header and not a More entry. The
+      // scope is the two chrome bands, because the Contents panel legitimately
+      // owns a Notes action and lives inside the same shell.
+      const chrome = page.locator('.reader-header, .reader-progress');
+      await expect(chrome.getByRole('button', { name: 'Notes', exact: true })).toHaveCount(0);
+      await page.getByRole('button', { name: 'Reader menu' }).click();
+      await expect(page.getByRole('menu', { name: 'Reader actions' })).toBeVisible();
+      await expect(page.getByRole('menuitem', { name: 'Notes', exact: true })).toHaveCount(0);
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('menu', { name: 'Reader actions' })).toHaveCount(0);
+
+      // The first entry: the selection Note action, armed through a real range so
+      // the action the reader reaches for is the one under test.
+      await page.locator('.reader-text').evaluate(root => {
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let node = walker.nextNode();
+        while (node && !node.textContent!.includes('quiet reader')) node = walker.nextNode();
+        const start = node!.textContent!.indexOf('quiet reader');
+        const range = document.createRange();
+        range.setStart(node!, start);
+        range.setEnd(node!, start + 'quiet reader'.length);
+        const selection = window.getSelection()!;
+        selection.removeAllRanges();
+        selection.addRange(range);
+        root.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+      });
+      await page.locator('.selection-actions').getByRole('button', { name: 'Note', exact: true }).click();
+      await expect(page.locator('.notes-panel')).toBeVisible();
+      // The selection travelled with the note, so the overlay records where the
+      // note was written rather than an empty location.
+      await expect(page.locator('.note-selection')).toContainText('quiet reader');
+      await page.getByRole('textbox', { name: 'New note' }).fill('A persisted ARCH-7 note');
+      await page.getByRole('button', { name: 'Save note', exact: true }).click();
+      await expect(page.locator('.notes-list')).toContainText('A persisted ARCH-7 note');
+      await page.locator('.notes-panel').getByRole('button', { name: 'Close notes', exact: true }).click();
+      await expect(page.locator('.notes-panel')).toHaveCount(0);
+
+      // The second entry: the Contents panel Notes action. Desktop auto-opens the
+      // panel on load; mobile closed it when the selection Note action fired, so
+      // it is reopened from the Footer band that owns Contents at this width.
+      const contents = page.locator('.contents-panel');
+      if (!desktop) {
+        await expect(contents).toHaveCount(0);
+        await page.getByRole('button', { name: 'Contents', exact: true }).click();
+      }
+      await expect(contents).toBeVisible();
+      // ARCH-7: the panel offers document destinations and a footer Notes action,
+      // not a third Notes tab. A text document is unpaginated, so Pages is absent
+      // here and pdf-ocr covers the paginated pair.
+      const destinations = contents.getByRole('group', { name: 'Document navigation' });
+      await expect(destinations.getByRole('button', { name: 'Contents', exact: true })).toHaveCount(1);
+      await expect(destinations.getByRole('button', { name: 'Notes', exact: true })).toHaveCount(0);
+      await expect(contents.getByRole('tab', { name: 'Notes' })).toHaveCount(0);
+      await contents.locator('.document-panel-actions').getByRole('button', { name: 'Notes', exact: true }).click();
+      await expect(page.locator('.notes-panel')).toBeVisible();
+      // The note persisted: reopening the overlay through a different entry shows
+      // the same record, not a fresh empty editor.
+      await expect(page.locator('.notes-list')).toContainText('A persisted ARCH-7 note');
+      await expect(page.locator('.note-selection')).toHaveCount(0);
     });
   }
 });
