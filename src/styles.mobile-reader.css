@@ -2,14 +2,14 @@
 @media (max-width: 1023px) {
   .reader-shell.reader-shell,
   .reader-shell.reader-shell[data-reader-surface] {
-    --reader-header-height: calc(88px + env(safe-area-inset-top));
+    --reader-header-height: calc(44px + env(safe-area-inset-top));
     --reader-footer-height: calc(44px + env(safe-area-inset-bottom));
   }
   .reader-shell.reader-shell .reader-header,
   .reader-shell.reader-shell[data-reader-surface] .reader-header {
     position: fixed; inset: 0 0 auto;
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: 44px 44px;
+    grid-template-rows: 1fr;
     gap: 0; padding: env(safe-area-inset-top) max(4px, env(safe-area-inset-right)) 0 max(4px, env(safe-area-inset-left));
     height: var(--reader-header-height); min-height: var(--reader-header-height);
       background: transparent; border-bottom: none;
@@ -34,22 +34,32 @@
   .reader-shell.reader-shell .pdf-reading-scroll { padding-bottom: calc(var(--reader-footer-height) + env(safe-area-inset-bottom)); box-sizing: border-box; }
   .reader-shell.reader-shell .pdf-scroll { padding-top: calc(var(--reader-header-height) + 12px); padding-bottom: calc(var(--reader-footer-height) + env(safe-area-inset-bottom)); box-sizing: border-box; }
   .reader-shell.reader-shell[data-reader-surface="original"] .pdf-scroll { padding-top: 4px; }
-    /* §8.2/§8.3/§9.6: at <=1023px zoom is a direct Footer control (decrease / level / increase).
-       It is never a popup and never appears in More, so the mobile zoom host is a plain Footer slot. */
-    .reader-shell.reader-shell .pdf-footer-zoom-host { display: flex; flex: none; }
-    .reader-shell.reader-shell .pdf-zoom-stepper { display: flex; align-items: center; gap: 2px; }
-    .reader-shell.reader-shell .pdf-zoom-stepper > button { min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--primary-text); font: 600 16px/1 var(--font-ui); touch-action: manipulation; }
-    .reader-shell.reader-shell .pdf-zoom-stepper > button:hover { background: var(--hover-surface, var(--elevated-surface)); }
-    .reader-shell.reader-shell .pdf-zoom-stepper > span { min-width: 40px; text-align: center; font: 600 12px/1 var(--font-ui); color: var(--secondary-text); font-variant-numeric: tabular-nums; }
-    .reader-shell.reader-shell .reader-progress-status { gap: 6px; }
   .reader-shell.reader-shell .reader-text { width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding-top: calc(var(--reader-header-height) + 12px); }
   .reader-shell.reader-shell .pdf-reading-page { box-sizing: border-box; width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding: 12px max(var(--reader-page-padding, 18px), env(safe-area-inset-right)) 32px max(var(--reader-page-padding, 18px), env(safe-area-inset-left)); }
   .reader-shell.reader-shell .pdf-reading-page > header { margin-bottom: 12px; }
   .reader-shell.reader-shell .reader-progress { padding-top: 0; padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right)); gap: 4px; }
+  .reader-shell.reader-shell .reader-progress-bar { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 4px; }
+  .reader-shell.reader-shell .reader-progress-location { flex: 1; min-width: 0; }
+  .reader-shell.reader-shell .reader-progress-status { display: flex; align-items: center; gap: var(--space-3); flex: none; }
+  /* MOB-2: the four Footer-bar items carry visible text labels: Contents · page number · Markup · More. */
+  .reader-shell.reader-shell .reader-progress-bar .icon-button {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0; min-width: 48px; min-height: 44px; padding: 0 2px;
+  }
+  .reader-shell.reader-shell .reader-progress-label { font-size: 10px; line-height: 1.1; }
   /* §6.9 (MobileChrome placement): the reveal-only control anchors above the Footer band.
      It is repositioned by the mobile Footer layout below; this rule only drops the shadow so it
      reads as part of the chrome, not as a floating surface. */
   .reader-shell.reader-shell .reader-reveal { box-shadow: none; }
+
+  /* FTR-3: at ≤1023px the Footer Markup action opens a compact palette ABOVE the Footer bar.
+     Band coordinates live here (mobile presentation ownership); reader-base.css keeps only the
+     surface treatment. The palette is never rendered at ≥1024px. */
+  .reader-shell.reader-shell .reader-highlight-palette {
+    top: auto; left: auto; transform: none;
+    bottom: calc(var(--reader-footer-height) + 8px);
+    right: max(8px, env(safe-area-inset-right));
+  }
 
   /* Centered/max-width treatment for wider mobile widths (768-1023px).
        Centering uses `left/right:0` + `margin-inline:auto` rather than

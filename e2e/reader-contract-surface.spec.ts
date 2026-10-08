@@ -197,3 +197,36 @@ test('at 1280px the Header Markup group is the direct Highlight, Underline and E
     await expect(page.getByRole('dialog', { name: 'Markup tools' })).toHaveCount(0);
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
+
+test('at 390px the Footer Markup action opens the palette above the bar and returns focus @pdf @FTR-3 @A11Y-3', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openOriginalPdf(page, 'markup-mobile.pdf', pdfFixture(4), 390, 844);
+
+  // FTR-3 mobile half: the Footer owns the single Markup opener. It is a dialog
+  // disclosure, not a tool toggle, and it is the only Markup entry at this band.
+  const trigger = page.getByRole('button', { name: 'Markup', exact: true });
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('menuitem', { name: 'Markup', exact: true })).toHaveCount(0);
+
+  await trigger.click();
+  const palette = page.getByRole('dialog', { name: 'Markup tools' });
+  await expect(palette).toBeVisible();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  for (const tool of ['Highlight', 'Underline', 'Erase']) {
+    await expect(palette.getByRole('button', { name: tool, exact: true })).toBeVisible();
+  }
+  // ARCH-7: Notes is not a chrome action, so the palette offers no Note entry.
+  await expect(palette.getByRole('button', { name: 'Note', exact: true })).toHaveCount(0);
+
+  // FTR-3: the palette opens ABOVE the Footer bar.
+  const [paletteBox, footerBox] = await Promise.all([palette.boundingBox(), page.locator('.reader-progress').boundingBox()]);
+  expect(paletteBox!.y + paletteBox!.height, 'the Markup palette is not above the Footer bar').toBeLessThanOrEqual(footerBox!.y + 1);
+
+  // A11Y-3: dismissing the palette returns focus to its opener.
+  await palette.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(palette).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+});

@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { createPortal } from 'preact/compat';
 import type { DocumentRecord } from '../../db/database';
 import type { PdfDocumentLocation } from '../../documents/location';
 import type { ReaderSelection } from '../TextReader';
-import { calculatePdfScale, pdfOffsetForPage, stepDesktopPdfScale, stepPdfScale, type PdfZoomMode } from './navigation';
+import { calculatePdfScale, pdfOffsetForPage, stepDesktopPdfScale, type PdfZoomMode } from './navigation';
 import { PdfPage, type PdfPageSize } from './PdfPage';
 import { usePdfDocument } from './usePdfDocument';
 import { usePdfScroll } from './usePdfScroll';
@@ -15,9 +14,8 @@ const DEFAULT_SIZE = { width: 612, height: 792 };
 
 export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desktopCustomScale = 1, onDesktopCustomScale, onActualScale, onZoomStepReady, clickLookup = true, activeMarkupTool, activeMarkupColor = 'yellow', onLocation, onLookup, onAddNote, navigationToken = 0, onHighlight, onErase, ocrBusy = false }: { navigationToken?: number; activeMarkupTool?: MarkupTool | null; activeMarkupColor?: import('../../db/database').ReaderHighlight['color']; onHighlight?: (highlight: import('../../db/database').ReaderHighlight) => void; onErase?: (startOffset: number, endOffset: number) => void; documentRecord: DocumentRecord; location: PdfDocumentLocation; zoomMode: PdfZoomMode; onZoomMode: (mode: PdfZoomMode) => void; desktopCustomScale?: number; onDesktopCustomScale?: (scale: number) => void; onActualScale?: (scale: number) => void; onZoomStepReady?: (step: (direction: -1 | 1) => void) => void; clickLookup?: boolean; onLocation: (location: PdfDocumentLocation) => void; onLookup: (selection: ReaderSelection) => void; onAddNote?: (selection: ReaderSelection) => void; ocrBusy?: boolean }) {
   const desktop = useDesktop();
-  const [mobileZoom, setMobileZoom] = useState<PdfZoomMode>('fit-width');
-  const effectiveZoom = desktop ? zoomMode : mobileZoom;
-  const changeZoom = (mode: PdfZoomMode) => { if (desktop) onZoomMode(mode); else setMobileZoom(mode); };
+  const effectiveZoom = desktop ? zoomMode : 'fit-width';
+  const changeZoom = (mode: PdfZoomMode) => { if (desktop) onZoomMode(mode); };
   const { pdf, error, passwordRequired, passwordError, password, setPassword, submitPassword } = usePdfDocument(documentRecord.data);  const [sizes, setSizes] = useState<Record<number, PdfPageSize>>({});
   const ready = Boolean(pdf && Object.keys(sizes).length === pdf.numPages);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -66,24 +64,15 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desk
   }, [desktop, ready]);
   const [geometryError, setGeometryError] = useState<string | null>(null);
   const [visible, setVisible] = useState(location.page);
-  const [customScale, setCustomScale] = useState(1);
   const [bounds, setBounds] = useState<{ width: number; height: number } | null>(null);
-  const [footerZoomHost, setFooterZoomHost] = useState<HTMLElement | null>(null);
-  // Contract §8.2/§8.3 (U3): zoom is a direct Footer control at every density, never a popup. The
-    // Footer owns the host element; this is a render seam for a control that lives in the Footer, not a
-    // disclosure surface. `.pdf-more` / `.pdf-more-menu` and the `.pdf-toolbar` band are gone entirely.
-  useEffect(() => {
-      if (!ready) { setFooterZoomHost(null); return; }
-    setFooterZoomHost(document.querySelector<HTMLElement>('.pdf-footer-zoom-host'));
-    }, [ready]);
-  const selectedCustomScale = desktop ? desktopCustomScale : customScale;
+  const selectedCustomScale = desktop ? desktopCustomScale : 1;
   const scaleFor = (size: PdfPageSize) => calculatePdfScale(effectiveZoom, selectedCustomScale, bounds?.width ?? 0, bounds?.height ?? 0, size.width, size.height, desktop ? 6 : 3);
   const stepZoom = (direction: -1 | 1) => {
     const size = sizes[visible] ?? DEFAULT_SIZE;
     const current = scaleFor(size);
     const fitWidth = calculatePdfScale('fit-width', 1, bounds?.width ?? 0, bounds?.height ?? 0, size.width, size.height);
-    const next = desktop ? stepDesktopPdfScale(current, fitWidth, direction, effectiveZoom) : stepPdfScale(current, direction);
-    if (desktop) onDesktopCustomScale?.(next); else setCustomScale(next);
+    const next = stepDesktopPdfScale(current, fitWidth, direction, effectiveZoom);
+    onDesktopCustomScale?.(next);
     changeZoom('custom');
   };
   const geometryKey = `${effectiveZoom}:${selectedCustomScale}:${bounds?.width}:${bounds?.height}`;
@@ -140,17 +129,6 @@ export function PdfViewer({ documentRecord, location, zoomMode, onZoomMode, desk
   if (error || geometryError) return <div class="pdf-state" role="alert"><h2>PDF could not be opened</h2><p>{error ?? geometryError}</p></div>;
   if (!pdf || !ready) return <div class="pdf-state" role="status">Opening PDF…</div>;
   return <div class="pdf-viewer-wrap">
-    {(() => {
-        // One direct Footer zoom control at every density (§8.2): decrease, level readout, increase.
-        // It is never a popup and never appears in More (§8.3/§9.4). At >=1024px the Footer owns the
-        // host too, so desktop and mobile share one stepper and one owner.
-        const directStepper = <div class="pdf-zoom-stepper">
-          <button aria-label="Zoom out" onClick={() => stepZoom(-1)}>−</button>
-          <span aria-label="Zoom level" aria-live="off">{Math.round(actualScale * 100)}%</span>
-          <button aria-label="Zoom in" onClick={() => stepZoom(1)}>+</button>
-        </div>;
-        return footerZoomHost ? createPortal(directStepper, footerZoomHost) : null;
-      })()}
     <div ref={rootRef} class="pdf-scroll" tabIndex={0}>
       <div class="pdf-pages">
         {bounds && Array.from({ length: pdf.numPages }, (_, index) => index + 1).map(pageNumber => {

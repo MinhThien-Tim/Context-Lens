@@ -239,15 +239,17 @@ test('appearance preference persists across the reader and reload', async ({ pag
     await expect(page.getByRole('button', { name: 'Back to library' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Contents', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Markup', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Markup tools' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Highlight', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Note', exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    // FTR-3 mobile half: the Footer Markup action opens the palette. ARCH-7: no Note entry in chrome.
+    const palette = page.getByRole('dialog', { name: 'Markup tools' });
+    await expect(palette).toBeVisible();
+    await expect(palette.getByRole('button', { name: 'Highlight', exact: true })).toBeVisible();
+    await expect(palette.getByRole('button', { name: 'Erase', exact: true })).toBeVisible();
+    await palette.getByRole('button', { name: 'Done', exact: true }).click();
     await page.getByRole('button', { name: 'Reader menu' }).click();
-    // mobile-chrome.md §6 — renamed 2026-10-05 from `Text and theme`.
-        await expect(page.getByRole('menuitem', { name: 'Text', exact: true })).toBeVisible();
-        await page.getByRole('menuitem', { name: 'Text', exact: true }).click();
-    await expect(page.getByRole('dialog')).toBeVisible();
+    // MORE-2: the mobile More entry is `Theme` (renamed from `Text` in P2b).
+    await expect(page.getByRole('menuitem', { name: 'Theme', exact: true })).toBeVisible();
+    await page.getByRole('menuitem', { name: 'Theme', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Reader settings' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }

@@ -87,9 +87,9 @@ for (const width of desktopWidths) {
 // asserts the control reaches the documented destination (not a direct jump), because the Footer
 // that used to open it no longer exists here.
 //
-// Untagged: NAV-1, which makes the Header the sole opener above 1024px, is a P2b rule. The opener
+// Untagged: NAV-1, which makes the Footer the sole owner at every band, is a P2b rule. The opener
 // name goes through `openGoToLocation`, so P2b renames it once.
-test('the Header Current PDF page button opens Go to location at 1280px @pdf', async ({ page }) => {
+test('the Footer Current PDF page button opens Go to location at 1280px @pdf', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'go-to-1280.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3) });
@@ -104,9 +104,8 @@ test('the Header Current PDF page button opens Go to location at 1280px @pdf', a
   await expect(page.getByRole('button', { name: 'Current PDF page' })).toHaveText('3 / 3');
 });
 
-// docs/ui-system.md:82 — "page indicator opens Go to location". The Header band is asserted by
-// the test above; this is the same contract at ≤1023px, where App.tsx:696 renders PageNavigation
-// (not the Header ReaderToolbar), so the opener and the jump must be proven in that band too.
+// docs/ui-system.md:82 — "page indicator opens Go to location". The Footer owns this indicator at
+// every band (NAV-1), so the opener and the jump are proven here at ≤1023px.
 test('the Footer Current PDF page button opens Go to location at 390px @pdf', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
@@ -114,14 +113,14 @@ test('the Footer Current PDF page button opens Go to location at 390px @pdf', as
     await modeControl(page, 'text').click();
   await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
 
-  // The Footer owns this indicator in this band; the Header does not render a second copy.
-    const footerNav = page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('navigation', { name: 'Page navigation' });
-    await expect(footerNav.getByRole('button', { name: 'Current PDF page' })).toHaveCount(1);
+  // The Footer owns this indicator at every band; the Header does not render a second copy.
+    const footer = page.getByRole('contentinfo', { name: 'Reading navigation' });
+    await expect(footer.getByRole('button', { name: 'Current PDF page' })).toHaveCount(1);
 
     const dialog = await openGoToLocation(page);
     await goToLocationPageInput(dialog).fill('3');
     await goToLocationConfirm(dialog).click();
     await expect(dialog).toHaveCount(0);
     await expect(page.locator('[data-pdf-page="3"] .pdf-canvas')).toBeVisible();
-    await expect(footerNav.getByRole('button', { name: 'Current PDF page' })).toHaveText('3 / 3');
+    await expect(footer.getByRole('button', { name: 'Current PDF page' })).toHaveText('3 / 3');
     });

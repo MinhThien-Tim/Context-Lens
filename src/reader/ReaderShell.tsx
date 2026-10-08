@@ -18,7 +18,7 @@ const GESTURE_WINDOW = 1200;
 const CHROME = '.reader-header,.reader-progress,.reader-reveal';
 // §4.4/§9.8: any open Reader overlay blocks quieting. Contract §3.6 makes More the only popup
 // architecture, so the former `.pdf-more-menu` entries are gone with the deleted PDF zoom popover.
-const OVERLAY_OPEN = '.reader-more-menu,.pdf-reading-options,.pdf-reading-selection-wrap,.pdf-reading-selection-actions,.selection-actions';
+const OVERLAY_OPEN = '.reader-more-menu,.pdf-reading-options,.pdf-reading-selection-wrap,.pdf-reading-selection-actions,.selection-actions,.reader-highlight-palette';
 
 export function ReaderShell({ children, contentsOpen, contextOpen, surface, controlsLocked = false }: {
   children: ComponentChildren; contentsOpen: boolean; contextOpen: boolean;

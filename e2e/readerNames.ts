@@ -37,7 +37,7 @@
   * separate contract from the control's identity, so it lives beside the label
   * rather than in a second helper.
   */
- export const modeLabels = { text: 'Original', pdf: 'Reading' } as const;
+ export const modeLabels = { text: 'Text', pdf: 'PDF' } as const;
 
  const modeLabelsVi = { text: 'Trang gốc', pdf: 'Đọc chữ' } as const;
 
