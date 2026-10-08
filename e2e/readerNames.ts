@@ -24,22 +24,22 @@
  /**
   * ARCH-3 / MODE-3: the one `Text | PDF` presentation control.
   *
-  * Today the two presentations a user switches between are the PDF's `Original`
-  * (native page) and `Reading` (extracted text) views, so `text` is the Original
-  * view and `pdf` is the Reading view. P2b retitles both to `Text` and `PDF`.
+  * The two presentations a user switches between are the PDF's `original`
+  * (native page) and `reading` (extracted text) views, so `text` is the reading
+  * view and `pdf` is the original view. The control labels are `Text` and `PDF`.
   *
   * Only the specs in the P2a commit-B scope route through this helper, so the
   * remaining `Original` / `Reading` literals elsewhere in `e2e/` are a separate
   * task's work, not a second home for these two names.
   *
-  * The Vietnamese guide translates these two labels (`Trang gốc`, `Đọc chữ`),
+  * The Vietnamese guide translates these two labels (`Đọc chữ`, `Trang gốc`),
   * which is why the resolver below accepts both spellings. The translation is a
   * separate contract from the control's identity, so it lives beside the label
   * rather than in a second helper.
   */
  export const modeLabels = { text: 'Text', pdf: 'PDF' } as const;
 
- const modeLabelsVi = { text: 'Trang gốc', pdf: 'Đọc chữ' } as const;
+ const modeLabelsVi = { text: 'Đọc chữ', pdf: 'Trang gốc' } as const;
 
  export type ReaderMode = keyof typeof modeLabels;
 

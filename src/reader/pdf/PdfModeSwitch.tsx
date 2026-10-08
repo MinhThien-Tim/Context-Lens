@@ -14,8 +14,8 @@ interface ModeProps {
 // presentation control the Header is allowed to own. Nothing else renders here.
 export function PdfModeSwitch({ mode, uiLanguage, canRead, onOriginal, onReading }: ModeProps) {
   return <div class="pdf-mode-switch" role="group" aria-label="PDF view mode">
-    <button aria-pressed={mode === 'original'} onClick={onOriginal}>{uiLanguage === 'vi' ? 'Trang gốc' : 'Text'}</button>
-    <button aria-pressed={mode === 'reading'} disabled={!canRead} onClick={onReading}>{uiLanguage === 'vi' ? 'Đọc chữ' : 'PDF'}</button>
+    <button aria-pressed={mode === 'original'} onClick={onOriginal}>{uiLanguage === 'vi' ? 'Trang gốc' : 'PDF'}</button>
+    <button aria-pressed={mode === 'reading'} disabled={!canRead} onClick={onReading}>{uiLanguage === 'vi' ? 'Đọc chữ' : 'Text'}</button>
   </div>;
 }
 

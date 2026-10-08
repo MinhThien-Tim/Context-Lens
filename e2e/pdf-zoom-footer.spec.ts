@@ -15,7 +15,7 @@ for (const width of desktopWidths) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto('/');
       await page.locator('input[type=file]').setInputFiles({ name: 'zoom-footer.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
-      await modeControl(page, 'text').click();
+      await modeControl(page, 'pdf').click();
       await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
 
       // Ownership: the stepper lives in the Header toolbar band, and the retired toolbar band is gone.
@@ -90,7 +90,7 @@ test('the Footer Current PDF page button opens Go to location at 1280px @pdf @NA
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'go-to-1280.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3) });
-    await modeControl(page, 'text').click();
+    await modeControl(page, 'pdf').click();
   await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
 
   const dialog = await openGoToLocation(page);
@@ -107,7 +107,7 @@ test('the Footer Current PDF page button opens Go to location at 390px @pdf @NAV
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'go-to-390.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3) });
-    await modeControl(page, 'text').click();
+    await modeControl(page, 'pdf').click();
   await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
 
   // The Footer owns this indicator at every band; the Header does not render a second copy.

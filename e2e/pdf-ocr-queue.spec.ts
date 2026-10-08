@@ -110,7 +110,7 @@ test('preloads at most the first twelve pages and leaves later scans for a manua
   const kinds = Array.from({ length: 13 }, (_, index) => index === 0 || index === 12 ? 'scan' as const : 'blank' as const);
   await page.locator('input[type=file]').setInputFiles({ name: 'first-twelve.pdf', mimeType: 'application/pdf', buffer: pdfQueueFixture(Buffer.from(jpeg, 'base64'), 800, 1000, undefined, kinds) });
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
-  await page.getByRole('button', { name: 'Text', exact: true }).click();
+  await modeControl(page, 'text').click();
   // docs/desktop-reader.md §2.2: the page-number button opens `Go to location` at >=1024px.
   // The Footer owns the location button at every band (NAV-1), so we use it to jump to page 12.
   // This spec runs in both projects, so the band comes from the project fixture (the repo idiom

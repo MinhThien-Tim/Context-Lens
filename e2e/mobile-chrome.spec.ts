@@ -59,7 +59,7 @@ async function openPdfReader(page: Page, width: number, height: number) {
   await page.goto('/');
   await page.locator('input[type=file]')
     .setInputFiles({ name: 'mobile-chrome.pdf', mimeType: 'application/pdf', buffer: pdfFixture(12) });
-  await togglePdfMode(page, 'text');
+  await togglePdfMode(page, 'pdf');
   await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
   await page.waitForTimeout(300);
 }
@@ -425,7 +425,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
       // not quiet or re-reveal the chrome.
       await togglePdfMode(page, 'pdf');
             await expectMobileChrome(page, 'revealed');
-                  await togglePdfMode(page, 'text');
+      await togglePdfMode(page, 'text');
             await expectMobileChrome(page, 'revealed');
 
       // The accumulator is still purely user-driven after two programmatic navigations: real
