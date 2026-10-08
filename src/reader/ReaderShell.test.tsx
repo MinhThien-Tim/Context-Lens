@@ -201,3 +201,24 @@ it('keeps reading chrome visible while a selection action surface is open', () =
   expect(isQuiet()).toBe(false);
 });
 
+
+it('Header/Footer overlay the surface with static padding and no reserved strip element at both band widths @CHR-1', () => {
+  mount(390);
+  const scroll = document.querySelector('.pdf-scroll') as HTMLElement | null || document.querySelector('.pdf-reading-scroll') as HTMLElement | null;
+  expect(scroll).not.toBeNull();
+  const strip = document.querySelector('.reader-strip');
+  expect(strip).toBeNull();
+  const footer = document.querySelector('.reader-progress');
+  const header = document.querySelector('.reader-header');
+  expect(footer || header).not.toBeNull();
+  if (host) act(() => render(null, host));
+  document.body.replaceChildren();
+  host = document.createElement('div'); document.body.appendChild(host);
+  mount(1280);
+  const strip2 = document.querySelector('.reader-strip');
+  expect(strip2).toBeNull();
+  const scroll2 = document.querySelector('.pdf-scroll') as HTMLElement | null || document.querySelector('.pdf-reading-scroll') as HTMLElement | null;
+  expect(scroll2).not.toBeNull();
+  if (host) act(() => render(null, host));
+});
+
