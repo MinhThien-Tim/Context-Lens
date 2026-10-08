@@ -1,12 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { pdfFixture } from './pdfFixture';
+import { modeControl } from './readerNames';
 
 async function openPdf(page: Page, count = 64) {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'stability-fixture.pdf', mimeType: 'application/pdf', buffer: pdfFixture(count) });
-  await expect(page.getByRole('button', { name: 'Original', exact: true }).first()).toBeVisible();
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await expect(modeControl(page, 'pdf')).toBeVisible();
+  await modeControl(page, 'pdf').click();
   await expect(page.locator('.pdf-text-layer').first().locator('span').first()).toBeVisible();
 }
 
@@ -29,13 +30,13 @@ async function openContents(page: Page) {
 test('blank and rotated pages keep their page number across both views @pdf', async ({ page }) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'mixed-pages.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3, 2, 3) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await modeControl(page, 'pdf').click();
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  await modeControl(page, 'text').click();
   await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
   await expect(page.locator('.pdf-reading-page[data-pdf-reading-page="2"]')).toContainText('no extractable text');
-  await page.getByRole('button', { name: 'Original', exact: true }).click();
+  await modeControl(page, 'pdf').click();
   await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
   await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByLabel('Current PDF page')).toContainText('3 / 3');
@@ -195,12 +196,12 @@ test('zoom, links, multiline selection and five mode switches preserve interacti
   for (let i = 0; i < 5; i++) {
     await page.getByRole('button', { name: 'Next page', exact: true }).click();
     await expect(page.getByLabel('Current PDF page')).toHaveText('2 / 8');
-    await page.getByRole('button', { name: 'Reading', exact: true }).click();
+    await modeControl(page, 'text').click();
     await expect(page.getByLabel('Current PDF page')).toHaveText('2 / 8');
     const top = await page.locator('.pdf-reading-scroll').evaluate(el => el.scrollTop);
     await page.waitForTimeout(250);
     expect(await page.locator('.pdf-reading-scroll').evaluate(el => el.scrollTop)).toBe(top);
-    await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+    await modeControl(page, 'pdf').click();
     await expect(page.getByLabel('Current PDF page')).toHaveText('2 / 8');
     await page.getByRole('button', { name: 'Previous page', exact: true }).click();
     await selectPhrase(page);
@@ -224,8 +225,8 @@ test('local complex book imports and scrolls beyond fifty pages', async ({ page 
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles(process.env.QA_BOOK!);
-  await expect(page.getByRole('button', { name: 'Original', exact: true }).first()).toBeVisible({ timeout: 90_000 });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await expect(modeControl(page, 'pdf')).toBeVisible({ timeout: 90_000 });
+  await modeControl(page, 'pdf').click();
   await expect(page.locator('.pdf-canvas').first()).toBeVisible({ timeout: 30_000 });
   const samples = [];
   const cdp = await page.context().newCDPSession(page);
@@ -262,7 +263,7 @@ test('Contents issues one jump in each mode', async ({ page }, info) => {
   });
   for (const mode of ['original', 'reading']) {
     if (mode === 'reading') {
-      await page.getByRole('button', { name: 'Reading', exact: true }).click();
+      await modeControl(page, 'text').click();
     }
     await openContents(page);
     await expect(page.locator('.contents-item')).toHaveText('Chapter 3p. 3');

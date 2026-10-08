@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
+import { modeControl } from './readerNames';
 
 // docs/desktop-reader.md §3.1: "The displayed value always represents the actual PDF rendering
 // scale." §6.1 names the observable form of that rule: `Zoom in` increases the rendered slot
@@ -13,17 +14,17 @@ const FIXTURE_PAGE_WIDTH = 612;
 const slotWidth = (page: Page) =>
   page.locator('.pdf-scroll .pdf-page-slot[data-pdf-page="1"]').evaluate(el => el.getBoundingClientRect().width);
 
-const openOriginalPdf = async (page: Page, name: string) => {
+const openPdfView = async (page: Page, name: string) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name, mimeType: 'application/pdf', buffer: pdfFixture(2) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await modeControl(page, 'pdf').click();
   await expect(page.locator('.pdf-scroll .pdf-page-slot[data-pdf-page="1"]')).toBeVisible();
   await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
 };
 
 test('§3.1: Header Zoom in increases and Zoom out decreases the rendered slot width at 1280px @pdf', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await openOriginalPdf(page, 'zoom-actual-1280.pdf');
+  await openPdfView(page, 'zoom-actual-1280.pdf');
 
   const header = page.locator('.reader-header');
   const zoomIn = header.getByRole('button', { name: 'Zoom in' });
@@ -57,7 +58,7 @@ test('§3.1: Header Zoom in increases and Zoom out decreases the rendered slot w
 
 test('§3.1: each fixed selector choice sets the actual scale, and a stepped-to scale stays visible @pdf', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await openOriginalPdf(page, 'zoom-select-1280.pdf');
+  await openPdfView(page, 'zoom-select-1280.pdf');
 
   const header = page.locator('.reader-header');
   const zoomIn = header.getByRole('button', { name: 'Zoom in' });
@@ -96,7 +97,7 @@ test('§3.1: each fixed selector choice sets the actual scale, and a stepped-to 
   // Underline and Erase with pressed state. §6.1 names the required coverage.
   test('§2.1: the Header Underline tool presses on click and underlines PDF text at 1280px @pdf', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await openOriginalPdf(page, 'underline-1280.pdf');
+    await openPdfView(page, 'underline-1280.pdf');
 
     const markupTools = page.getByRole('group', { name: 'Markup tools' });
     const underline = markupTools.getByRole('button', { name: 'Underline', exact: true });

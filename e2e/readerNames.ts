@@ -13,8 +13,9 @@
   *   - the `Go to location` opener                    -> openGoToLocation
  *
   * Names that P2b does NOT rename are deliberately absent, so a later reader
-  * cannot mistake them for pending renames: `Original`/`Reading` (ARCH-3 keeps
-  * the persisted `viewMode` values and only retitles the labels), the Footer
+  * cannot mistake them for pending renames: the persisted `viewMode` values
+  * `original`/`reading` (ARCH-3 keeps the values; the labels they once showed
+  * are now `Text`/`PDF`), the Footer
   * location button `Current PDF page` and the dialog `Go to location` itself
   * (NAV-1 wording, unchanged by the amendment list), and the desktop Markup tools
   * `Highlight` / `Underline` / `Erase`.
@@ -28,9 +29,9 @@
   * (native page) and `reading` (extracted text) views, so `text` is the reading
   * view and `pdf` is the original view. The control labels are `Text` and `PDF`.
   *
-  * Only the specs in the P2a commit-B scope route through this helper, so the
-  * remaining `Original` / `Reading` literals elsewhere in `e2e/` are a separate
-  * task's work, not a second home for these two names.
+  * Every spec that switches presentation routes through this helper — C1
+  * migrated the last legacy mode-label literals, so no second home for
+  * these two names exists.
   *
   * The Vietnamese guide translates these two labels (`Đọc chữ`, `Trang gốc`),
   * which is why the resolver below accepts both spellings. The translation is a

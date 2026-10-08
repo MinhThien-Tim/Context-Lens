@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { pdfFixture } from './pdfFixture';
+import { modeControl } from './readerNames';
 
 async function selectWord(page: import('@playwright/test').Page, surface: '.pdf-text-layer' | '.pdf-reading-page') {
   const root = page.locator(surface).first();
@@ -27,7 +28,7 @@ test('save the same PDF word in both modes, reopen, and export once', async ({ p
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'vocabulary-flow.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
-  await page.locator('button', { hasText: 'Original' }).click();
+  await modeControl(page, 'pdf').click();
   await expect(page.locator('.pdf-text-layer').first()).toBeVisible();
 
   await selectWord(page, '.pdf-text-layer');
@@ -43,7 +44,7 @@ test('save the same PDF word in both modes, reopen, and export once', async ({ p
   await expect(lookup.getByRole('button', { name: 'Remove saved word' })).toHaveAttribute('aria-pressed', 'true');
   await lookup.getByRole('button', { name: 'Close meaning' }).click();
 
-  await page.locator('button', { hasText: 'Reading' }).click();
+  await modeControl(page, 'text').click();
   await selectWord(page, '.pdf-reading-page');
   await page.getByRole('toolbar', { name: /Selected text actions/ }).getByRole('button', { name: /Explain|Define/ }).click();
   await expect(lookup).toContainText('maintain');

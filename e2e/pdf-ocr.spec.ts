@@ -229,7 +229,7 @@ test('recognizes one scanned page, reads and looks up its text, then reuses the 
   await page.locator('input[type=file]').setInputFiles({ name: 'scan.pdf', mimeType: 'application/pdf', buffer: pdfScanFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
   // MODE-2: with no readable text the control may be hidden or disabled, but the PDF presentation it
   // switches to must become usable once OCR text exists. Assert the member exists first, then reach it.
-  await expect(modeControl(page, 'text').first()).toBeVisible();
+  await expect(modeControl(page, 'text')).toBeVisible();
     const heapBefore = await page.evaluate(() => (performance as any).memory?.usedJSHeapSize ?? null);
     const ocrStart = Date.now();
     await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });

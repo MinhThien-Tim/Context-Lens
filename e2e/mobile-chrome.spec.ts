@@ -53,7 +53,7 @@ async function openTextReader(page: Page, width: number, height: number) {
     .toBeGreaterThan(-0.5);
 }
 
-/** Opens the Reader on a PDF in Original mode, where the Footer owns the zoom stepper (§8.2). */
+/** Opens the Reader on a PDF in the PDF view at the given viewport. */
 async function openPdfReader(page: Page, width: number, height: number) {
   await page.setViewportSize({ width, height });
   await page.goto('/');
@@ -70,7 +70,7 @@ test.describe('MobileChrome — presentation band', () => {
       test.setTimeout(90_000);
       await openTextReader(page, size.width, size.height);
 
-      // §7.1/§7.2 — the Header owns Back, the title, and (PDF only) Original/Reading. Nothing else.
+      // §7.1/§7.2 — the Header owns Back, the title, and (PDF only) the Text|PDF mode control. Nothing else.
       const header = page.locator('.reader-header');
       await expect(header.getByRole('button', { name: 'Back to library' })).toBeVisible();
       for (const action of ['Contents', 'Context', 'Notes', 'Markup', 'Text', 'Languages', 'Document', 'Click lookup', 'OCR next', 'Search']) {
@@ -508,7 +508,7 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
   test('exactly one Reader menu trigger per band: Footer at 390px, Header at 1280px @MORE-1 @MORE-4', async ({ page }) => {
     test.setTimeout(90_000);
     await openPdfReader(page, 390, 900);
-    // §8.1 — mobile Header owns Back/title/Original-Reading only; More lives in the Footer.
+    // §8.1 — mobile Header owns Back/title/Text-PDF mode control only; More lives in the Footer.
     await expect(page.locator('.reader-header').getByRole('button', { name: 'Reader menu' })).toHaveCount(0);
     await expect(page.locator('.reader-progress').getByRole('button', { name: 'Reader menu' })).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Reader menu' })).toHaveCount(1);

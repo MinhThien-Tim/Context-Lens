@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { modeControl } from './readerNames';
 
 // §9.7 — document tools and OCR controls are ONE surface reached through More.
 async function openDocumentTools(page: Page) {
@@ -28,13 +29,13 @@ test('reviews the supplied title page and manually compares OCR with PDF text @p
   test.setTimeout(240_000);
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles(textPdf!);
-  await page.getByRole('button', { name: 'Original', exact: true }).click();
+  await modeControl(page, 'pdf').click();
   for (let n = 1; n < 5; n++) await page.getByRole('button', { name: 'Next page' }).click();
   await expect(page.getByLabel('Current PDF page')).toContainText('5 / 21');
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  await modeControl(page, 'text').click();
   await expect(page.locator('.pdf-reading-page').nth(4)).toContainText('THIRD EDITION');
   await expect(page.locator('.pdf-reading-page').nth(4)).toContainText('GERALD GRAFF');
-  await page.getByRole('button', { name: 'Original', exact: true }).click();
+  await modeControl(page, 'pdf').click();
   await beginOcr(page);
   await readOcr(page);
   await expect(page.getByLabel('Current PDF page')).toContainText('5 / 21');
@@ -46,7 +47,7 @@ test('reviews the supplied title page and manually compares OCR with PDF text @p
   await test.info().attach('title-page-ocr', { body: await page.locator('[data-ocr-page="5"] .pdf-ocr-text').textContent() ?? '', contentType: 'text/plain' });
 });
 
-test('reads the supplied scan through OCR and returns to its original page @pdf @heavy', async ({ page }) => {
+test('reads the supplied scan through OCR and returns to the PDF view @pdf @heavy', async ({ page }) => {
   test.skip(!scanPdf, 'Set PDF_QA_SCAN_PATH to run the local sample');
   test.setTimeout(240_000);
   await page.goto('/');
@@ -67,7 +68,7 @@ test('keeps several body pages of the supplied text PDF readable without OCR @pd
   test.setTimeout(180_000);
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles(textPdf!);
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  await modeControl(page, 'text').click();
   for (const number of [13, 14, 16]) {
     const body = (await page.locator(`[data-pdf-reading-page="${number}"]`).textContent()) ?? '';
     expect(body.trim().length).toBeGreaterThan(100);
@@ -91,9 +92,9 @@ test('runs a bounded OCR slice on body pages of the supplied scan @pdf @heavy', 
       // The paragraph only exists once a run has reported, and its copy is the localised
       // "Completed N/M" line (PdfModeSwitch.tsx), not the retired "no pages left" phrasing.
       await expect(page.getByRole('dialog', { name: /Document tools|Công cụ/ }).getByRole('status')).toContainText(/Completed \d+\/\d+/);
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  await modeControl(page, 'text').click();
   await expect(page.locator('.pdf-ocr-page').first()).toBeVisible();
   await expect(page.locator('.pdf-ocr-page')).toHaveCount(7);
-  await page.getByRole('button', { name: 'Original', exact: true }).click();
+  await modeControl(page, 'pdf').click();
   await expect(page.locator('.pdf-canvas').first()).toBeVisible();
 });

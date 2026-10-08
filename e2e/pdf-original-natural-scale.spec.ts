@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
+import { modeControl } from './readerNames';
 
 test.use({ deviceScaleFactor: 2 });
 
@@ -7,7 +8,7 @@ test('desktop natural scale, explicit zoom, canvas resolution and text geometry 
   await page.setViewportSize({ width: 1728, height: 900 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'natural.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await modeControl(page, 'pdf').click();
   await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
   const measure = () => page.evaluate(() => {
     const root = document.querySelector<HTMLElement>('.pdf-scroll')!;
@@ -52,6 +53,6 @@ test('natural width clamps on a narrow desktop viewport', async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 900 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'narrow.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await modeControl(page, 'pdf').click();
   await expect.poll(() => page.locator('[data-pdf-page="1"]').evaluate(el => el.getBoundingClientRect().width)).toBeCloseTo(736, 0);
 });

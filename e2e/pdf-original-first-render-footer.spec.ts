@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
+import { modeControl } from './readerNames';
 test.use({ deviceScaleFactor: 2 });
 
 test('first desktop canvas uses real bounds and dominant DPR before zoom @pdf', async ({ page }) => {
@@ -18,7 +19,7 @@ test('first desktop canvas uses real bounds and dominant DPR before zoom @pdf', 
     }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['width', 'height', 'style'] });
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'first-render.pdf', mimeType: 'application/pdf', buffer: pdfFixture(4) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await modeControl(page, 'pdf').click();
   const canvas = page.locator('[data-pdf-page="1"] canvas');
   await expect.poll(() => canvas.evaluate(el => (el as HTMLCanvasElement).width)).toBeGreaterThan(1800);
   const initial = await canvas.evaluate(el => { const c = el as HTMLCanvasElement; return { backing: c.width, height: c.height, css: c.getBoundingClientRect().width, dpr: devicePixelRatio }; });
@@ -47,7 +48,7 @@ test('mobile Footer keeps a direct zoom stepper operable down to 320px', async (
   await page.setViewportSize({ width: 390, height: 850 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'footer.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await modeControl(page, 'pdf').click();
   for (const width of [320, 360, 390, 393, 430]) {
     await page.setViewportSize({ width, height: 850 });
     await expect(page.getByRole('button', { name: 'Zoom out' })).toBeVisible();

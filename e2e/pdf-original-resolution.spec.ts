@@ -1,12 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
+import { modeControl } from './readerNames';
 
 test.use({ deviceScaleFactor: 2 });
 
-test('Original PDF keeps the dominant page at display resolution @pdf', async ({ page }, info) => {
+test('PDF view keeps the dominant page at display resolution @pdf', async ({ page }, info) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'resolution.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await modeControl(page, 'pdf').click();
   await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
   const measure = () => page.evaluate(() => {
     const root = document.querySelector<HTMLElement>('.pdf-scroll')!;

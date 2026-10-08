@@ -33,8 +33,8 @@ import { readerGeometry, expectViewportStable, expectLocationIdentical } from '.
 import { modeControl } from './readerNames';
 import { waitForReaderSurface } from './readerO';
 
-/** Opens a PDF reader in its native Original view at the given viewport. */
-async function openOriginalPdf(page: Page, name: string, buffer: Buffer, width: number, height: number) {
+/** Opens a PDF reader in its native PDF view at the given viewport. */
+async function openPdfView(page: Page, name: string, buffer: Buffer, width: number, height: number) {
   await page.setViewportSize({ width, height });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name, mimeType: 'application/pdf', buffer });
@@ -181,7 +181,7 @@ test.describe('MODE-1 — Text <-> PDF changes presentation only', () => {
   ] as const) {
     test(`switching Text <-> PDF leaves content, page identity and geometry unchanged at ${band} @pdf @MODE-1`, async ({ page }) => {
       test.setTimeout(120_000);
-      await openOriginalPdf(page, 'mode-1.pdf', pdfFixture(6), width, height);
+      await openPdfView(page, 'mode-1.pdf', pdfFixture(6), width, height);
 
       // Content: the same pages stay rendered, with the same text layer, so the
       // round trip changed presentation and nothing about the document.
@@ -208,7 +208,7 @@ test.describe('MODE-1 — Text <-> PDF changes presentation only', () => {
       await modeControl(page, 'text').click();
       await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
 
-      // Back in Original at the top of the same document: page identity and the
+      // Back in the PDF view at the top of the same document: page identity and the
       // reading box are untouched, and the extracted text is byte-identical, so
       // extraction was not recomputed into something else.
       const after = await readerGeometry(page);
@@ -234,7 +234,7 @@ test('with no readable text the mode control is disabled, not an enabled no-op @
     context.fillText('A SCANNED PAGE WITH NO TEXT LAYER', 40, 200);
     return canvas.toDataURL('image/jpeg', .9).split(',')[1];
   });
-  await openOriginalPdf(page, 'mode-2.pdf', pdfScanFixture(Buffer.from(jpeg, 'base64'), 612, 792), 390, 844);
+  await openPdfView(page, 'mode-2.pdf', pdfScanFixture(Buffer.from(jpeg, 'base64'), 612, 792), 390, 844);
 
   // MODE-2 admits either form, but never an enabled no-op. Whichever form the
   // UI takes, the Reading member must carry a state a screen reader can read.
@@ -257,7 +257,7 @@ test('with no readable text the mode control is disabled, not an enabled no-op @
 
 test('at 1280px the Header Markup group is the direct Highlight, Underline and Erase control @pdf @FTR-3', async ({ page }) => {
   test.setTimeout(90_000);
-  await openOriginalPdf(page, 'markup-desktop.pdf', pdfFixture(4), 1280, 900);
+  await openPdfView(page, 'markup-desktop.pdf', pdfFixture(4), 1280, 900);
 
   // FTR-3 desktop half: the three tools are in the Header group, reachable
   // directly. No second Markup entry, and no dialog button standing in for the
@@ -287,7 +287,7 @@ test('at 1280px the Header Markup group is the direct Highlight, Underline and E
 
 test('at 390px the Footer Markup action opens the palette above the bar and returns focus @pdf @FTR-3 @A11Y-3 @ARCH-7', async ({ page }) => {
   test.setTimeout(90_000);
-  await openOriginalPdf(page, 'markup-mobile.pdf', pdfFixture(4), 390, 844);
+  await openPdfView(page, 'markup-mobile.pdf', pdfFixture(4), 390, 844);
 
   // FTR-3 mobile half: the Footer owns the single Markup opener. It is a dialog
   // disclosure, not a tool toggle, and it is the only Markup entry at this band.

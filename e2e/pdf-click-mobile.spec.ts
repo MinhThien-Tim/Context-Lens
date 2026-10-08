@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
+import { modeControl } from './readerNames';
 
 // QUARANTINED (T0c, REWRITE): the tap/gesture disambiguation this test guards is
 // still valid, but it forces quiet chrome with a FAKE scroll —
@@ -12,7 +13,7 @@ test.fixme('REWRITE (T0c): fakes quiet chrome via synthetic touchmove/scroll eve
   test.skip(!test.info().project.use.isMobile, 'Mobile touchscreen only');
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'click.pdf', mimeType: 'application/pdf', buffer: pdfFixture(2) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await modeControl(page, 'pdf').click();
   const toggle = page.getByRole('button', { name: 'Click lookup' });
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   const span = page.locator('.pdf-page-slot[data-pdf-page="1"] .pdf-text-layer span').filter({ hasText: 'The decision had surprised many voters.' });
