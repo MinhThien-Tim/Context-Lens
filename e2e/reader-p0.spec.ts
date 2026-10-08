@@ -7,7 +7,7 @@ test('visible PDF text, mode return and selection-to-card keep the reading posit
   await page.route('**/*', route => new URL(route.request().url()).origin === new URL(info.project.use.baseURL!).origin ? route.continue() : route.abort());
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'reader-p0.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await page.locator('button', { hasText: 'Original' }).click();
   await expect(page.locator('.pdf-text-layer span').first()).toBeVisible();
   const original = page.locator('.pdf-scroll');
   await original.evaluate(root => { root.scrollTop = 350; });
@@ -17,15 +17,15 @@ test('visible PDF text, mode return and selection-to-card keep the reading posit
   await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
   const originalTop = await original.evaluate(root => root.scrollTop);
   const pageBefore = await page.getByLabel('Current PDF page').textContent();
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  await page.locator('button', { hasText: 'Reading' }).click();
   await expect(page.getByLabel('Current PDF page')).toHaveText(pageBefore!);
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await page.locator('button', { hasText: 'Original' }).click();
   await expect.poll(() => original.evaluate(root => root.scrollTop)).toBeCloseTo(originalTop, 0);
   const originalReturnTop = await original.evaluate(root => root.scrollTop);
   await expect(page.getByLabel('Current PDF page')).toHaveText(pageBefore!);
   expect(await page.locator('.pdf-canvas').count()).toBeLessThanOrEqual(3);
 
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  await page.locator('button', { hasText: 'Reading' }).click();
   await page.evaluate(async () => {
     const path = '/src/lookup/service.ts';
     const { lookupService } = await import(/* @vite-ignore */ path);
@@ -106,3 +106,4 @@ test('visible PDF text, mode return and selection-to-card keep the reading posit
   console.log('reader-p0-metrics', JSON.stringify(metrics));
   await info.attach('reader-p0-metrics', { body: JSON.stringify(metrics), contentType: 'application/json' });
 });
+

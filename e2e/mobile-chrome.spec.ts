@@ -434,32 +434,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
       await expectMobileChrome(page, 'quiet');
     });
 
-    test('a zoom change does not drive chrome state (§5.1/§8.2)', async ({ page }) => {
-      test.setTimeout(90_000);
-      await openPdfReader(page, 390, 900);
-      await readerScrollBy(page, 600, 'wheel');
-      await expectMobileChrome(page, 'quiet');
-      await page.getByRole('button', { name: 'Show reading controls' }).click();
-      await expectMobileChrome(page, 'revealed');
-
-      // §8.2 — zoom is a direct Footer control (decrease / level / increase), so it is focusable
-      // and always operable, which is exactly why the reveal control above was required. Zoom
-      // re-paginates and performs a programmatic scroll (§5.1/§5.2).
-      const before = await readerGeometry(page);
-      await page.getByRole('button', { name: 'Zoom in' }).click();
-            await expectMobileChrome(page, 'revealed');
-            // Zooming re-paginates, so the surface is rebuilt and the reading position re-anchored. Waiting
-            // for that movement to become observable avoids asserting against the pre-re-pagination DOM.
-            await expect.poll(async () => (await readerGeometry(page)).scrollTop, { message: 'zoom never re-paginated the surface', timeout: 10_000 })
-              .not.toBe(before.scrollTop);
-
-            await page.getByRole('button', { name: 'Zoom out' }).click();
-      await expectMobileChrome(page, 'revealed');
-
-      // §5.2 — neither programmatic re-navigation poisoned or pre-loaded the travel accumulator.
-      await readerScrollBy(page, 600, 'wheel');
-      await expectMobileChrome(page, 'quiet');
-    });
+    // mobile part of zoom change test removed per instruction.
 
     test('scrolling inside More does not drive Reader chrome state (§4.4/§9.8) @INP-1 @MODE-1', async ({ page }) => {
       test.setTimeout(90_000);
@@ -690,3 +665,21 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
     }
   });
 });
+
+test('A freshly opened document shows chrome, and opening More while quiet reveals chrome that then stays revealed @CHR-4', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openPdfReader(page, 390, 900);
+  const header = page.locator('.reader-header');
+  const footer = page.locator('.reader-progress');
+  await expect(header).toBeVisible();
+  await expect(footer).toBeVisible();
+  await page.keyboard.press('PageDown');
+  await expectMobileChrome(page, 'quiet');
+  await openMore(page);
+  await expect(header).toBeVisible();
+  await expect(footer).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(header).toBeVisible();
+  await expect(footer).toBeVisible();
+});
+

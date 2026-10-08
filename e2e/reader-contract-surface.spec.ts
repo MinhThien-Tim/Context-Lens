@@ -31,6 +31,7 @@ import { pdfFixture } from './pdfFixture';
 import { pdfScanFixture } from './pdfScanFixture';
 import { readerGeometry, expectViewportStable, expectLocationIdentical } from './readerO';
 import { modeControl } from './readerNames';
+import { waitForReaderSurface } from './readerO';
 
 /** Opens a PDF reader in its native Original view at the given viewport. */
 async function openOriginalPdf(page: Page, name: string, buffer: Buffer, width: number, height: number) {
@@ -316,3 +317,41 @@ test('at 390px the Footer Markup action opens the palette above the bar and retu
   await expect(trigger).toBeFocused();
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 });
+test.describe('ARCH-7 � Notes no chrome entry; Contents panel Notes entry exists', () => {
+  for (const [band, width, height] of [["desktop 1280px", 1280, 900], ["mobile 390px", 390, 844]] as const) {
+    test(`The parked Contents-panel Notes entry still exists while More, Header and Footer expose no Notes entry at ${band} @ARCH-7`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto('/');
+      const passage = Array.from({ length: 6 }, (_, i) => `P${i + 1} text.`).join('\n\n');
+      await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill(passage);
+      await page.getByRole('button', { name: /Preview & read/ }).click();
+      await expect(page.locator('.reader-text')).toBeVisible();
+      const chrome = page.locator('.reader-header, .reader-progress');
+      await expect(chrome.getByRole('button', { name: 'Notes', exact: true })).toHaveCount(0);
+      await page.getByRole('button', { name: 'Reader menu' }).click();
+      await expect(page.getByRole('menu', { name: 'Reader actions' })).toBeVisible();
+      await expect(page.getByRole('menuitem', { name: 'Notes', exact: true })).toHaveCount(0);
+      await page.keyboard.press('Escape');
+    });
+  }
+});
+
+
+test.describe('ARCH-8 � No Print entry anywhere', () => {
+  for (const [band, width, height] of [["desktop 1280px", 1280, 900], ["mobile 390px", 390, 844]] as const) {
+    test(`No Print entry exists in Header, Footer or More at ${band} @ARCH-8`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto('/');
+      await page.locator('input[type=file]').setInputFiles({ name: 'arch8.pdf', mimeType: 'application/pdf', buffer: pdfFixture(1) });
+      await modeControl(page, 'pdf').click().catch(() => {});
+      await expect(page.locator('.reader-shell')).toBeVisible();
+      const chrome = page.locator('.reader-header, .reader-progress');
+      await expect(chrome.getByRole('button', { name: 'Print', exact: true })).toHaveCount(0);
+      await page.getByRole('button', { name: 'Reader menu' }).click();
+      await expect(page.getByRole('menu', { name: 'Reader actions' })).toBeVisible();
+      await expect(page.getByRole('menuitem', { name: 'Print', exact: true })).toHaveCount(0);
+      await page.keyboard.press('Escape');
+    });
+  }
+});
+

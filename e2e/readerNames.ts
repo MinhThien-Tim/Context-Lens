@@ -76,7 +76,7 @@ export function contextItem(page: Page): Locator {
  * dialog keep working against whatever the new names are.
  */
 export async function openGoToLocation(page: Page) {
-  await page.getByRole('button', { name: 'Current PDF page' }).first().click();
+  await page.getByRole('button', { name: 'Current PDF page' }).click();
   const dialog = page.getByRole('dialog', { name: 'Go to location' });
   await expect(dialog).toBeVisible();
   return dialog;
