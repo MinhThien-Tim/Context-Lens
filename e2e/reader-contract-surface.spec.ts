@@ -198,7 +198,7 @@ test('at 1280px the Header Markup group is the direct Highlight, Underline and E
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-test('at 390px the Footer Markup action opens the palette above the bar and returns focus @pdf @FTR-3 @A11Y-3', async ({ page }) => {
+test('at 390px the Footer Markup action opens the palette above the bar and returns focus @pdf @FTR-3 @A11Y-3 @ARCH-7', async ({ page }) => {
   test.setTimeout(90_000);
   await openOriginalPdf(page, 'markup-mobile.pdf', pdfFixture(4), 390, 844);
 

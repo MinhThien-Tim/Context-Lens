@@ -44,7 +44,7 @@ function scrollSteps(scroll: HTMLElement, tops: number[]) {
 const isQuiet = () => host.querySelector('.chrome-quiet') !== null;
 const revealControl = () => host.querySelector<HTMLButtonElement>('[aria-label="Show reading controls"]');
 
-it('quiets mobile chrome after real accumulated travel and reveals it again without moving content', () => {
+it('quiets mobile chrome after real accumulated travel and reveals it again without moving content @MOB-3', () => {
   const { scroll } = mount();
   scrollSteps(scroll, [20, 60]);
   expect(isQuiet()).toBe(true);
@@ -53,7 +53,7 @@ it('quiets mobile chrome after real accumulated travel and reveals it again with
   expect(scroll.scrollTop).toBe(60);
 });
 
-it('keeps 1024px as the sole responsive authority and never has a tablet band', () => {
+it('keeps 1024px as the sole responsive authority and never has a tablet band @ARCH-1 @CHR-3', () => {
   for (const width of [767, 768, 1023, 1024]) {
     const { scroll, queries } = mount(width);
         // The only responsive query the Reader ever issues is the 1024px authority, so no 768 tablet
@@ -77,7 +77,7 @@ it('reveals chrome only after accumulated upward travel, not for a single small 
   expect(scroll.scrollTop).toBe(168);
 });
 
-it('never reveals or quiets chrome from a tap, and exposes only a reveal-only escape control', () => {
+it('never reveals or quiets chrome from a tap, and exposes only a reveal-only escape control @MOB-3 @INP-4', () => {
   const { scroll } = mount();
   scrollSteps(scroll, [60]);
   expect(isQuiet()).toBe(true);
@@ -91,7 +91,7 @@ it('never reveals or quiets chrome from a tap, and exposes only a reveal-only es
   expect(revealControl()).toBeNull();
 });
 
-it('reveals chrome when focus enters chrome and not when focus enters the reading surface', () => {
+it('reveals chrome when focus enters chrome and not when focus enters the reading surface @INP-3', () => {
   const { scroll } = mount();
   scrollSteps(scroll, [60]);
   expect(isQuiet()).toBe(true);

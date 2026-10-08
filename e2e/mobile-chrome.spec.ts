@@ -66,7 +66,7 @@ async function openPdfReader(page: Page, width: number, height: number) {
 
 test.describe('MobileChrome — presentation band', () => {
   for (const size of MATRIX) {
-    test(`mobile Chrome presents and stays usable at ${size.name} @MORE-1 @ARCH-6`, async ({ page }) => {
+    test(`mobile Chrome presents and stays usable at ${size.name} @MORE-1 @ARCH-6 @HDR-3`, async ({ page }) => {
       test.setTimeout(90_000);
       await openTextReader(page, size.width, size.height);
 
@@ -110,7 +110,7 @@ test.describe('MobileChrome — presentation band', () => {
         });
   }
 
-  test('1024px is the responsive authority: the Header is a Desktop overlay band there', async ({ page }) => {
+  test('1024px is the responsive authority: the Header is a Desktop overlay band there @ARCH-1 @CHR-3', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 1024, 900);
     // §4.3 — quiet/reveal is a mobile-only model; at 1024 the chrome never quiets.
@@ -212,7 +212,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
     await expectQuietVisualOnly(page, before);
   });
 
-  test('a small upward correction below the travel threshold does not reveal (§6.3)', async ({ page }) => {
+  test('a small upward correction below the travel threshold does not reveal (§6.3) @MOB-3', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     await page.mouse.move(195, 450);
@@ -226,7 +226,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
     expect((await textChrome(page)).headerOpacity).toBeLessThan(0.1);
   });
 
-  test('touch scroll quiets and reveals exactly like wheel (§5.4)', async ({ page }) => {
+  test('touch scroll quiets and reveals exactly like wheel (§5.4) @MOB-3', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     // On the text Reader the reading text is the scroll surface (the window scrolls), so the
@@ -255,7 +255,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
     await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeGreaterThan(0.9);
   });
 
-  test('a tap does not toggle or reveal chrome (§5.3/§6.7/§15.11)', async ({ page }) => {
+  test('a tap does not toggle or reveal chrome (§5.3/§6.7/§15.11) @MOB-3 @INP-4', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     await page.mouse.move(195, 450);
@@ -276,7 +276,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
     await expectQuietVisualOnly(page, before);
   });
 
-  test('the dedicated reveal control is a one-way, non-toggling escape (§6.5/§6.6/§6.7)', async ({ page }) => {
+  test('the dedicated reveal control is a one-way, non-toggling escape (§6.5/§6.6/§6.7) @MOB-3 @INP-4', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     await page.mouse.move(195, 450);
@@ -302,7 +302,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
     await expectQuietVisualOnly(page, before);
   });
 
-  test('the reveal control stays operable at 320px and in both landscape pairs (§6.9)', async ({ page }) => {
+  test('the reveal control stays operable at 320px and in both landscape pairs (§6.9) @MOB-3 @INP-4', async ({ page }) => {
     for (const [width, height] of [[320, 700], [844, 390], [915, 412]] as const) {
       await openTextReader(page, width, height);
       await page.mouse.move(width / 2, height / 2);
@@ -319,7 +319,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
     }
   });
 
-  test('focus entering the Chrome reveals it; focus in the reading surface does not (§6.4)', async ({ page }) => {
+  test('focus entering the Chrome reveals it; focus in the reading surface does not (§6.4) @INP-3', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     await page.mouse.move(195, 450);
@@ -341,7 +341,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
         expect((await textChrome(page)).headerOpacity).toBeLessThan(0.1);
       });
 
-  test('a page jump through Contents does not drive chrome state (§4.4/§5.1/§5.2)', async ({ page }) => {
+  test('a page jump through Contents does not drive chrome state (§4.4/§5.1/§5.2) @INP-1 @MODE-1', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     await page.mouse.move(195, 450);
@@ -385,7 +385,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
             await expect(page.locator('.contents-panel')).toBeHidden();
           });
 
-    test('a mode switch does not drive chrome state (§5.1/§10.2)', async ({ page }) => {
+    test('a mode switch does not drive chrome state (§5.1/§10.2) @INP-1 @MODE-1', async ({ page }) => {
       test.setTimeout(90_000);
       await openPdfReader(page, 390, 900);
       await readerScrollBy(page, 600, 'wheel');
@@ -437,7 +437,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
       await expectMobileChrome(page, 'quiet');
     });
 
-    test('scrolling inside More does not drive Reader chrome state (§4.4/§9.8)', async ({ page }) => {
+    test('scrolling inside More does not drive Reader chrome state (§4.4/§9.8) @INP-1 @MODE-1', async ({ page }) => {
       test.setTimeout(90_000);
       await openTextReader(page, 320, 900);
       await page.mouse.move(160, 450);
@@ -503,7 +503,7 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
   // §8.1/§9.4 and docs/desktop-reader.md §2: one More trigger per density band, in the band that
   // owns the surrounding chrome. App.tsx gates the Footer trigger on `!desktop`, so restoring it
   // must give mobile the Footer disclosure and desktop the Header one — never two, never none.
-  test('exactly one Reader menu trigger per band: Footer at 390px, Header at 1280px', async ({ page }) => {
+  test('exactly one Reader menu trigger per band: Footer at 390px, Header at 1280px @MORE-1 @MORE-4', async ({ page }) => {
     test.setTimeout(90_000);
     await openPdfReader(page, 390, 900);
     // §8.1 — mobile Header owns Back/title/Original-Reading only; More lives in the Footer.
@@ -525,7 +525,7 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
     await expect(page.getByRole('menuitem', { name: 'Document', exact: true })).toHaveCount(1);
   });
 
-      test('the More layer stays usable at every band it presents (§9.2/§9.5/§9.6)', async ({ page }) => {
+      test('the More layer stays usable at every band it presents (§9.2/§9.5/§9.6) @MORE-1 @MORE-4', async ({ page }) => {
     test.setTimeout(120_000);
 
     // Regression lock for the portal-scope defect: the menu is portaled to <body>, so every
@@ -651,7 +651,7 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
       await expect(page.getByRole('button', { name: 'OCR next' })).toBeVisible();
     });
 
-  test('progress and location are owned by the Footer at every mobile width (§8.1/§8.5)', async ({ page }) => {
+  test('progress and location are owned by the Footer at every mobile width (§8.1/§8.5) @FTR-1', async ({ page }) => {
     test.setTimeout(90_000);
     for (const width of [320, 390, 768, 1023]) {
       await openPdfReader(page, width, 900);

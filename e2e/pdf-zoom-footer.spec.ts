@@ -86,10 +86,7 @@ for (const width of desktopWidths) {
 // gating the Footer nav by `!desktop` cannot leave the dialog unreachable in that band. This
 // asserts the control reaches the documented destination (not a direct jump), because the Footer
 // that used to open it no longer exists here.
-//
-// Untagged: NAV-1, which makes the Footer the sole owner at every band, is a P2b rule. The opener
-// name goes through `openGoToLocation`, so P2b renames it once.
-test('the Footer Current PDF page button opens Go to location at 1280px @pdf', async ({ page }) => {
+test('the Footer Current PDF page button opens Go to location at 1280px @pdf @NAV-1', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'go-to-1280.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3) });
@@ -106,7 +103,7 @@ test('the Footer Current PDF page button opens Go to location at 1280px @pdf', a
 
 // docs/ui-system.md:82 — "page indicator opens Go to location". The Footer owns this indicator at
 // every band (NAV-1), so the opener and the jump are proven here at ≤1023px.
-test('the Footer Current PDF page button opens Go to location at 390px @pdf', async ({ page }) => {
+test('the Footer Current PDF page button opens Go to location at 390px @pdf @NAV-1', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'go-to-390.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3) });
