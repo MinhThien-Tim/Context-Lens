@@ -10,8 +10,8 @@ interface ModeProps {
   onOriginal: () => void; onReading: () => void;
 }
 
-// Contract §7.1/§7.4/§10.1: Original/Reading is the single PDF presentation control and the only
-// presentation control the Header is allowed to own. Nothing else renders here.
+// Contract §7.1/§7.4/§10.1: the Text|PDF presentation control (viewMode values original/reading) is
+// the single PDF presentation control and the only one the Header may own. Nothing else renders here.
 export function PdfModeSwitch({ mode, uiLanguage, canRead, onOriginal, onReading }: ModeProps) {
   return <div class="pdf-mode-switch" role="group" aria-label="PDF view mode">
     <button aria-pressed={mode === 'original'} onClick={onOriginal}>{uiLanguage === 'vi' ? 'Trang gốc' : 'PDF'}</button>
