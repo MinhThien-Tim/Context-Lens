@@ -17,8 +17,8 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
-import { expectMobileChrome, readerScrollBy, readerGeometry, openMore, closeMore, togglePdfMode } from './readerO';
-import { documentItem } from './readerNames';
+import { expectMobileChrome, readerScrollBy, readerGeometry, openMore, revealChrome, closeMore, togglePdfMode } from './readerO';
+import { documentItem, openGoToLocation } from './readerNames';
 
 /** §15.6 responsive matrix. 900 is the repository portrait convention; landscape uses real device heights. */
 const MATRIX = [
@@ -152,6 +152,13 @@ async function textChrome(page: Page) {
       headerOpacity: header.opacity,
       footerTop: footer.top,
       footerOpacity: footer.opacity,
+          footerHeight: footer.height,
+                // The Footer's reserved band while it is REVEALED. `.reader-progress` is
+                // position:fixed with bottom:0, so the band's top is the viewport bottom
+                // minus the Footer's own measured height. Reading it off the live box keeps
+                // the reveal-control anchors scroll-invariant: `footerTop` is measured
+                // mid-slide by the quiet transform and must not be used as the anchor.
+                footerBandTop: innerHeight - footer.height,
       firstLineTop: firstLine ? firstLine.getBoundingClientRect().top : NaN,
             // Scroll-invariant form of the same fact: the offset of the first line inside the
             // reading container. `firstLineTop` alone moves with the viewport whenever the user
@@ -165,23 +172,26 @@ async function textChrome(page: Page) {
       }
       /** §4.1/§4.2/CHR-2 — quiet is a two-state visual model and it never touches the reading box.
     *
-    * The Footer's opacity is deliberately not asserted here. MOB-1 makes the Footer a real band
-    * rather than an always-visible chrome strip, so "the Footer stays visible" is no longer a
-    * contract statement. Its *position* still is: the Footer must not move when the Header
-    * quiets, which is why `footerTop` is compared. */
-      async function expectQuietVisualOnly(page: Page, before: Awaited<ReturnType<typeof textChrome>>) {
-        const after = await textChrome(page);
-        // §4.2/A12 G1-G3 — quiet is visual-only: it hides the Header overlay but must not move
-        // or resize the reading box, change content height, change the scroll position, or reflow.
-        // Every compared value is scroll-invariant, so a real user scroll in between cannot mask or
-        // fake a geometry change. The Header's own offset is deliberately NOT compared: sliding it
-        // out of the viewport is the quiet transition itself, not a geometry event.
-        expect(after.contentHeight).toBe(before.contentHeight);
-                expect(after.firstLineInContent).toBeCloseTo(before.firstLineInContent, 0);
-                expect(after.footerTop).toBeCloseTo(before.footerTop, 0);
-                expect(after.overflowX).toBe(false);
-                return after;
-              }
+          * Neither the Header's nor the Footer's offset is compared here. CHR-2 and GEO-1 scope the
+          * quiet invariant to the reading *viewport box* and to content geometry, and both the Header
+          * and the Footer slide out of the viewport by their own height when the shell quiets
+          * (reader-layout.css, `.chrome-quiet`). Comparing either offset therefore asserted the
+          * transition itself, and the t0c review ruled the identical Header-side check an over-reach:
+          * at mobile widths the delta is always exactly one chrome height. What that ruling added
+          * instead, and what still holds the line here, are the positive assertions below — content
+          * height and first-line position are unchanged — plus GEO-4/GEO-5 in
+          * pdf-reader-chrome-a12.spec.ts, which measure the revealed Header's real overlap. */
+            async function expectQuietVisualOnly(page: Page, before: Awaited<ReturnType<typeof textChrome>>) {
+              const after = await textChrome(page);
+              // §4.2/A12 G1-G3 — quiet is visual-only: it hides the Header overlay but must not move
+              // or resize the reading box, change content height, change the scroll position, or reflow.
+              // Every compared value is scroll-invariant, so a real user scroll in between cannot mask or
+              // fake a geometry change.
+              expect(after.contentHeight).toBe(before.contentHeight);
+              expect(after.firstLineInContent).toBeCloseTo(before.firstLineInContent, 0);
+              expect(after.overflowX).toBe(false);
+              return after;
+            }
 
 test.describe('MobileChrome — quiet and reveal', () => {
   test('real user scroll quiets and real upward scroll reveals the Header (§4.1/§6.0) @INP-1 @INP-2 @CHR-2', async ({ page }) => {
@@ -291,11 +301,14 @@ test.describe('MobileChrome — quiet and reveal', () => {
     await expect(page.getByRole('menu')).toHaveCount(0);
 
     // §16.1/§6.9 — the control anchors directly above the reserved Footer band.
-    const control = await reveal.evaluate(el => { const r = el.getBoundingClientRect(); return { bottom: r.bottom, height: r.height }; });
-    expect(control.height).toBeGreaterThanOrEqual(44);
-    expect(control.bottom).toBeLessThanOrEqual(before.footerTop + 0.5);
+        // The anchor is the Footer's revealed band, not `footerTop`: while the shell is
+        // quiet the Footer is translated out of the viewport, so its live top sits one
+        // full Footer height below the band and would make this check pass vacuously.
+        const control = await reveal.evaluate(el => { const r = el.getBoundingClientRect(); return { bottom: r.bottom, height: r.height }; });
+        expect(control.height).toBeGreaterThanOrEqual(44);
+        expect(control.bottom).toBeLessThanOrEqual(before.footerBandTop + 0.5);
 
-    await reveal.click();
+        await reveal.click();
     await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeGreaterThan(0.9);
     // §6.6 — reveal only, never toggle: the control does not survive the reveal.
     await expect(reveal).toHaveCount(0);
@@ -313,9 +326,11 @@ test.describe('MobileChrome — quiet and reveal', () => {
       await expect(reveal).toBeVisible();
       const box = await reveal.boundingBox();
       // §6.9 — inside the viewport and clear of the Footer band at every mobile width.
-      expect(box!.x).toBeGreaterThanOrEqual(0);
-      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
-      expect(box!.y + box!.height).toBeLessThanOrEqual(quiet.footerTop + 0.5);
+            // `footerBandTop` is the Footer's revealed band; `footerTop` would be measured
+            // mid-slide by the quiet transform and let a control overlapping the band pass.
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+        expect(box!.y + box!.height).toBeLessThanOrEqual(quiet.footerBandTop + 0.5);
     }
   });
 
@@ -351,20 +366,29 @@ test.describe('MobileChrome — quiet and reveal', () => {
       // §4.4 — a blocking overlay holds the chrome revealed, so opening Contents reveals it.
       // That reveal belongs to the overlay, not to the navigation, which is what the rest of this
       // test isolates: the programmatic page jump itself must neither reveal nor quiet the chrome.
-      await openMore(page);
-      await page.getByRole('menuitem', { name: 'Contents', exact: true }).click();
+      //
+      // HDR-4/FTR-1 — at ≤1023px Contents is a direct Footer trigger and is never in More (MORE-2's
+      // inventory has no Contents entry), so it is opened from the Footer. That trigger lives in the
+      // quiet, fixed Footer, which cannot be scrolled back, so the contract's reveal prerequisite
+      // (§6.0/§6.5) is the real way to reach it.
+      await revealChrome(page);
+      await page.locator('.reader-progress').getByRole('button', { name: 'Contents', exact: true }).click();
       await expect(page.locator('.contents-panel')).toBeVisible();
       await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeGreaterThan(0.9);
 
       const beforeJump = await textChrome(page);
       // 2cc6c49 removed the Contents-panel "Go to location" button. The dialog it opened is
-      // unchanged and stays reachable for a text document through the Footer's position button
-      // (App.tsx renders DocumentPosition for every non-PDF kind), which is the sanctioned opener
-      // in this band. The sheet is a blocking overlay, so Escape dismisses it first (§9.5) and the
-      // jump then runs from the Footer. The jump itself is the same programmatic jump either way.
-      await page.keyboard.press('Escape');
-      await expect(page.locator('.contents-panel')).toBeHidden();
-      await page.locator('.reader-progress').getByRole('button', { name: /^Go to location: / }).click();
+            // unchanged and stays reachable for a text document through the Footer's location button,
+            // which is the sanctioned opener at this band (NAV-1: one location button in the Footer at
+            // every band, accessible name `Current PDF page`). The sheet is a blocking overlay, so
+            // Escape dismisses it first (§9.5) and the jump then runs from the Footer. The jump itself
+            // is the same programmatic jump either way.
+            await page.keyboard.press('Escape');
+            await expect(page.locator('.contents-panel')).toBeHidden();
+            // `openGoToLocation` also asserts the dialog opened. The old inline locator matched
+            // /^Go to location: /, a name no element has carried since NAV-1 renamed the button, so
+            // this line timed out on a selector that had never been reachable through.
+            await openGoToLocation(page);
       const goto = page.getByRole('dialog', { name: /Go to|Lookup/ }).first();
       if (await goto.count()) {
         const field = goto.getByRole('spinbutton').first();
@@ -445,6 +469,9 @@ test.describe('MobileChrome — quiet and reveal', () => {
       await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeLessThan(0.1);
 
       // §4.4 — More is a blocking overlay, so it holds the chrome revealed while it is open.
+      // The More trigger sits in the quiet, fixed Footer, which no scroll can bring back, so the
+      // contract's reveal prerequisite (§6.0/§6.5) is what makes it reachable at all.
+      await revealChrome(page);
       await openMore(page);
       await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeGreaterThan(0.9);
       const before = await textChrome(page);
