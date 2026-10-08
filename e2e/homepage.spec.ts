@@ -117,10 +117,10 @@ test('reader presets and manual typography controls fit one phone viewport', asy
   const reader = page.locator('.reader-text');
   await expect(reader).toBeVisible();
   // mobile-chrome.md §6 + reader-behavior-contract §7.2: at 390px the Header owns only Back,
-  // title and PDF mode, so reader settings is reached through More -> `Text` (renamed
-  // 2026-10-05 from `Text and theme`; the old `Reading appearance` Header button no longer exists).
+  // title and the mode control, so reader settings is reached through More -> `Theme` (renamed
+  // 2026-10-05 from `Text and theme`, then to `Theme`; the old `Reading appearance` Header button no longer exists).
   await page.getByRole('button', { name: 'Reader menu', exact: true }).click();
-  await page.getByRole('menuitem', { name: 'Text', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Theme', exact: true }).click();
   const settings = page.getByRole('dialog', { name: 'Reader settings' });
   await settings.getByRole('button', { name: 'News', exact: true }).click();
   await expect(reader).toHaveCSS('font-size', '18px');
