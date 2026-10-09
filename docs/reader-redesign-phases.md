@@ -24,7 +24,7 @@ Acceptance = the contract rule IDs in [reader-behavior-contract.md](reader-behav
 | One font setting (Sans \| Serif, local) drives reading and interface | Separate UI and reading fonts |
 | Text and PDF modes are similar, not identical, where their function differs (MODE-3) | — |
 | More inventory per MORE-2: mobile Document · Theme · Languages · OCR [P4] · Click lookup; desktop Document · Languages · OCR [P4] · Click lookup | The 8 items of 2026-10-05; separate Appearance and Fonts rows |
-| Notes is not a chrome action; implementation, data and the selection Note action stay untouched (ARCH-7) | Notes as a More item |
+| Notes is not a chrome action; implementation, data and the selection Note action stay untouched (ARCH-7). Its entries are the Contents panel footer `Notes` action, the Context panel `Open notes` and the selection Note action | Notes as a More item |
 | Docs end state: `reader-behavior-contract.md` (WHAT) + `reader-chrome.md` (HOW) + `change-dependencies.md`; the three chrome docs are deleted, `reader.md` and `ui-system.md` are patched, not deleted | Six overlapping Reader docs |
 | Mobile More trigger in the Footer, desktop More trigger in the Header | (unchanged from current code) |
 | `Aa ···` kept, mobile and quiet only (desktop has no quiet state, so no `Aa ···`) | — |
@@ -46,9 +46,9 @@ Acceptance = the contract rule IDs in [reader-behavior-contract.md](reader-behav
 
 - **Goal.** HDR-*, FTR-*, NAV-1, MOB-*, THEME-1, MORE-*, MODE-*, GEO-*, ARCH-2, ARCH-3 hold; the old chrome is gone.
 - **Order.** (1) Remove `interfaceMode` (preference migration, App branches, `data-interface-mode`, Advanced Home, `home-advanced.css`, density control). (2) Geometry: make the reading viewport full height at all times; Header and Footer overlay it with static padding inside the scroll container; delete the reserved Footer band and the Original-PDF resize-on-quiet logic. (3) Mobile: Header = Back · title · `Text \| PDF`; Footer = one full-width bar (Contents · page number · Markup · More) with a hairline progress line; quiet hides both; delete the mobile zoom host, stepper and custom-scale code. (4) Desktop Header: regroup per HDR-5 (keep zoom −/level/+ and the Markup group), delete the Notes, Markup-dialog and Print buttons, previous/next and the page count; add `Aa` (opens the existing reading settings); rename Original/Reading to Text \| PDF; desktop Footer = page number + thin progress line + OCR status. (5) More per MORE-2 for each band. (6) Delete obsolete components, CSS and specs per `reader-chrome.md` §7. (7) One test per rule ID. (8) Stale-reference search.
-- **Notes rule.** Leave `NotesPanel`, the notes store and the selection Note action untouched (ARCH-7); only the More entry goes.
+- **Notes rule.** Leave `NotesPanel`, the notes store and the selection Note action untouched (ARCH-7); only the Header and More entries go, and the Contents panel keeps a footer `Notes` action that opens the same overlay. No Notes tab is added, and the mobile behaviour where the selection Note action closes Contents is preserved.
 - **Don't.** Touch colours, fonts, OCR behavior, lookup copy, or implement pinch (Z2). Leave the OCR widget exactly as it is. Do not remove the Home Settings entry that opens the Language engines dialog (it is how engines are configured so lookups run); `e2e/homepage.spec.ts` utilities test guards it. **Known interim:** until Z2 ships, mobile PDF has no in-app scale control (fit-width only).
-- **Decided for P2b (closed 2026-10-07).** Mobile Footer items carry visible text labels; `Aa ···` sits bottom-right inside the safe-area inset (record the offset after the 320px and landscape checks); the Contents panel offers Contents and Pages only, with no Outline tab and no clock icon.
+- **Decided for P2b (closed 2026-10-07).** Mobile Footer items carry visible text labels; `Aa ···` sits bottom-right inside the safe-area inset (record the offset after the 320px and landscape checks); the Contents panel offers Contents and Pages tabs, plus the footer Notes action, with no Outline tab and no clock icon.
 - **Gate.** `check:css` → `verify:reader` → `verify:pdf` → `verify:ui`; viewports 320, 390, 767, 768, 1023, 1024, 844×390, 915×412, 1280×800. Report: Header title width at 320 in both fonts, last-line clearance above the Footer at 320 and 844×390, and that quiet shows text only at 390.
 
 ## P2c — File switcher (desktop)
@@ -108,7 +108,12 @@ Acceptance = the contract rule IDs in [reader-behavior-contract.md](reader-behav
 
 - **Goal.** Nothing orphaned.
 - **Do.** Orphan components and CSS (including the dead `768–850px` block), stale test titles, `@tag`s, selectors, helpers, task docs, duplicate rules. Run `verify:full` once.
+- **Keep.** `NotesPanel` and the notes store: they are the live surface behind the Contents panel `Notes` action, the Context panel `Open notes` and the selection `Note` action, so they are live code, not orphans. Do not fold them into the Contents panel or delete them as unused while the dedicated-Notes task is open.
 - **Gate.** Cleanup report with an orphan check.
+
+## Open item — a dedicated Notes surface
+
+Open after P2b, before the cleanup above reclaims anything Notes-related. P2b settled *where Notes is entered* (the three entries above, no Header or More entry, no Contents tab); it did not settle *how Notes are browsed*. Deciding this traces its dependencies first: whether `NotesPanel` keeps its own overlay or becomes a Reader surface, whether a desktop entry is needed, and whether the Contents panel grows a tab — a question step 6's proposal answered "no" but that a later task must re-ask on its own evidence. Until that task lands, `NotesPanel` and the notes store stay untouched.
 
 ## S1 — Spike: mobile pen canvas (not scheduled)
 

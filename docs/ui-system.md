@@ -26,8 +26,9 @@ src/main.tsx
           reader-viewport → TextReader | PdfViewer | PdfReadingView
           panels: ContentsPanel, LookupBottomSheet (Context Inspector opens from Show more)
           overlays: MarkupPalette, Theme panel (ReaderSettings), GoToLocation, Document (via More)
-          NotesPanel stays in the tree but has no chrome entry (ARCH-7); saved notes are unreachable
-          in Reader until a separate task decides.
+          NotesPanel stays in the tree and has no chrome entry (ARCH-7). Its entries are the ContentsPanel
+                    footer `Notes` action, the Context panel `Open notes` and the selection-bar Note action, and all
+                    three open this one overlay. Browsing all saved notes stays an open item after P2b.
 ```
 
 `ReaderShell` exposes `data-reader-surface` and panel classes. It owns only transient mobile chrome visibility; rules and constants are in [reader-chrome.md](reader-chrome.md).
@@ -62,7 +63,7 @@ Mobile at ≤1023 px uses a compact Header (Back, title, Text | PDF), a one-row 
 
 | Area | Desktop | Mobile |
 | --- | --- | --- |
-| Notes | No chrome entry (ARCH-7); `NotesPanel` retained | Same |
+| Notes | No Header or More entry (ARCH-7); reachable via the Contents panel footer `Notes` action, the Context panel `Open notes` and the selection-bar Note action | Same |
 | Header | Library · title ⌄ (File switcher, P2c) · Text \| PDF · zoom − level + · Contents · Highlight Underline Erase · `Aa` · More **[P2b]** | Back · title · Text \| PDF **[P2b]** |
 | Footer | Page number (opens Go to location) · thin progress line · OCR status while active **[P4]** | One-row bar: Contents · page number · Markup · More · hairline progress; hidden with Header while quiet **[P2b]** |
 | Contents / Go to | Contents icon in Header; an entry navigates; page number opens Go to location; keyboard `T` and `G` unchanged | Contents icon in Footer; same behavior |
