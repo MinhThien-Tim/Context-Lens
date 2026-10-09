@@ -30,6 +30,22 @@ Reader architecture and behavior route to [reader-chrome.md](reader-chrome.md) a
 | Zoom | `PdfViewer`, `ReaderToolbar` → FTR-2, ZOOM-2 |
 | File switcher (P2c) | `FileSwitcher`, `useLibrary` → FILE-1 tests |
 
+## Propagation by change type
+
+The Core Rule above is one sentence per change type; this table is the same rule spread across the layers
+each type touches. Apply the row for the change being made. A change that is more than one type (a rename and
+a move, say) takes every matching row.
+
+| Change | Implementation | UI / accessible name | Tests / selectors | Docs / spec |
+| --- | --- | --- | --- | --- |
+| **Add** | Add the implementation | Add the UI contract: control, label, announced name, position, both bands | Add coverage in the same change | Add required documentation together |
+| **Remove** | Remove the implementation | Remove the UI entry, including its label and announced name | Remove tests/specs, selectors and helpers | Remove obsolete docs |
+| **Rename** | Rename the symbol | Update every reference, including accessible names and CSS hooks | Update test titles, `@tags` and helpers | Update docs and specs |
+| **Move** | Move the implementation, leave no forwarding re-export | Carry the UI contract unchanged to the new location | Carry selectors, helpers and `@tags` unchanged; re-point any import in tests | Update paths, routing tables and cross-links |
+
+Before editing, identify dependents. After editing, search the changed symbol or name and inspect every
+directly dependent file before verification.
+
 ## Rename/Removal Checklist
 - [ ] Implementation updated/removed
 - [ ] UI entry updated/removed

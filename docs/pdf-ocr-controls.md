@@ -1,6 +1,6 @@
 # PDF/OCR Controls — Implementation Spec
 
-**Status:** Active · **Authority:** [`reader-behavior-contract.md`](./reader-behavior-contract.md) (frozen, wins over this doc) · **Phase:** PDF/OCR Controls
+**Status:** Active · **Authority:** [`reader-behavior-contract.md`](./reader-behavior-contract.md) (frozen, wins over this doc) · **Phase:** P4 (OCR behavior); PDF scale ownership follows P2b and Z2
 
 This is the implementation-facing source of truth for PDF-specific controls and OCR behavior in the Reader. It owns zoom presets, `Text | PDF` presentation, OCR preload, OCR continuation, OCR start ownership, OCR status lifecycle, and the PDF-specific More actions. It does **not** redesign the Reader chrome architecture, the OCR queue engine, or the responsive model — those are fixed by the frozen contract and [`reader.md`](./reader.md).
 
@@ -22,7 +22,7 @@ This is the implementation-facing source of truth for PDF-specific controls and 
 ### 1.2 What this spec does NOT own
 - Reader chrome architecture (Header/Footer/More layout) — see [`reader-chrome.md`](./reader-chrome.md).
 - OCR queue engine internals (worker, eligibility, cache, storage guard) — see [`reader.md`](./reader.md) §"OCR integration".
-- Responsive model — `useDesktop()` / 1024px is the sole authority (contract §1.3).
+- Responsive model — `useDesktop()` / 1024px is the sole authority ([reader-behavior-contract.md](./reader-behavior-contract.md) §1.3).
 - Icon family or general Header layout — only PDF/OCR control integration is in scope.
 
 ## 2. Responsive model
@@ -32,6 +32,8 @@ This is the implementation-facing source of truth for PDF-specific controls and 
 - PDF/OCR controls may present differently by viewport, but must represent the same underlying actions/state.
 
 ## 3. PDF zoom
+
+**[P2b]** The current mobile Footer stepper and custom-scale state are legacy and are removed in P2b. Until pinch ships **[Z2]**, mobile PDF uses fit-width only.
 
 ### 3.1 Zoom presets
 The zoom control exposes exactly these choices:
@@ -69,7 +71,7 @@ Selecting a preset must:
 ## 4. `Text | PDF`
 
 ### 4.1 Single control
-`Text | PDF` is the single PDF presentation control, owned by `PdfModeSwitch` via `primaryActions` in the Header (MODE-3). It is presentation-only — it does not couple to zoom state. The Header owns no other mode bar (HDR-3).
+`Text | PDF` is the single PDF presentation control, owned by `PdfModeSwitch` via `primaryActions` in the Header (ARCH-3). It is presentation-only — it does not couple to zoom state. The Header owns no other mode bar (HDR-3).
 
 ### 4.2 Unavailable readable text
 When readable text is unavailable (`canRead` is false):
@@ -80,6 +82,8 @@ When readable text is unavailable (`canRead` is false):
 Per-page text source (`pdf` vs `ocr`) is chosen in the Document surface, not in the mode switch.
 
 ## 5. OCR lifecycle
+
+**[P4]** The Footer active status stays visible only during `preparing | running | paused`. Queue, source and run actions move from Document to the OCR More item in P4. The terminal-success shape and announcement remain open.
 
 ### 5.1 Lifecycle classes
 "OCR active" means the union of `preparing`, `running`, `paused`. All behavior is defined over queue **state**, never over localized status text.
@@ -96,7 +100,7 @@ Per-page text source (`pdf` vs `ocr`) is chosen in the Document surface, not in 
 source of truth for "no OCR work left" and replaces the removed localized-string comparison.
 
 ### 5.2 Preload (initial automatic)
-- The Reader **MUST** preload the **first 12 candidate pages** on document open.
+- The Reader **MUST** preload the **first 12 candidate pages** on document open. This local preload does not start a run; only an explicit user action starts OCR, then continuation proceeds through 12-page windows.
 - The preload loop iterates pages 1–12, skipping pages that already carry PDF text, and collects up to `OCR_AUTO_BATCH_SIZE` (12) candidates.
 - The hard-coded `pending.length >= 6` cap is a **defect** — it must be `pending.length >= OCR_AUTO_BATCH_SIZE`.
 - Preload **MUST** remain local-only: no upstream request, no quota reservation, no Worker API call.
@@ -204,6 +208,8 @@ During `preparing`, `running`, `paused`:
 - Non-OCR document functionality (source choice, language, clear) remains intact.
 
 ## 9. Test migration
+
+This section records implementation history; Reader target behavior is governed by the contract.
 
 ### 9.1 Classification
 | Test | Classification | Reason |

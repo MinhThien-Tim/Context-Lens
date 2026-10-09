@@ -143,7 +143,7 @@ doc only when the task genuinely crosses subsystem boundaries.
 | Task | Read |
 | --- | --- |
 | PDF / OCR / reader | [reader.md](reader.md) |
-| Reader chrome (Header, Footer, More) | [reader-chrome.md](reader-chrome.md) + [reader-behavior-contract.md](reader-behavior-contract.md) |
+| Reader chrome and behavior (Header, Footer, More) | [reader-chrome.md](reader-chrome.md) + [reader-behavior-contract.md](reader-behavior-contract.md) |
 | Dictionary / translation / context | [translation-pipeline.md](translation-pipeline.md) |
 | UI / theme / responsive | [ui-system.md](ui-system.md) |
 | Offline mode / PWA shell | [ui-system.md](ui-system.md) + [data-storage.md](data-storage.md) + [translation-pipeline.md](translation-pipeline.md) |
