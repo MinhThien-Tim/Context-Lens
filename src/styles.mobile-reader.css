@@ -31,9 +31,14 @@
   .reader-shell.reader-shell .reader-viewport { margin: 0; min-height: 100dvh; }
   .reader-shell.reader-shell .pdf-viewer-wrap,
   .reader-shell.reader-shell .pdf-reading-view { height: 100dvh; min-height: 0; }
-  .reader-shell.reader-shell .pdf-reading-scroll { padding-bottom: calc(var(--reader-footer-height) + env(safe-area-inset-bottom)); box-sizing: border-box; }
-  .reader-shell.reader-shell .pdf-scroll { padding-top: calc(var(--reader-header-height) + 12px); padding-bottom: calc(var(--reader-footer-height) + env(safe-area-inset-bottom)); box-sizing: border-box; }
-  .reader-shell.reader-shell[data-reader-surface="original"] .pdf-scroll { padding-top: 4px; }
+  /* The fixed Header overlays this full-height frame, so the frame — not the scroll box —
+     carries the header compensation, the same model as `.reader-text` above. Padding on
+     `.pdf-scroll` cannot work: `navigate()` aligns a page top to the scroll box's content
+     edge, which scrolls the padding away and parks page 1 flush at the viewport top under
+     the Header, leaving its first line unselectable. */
+  .reader-shell.reader-shell .pdf-viewer-wrap { padding-top: calc(var(--reader-header-height) + 12px); }
+  .reader-shell.reader-shell .pdf-reading-scroll,
+  .reader-shell.reader-shell .pdf-scroll { padding-bottom: calc(var(--reader-footer-height) + env(safe-area-inset-bottom)); box-sizing: border-box; }
   .reader-shell.reader-shell .reader-text { width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding-top: calc(var(--reader-header-height) + 12px); }
   .reader-shell.reader-shell .pdf-reading-page { box-sizing: border-box; width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding: 12px max(var(--reader-page-padding, 18px), env(safe-area-inset-right)) 32px max(var(--reader-page-padding, 18px), env(safe-area-inset-left)); }
   .reader-shell.reader-shell .pdf-reading-page > header { margin-bottom: 12px; }
