@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import { pdfFixture } from './pdfFixture';
-import { modeControl } from './readerNames';
+import { modeControl, openGoToLocation, goToLocationPageInput, goToLocationConfirm, contentsTrigger } from './readerNames';
 
 async function openPdf(page: Page, count = 64) {
   await page.goto('/');
@@ -11,35 +11,38 @@ async function openPdf(page: Page, count = 64) {
   await expect(page.locator('.pdf-text-layer').first().locator('span').first()).toBeVisible();
 }
 
-// Contents is reached through More in the mobile band and directly from the Header toolbar at
-// >=1024px (mobile-chrome.md §7/§9, desktop-reader.md §3).
+// Contents is a direct trigger in the band that owns it — the Footer bar at mobile density
+// (MOB-2) and the Header toolbar at ≥1024px. It is no longer a More menuitem.
 async function openContents(page: Page) {
-  if (test.info().project.use.isMobile) {
-    await page.locator('.reader-progress').getByRole('button', { name: 'Reader menu' }).click();
-    await page.getByRole('menuitem', { name: 'Contents', exact: true }).click();
+  const mobile = Boolean(test.info().project.use.isMobile);
+  if (mobile) {
+    await contentsTrigger(page, true).click();
   } else {
-      // Desktop starts with the panel already open: App.tsx opens it on document load for
-      // `desktop`. Clicking here would toggle it shut.
-      if (!(await page.locator('.contents-panel').isVisible())) {
-        await page.locator('.reader-header').getByRole('button', { name: 'Contents' }).click();
-      }
-    }
-    await expect(page.locator('.contents-panel')).toBeVisible();
+    // Desktop starts with the panel already open: App.tsx opens it on document load for
+    // `desktop`. Clicking here would toggle it shut.
+    if (!(await page.locator('.contents-panel').isVisible())) await contentsTrigger(page, false).click();
+  }
+  await expect(page.locator('.contents-panel')).toBeVisible();
 }
 
 test('blank and rotated pages keep their page number across both views @pdf', async ({ page }) => {
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'mixed-pages.pdf', mimeType: 'application/pdf', buffer: pdfFixture(3, 2, 3) });
   await modeControl(page, 'pdf').click();
-  await page.getByRole('button', { name: 'Next page' }).click();
+    const toPage = async (n: string) => {
+      const dialog = await openGoToLocation(page);
+      await goToLocationPageInput(dialog).fill(n);
+      await goToLocationConfirm(dialog).click();
+    };
+    await toPage('2');
   await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
-  await modeControl(page, 'text').click();
-  await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
-  await expect(page.locator('.pdf-reading-page[data-pdf-reading-page="2"]')).toContainText('no extractable text');
-  await modeControl(page, 'pdf').click();
-  await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
-  await page.getByRole('button', { name: 'Next page' }).click();
-  await expect(page.getByLabel('Current PDF page')).toContainText('3 / 3');
+    await modeControl(page, 'text').click();
+    await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
+    await expect(page.locator('.pdf-reading-page[data-pdf-reading-page="2"]')).toContainText('no extractable text');
+    await modeControl(page, 'pdf').click();
+    await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
+    await toPage('3');
+    await expect(page.getByLabel('Current PDF page')).toContainText('3 / 3');
   const size = await page.locator('.pdf-page-slot[data-pdf-page="3"]').evaluate(element => ({ width: element.clientWidth, height: element.clientHeight }));
   expect(size.width).toBeGreaterThan(size.height);
   expect(await page.locator('.pdf-canvas').count()).toBeLessThanOrEqual(2);
@@ -169,6 +172,11 @@ test('50-page scroll has bounded canvases and no passive programmatic scrolls @p
 });
 
 test('zoom, links, multiline selection and five mode switches preserve interaction', async ({ page }, info) => {
+  // This test drives 5 page round trips, 2 mode switches each, and a 10-iteration
+  // define/close loop. On mobile each selection is a real 750ms hold gesture, so the
+  // wall-clock is ~50s — past the `fast` tier's 30s budget. The tier config names
+  // `test.slow()` as the sanctioned escape hatch for tests that need more time.
+  test.slow();
   await openPdf(page, 8);
   await expect(page.locator('.pdf-annotation-layer a').first()).toHaveAttribute('href', 'https://example.com/');
   if (!info.project.use.isMobile) {
@@ -178,35 +186,42 @@ test('zoom, links, multiline selection and five mode switches preserve interacti
       const stepper = page.locator('.pdf-zoom-stepper');
       for (const control of ['Zoom in', 'Zoom out']) {
         await stepper.getByRole('button', { name: control, exact: true }).click();
-      await selectPhrase(page);
-      await page.getByRole('button', { name: 'Close selection actions' }).click();
-    }
+        await selectPhrase(page);
+        await page.getByRole('button', { name: 'Close selection actions' }).click();
+      }
       await stepper.getByLabel('Zoom level').selectOption('125');
       await selectPhrase(page);
       await page.getByRole('button', { name: 'Close selection actions' }).click();
     } else {
-      // The mobile `.pdf-more` zoom popup is deleted (mobile-chrome.md §5): zoom is a direct Footer
-      // stepper (decrease / level / increase), so there is no disclosure to open.
-      for (const control of ['Zoom in', 'Zoom out']) {
-        await page.locator('.pdf-footer-zoom-host').getByRole('button', { name: control, exact: true }).click();
+      // Mobile has no zoom control at any band: the mobile zoom host, stepper and custom-scale code
+      // are deleted, and mobile pinch is a later task. The zoom half of this test therefore runs on
+      // desktop only; the mobile band still proves links, selection and the mode switches below.
       await selectPhrase(page);
       await page.getByRole('button', { name: 'Close selection actions' }).click();
     }
-  }
-  for (let i = 0; i < 5; i++) {
-    await page.getByRole('button', { name: 'Next page', exact: true }).click();
-    await expect(page.getByLabel('Current PDF page')).toHaveText('2 / 8');
-    await modeControl(page, 'text').click();
-    await expect(page.getByLabel('Current PDF page')).toHaveText('2 / 8');
-    const top = await page.locator('.pdf-reading-scroll').evaluate(el => el.scrollTop);
-    await page.waitForTimeout(250);
-    expect(await page.locator('.pdf-reading-scroll').evaluate(el => el.scrollTop)).toBe(top);
-    await modeControl(page, 'pdf').click();
-    await expect(page.getByLabel('Current PDF page')).toHaveText('2 / 8');
-    await page.getByRole('button', { name: 'Previous page', exact: true }).click();
-    await selectPhrase(page);
-    await page.getByRole('button', { name: 'Close selection actions' }).click();
-  }
+    // Page navigation is one location button in the Footer at every band (NAV-1); the previous/next
+    // buttons are deleted. Go to location is the sanctioned way to move a page, and the loop keeps the
+    // original 1 -> 2 -> 1 round trip so the selection below still lands on page 1.
+    const toPage = async (n: string) => {
+      const dialog = await openGoToLocation(page);
+      await goToLocationPageInput(dialog).fill(n);
+      await goToLocationConfirm(dialog).click();
+    };
+    for (let i = 0; i < 5; i++) {
+      await toPage('2');
+      await expect(page.getByLabel('Current PDF page')).toHaveText('2 / 8');
+      await modeControl(page, 'text').click();
+      await expect(page.getByLabel('Current PDF page')).toHaveText('2 / 8');
+      const top = await page.locator('.pdf-reading-scroll').evaluate(el => el.scrollTop);
+      await page.waitForTimeout(250);
+      expect(await page.locator('.pdf-reading-scroll').evaluate(el => el.scrollTop)).toBe(top);
+      await modeControl(page, 'pdf').click();
+      await expect(page.getByLabel('Current PDF page')).toHaveText('2 / 8');
+      await toPage('1');
+      await expect(page.getByLabel('Current PDF page')).toHaveText('1 / 8');
+      await selectPhrase(page);
+      await page.getByRole('button', { name: 'Close selection actions' }).click();
+    }
   await selectAcrossSpans(page);
   expect(await page.evaluate(() => window.getSelection()?.toString())).toContain('government');
   await page.getByRole('button', { name: 'Close selection actions' }).click();

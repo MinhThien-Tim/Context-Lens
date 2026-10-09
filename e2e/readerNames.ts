@@ -63,6 +63,20 @@ export function documentItem(page: Page): Locator {
   return page.getByRole('menuitem', { name: 'Document', exact: true });
 }
 
+/**
+ * NAV-1 / MOB-2: the `Contents` trigger, in the band that owns it.
+ *
+ * It is a direct button, not a More menuitem: the Footer bar owns it at mobile
+ * density (MOB-2) and the Header toolbar owns it at ≥1024px. Scoping by the
+ * owning bar keeps a spec from resolving the *other* band's button when a run
+ * renders both, so the band under test is the band asserted.
+ */
+export function contentsTrigger(page: Page, mobile: boolean): Locator {
+  return mobile
+    ? page.locator('.reader-progress').getByRole('button', { name: 'Contents', exact: true })
+    : page.locator('.reader-header').getByRole('button', { name: 'Contents', exact: true });
+}
+
 /** BACK-1: the More entry that opens the Context surface. */
 export function contextItem(page: Page): Locator {
   return page.getByRole('menuitem', { name: 'Context', exact: true });

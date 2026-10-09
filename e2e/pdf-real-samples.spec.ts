@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { modeControl } from './readerNames';
+import { modeControl, openGoToLocation, goToLocationPageInput, goToLocationConfirm } from './readerNames';
 
 // §9.7 — document tools and OCR controls are ONE surface reached through More.
 async function openDocumentTools(page: Page) {
@@ -30,8 +30,11 @@ test('reviews the supplied title page and manually compares OCR with PDF text @p
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles(textPdf!);
   await modeControl(page, 'pdf').click();
-  for (let n = 1; n < 5; n++) await page.getByRole('button', { name: 'Next page' }).click();
-  await expect(page.getByLabel('Current PDF page')).toContainText('5 / 21');
+    // One location button per band (NAV-1): the previous/next buttons are deleted.
+    const dialog = await openGoToLocation(page);
+    await goToLocationPageInput(dialog).fill('5');
+    await goToLocationConfirm(dialog).click();
+    await expect(page.getByLabel('Current PDF page')).toContainText('5 / 21');
   await modeControl(page, 'text').click();
   await expect(page.locator('.pdf-reading-page').nth(4)).toContainText('THIRD EDITION');
   await expect(page.locator('.pdf-reading-page').nth(4)).toContainText('GERALD GRAFF');
