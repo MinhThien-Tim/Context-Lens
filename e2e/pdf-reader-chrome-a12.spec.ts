@@ -151,6 +151,39 @@ test.describe('A12 — PDF viewport geometry survives chrome transitions', () =>
     ).toBeLessThanOrEqual(headerHeight + 0.5);
   });
 
+  test('a navigated page clears the Header and the chrome clearance scrolls away while quiet @pdf @GEO-4 @CHR-1', async ({ page }) => {
+    test.setTimeout(90_000);
+    await openPdf(page, 390, 844);
+
+    // A fresh open navigates to page 1. The chrome clearance lives inside the scroll container, so
+    // the navigation must not scroll it away: the first readable line clears the overlaid Header.
+    const atOpen: ReaderGeometry = await readerGeometry(page);
+    expect(atOpen.scrollTop, 'a fresh open did not rest at the document top').toBeLessThanOrEqual(1);
+    expect(
+      atOpen.firstLineTop,
+      `first readable line (top ${atOpen.firstLineTop}) is covered by the header (bottom ${atOpen.headerBottom})`,
+    ).toBeGreaterThan(atOpen.headerBottom - 0.5);
+
+    // Mid-document in the quiet state the same clearance has scrolled away with the content, so no
+    // dead band is left above the reading area: the topmost painted text reaches the scroll box top.
+    await readerScrollBy(page, 1200, 'wheel');
+    await readerScrollBy(page, 1200, 'wheel');
+    await expectMobileChrome(page, 'quiet');
+    const mid = await page.evaluate(() => {
+      const scroll = document.querySelector<HTMLElement>('.pdf-scroll')!;
+      const box = scroll.getBoundingClientRect();
+      const spans = Array.from(document.querySelectorAll<HTMLElement>('.pdf-text-layer span'))
+        .map(el => el.getBoundingClientRect())
+        .filter(rect => rect.bottom > box.top && rect.top < box.bottom);
+      return { boxTop: box.top, topMostText: spans.length ? Math.min(...spans.map(rect => rect.top)) : Number.NaN };
+    });
+    expect(mid.topMostText, 'no readable text is painted at all').not.toBeNaN();
+    expect(
+      mid.topMostText,
+      `quiet leaves a ${mid.topMostText - mid.boxTop}px dead band above the reading area`,
+    ).toBeLessThanOrEqual(mid.boxTop + 4);
+  });
+
   test('the first readable line is clear of the header at scrollTop 0 @pdf @GEO-4', async ({ page }) => {
     test.setTimeout(90_000);
     await openPdf(page, 390, 844);

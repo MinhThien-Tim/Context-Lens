@@ -31,12 +31,14 @@
   .reader-shell.reader-shell .reader-viewport { margin: 0; min-height: 100dvh; }
   .reader-shell.reader-shell .pdf-viewer-wrap,
   .reader-shell.reader-shell .pdf-reading-view { height: 100dvh; min-height: 0; }
-  /* The fixed Header overlays this full-height frame, so the frame — not the scroll box —
-     carries the header compensation, the same model as `.reader-text` above. Padding on
-     `.pdf-scroll` cannot work: `navigate()` aligns a page top to the scroll box's content
-     edge, which scrolls the padding away and parks page 1 flush at the viewport top under
-     the Header, leaving its first line unselectable. */
-  .reader-shell.reader-shell .pdf-viewer-wrap { padding-top: calc(var(--reader-header-height) + 12px); }
+  /* The fixed Header overlays this full-height frame, so the frame keeps no padding of its own:
+     padding here reserves a dead band above the scroll box that stays blank once the chrome goes
+     quiet, because it sits outside the scroller and can never scroll away. The clearance lives in
+     `.pdf-scroll`'s own top padding (reader-layout.css), inside the scroll container, so the first
+     line clears the Header at the top of the document and the band scrolls away with the content
+     everywhere else, leaving text edge to edge while quiet. `--reader-chrome-overlay` marks the
+     overlaid bands so `usePdfScroll.navigate()` preserves that clearance when it aligns a page. */
+  .reader-shell.reader-shell .pdf-viewer-wrap { --reader-chrome-overlay: 1; }
   .reader-shell.reader-shell .pdf-reading-scroll,
   .reader-shell.reader-shell .pdf-scroll { padding-bottom: calc(var(--reader-footer-height) + env(safe-area-inset-bottom)); box-sizing: border-box; }
   .reader-shell.reader-shell .reader-text { width: min(calc(100% - var(--reader-gutter-total, 36px)), var(--reading-width), var(--reading-chars)); padding-top: calc(var(--reader-header-height) + 12px); }
