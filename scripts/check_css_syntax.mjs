@@ -13,9 +13,9 @@
  * It parses every stylesheet under `src/` instead of walking a single entry
  * point, because `src/styles.css` is the only eagerly imported stylesheet:
  * `src/reader-layout.css` (and through it the reader base/mobile/desktop files)
- * and `src/home-advanced.css` are all loaded through lazy `import()` calls in
- * `src/app/App.tsx`. An entry-only walk would not see them, which is exactly
- * how the unclosed mobile block escaped the narrow checks.
+ * is loaded through a lazy `import()` call in `src/app/App.tsx`. An entry-only
+ * walk would not see it, which is exactly how the unclosed mobile block escaped
+ * the narrow checks.
  *
  * Usage: node scripts/check_css_syntax.mjs [dir-or-file ...]   (default: src)
  */

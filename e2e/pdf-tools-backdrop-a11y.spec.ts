@@ -5,7 +5,7 @@
  * `Close document tools` accessible name with the dialog's real close button. On the
  * mobile band that made `getByRole('button', { name: 'Close document tools' })` resolve to
  * 2 elements and hard-failed every spec that closed the sheet (e2e/pdf-ocr.spec.ts,
- * e2e/pdf-mode-layout.spec.ts).
+  * e2e/pdf-ocr-raster.spec.ts).
  *
  * The backdrop is now `aria-hidden` and out of the tab order: it is a click-to-dismiss
  * surface, not a control a keyboard or screen-reader user needs to reach, because the

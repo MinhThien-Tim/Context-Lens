@@ -7,6 +7,7 @@
  * never fake user input — `readerScrollBy` drives real browser input only.
  */
 import { expect, type Page } from '@playwright/test';
+import { modeControl, type ReaderMode } from './readerNames';
 
 export type ReaderGeometry = {
   viewportTop: number;
@@ -217,10 +218,10 @@ export async function readerScrollOffset(page: Page) {
   return page.evaluate(selector => document.querySelector<HTMLElement>(selector)?.scrollTop ?? 0, SCROLL_SELECTOR);
 }
 
-export async function togglePdfMode(page: Page, mode: 'Original' | 'Reading') {
+export async function togglePdfMode(page: Page, mode: ReaderMode) {
   // The Footer control can be scrolled out of reach on a short surface; scrolling it into view with
   // real input is a prerequisite for activating it, not a chrome assertion.
-  const button = page.locator('.pdf-mode-switch').getByRole('button', { name: mode === 'Original' ? /Original|Trang gốc/ : /Reading/ });
+  const button = modeControl(page, mode);
   await button.scrollIntoViewIfNeeded();
   await button.click();
   await waitForReaderSurface(page);
@@ -229,6 +230,35 @@ export async function togglePdfMode(page: Page, mode: 'Original' | 'Reading') {
 export async function openMore(page: Page) {
   await page.getByRole('button', { name: 'Reader menu' }).click();
   await expect(page.getByRole('menu', { name: 'Reader actions' })).toBeVisible();
+}
+
+/** §6.0/§6.5 — brings the quiet Chrome back with real user input, and asserts that it did. */
+export async function revealChrome(page: Page) {
+  // `readerGeometry` is PDF-only (it requires a `.pdf-scroll` surface), so the state is read
+  // straight off the Header, which both surfaces render. The opacity transition runs 120ms, so
+  // one sample can read a still-fading Header as quiet: this polls until it settles or gives up.
+  const headerRevealed = () => page.evaluate(() => {
+    const header = document.querySelector('.reader-header');
+    return header ? Number.parseFloat(getComputedStyle(header).opacity) > 0.9 : false;
+  });
+  const settled = async () => {
+    try { await expect.poll(headerRevealed, { timeout: 1_000 }).toBe(true); return true; } catch { return false; }
+  };
+  if (await settled()) return;
+  // §6.3 — a real upward wheel over the reading surface is the primary reveal gesture.
+  const size = page.viewportSize()!;
+  const box = await page.locator('.reader-text').boundingBox();
+  const x = box ? box.x + box.width / 2 : size.width / 2;
+  const y = Math.min(box ? box.y + box.height / 2 : size.height / 2, size.height - 8);
+  await page.mouse.move(x, y);
+  await page.mouse.wheel(0, -200);
+  if (await settled()) return;
+  // §6.5 — fall back to the one-way reveal control, which is reachable while quiet.
+  const control = page.getByRole('button', { name: 'Show reading controls' });
+  await expect(control).toBeVisible();
+  await control.click();
+  // §6.6 — reveal is one-way: the control does not survive it, so its absence proves the reveal.
+  await expect(control).toHaveCount(0);
 }
 
 export async function closeMore(page: Page) {

@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { pdfQueueFixture } from './pdfQueueFixture';
 import { pdfScanFixture } from './pdfScanFixture';
+import { openGoToLocation, goToLocationPageInput, goToLocationConfirm, modeControl } from './readerNames';
 
 // §9.7 — document tools and OCR controls are ONE surface reached through More.
 // Idempotent: OCR action buttons call onClose(), so a test may need to reopen the dialog.
@@ -44,7 +45,7 @@ test('OCRs only inked poor pages in bounded slices and clears their cache @pdf @
   await page.getByRole('button', { name: 'Tiếp tục OCR' }).click();
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
   await expect(page.getByRole('progressbar', { name: 'Reading progress' })).toBeVisible();
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  await modeControl(page, 'text').click();
   await expect(page.locator('.pdf-ocr-page')).toHaveCount(3);
   await expect(page.locator('[data-pdf-reading-page="3"] .pdf-ocr-text')).toHaveCount(0);
   // The OCR Next action lives in the document-tools dialog; open it explicitly before acting on it.
@@ -63,7 +64,7 @@ test('OCRs only inked poor pages in bounded slices and clears their cache @pdf @
   // "Xóa kết quả OCR của tài liệu" is a button inside the document-tools dialog, not a More menuitem
   await page.getByRole('dialog', { name: /Document tools|Công cụ/ }).getByRole('button', { name: 'Xóa kết quả OCR của tài liệu' }).click();
   await expect(page.locator('.pdf-ocr-page')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Original', exact: true }).click();
+  await modeControl(page, 'pdf').click();
   await expect(page.locator('.pdf-canvas').first()).toBeVisible();
 });
 
@@ -109,25 +110,26 @@ test('preloads at most the first twelve pages and leaves later scans for a manua
   const kinds = Array.from({ length: 13 }, (_, index) => index === 0 || index === 12 ? 'scan' as const : 'blank' as const);
   await page.locator('input[type=file]').setInputFiles({ name: 'first-twelve.pdf', mimeType: 'application/pdf', buffer: pdfQueueFixture(Buffer.from(jpeg, 'base64'), 800, 1000, undefined, kinds) });
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
-  await expect(page.locator('[data-ocr-page="1"]')).toHaveCount(1);
-  await expect(page.locator('[data-ocr-page="13"]')).toHaveCount(0);
-  await page.getByRole('button', { name: 'Original', exact: true }).click();
-  // docs/desktop-reader.md §2.2: at this desktop width the Header nav is the sole owner, so "Next
-  // page" resolves without a region scope. A Footer scope here would fail, which is the point.
+  await modeControl(page, 'pdf').click();
+  // docs/desktop-reader.md §2.2: the page-number button opens `Go to location` at >=1024px.
+  // The Footer owns the location button at every band (NAV-1), so we use it to jump to page 12.
   // This spec runs in both projects, so the band comes from the project fixture (the repo idiom
   // in pdf-stability.spec.ts / reader-p0.spec.ts), never from a measured viewport width.
   const isMobileBand = test.info().project.use.isMobile === true;
-  const headerNav = page.getByRole('navigation', { name: 'Page navigation' });
-  await expect(headerNav).toHaveCount(1);
-  for (let index = 1; index < 12; index++) await headerNav.getByRole('button', { name: 'Next page' }).click();
+  // The Footer owns the page number button at every band; the Header does not render a second copy.
+  const footer = page.getByRole('contentinfo', { name: 'Reading navigation' });
+  await expect(footer.getByRole('button', { name: 'Current PDF page' })).toHaveCount(1);
+
+  // Jump to page 12 using Go to location
+  const dialog = await openGoToLocation(page);
+  await goToLocationPageInput(dialog).fill('12');
+  await goToLocationConfirm(dialog).click();
+  await expect(dialog).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Current PDF page' })).toContainText('12 / 13');
-  // docs/desktop-reader.md §2.2: the Header is the only owner at >=1024px, so the Footer must not
-  // render a second PageNavigation there. At <=1023px the Footer still owns it, so this absence
-  // assertion is scoped to the band the test itself already runs in.
-  await expect(headerNav.getByRole('button', { name: 'Next page' })).toHaveCount(1);
+  // The Footer is the sole owner at every band; the Header must not render a PageNavigation.
+  await expect(page.getByRole('navigation', { name: 'Page navigation' })).toHaveCount(0);
   if (isMobileBand) {
-    await expect(page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('navigation', { name: 'Page navigation' })).toHaveCount(1);
+    await expect(page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('navigation', { name: 'Page navigation' })).toHaveCount(0);
   } else {
     await expect(page.getByRole('contentinfo', { name: 'Reading navigation' }).getByRole('navigation', { name: 'Page navigation' })).toHaveCount(0);
   }
@@ -135,7 +137,7 @@ test('preloads at most the first twelve pages and leaves later scans for a manua
   // The canonical OCR Next action carries aria-label="OCR next"
   await page.getByRole('button', { name: 'OCR next' }).click();
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  await modeControl(page, 'text').click();
   await expect(page.locator('[data-ocr-page="13"]')).toHaveCount(1);
 });
 
@@ -166,7 +168,7 @@ test('§9 auto-continues an explicit run past the ineligible page it started on 
   // asserting an absence that is also the pre-run state.
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 120_000 });
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  await modeControl(page, 'text').click();
   // Only page 14 was an OCR candidate: the started-on page is never OCRed and never revisited.
   await expect(page.locator('.pdf-ocr-page')).toHaveCount(1);
   await expect(page.locator('[data-ocr-page="14"]')).toHaveCount(1);

@@ -10,6 +10,8 @@ Precedence: task instructions > AGENTS.md > this document > domain docs
 Code and config (`vite.config.ts`, `package.json`, `playwright.config.ts`) are the final authority. When a doc
 and the code disagree, the code is right and the doc is fixed in the same task.
 
+See [Change propagation](change-dependencies.md) for the rule that governs how edits affect dependent layers.
+
 ## 0. Hard rules
 
 The 12 hard rules live in [`AGENTS.md`](../AGENTS.md#hard-rules) and are the only copy. This document holds the

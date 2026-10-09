@@ -133,6 +133,8 @@ Verified against current code. Preserve these when modifying.
 11. **No silent reload on update.** The PWA uses `registerType: 'prompt'`; `src/main.tsx` only signals
     `context-lens:update-ready`, and the app reloads through its explicit Reload control via `applyUpdate(true)`.
 
+See [Change propagation](change-dependencies.md) for the rule that governs how edits affect dependent layers.
+
 ## Task routing
 
 Default path: `AGENTS.md` → this file → **one** row below → the source files that doc names. Read more than one
@@ -141,7 +143,7 @@ doc only when the task genuinely crosses subsystem boundaries.
 | Task | Read |
 | --- | --- |
 | PDF / OCR / reader | [reader.md](reader.md) |
-| DesktopReader toolbar | [desktop-reader.md](desktop-reader.md) |
+| Reader chrome and behavior (Header, Footer, More) | [reader-chrome.md](reader-chrome.md) + [reader-behavior-contract.md](reader-behavior-contract.md) |
 | Dictionary / translation / context | [translation-pipeline.md](translation-pipeline.md) |
 | UI / theme / responsive | [ui-system.md](ui-system.md) |
 | Offline mode / PWA shell | [ui-system.md](ui-system.md) + [data-storage.md](data-storage.md) + [translation-pipeline.md](translation-pipeline.md) |

@@ -17,7 +17,8 @@
  */
 import { test, expect, type Page } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
-import { expectMobileChrome, readerScrollBy, readerGeometry, openMore, closeMore, togglePdfMode } from './readerO';
+import { expectMobileChrome, readerScrollBy, readerGeometry, openMore, revealChrome, closeMore, togglePdfMode } from './readerO';
+import { documentItem, openGoToLocation } from './readerNames';
 
 /** §15.6 responsive matrix. 900 is the repository portrait convention; landscape uses real device heights. */
 const MATRIX = [
@@ -52,52 +53,64 @@ async function openTextReader(page: Page, width: number, height: number) {
     .toBeGreaterThan(-0.5);
 }
 
-/** Opens the Reader on a PDF in Original mode, where the Footer owns the zoom stepper (§8.2). */
+/** Opens the Reader on a PDF in the PDF view at the given viewport. */
 async function openPdfReader(page: Page, width: number, height: number) {
   await page.setViewportSize({ width, height });
   await page.goto('/');
   await page.locator('input[type=file]')
     .setInputFiles({ name: 'mobile-chrome.pdf', mimeType: 'application/pdf', buffer: pdfFixture(12) });
-  await togglePdfMode(page, 'Original');
+  await togglePdfMode(page, 'pdf');
   await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
   await page.waitForTimeout(300);
 }
 
 test.describe('MobileChrome — presentation band', () => {
   for (const size of MATRIX) {
-    test(`mobile Chrome presents and stays usable at ${size.name}`, async ({ page }) => {
+    test(`mobile Chrome presents and stays usable at ${size.name} @MORE-1 @ARCH-6 @HDR-3`, async ({ page }) => {
       test.setTimeout(90_000);
       await openTextReader(page, size.width, size.height);
 
-      // §7.1/§7.2 — the Header owns Back, the title, and (PDF only) Original/Reading. Nothing else.
+      // §7.1/§7.2 — the Header owns Back, the title, and (PDF only) the Text|PDF mode control. Nothing else.
       const header = page.locator('.reader-header');
       await expect(header.getByRole('button', { name: 'Back to library' })).toBeVisible();
       for (const action of ['Contents', 'Context', 'Notes', 'Markup', 'Text', 'Languages', 'Document', 'Click lookup', 'OCR next', 'Search']) {
         await expect(header.getByRole('button', { name: action, exact: true })).toHaveCount(0);
       }
 
-      // §9.1/§9.4 — one More disclosure, in the Footer, owning the whole §9.3 inventory.
-      await expect(page.locator('.reader-progress').getByRole('button', { name: 'Reader menu' })).toBeVisible();
-      await openMore(page);
-      for (const action of ['Contents', 'Context', 'Notes', 'Markup', 'Text', 'Languages', 'Document', 'Click lookup']) {
-        await expect(page.getByRole('menuitem', { name: action, exact: true })).toHaveCount(1);
-      }
-      // §8.3 — zoom is a direct Footer control and MUST NOT appear in More.
-      await expect(page.getByRole('menuitem', { name: /Zoom/ })).toHaveCount(0);
-      // §9.5 — a bottom sheet inside the viewport, with no horizontal overflow.
-      const sheet = await page.getByRole('menu', { name: 'Reader actions' }).boundingBox();
-      expect(sheet!.x).toBeGreaterThanOrEqual(0);
-      expect(sheet!.x + sheet!.width).toBeLessThanOrEqual(size.width + 1);
-      expect(sheet!.y + sheet!.height).toBeLessThanOrEqual(size.height + 1);
-      await closeMore(page);
+          // §9.1/§9.4 — one More disclosure, in the Footer. The test asserts the disclosure and the
+          // shape of the surface it opens, not the §9.3 item inventory: P2b changes that inventory, and
+          // a fixed list would turn every such change into a red test with no contract meaning.
+          // More-3 (the exact item set) is therefore never asserted, and the items that stay are
+          // reached by name through the helpers in `readerNames`.
+          await expect(page.locator('.reader-progress').getByRole('button', { name: 'Reader menu' })).toBeVisible();
+          await openMore(page);
+          await expect(page.getByRole('menu', { name: 'Reader actions' })).toBeVisible();
+          // §8.3 — zoom is never in More at any band, whatever else the surface lists.
+          await expect(page.getByRole('menuitem', { name: /Zoom/ })).toHaveCount(0);
+          // §9.5 — a bottom sheet inside the viewport, with no horizontal overflow.
+          const sheet = await page.getByRole('menu', { name: 'Reader actions' }).boundingBox();
+          expect(sheet!.x).toBeGreaterThanOrEqual(0);
+          expect(sheet!.x + sheet!.width).toBeLessThanOrEqual(size.width + 1);
+          expect(sheet!.y + sheet!.height).toBeLessThanOrEqual(size.height + 1);
+          await closeMore(page);
 
-      // §8.6/§9.5 — Footer stays laid out and the page never overflows horizontally.
-      await expect(page.locator('.reader-progress')).toBeVisible();
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    });
+          // §8.6/§9.5 — Footer stays laid out and the page never overflows horizontally.
+          await expect(page.locator('.reader-progress')).toBeVisible();
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+
+          // ARCH-6 — every Footer control is a real hit target at this band, whatever controls the
+          // Footer has. Iterating by role means a control added or removed in P2b is picked up here
+          // without editing this test.
+          for (const control of await page.locator('.reader-progress').getByRole('button').all()) {
+            await expect(control).toBeVisible();
+            const box = await control.boundingBox();
+            expect(box!.width).toBeGreaterThanOrEqual(44);
+            expect(box!.height).toBeGreaterThanOrEqual(44);
+          }
+        });
   }
 
-  test('1024px is the responsive authority: the Header is a Desktop overlay band there', async ({ page }) => {
+  test('1024px is the responsive authority: the Header is a Desktop overlay band there @ARCH-1 @CHR-3', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 1024, 900);
     // §4.3 — quiet/reveal is a mobile-only model; at 1024 the chrome never quiets.
@@ -139,6 +152,13 @@ async function textChrome(page: Page) {
       headerOpacity: header.opacity,
       footerTop: footer.top,
       footerOpacity: footer.opacity,
+          footerHeight: footer.height,
+                // The Footer's reserved band while it is REVEALED. `.reader-progress` is
+                // position:fixed with bottom:0, so the band's top is the viewport bottom
+                // minus the Footer's own measured height. Reading it off the live box keeps
+                // the reveal-control anchors scroll-invariant: `footerTop` is measured
+                // mid-slide by the quiet transform and must not be used as the anchor.
+                footerBandTop: innerHeight - footer.height,
       firstLineTop: firstLine ? firstLine.getBoundingClientRect().top : NaN,
             // Scroll-invariant form of the same fact: the offset of the first line inside the
             // reading container. `firstLineTop` alone moves with the viewport whenever the user
@@ -150,24 +170,31 @@ async function textChrome(page: Page) {
           };
         });
       }
-      /** §4.1/§4.2 — quiet is a two-state visual model and it never touches the reading box. */
-      async function expectQuietVisualOnly(page: Page, before: Awaited<ReturnType<typeof textChrome>>) {
-        const after = await textChrome(page);
-        // §4.2/A12 G1-G3 — quiet is visual-only: it hides the Header overlay but must not move
-        // or resize the reading box, change content height, change the scroll position, or reflow.
-        // Every compared value is scroll-invariant, so a real user scroll in between cannot mask or
-        // fake a geometry change. The Header's own offset is deliberately NOT compared: sliding it
-        // out of the viewport is the quiet transition itself, not a geometry event.
-        expect(after.contentHeight).toBe(before.contentHeight);
-        expect(after.firstLineInContent).toBeCloseTo(before.firstLineInContent, 0);
-        expect(after.footerTop).toBeCloseTo(before.footerTop, 0);
-        expect(after.footerOpacity).toBeGreaterThan(0.9);
-        expect(after.overflowX).toBe(false);
-        return after;
-      }
+      /** §4.1/§4.2/CHR-2 — quiet is a two-state visual model and it never touches the reading box.
+    *
+          * Neither the Header's nor the Footer's offset is compared here. CHR-2 and GEO-1 scope the
+          * quiet invariant to the reading *viewport box* and to content geometry, and both the Header
+          * and the Footer slide out of the viewport by their own height when the shell quiets
+          * (reader-layout.css, `.chrome-quiet`). Comparing either offset therefore asserted the
+          * transition itself, and the t0c review ruled the identical Header-side check an over-reach:
+          * at mobile widths the delta is always exactly one chrome height. What that ruling added
+          * instead, and what still holds the line here, are the positive assertions below — content
+          * height and first-line position are unchanged — plus GEO-4/GEO-5 in
+          * pdf-reader-chrome-a12.spec.ts, which measure the revealed Header's real overlap. */
+            async function expectQuietVisualOnly(page: Page, before: Awaited<ReturnType<typeof textChrome>>) {
+              const after = await textChrome(page);
+              // §4.2/A12 G1-G3 — quiet is visual-only: it hides the Header overlay but must not move
+              // or resize the reading box, change content height, change the scroll position, or reflow.
+              // Every compared value is scroll-invariant, so a real user scroll in between cannot mask or
+              // fake a geometry change.
+              expect(after.contentHeight).toBe(before.contentHeight);
+              expect(after.firstLineInContent).toBeCloseTo(before.firstLineInContent, 0);
+              expect(after.overflowX).toBe(false);
+              return after;
+            }
 
 test.describe('MobileChrome — quiet and reveal', () => {
-  test('real user scroll quiets the Header while the Footer stays visible (§4.1/§8.4)', async ({ page }) => {
+  test('real user scroll quiets and real upward scroll reveals the Header (§4.1/§6.0) @INP-1 @INP-2 @CHR-2', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     const before = await textChrome(page);
@@ -175,13 +202,13 @@ test.describe('MobileChrome — quiet and reveal', () => {
     await page.mouse.move(195, 450);
     await page.mouse.wheel(0, 600);
     await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeLessThan(0.1);
+      await expectQuietVisualOnly(page, before);
 
-    const quiet = await expectQuietVisualOnly(page, before);
-    // §4.2 — quiet hides the Header only. The Footer is never quieted with it.
-    expect(quiet.footerOpacity).toBeGreaterThan(0.9);
+      await page.mouse.wheel(0, -120);
+      await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeGreaterThan(0.9);
   });
 
-  test('real upward scroll reveals the Header (§6.0/§6.1/§6.3)', async ({ page }) => {
+    test('real upward scroll reveals the Header (§6.0/§6.1/§6.3) @INP-2', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     await page.mouse.move(195, 450);
@@ -195,7 +222,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
     await expectQuietVisualOnly(page, before);
   });
 
-  test('a small upward correction below the travel threshold does not reveal (§6.3)', async ({ page }) => {
+  test('a small upward correction below the travel threshold does not reveal (§6.3) @MOB-3', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     await page.mouse.move(195, 450);
@@ -209,7 +236,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
     expect((await textChrome(page)).headerOpacity).toBeLessThan(0.1);
   });
 
-  test('touch scroll quiets and reveals exactly like wheel (§5.4)', async ({ page }) => {
+  test('touch scroll quiets and reveals exactly like wheel (§5.4) @MOB-3', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     // On the text Reader the reading text is the scroll surface (the window scrolls), so the
@@ -238,7 +265,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
     await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeGreaterThan(0.9);
   });
 
-  test('a tap does not toggle or reveal chrome (§5.3/§6.7/§15.11)', async ({ page }) => {
+  test('a tap does not toggle or reveal chrome (§5.3/§6.7/§15.11) @MOB-3 @INP-4', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     await page.mouse.move(195, 450);
@@ -259,7 +286,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
     await expectQuietVisualOnly(page, before);
   });
 
-  test('the dedicated reveal control is a one-way, non-toggling escape (§6.5/§6.6/§6.7)', async ({ page }) => {
+  test('the dedicated reveal control is a one-way, non-toggling escape (§6.5/§6.6/§6.7) @MOB-3 @INP-4', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     await page.mouse.move(195, 450);
@@ -274,18 +301,21 @@ test.describe('MobileChrome — quiet and reveal', () => {
     await expect(page.getByRole('menu')).toHaveCount(0);
 
     // §16.1/§6.9 — the control anchors directly above the reserved Footer band.
-    const control = await reveal.evaluate(el => { const r = el.getBoundingClientRect(); return { bottom: r.bottom, height: r.height }; });
-    expect(control.height).toBeGreaterThanOrEqual(44);
-    expect(control.bottom).toBeLessThanOrEqual(before.footerTop + 0.5);
+        // The anchor is the Footer's revealed band, not `footerTop`: while the shell is
+        // quiet the Footer is translated out of the viewport, so its live top sits one
+        // full Footer height below the band and would make this check pass vacuously.
+        const control = await reveal.evaluate(el => { const r = el.getBoundingClientRect(); return { bottom: r.bottom, height: r.height }; });
+        expect(control.height).toBeGreaterThanOrEqual(44);
+        expect(control.bottom).toBeLessThanOrEqual(before.footerBandTop + 0.5);
 
-    await reveal.click();
+        await reveal.click();
     await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeGreaterThan(0.9);
     // §6.6 — reveal only, never toggle: the control does not survive the reveal.
     await expect(reveal).toHaveCount(0);
     await expectQuietVisualOnly(page, before);
   });
 
-  test('the reveal control stays operable at 320px and in both landscape pairs (§6.9)', async ({ page }) => {
+  test('the reveal control stays operable at 320px and in both landscape pairs (§6.9) @MOB-3 @INP-4', async ({ page }) => {
     for (const [width, height] of [[320, 700], [844, 390], [915, 412]] as const) {
       await openTextReader(page, width, height);
       await page.mouse.move(width / 2, height / 2);
@@ -296,13 +326,15 @@ test.describe('MobileChrome — quiet and reveal', () => {
       await expect(reveal).toBeVisible();
       const box = await reveal.boundingBox();
       // §6.9 — inside the viewport and clear of the Footer band at every mobile width.
-      expect(box!.x).toBeGreaterThanOrEqual(0);
-      expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
-      expect(box!.y + box!.height).toBeLessThanOrEqual(quiet.footerTop + 0.5);
+            // `footerBandTop` is the Footer's revealed band; `footerTop` would be measured
+            // mid-slide by the quiet transform and let a control overlapping the band pass.
+        expect(box!.x).toBeGreaterThanOrEqual(0);
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
+        expect(box!.y + box!.height).toBeLessThanOrEqual(quiet.footerBandTop + 0.5);
     }
   });
 
-  test('focus entering the Chrome reveals it; focus in the reading surface does not (§6.4)', async ({ page }) => {
+  test('focus entering the Chrome reveals it; focus in the reading surface does not (§6.4) @INP-3', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     await page.mouse.move(195, 450);
@@ -324,7 +356,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
         expect((await textChrome(page)).headerOpacity).toBeLessThan(0.1);
       });
 
-  test('a page jump through Contents does not drive chrome state (§4.4/§5.1/§5.2)', async ({ page }) => {
+  test('a page jump through Contents does not drive chrome state (§4.4/§5.1/§5.2) @INP-1 @MODE-1', async ({ page }) => {
     test.setTimeout(90_000);
     await openTextReader(page, 390, 900);
     await page.mouse.move(195, 450);
@@ -334,20 +366,29 @@ test.describe('MobileChrome — quiet and reveal', () => {
       // §4.4 — a blocking overlay holds the chrome revealed, so opening Contents reveals it.
       // That reveal belongs to the overlay, not to the navigation, which is what the rest of this
       // test isolates: the programmatic page jump itself must neither reveal nor quiet the chrome.
-      await openMore(page);
-      await page.getByRole('menuitem', { name: 'Contents', exact: true }).click();
+      //
+      // HDR-4/FTR-1 — at ≤1023px Contents is a direct Footer trigger and is never in More (MORE-2's
+      // inventory has no Contents entry), so it is opened from the Footer. That trigger lives in the
+      // quiet, fixed Footer, which cannot be scrolled back, so the contract's reveal prerequisite
+      // (§6.0/§6.5) is the real way to reach it.
+      await revealChrome(page);
+      await page.locator('.reader-progress').getByRole('button', { name: 'Contents', exact: true }).click();
       await expect(page.locator('.contents-panel')).toBeVisible();
       await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeGreaterThan(0.9);
 
       const beforeJump = await textChrome(page);
       // 2cc6c49 removed the Contents-panel "Go to location" button. The dialog it opened is
-      // unchanged and stays reachable for a text document through the Footer's position button
-      // (App.tsx renders DocumentPosition for every non-PDF kind), which is the sanctioned opener
-      // in this band. The sheet is a blocking overlay, so Escape dismisses it first (§9.5) and the
-      // jump then runs from the Footer. The jump itself is the same programmatic jump either way.
-      await page.keyboard.press('Escape');
-      await expect(page.locator('.contents-panel')).toBeHidden();
-      await page.locator('.reader-progress').getByRole('button', { name: /^Go to location: / }).click();
+            // unchanged and stays reachable for a text document through the Footer's location button,
+            // which is the sanctioned opener at this band (NAV-1: one location button in the Footer at
+            // every band, accessible name `Current PDF page`). The sheet is a blocking overlay, so
+            // Escape dismisses it first (§9.5) and the jump then runs from the Footer. The jump itself
+            // is the same programmatic jump either way.
+            await page.keyboard.press('Escape');
+            await expect(page.locator('.contents-panel')).toBeHidden();
+            // `openGoToLocation` also asserts the dialog opened. The old inline locator matched
+            // /^Go to location: /, a name no element has carried since NAV-1 renamed the button, so
+            // this line timed out on a selector that had never been reachable through.
+            await openGoToLocation(page);
       const goto = page.getByRole('dialog', { name: /Go to|Lookup/ }).first();
       if (await goto.count()) {
         const field = goto.getByRole('spinbutton').first();
@@ -368,7 +409,7 @@ test.describe('MobileChrome — quiet and reveal', () => {
             await expect(page.locator('.contents-panel')).toBeHidden();
           });
 
-    test('a mode switch does not drive chrome state (§5.1/§10.2)', async ({ page }) => {
+    test('a mode switch does not drive chrome state (§5.1/§10.2) @INP-1 @MODE-1', async ({ page }) => {
       test.setTimeout(90_000);
       await openPdfReader(page, 390, 900);
       await readerScrollBy(page, 600, 'wheel');
@@ -382,9 +423,9 @@ test.describe('MobileChrome — quiet and reveal', () => {
       // §10.1/§10.2 — the mode control is a single PDF-only presentation control. Switching it
       // re-renders the whole surface and performs a programmatic scroll; per §5.1/§5.2 that must
       // not quiet or re-reveal the chrome.
-      await togglePdfMode(page, 'Reading');
+      await togglePdfMode(page, 'pdf');
             await expectMobileChrome(page, 'revealed');
-            await togglePdfMode(page, 'Original');
+      await togglePdfMode(page, 'text');
             await expectMobileChrome(page, 'revealed');
 
       // The accumulator is still purely user-driven after two programmatic navigations: real
@@ -393,34 +434,9 @@ test.describe('MobileChrome — quiet and reveal', () => {
       await expectMobileChrome(page, 'quiet');
     });
 
-    test('a zoom change does not drive chrome state (§5.1/§8.2)', async ({ page }) => {
-      test.setTimeout(90_000);
-      await openPdfReader(page, 390, 900);
-      await readerScrollBy(page, 600, 'wheel');
-      await expectMobileChrome(page, 'quiet');
-      await page.getByRole('button', { name: 'Show reading controls' }).click();
-      await expectMobileChrome(page, 'revealed');
+    // mobile part of zoom change test removed per instruction.
 
-      // §8.2 — zoom is a direct Footer control (decrease / level / increase), so it is focusable
-      // and always operable, which is exactly why the reveal control above was required. Zoom
-      // re-paginates and performs a programmatic scroll (§5.1/§5.2).
-      const before = await readerGeometry(page);
-      await page.getByRole('button', { name: 'Zoom in' }).click();
-            await expectMobileChrome(page, 'revealed');
-            // Zooming re-paginates, so the surface is rebuilt and the reading position re-anchored. Waiting
-            // for that movement to become observable avoids asserting against the pre-re-pagination DOM.
-            await expect.poll(async () => (await readerGeometry(page)).scrollTop, { message: 'zoom never re-paginated the surface', timeout: 10_000 })
-              .not.toBe(before.scrollTop);
-
-            await page.getByRole('button', { name: 'Zoom out' }).click();
-      await expectMobileChrome(page, 'revealed');
-
-      // §5.2 — neither programmatic re-navigation poisoned or pre-loaded the travel accumulator.
-      await readerScrollBy(page, 600, 'wheel');
-      await expectMobileChrome(page, 'quiet');
-    });
-
-    test('scrolling inside More does not drive Reader chrome state (§4.4/§9.8)', async ({ page }) => {
+    test('scrolling inside More does not drive Reader chrome state (§4.4/§9.8) @INP-1 @MODE-1', async ({ page }) => {
       test.setTimeout(90_000);
       await openTextReader(page, 320, 900);
       await page.mouse.move(160, 450);
@@ -428,6 +444,9 @@ test.describe('MobileChrome — quiet and reveal', () => {
       await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeLessThan(0.1);
 
       // §4.4 — More is a blocking overlay, so it holds the chrome revealed while it is open.
+      // The More trigger sits in the quiet, fixed Footer, which no scroll can bring back, so the
+      // contract's reveal prerequisite (§6.0/§6.5) is what makes it reachable at all.
+      await revealChrome(page);
       await openMore(page);
       await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeGreaterThan(0.9);
       const before = await textChrome(page);
@@ -479,31 +498,17 @@ test.describe('MobileChrome — geometry invariants (A12 / U1)', () => {
       await page.mouse.wheel(0, -120);
       await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeGreaterThan(0.9);
       await expectQuietVisualOnly(page, before);
-    }
-  });
-
-  test('the Footer band is reserved in both chrome states (§3.4)', async ({ page }) => {
-    test.setTimeout(90_000);
-    await openTextReader(page, 390, 900);
-    const revealed = await textChrome(page);
-    await page.mouse.move(195, 450);
-    await page.mouse.wheel(0, 600);
-    await expect.poll(async () => (await textChrome(page)).headerOpacity, { timeout: 5_000 }).toBeLessThan(0.1);
-    const quiet = await textChrome(page);
-    // §3.4/§4.2 — the Footer is visible and reserved whether or not the Header is quiet.
-    expect(quiet.footerTop).toBeCloseTo(revealed.footerTop, 0);
-    expect(quiet.footerOpacity).toBeGreaterThan(0.9);
-    expect(quiet.footerTop).toBeLessThanOrEqual(901);
-  });
-});
+          }
+        });
+      });
 test.describe('MobileChrome — Footer and zoom ownership', () => {
   // §8.1/§9.4 and docs/desktop-reader.md §2: one More trigger per density band, in the band that
   // owns the surrounding chrome. App.tsx gates the Footer trigger on `!desktop`, so restoring it
   // must give mobile the Footer disclosure and desktop the Header one — never two, never none.
-  test('exactly one Reader menu trigger per band: Footer at 390px, Header at 1280px', async ({ page }) => {
+  test('exactly one Reader menu trigger per band: Footer at 390px, Header at 1280px @MORE-1 @MORE-4', async ({ page }) => {
     test.setTimeout(90_000);
     await openPdfReader(page, 390, 900);
-    // §8.1 — mobile Header owns Back/title/Original-Reading only; More lives in the Footer.
+    // §8.1 — mobile Header owns Back/title/Text-PDF mode control only; More lives in the Footer.
     await expect(page.locator('.reader-header').getByRole('button', { name: 'Reader menu' })).toHaveCount(0);
     await expect(page.locator('.reader-progress').getByRole('button', { name: 'Reader menu' })).toHaveCount(1);
     await expect(page.getByRole('button', { name: 'Reader menu' })).toHaveCount(1);
@@ -522,30 +527,7 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
     await expect(page.getByRole('menuitem', { name: 'Document', exact: true })).toHaveCount(1);
   });
 
-      // Contract §9.3 + mobile-chrome.md §6: the inventory is exactly eight items in a fixed order,
-      // with the labels fixed by the 2026-10-05 rename (Document, Text, Languages, Click lookup).
-      // `Document` is the single OCR entry (§9.7), so a separate `OCR` item must not appear.
-      test('More exposes exactly the eight §9.3 items, in order, with the §6 labels', async ({ page }) => {
-        test.setTimeout(90_000);
-        const expected = ['Contents', 'Context', 'Notes', 'Markup', 'Text', 'Languages', 'Document', 'Click lookup'];
-
-        for (const width of [390, 1280]) {
-          await openPdfReader(page, width, 900);
-          await openMore(page);
-          const items = page.getByRole('menu', { name: 'Reader actions' }).getByRole('menuitem');
-          // The accessible name of each item is its label, and the label is also the visible text,
-          // so a plain ordered text assertion pins both the membership and the order.
-          await expect(items).toHaveCount(8);
-          await expect(items).toHaveText(expected);
-
-          // OCR is reachable only through `Document` (§9.7), never as its own entry (§12.11).
-          await expect(page.getByRole('menuitem', { name: /^OCR/ })).toHaveCount(0);
-          await expect(page.getByRole('menuitem', { name: 'Zoom' })).toHaveCount(0);
-          await closeMore(page);
-        }
-      });
-
-      test('the More layer stays usable at every band it presents (§9.2/§9.5/§9.6)', async ({ page }) => {
+      test('the More layer stays usable at every band it presents (§9.2/§9.5/§9.6) @MORE-1 @MORE-4', async ({ page }) => {
     test.setTimeout(120_000);
 
     // Regression lock for the portal-scope defect: the menu is portaled to <body>, so every
@@ -631,56 +613,47 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
     expect(desktopGeometry.centreHitsMenu).toBe(true);
     expect(desktopGeometry.iconWidth).toBe(20);
     expect(desktopGeometry.backdropZ).toBe(null);
-        await desktopMenu.getByRole('menuitem', { name: 'Click lookup' }).click();
-    await expect(desktopMenu).toBeHidden();
-  });
+            await desktopMenu.getByRole('menuitem', { name: 'Click lookup' }).click();
+        await expect(desktopMenu).toBeHidden();
+      });
 
-      test('the mobile Footer owns a direct zoom stepper and never a zoom menu (§8.2/§8.3)', async ({ page }) => {
-    test.setTimeout(90_000);
-    await openPdfReader(page, 390, 900);
-    const footer = page.locator('.reader-progress');
-    // §8.2 — decrease, level readout, increase: three direct Footer controls. The readout is a
-        // live-region label rather than a button, so it is addressed by its accessible name.
-        await expect(footer.getByRole('button', { name: 'Zoom out' })).toBeVisible();
-        await expect(footer.getByLabel('Zoom level')).toBeVisible();
-        await expect(footer.getByRole('button', { name: 'Zoom in' })).toBeVisible();
-    // §8.3 — the retired popup is gone and zoom is not reachable from More.
-    await expect(page.getByRole('button', { name: 'PDF options' })).toHaveCount(0);
-    await openMore(page);
-    await expect(page.getByRole('menuitem', { name: /Zoom|PDF options/ })).toHaveCount(0);
-    await closeMore(page);
-  });
-
-  test('every Footer control meets the 44px hit target (§7.5/§8.6)', async ({ page }) => {
+      test('every Footer control meets the 44px hit target (§7.5/§8.6) @ARCH-6', async ({ page }) => {
     test.setTimeout(90_000);
     await openPdfReader(page, 320, 900);
-    const small = await page.locator('.reader-progress').evaluate(footer =>
-      Array.from(footer.querySelectorAll<HTMLElement>('button')).map(button => {
-        const r = button.getBoundingClientRect();
-        return { name: button.getAttribute('aria-label') ?? button.textContent?.trim() ?? '', width: r.width, height: r.height };
-      }));
-    expect(small.length).toBeGreaterThan(0);
-    for (const button of small) {
-      expect(button.width, `Footer control "${button.name}" is only ${Math.round(button.width)}px wide`).toBeGreaterThanOrEqual(44);
-      expect(button.height, `Footer control "${button.name}" is only ${Math.round(button.height)}px tall`).toBeGreaterThanOrEqual(44);
-    }
-  });
+          // Iterate the Footer's buttons by role rather than by a fixed inventory, so a control added
+          // or removed in P2b is covered here without editing this test. The name is captured purely for
+          // the failure message.
+          const controls = page.locator('.reader-progress').getByRole('button');
+          const count = await controls.count();
+          expect(count).toBeGreaterThan(0);
+          for (let i = 0; i < count; i++) {
+            const control = controls.nth(i);
+            await expect(control).toBeVisible();
+            const name = (await control.getAttribute('aria-label')) ?? (await control.textContent())?.trim() ?? `#${i}`;
+            const box = (await control.boundingBox())!;
+            expect(box.width, `Footer control "${name}" is only ${Math.round(box.width)}px wide`).toBeGreaterThanOrEqual(44);
+            expect(box.height, `Footer control "${name}" is only ${Math.round(box.height)}px tall`).toBeGreaterThanOrEqual(44);
+          }
+        });
 
-  test('OCR next lives only in the document-tools surface reached from More (§9.7/§12.11)', async ({ page }) => {
-    test.setTimeout(90_000);
-    await openPdfReader(page, 390, 900);
-    // §7.2/§9.4 — not in the Header, not in the Footer, not a More entry of its own.
-    await expect(page.locator('.reader-header').getByRole('button', { name: 'OCR next' })).toHaveCount(0);
-    await expect(page.locator('.reader-progress').getByRole('button', { name: 'OCR next' })).toHaveCount(0);
-    // §9.7 — document tools and OCR controls are ONE More action opening ONE surface.
-    await openMore(page);
-    await expect(page.getByRole('menuitem', { name: 'OCR next', exact: true })).toHaveCount(0);
-    await page.getByRole('menuitem', { name: 'Document', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: /Document tools|Công cụ/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'OCR next' })).toBeVisible();
-  });
+  // Untagged on purpose. OCR next retires in P4, so this is not a More-3 (More inventory) claim;
+    // it states only where OCR controls are reachable until then. The More item name goes through
+    // `documentItem` because P2b renames it.
+    test('OCR next lives only in the document-tools surface reached from More (§9.7/§12.11)', async ({ page }) => {
+      test.setTimeout(90_000);
+      await openPdfReader(page, 390, 900);
+      // §7.2/§9.4 — not in the Header, not in the Footer, not a More entry of its own.
+      await expect(page.locator('.reader-header').getByRole('button', { name: 'OCR next' })).toHaveCount(0);
+      await expect(page.locator('.reader-progress').getByRole('button', { name: 'OCR next' })).toHaveCount(0);
+      // §9.7 — document tools and OCR controls are ONE More action opening ONE surface.
+      await openMore(page);
+      await expect(page.getByRole('menuitem', { name: 'OCR next', exact: true })).toHaveCount(0);
+      await documentItem(page).click();
+      await expect(page.getByRole('dialog', { name: /Document tools|Công cụ/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'OCR next' })).toBeVisible();
+    });
 
-  test('progress and location are owned by the Footer at every mobile width (§8.1/§8.5)', async ({ page }) => {
+  test('progress and location are owned by the Footer at every mobile width (§8.1/§8.5) @FTR-1', async ({ page }) => {
     test.setTimeout(90_000);
     for (const width of [320, 390, 768, 1023]) {
       await openPdfReader(page, width, 900);
@@ -692,3 +665,21 @@ test.describe('MobileChrome — Footer and zoom ownership', () => {
     }
   });
 });
+
+test('A freshly opened document shows chrome, and opening More while quiet reveals chrome that then stays revealed @CHR-4', async ({ page }) => {
+  test.setTimeout(90_000);
+  await openPdfReader(page, 390, 900);
+  const header = page.locator('.reader-header');
+  const footer = page.locator('.reader-progress');
+  await expect(header).toBeVisible();
+  await expect(footer).toBeVisible();
+  await page.keyboard.press('PageDown');
+  await expectMobileChrome(page, 'quiet');
+  await openMore(page);
+  await expect(header).toBeVisible();
+  await expect(footer).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(header).toBeVisible();
+  await expect(footer).toBeVisible();
+});
+

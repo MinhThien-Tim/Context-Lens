@@ -54,6 +54,14 @@
             }
             .reader-shell.reader-shell .reader-more { display: flex; align-items: center; }
             .reader-shell.reader-shell .reader-more .icon-button { flex: 0 0 36px; width: 36px; min-width: 36px; min-height: 36px; }
+      /* MOB-2 text labels are a ≤1023px affordance; desktop keeps icon-only controls. */
+      .reader-shell.reader-shell .reader-more .reader-progress-label { display: none; }
+      /* HDR-1/HDR-5: the desktop Back control reads `Library`. Override the fixed 36px icon width so
+         the visible label fits; the mobile rule hides the span again. */
+      .reader-shell.reader-shell .reader-back { flex: 0 0 auto; width: auto; min-width: 36px; padding-inline: 8px; }
+      .reader-shell.reader-shell .reader-back-label { margin-left: 6px; font-size: 13px; }
+      /* HDR-5/THEME-1: `Aa` is the desktop Theme entry, divided from the Markup tool group. */
+      .reader-shell.reader-shell .reader-theme { flex: 0 0 36px; width: 36px; min-width: 36px; min-height: 36px; margin-inline-start: 4px; border-inline-start: 1px solid var(--border); border-radius: 0; font-size: 15px; font-weight: 600; }
       
             .reader-shell.reader-shell .reader-header-actions { overflow: visible; }
   .reader-shell.reader-shell .reader-text { padding-top: clamp(24px, 3vh, 40px); }

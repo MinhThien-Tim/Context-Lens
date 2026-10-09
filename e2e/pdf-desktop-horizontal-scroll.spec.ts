@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
+import { modeControl } from './readerNames';
 
 const slotWidth = (page: Page) =>
   page.locator('.pdf-scroll .pdf-page-slot').first()
@@ -18,14 +19,14 @@ const settled = async (page: Page) => {
 };
 
 for (const width of [1024, 1366, 1920]) {
-  test(`desktop Original PDF reaches both horizontal edges after zoom @${width} @pdf`, async ({ page }) => {
+  test(`desktop PDF view reaches both horizontal edges after zoom @${width} @pdf`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
     await page.locator('input[type=file]').setInputFiles({
       name: `scroll-${width}.pdf`, mimeType: 'application/pdf',
       buffer: pdfFixture(3, 0, 0, { width: 2200, height: 800 }),
     });
-    await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+    await modeControl(page, 'pdf').click();
     await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
 
     const zoom = page.getByRole('combobox', { name: 'Zoom level' });

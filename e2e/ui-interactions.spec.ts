@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { useInterfaceMode } from './interfaceMode';
 
-test('desktop Quick stays contained at selection edges with long bilingual content', async ({ page }) => {
+test('desktop Quick stays contained at selection edges with long bilingual content @LOOK-1', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 850 });
   await page.goto('/');
-  await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill('We maintain public confidence through careful work.');
+  await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill('The movement of the points on the page is obvious.');
   await page.getByRole('button', { name: /Preview & read/ }).click();
   const sheet = page.locator('.lookup-sheet');
   for (const [left, top] of [[12, 80], [720, 80], [12, 740], [720, 740]]) {
@@ -13,17 +12,41 @@ test('desktop Quick stays contained at selection edges with long bilingual conte
       Object.assign(paragraph.style, { position: 'fixed', left: `${position[0]}px`, top: `${position[1]}px`, width: '280px', margin: '0', padding: '0' });
     }, [left, top]);
     await page.locator('.reader-text').evaluate(root => {
-      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      let node = walker.nextNode()!;
-      while (!node.textContent!.includes('maintain')) node = walker.nextNode()!;
-      const start = node.textContent!.indexOf('maintain');
-      const range = document.createRange(); range.setStart(node, start); range.setEnd(node, start + 8);
-      const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
-      root.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
-    });
-    await page.locator('.selection-actions').getByRole('button', { name: 'Define', exact: true }).click();
-    await expect(sheet.locator('.sense-definition').first()).toBeVisible();
-    await sheet.locator('.sense-definition,.sense-vi').evaluateAll(elements => {
+          const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+          let node = walker.nextNode()!;
+          while (!node.textContent!.includes('movement')) node = walker.nextNode()!;
+          const start = node.textContent!.indexOf('movement');
+          const range = document.createRange(); range.setStart(node, start); range.setEnd(node, start + 'movement'.length);
+          const selection = window.getSelection()!; selection.removeAllRanges(); selection.addRange(range);
+          root.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+        });
+        await page.locator('.selection-actions').getByRole('button', { name: 'Define', exact: true }).click();
+        await expect(sheet.locator('.sense-definition').first()).toBeVisible();
+
+        // LOOK-1: the sheet shows the entry glosses for the explanation language it is actually in.
+        // The English view has none, because an English gloss is the definition itself. The Vietnamese
+        // and bilingual views carry the entry-level meanings, and they are shown, never hidden behind a
+        // disclosure. The cycle button is the only language opener on this surface; on the default
+        // Simple card it sits inside the More actions disclosure, so open that before using it.
+        await sheet.locator('.explain-more-actions > summary').click();
+        const cycle = sheet.locator('.language-cycle');
+        await expect(cycle).toBeVisible();
+        // The stored explanation language decides where the cycle starts, so drive it to the
+        // language under test instead of assuming which one comes first.
+        const cycleTo = async (language: 'en' | 'vi' | 'bilingual') => {
+          for (let step = 0; step < 3 && await sheet.locator(`.quick-explanation[data-language="${language}"]`).count() === 0; step++) await cycle.click();
+          await expect(sheet.locator(`.quick-explanation[data-language="${language}"]`)).toHaveCount(1);
+        };
+        await cycleTo('en');
+        await expect(sheet.locator('.entry-glosses')).toHaveCount(0);
+        for (const language of ['vi', 'bilingual'] as const) {
+          await cycleTo(language);
+          await expect(sheet.locator('.entry-glosses')).toBeVisible();
+          expect(await sheet.locator('.entry-glosses').evaluate(el => el.closest('details'))).toBeNull();
+        }
+        await sheet.locator('.explain-more-actions > summary').click();
+
+        await sheet.locator('.sense-definition,.sense-vi').evaluateAll(elements => {
       for (const el of elements) el.textContent += ' Long English definition và nghĩa tiếng Việt liên kết.'.repeat(50);
     });
     const bounds = await sheet.boundingBox();
@@ -186,30 +209,27 @@ for (const width of [1366, 320, 360, 390, 430]) {
   });
 }
 
-test('interface density and appearance remain independent and persist', async ({ page }) => {
+// P2b removed the Simple/Advanced density switch, so this no longer asserts that appearance and
+// density stay independent. What survives is the appearance contract itself: the preference
+// persists across opening a reader and across reload, and system/light/dark all resolve.
+test('appearance preference persists across the reader and reload', async ({ page }) => {
   await page.goto('/');
-  const advanced = page.getByRole('button', { name: 'Advanced', exact: true });
-  await expect(advanced).toBeEnabled();
-    await useInterfaceMode(page, 'advanced');
   await page.getByLabel('Appearance', { exact: true }).selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill('A quiet reader helps people understand a difficult passage.');
   await page.getByRole('button', { name: /Preview & read/ }).click();
-  await expect(page.locator('.reader-shell')).toHaveAttribute('data-interface-mode', 'advanced');
+  await expect(page.locator('.reader-shell')).toHaveAttribute('data-theme', 'dark');
   await page.reload();
-  await expect(advanced).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('Appearance', { exact: true })).toHaveValue('dark');
-    await page.getByRole('group', { name: 'Interface density' }).getByRole('button', { name: 'Simple', exact: true }).click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.getByLabel('Appearance', { exact: true }).selectOption('system');
   expect(await page.locator('html').evaluate(el => getComputedStyle(el).colorScheme)).toBe('dark');
   await page.getByLabel('Appearance', { exact: true }).selectOption('light');
   expect(await page.locator('html').evaluate(el => getComputedStyle(el).colorScheme)).toBe('light');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-});
+  });
 
-for (const width of [320, 360, 390, 430]) {
+  for (const width of [320, 360, 390, 430]) {
   test(`reading controls remain reachable at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 780 });
     await page.goto('/');
@@ -219,33 +239,32 @@ for (const width of [320, 360, 390, 430]) {
     await expect(page.getByRole('button', { name: 'Back to library' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Contents', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Markup', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Markup tools' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Highlight', exact: true })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Note', exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Done', exact: true }).click();
+    // FTR-3 mobile half: the Footer Markup action opens the palette. ARCH-7: no Note entry in chrome.
+    const palette = page.getByRole('dialog', { name: 'Markup tools' });
+    await expect(palette).toBeVisible();
+    await expect(palette.getByRole('button', { name: 'Highlight', exact: true })).toBeVisible();
+    await expect(palette.getByRole('button', { name: 'Erase', exact: true })).toBeVisible();
+    await palette.getByRole('button', { name: 'Done', exact: true }).click();
     await page.getByRole('button', { name: 'Reader menu' }).click();
-    // mobile-chrome.md §6 — renamed 2026-10-05 from `Text and theme`.
-        await expect(page.getByRole('menuitem', { name: 'Text', exact: true })).toBeVisible();
-        await page.getByRole('menuitem', { name: 'Text', exact: true }).click();
-    await expect(page.getByRole('dialog')).toBeVisible();
+    // MORE-2: the mobile More entry is `Theme` (renamed from `Text` in P2b).
+    await expect(page.getByRole('menuitem', { name: 'Theme', exact: true })).toBeVisible();
+    await page.getByRole('menuitem', { name: 'Theme', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Reader settings' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
 
 for (const width of [1024, 1280, 1366, 1440, 1920, 390]) {
-  for (const mode of ['Simple', 'Advanced']) {
-    test(`reader shell ${mode} at ${width}px keeps panels independent and navigation usable`, async ({ page }) => {
+    test(`reader shell at ${width}px keeps panels independent and navigation usable`, async ({ page }) => {
       await page.setViewportSize({ width, height: 850 });
       await page.goto('/');
-      await expect(page.getByRole('button', { name: mode, exact: true })).toBeEnabled();
-      await page.getByRole('button', { name: mode, exact: true }).click();
       await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill('A quiet reader helps people understand a difficult passage.');
       await page.getByRole('button', { name: /Preview & read/ }).click();
       const shell = page.locator('.reader-shell');
-      const desktopAdvanced = width >= 1024 && mode === 'Advanced';
-      await expect(shell).toHaveClass(desktopAdvanced ? /has-contents/ : /^(?!.*has-contents).*$/);
+            const desktop = width >= 1024;
+            await expect(shell).toHaveClass(desktop ? /has-contents/ : /^(?!.*has-contents).*$/);
       await expect(shell).not.toHaveClass(/has-context/);
-      await page.screenshot({ path: `tmp/phase2/reader-${mode.toLowerCase()}-${width}.png` });
+            await page.screenshot({ path: `tmp/phase2/reader-${width}.png` });
       // §7.2/§9.3/§9.4: at every width the Header owns only Back, title and PDF mode, so every
       // secondary action is reached through the single More disclosure. Only the label differs.
       const moreAction = async (name: string) => {
@@ -255,13 +274,13 @@ for (const width of [1024, 1280, 1366, 1440, 1920, 390]) {
       const action = async (panel: 'Document' | 'Context') => {
         await moreAction(panel === 'Document' ? 'Contents' : 'Context');
       };
-      if (desktopAdvanced) await action('Document');
+      if (desktop) await action('Document');
       await action('Document');
       await expect(page.locator('.contents-panel')).toBeVisible();
       if (width < 1024) await page.locator('.contents-panel').getByRole('button', { name: 'Close document panel', exact: true }).click();
       await action('Context');
       await expect(page.locator('.context-panel')).toBeVisible();
-      await page.screenshot({ path: `tmp/phase2/panels-${mode.toLowerCase()}-${width}.png` });
+            await page.screenshot({ path: `tmp/phase2/panels-${width}.png` });
       if (width >= 1024) {
         await expect(shell).toHaveClass(/has-contents/);
         expect(await page.locator('.reader-viewport').evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThan(width / 2);
@@ -279,16 +298,14 @@ for (const width of [1024, 1280, 1366, 1440, 1920, 390]) {
       await page.locator('.notes-panel').getByRole('button', { name: 'Close notes', exact: true }).click();
       if (width >= 1024) await expect(shell).toHaveClass(/has-contents/);
       // mobile-chrome.md §6 — renamed 2026-10-05 from `Text and theme`.
-      await moreAction('Text');
-      await page.getByRole('dialog', { name: 'Reader settings' }).getByRole('button', { name: mode === 'Simple' ? 'Advanced' : 'Simple', exact: true }).click();
-      await expect(shell).toHaveAttribute('data-interface-mode', mode === 'Simple' ? 'advanced' : 'simple');
-      await page.getByRole('button', { name: 'Close reader settings', exact: true }).click();
+      await moreAction('Theme');
+            await page.getByRole('dialog', { name: 'Reader settings' }).getByRole('button', { name: 'News', exact: true }).click();
+            await page.getByRole('button', { name: 'Close reader settings', exact: true }).click();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       const footer = await page.locator('.reader-progress').boundingBox();
       expect(footer!.y + footer!.height).toBeLessThanOrEqual(851);
-    });
-  }
-}
+          });
+      }
 
 test('mobile reading chrome hides on scroll and reveals without changing position', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 780 });

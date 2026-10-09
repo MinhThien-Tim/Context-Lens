@@ -1,10 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { useInterfaceMode } from './interfaceMode';
 
-for (const mode of ['simple', 'advanced'] as const) {
-  test(`Continue reading disclosure and safe dismissal (${mode})`, async ({ page }) => {
+test('Continue reading disclosure and safe dismissal', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('button', { name: 'Advanced', exact: true })).toBeEnabled();
     await page.evaluate(async () => {
       const database = await new Promise<IDBDatabase>((resolve, reject) => {
         const request = indexedDB.open('context-lens');
@@ -18,7 +15,6 @@ for (const mode of ['simple', 'advanced'] as const) {
       database.close();
     });
     await page.reload();
-    await useInterfaceMode(page, mode);
     const disclosure = page.locator('.continue-disclosure');
     await expect(disclosure.locator('.continue-count')).toHaveText('10');
     await expect(disclosure.locator('.continue-card').first()).not.toBeVisible();
@@ -36,7 +32,7 @@ for (const mode of ['simple', 'advanced'] as const) {
     await expect(page.locator('.home-shell')).toBeVisible();
     await expect(page.locator('.library-card').filter({ hasText: 'Compact book 9' })).toHaveCount(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.screenshot({ path: `tmp/continue-reading-${mode}-${test.info().project.name}.png`, fullPage: true });
+    await page.screenshot({ path: `tmp/continue-reading-${test.info().project.name}.png`, fullPage: true });
     await disclosure.locator('summary').click();
     await expect(disclosure.locator('.continue-card').first()).not.toBeVisible();
     await page.reload();
@@ -48,5 +44,4 @@ for (const mode of ['simple', 'advanced'] as const) {
       database.close();
       return { file: await doc.data.text(), page: doc.location.page, progress: doc.location.progress, highlights: doc.highlights, dismissed: doc.continueReadingDismissed };
     })).toEqual({ file: 'original file', page: 2, progress: 0.2, highlights: [], dismissed: true });
-  });
-}
+});

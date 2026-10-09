@@ -19,14 +19,6 @@ export function MoreIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>;
 }
 
-export function PrevPageIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>;
-}
-
-export function NextPageIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>;
-}
-
 export function ZoomOutIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M8 12h8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>;
 }
@@ -39,16 +31,8 @@ export function ContentsIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>;
 }
 
-export function NotesIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M14 2v6h6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /><path d="M10 12h8M10 16h5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" /></svg>;
-}
-
 export function MarkupIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15c2.5-6 4.5 2 7-3s4.5 1 9-5"/><path d="M4 20h16"/></svg>;
-}
-
-export function PrintIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9V3h10v6"/><path d="M7 17H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M7 14h10v7H7z"/></svg>;
 }
 
 export function HighlightIcon() {
@@ -62,10 +46,6 @@ export function UnderlineIcon() {
 
 export function EraseIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 5.8a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8L11.5 19.5H8l-3.2-3.2a2 2 0 0 1 0-2.8z"/><path d="M11.5 19.5H20"/></svg>;
-}
-
-export function ContextIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M12 8v4M12 16h.01" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>;
 }
 
 export function TextThemeIcon() {
@@ -88,6 +68,17 @@ export function ClickLookupIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5M11 8.5v5M8.5 11h5"/></svg>;
 }
 
+/**
+ * HDR-2: the Header label is the trimmed document name — the file extension and any
+ * `: subtitle` are dropped — while the full record title stays on the `title`
+ * attribute, so the untrimmed name is still recoverable (FILE-1 will need it).
+ */
+export function trimDocumentTitle(title: string): string {
+  return title
+    .replace(/\.(?:pdf|epub|txt|md|markdown|html?|rtf|docx?|odt|fb2|mobi|azw3?)(?=[:：]|$)/i, '')
+    .replace(/\s*[:：].*$/, '');
+}
+
 // Contract §7.1: the Header owns exactly and only Back, the document title, and Original/Reading
 // for PDF. No secondary action, no More trigger, no OCR control lives here (§7.2).
 // DesktopReader extension: at ≥1024px the Header expands to a full document-reader toolbar
@@ -99,8 +90,6 @@ export function ReaderToolbar({
   // Desktop toolbar props (≥1024px)
   page,
   totalPages,
-  onPrevPage,
-  onNextPage,
   onOpenGoTo,
   zoomLevel,
   zoomMode,
@@ -108,12 +97,10 @@ export function ReaderToolbar({
   onZoomIn,
   onZoomSelect,
   onContents,
-  onNotes,
-  onMarkup,
-  onPrint,
   onHighlight,
     onUnderline,
   onErase,
+  onTheme,
   moreItems,
     markupActive = false,
     activeMarkupTool = null
@@ -124,8 +111,6 @@ export function ReaderToolbar({
   // Desktop toolbar props
   page?: number;
   totalPages?: number;
-  onPrevPage?: () => void;
-  onNextPage?: () => void;
   /** docs/desktop-reader.md §2.2: the Header is the sole opener of `Go to location` at >=1024px. */
   onOpenGoTo?: () => void;
   zoomLevel?: number;
@@ -136,12 +121,11 @@ export function ReaderToolbar({
   onZoomIn?: () => void;
   onZoomSelect?: (mode: 'auto' | 'custom', value?: number) => void;
   onContents?: () => void;
-  onNotes?: () => void;
-  onMarkup?: () => void;
-  onPrint?: () => void;
   onHighlight?: () => void;
     onUnderline?: () => void;
   onErase?: () => void;
+  /** THEME-1: the desktop `Aa` Header button opens the reading settings panel. */
+  onTheme?: () => void;
   moreItems?: Array<{ label: string; onSelect: () => void; pressed?: boolean }>;
   markupActive?: boolean;
     /** docs/desktop-reader.md §2.1: pressed state per Markup tool (Highlight, Underline, Erase). */
@@ -164,26 +148,13 @@ export function ReaderToolbar({
   
   return <header class="reader-header">
     <div class="reader-header-leading">
-      <button class="icon-button reader-back" aria-label="Back to library" onClick={onBack}><BackIcon /></button>
-      <div class="reader-document"><h1 title={title}>{title}</h1></div>
+      <button class="icon-button reader-back" aria-label="Back to library" onClick={onBack}><BackIcon /><span class="reader-back-label">Library</span></button>
+      <div class="reader-document"><h1 class="reader-title" title={title}>{trimDocumentTitle(title)}</h1></div>
     </div>
     <div class="reader-header-actions">
       {primaryActions}
       {showDesktopToolbar && (
         <>
-          {/* Page navigation group */}
-          <nav class="page-navigation" aria-label="Page navigation">
-            <button class="icon-button" aria-label="Previous page" disabled={page! <= 1} onClick={onPrevPage}><PrevPageIcon /></button>
-            {/* docs/desktop-reader.md §2.2: the Header owns PDF page navigation alone at >=1024px.
-                The accessible name is the stable 'Current PDF page' handle the Footer uses at
-                <=1023px, so both bands expose one name for the same action; the full sentence
-                moves to title/aria-description so nothing is lost from the old label.
-                Activating it opens `Go to location` (not a direct jump): the Footer no longer
-                navigates in this band, so this button is the only reachable opener there. */}
-            <button class="text-button page-count" aria-label="Current PDF page" aria-description={`Page ${page} of ${totalPages}`} title={`Page ${page} of ${totalPages}`} onClick={onOpenGoTo}>{page} / {totalPages}</button>
-            <button class="icon-button" aria-label="Next page" disabled={page! >= totalPages!} onClick={onNextPage}><NextPageIcon /></button>
-          </nav>
-          
           {/* Zoom group with selector */}
           <div class="pdf-zoom-stepper" role="group" aria-label="Zoom">
             <button class="icon-button" aria-label="Zoom out" onClick={onZoomOut}><ZoomOutIcon /></button>
@@ -214,9 +185,6 @@ export function ReaderToolbar({
           {/* Document tools group */}
           <div class="reader-tools" role="group" aria-label="Document tools">
             <button class="icon-button" aria-label="Contents" onClick={onContents}><ContentsIcon /></button>
-            <button class="icon-button" aria-label="Notes" onClick={onNotes}><NotesIcon /></button>
-            <button class="icon-button" aria-label="Markup" onClick={onMarkup}><MarkupIcon /></button>
-            <button class="icon-button" aria-label="Print" onClick={onPrint}><PrintIcon /></button>
           </div>
           
           {/* Markup tools group */}
@@ -225,6 +193,9 @@ export function ReaderToolbar({
                         <button class="icon-button" aria-label="Underline" aria-pressed={activeMarkupTool === 'underline'} onClick={onUnderline}><UnderlineIcon /></button>
                         <button class="icon-button" aria-label="Erase" aria-pressed={activeMarkupTool === 'eraser'} onClick={onErase}><EraseIcon /></button>
           </div>
+
+          {/* HDR-5/THEME-1: the `Aa` Theme button is the desktop entry to the reading settings. */}
+          <button class="icon-button reader-theme" aria-label="Reading settings" onClick={onTheme}><span aria-hidden="true">Aa</span></button>
                   </>
                 )}
                 {showMore && <ReaderMore items={moreItems ?? []} markupActive={markupActive} />}
@@ -355,7 +326,7 @@ export function ReaderMore({ items, markupActive = false }: { items: ReaderMoreI
   );
 
   return <div class="reader-more" ref={root}>
-    <button ref={trigger} class={`icon-button ${markupActive ? 'markup-indicator' : ''}`} aria-label="Reader menu" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(value => !value)}><MoreIcon /></button>
+    <button ref={trigger} class={`icon-button ${markupActive ? 'markup-indicator' : ''}`} aria-label="Reader menu" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(value => !value)}><MoreIcon /><span class="reader-progress-label">More</span></button>
     {layer && createPortal(layer, document.body)}
   </div>;
 }

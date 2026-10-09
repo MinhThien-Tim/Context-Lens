@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
+import { modeControl } from './readerNames';
 
-test('Original PDF default page matches native mobile DPR within the pixel budget @pdf', async ({ page }, info) => {
+test('PDF view default page matches native mobile DPR within the pixel budget @pdf', async ({ page }, info) => {
   test.skip(info.project.name !== 'mobile-chromium');
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name: 'native-dpr.pdf', mimeType: 'application/pdf', buffer: pdfFixture(8) });
-  await page.getByRole('button', { name: 'Original', exact: true }).first().click();
+  await modeControl(page, 'pdf').click();
   await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
   const result = await page.locator('[data-pdf-page="1"] .pdf-canvas').evaluate(element => {
     const canvas = element as HTMLCanvasElement;

@@ -1,15 +1,24 @@
 import { test, expect } from '@playwright/test';
 
-test('formatted Paste text exposes markup and applies it without changing the selection mid-drag', async ({ page }) => {
+// FTR-3: Markup is one tool state (Highlight, Underline, Erase, colour). At ≤1023px the Footer
+// Markup action opens the compact palette; the tool is chosen there and the selection then applies
+// it. The old `.reader-highlight-button` opener was removed with the chrome it belonged to.
+test('formatted Paste text exposes markup and applies it without changing the selection mid-drag @FTR-3', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await page.getByRole('textbox', { name: 'Paste and edit formatted text' }).fill('A quiet reader understands a difficult passage.');
   await page.getByRole('button', { name: /Preview & read/ }).click();
 
-  const markup = page.locator('.reader-highlight-button').first();
-  await expect(markup).toBeVisible();
-  await markup.click();
-  await page.getByRole('dialog', { name: 'Markup tools' }).getByRole('button', { name: 'Highlight' }).click();
-  await page.getByRole('button', { name: 'Done' }).click();
+  const openPalette = async () => {
+    await page.getByRole('button', { name: 'Markup', exact: true }).click();
+    const palette = page.getByRole('dialog', { name: 'Markup tools' });
+    await expect(palette).toBeVisible();
+    return palette;
+  };
+
+  let palette = await openPalette();
+  await palette.getByRole('button', { name: 'Highlight', exact: true }).click();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
 
   await page.locator('.article-content').evaluate(root => {
     const text = root.firstChild!;
@@ -26,9 +35,9 @@ test('formatted Paste text exposes markup and applies it without changing the se
 
   await expect(page.locator('mark.reader-highlight-yellow')).toHaveText('quiet reader');
 
-  await markup.click();
-  await page.getByRole('dialog', { name: 'Markup tools' }).getByRole('button', { name: 'Highlight' }).click();
-  await page.getByRole('button', { name: 'Done' }).click();
+  palette = await openPalette();
+  await palette.getByRole('button', { name: 'Highlight', exact: true }).click();
+  await page.getByRole('button', { name: 'Done', exact: true }).click();
   await page.locator('.article-content').evaluate(root => {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     let text: Node | null = null;

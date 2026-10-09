@@ -44,7 +44,15 @@ export function usePdfScroll(rootRef: RefObject<HTMLDivElement>, selector: strin
     page = Math.max(1, Math.min(slots.length, page));
     const slot = slots[page - 1];
     currentPage.current = page;
-    const target = root.scrollTop + slot.getBoundingClientRect().top - root.getBoundingClientRect().top - root.clientTop + slot.offsetHeight * Math.max(0, Math.min(1, fraction));
+    // CHR-1: at the overlay bands the scroll container carries the chrome clearance as its own top
+    // padding. Aligning a slot's top to the content edge would scroll that padding away and park the
+    // page under the overlaying Header, so the inset is subtracted from the alignment target. The
+    // desktop chrome is in flow and leaves the marker unset, keeping the previous alignment.
+    const styles = getComputedStyle(root);
+    const inset = styles.getPropertyValue('--reader-chrome-overlay').trim() === '1'
+      ? Number.parseFloat(styles.paddingTop) || 0
+      : 0;
+    const target = root.scrollTop + slot.getBoundingClientRect().top - root.getBoundingClientRect().top - root.clientTop + slot.offsetHeight * Math.max(0, Math.min(1, fraction)) - inset;
     // §5.1/§5.2 the Reader must not read this jump as user reading travel, so the resulting position is
     // declared before it is observed rather than being told apart from a gesture after the fact.
     expectProgrammaticScroll(target, root);

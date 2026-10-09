@@ -250,7 +250,6 @@ export async function queryDocumentLibrary(options: { query?: string; kind?: Doc
 }
 
 export interface AppPreferences {
-  interfaceMode: 'simple' | 'advanced';
   languageMode: LanguageMode;
   lookupViewMode: 'quick' | 'full';
   lookupQuickMode: 'simple' | 'standard';
@@ -267,7 +266,6 @@ export interface AppPreferences {
 }
 
 export const defaultPreferences: AppPreferences = {
-  interfaceMode: 'advanced',
   languageMode: 'bilingual',
   lookupViewMode: 'quick',
   lookupQuickMode: 'simple',
@@ -287,9 +285,10 @@ export async function loadPreferences(): Promise<AppPreferences> {
   const record = await db.settings.get('reader-preferences');
   const stored = (record?.value && typeof record.value === 'object' ? record.value : {}) as Partial<AppPreferences>;
   const legacy = await db.settings.get('homepage.theme');
-  const rawMode = stored.interfaceMode as string | undefined;
-  const interfaceMode: AppPreferences['interfaceMode'] = rawMode === 'simple' || rawMode === 'advanced' ? rawMode
-    : (rawMode ?? legacy?.value) === 'bright' ? 'advanced' : 'advanced';
+  // ARCH-2: there is no Simple/Advanced. A stored `interfaceMode` is a retired key, so it is
+  // dropped here rather than merged back through `...stored`; the record is rewritten below, which
+  // is the migration. Nothing reads it and no value it could have held has a successor.
+  const { interfaceMode: _retiredInterfaceMode, ...retained } = stored as Partial<AppPreferences> & { interfaceMode?: unknown };
   const theme = ['system', 'light', 'dark'].includes(stored.theme ?? '') ? stored.theme! : 'system';
   const fontSize = typeof stored.fontSize === 'number' && Number.isFinite(stored.fontSize)
     ? Math.min(26, Math.max(16, Math.round(stored.fontSize))) : defaultPreferences.fontSize;
@@ -301,8 +300,9 @@ export async function loadPreferences(): Promise<AppPreferences> {
   const lookupViewMode: AppPreferences['lookupViewMode'] = stored.lookupViewMode === 'full' ? 'full' : 'quick';
   const pdfCustomScale = typeof stored.pdfCustomScale === 'number' && Number.isFinite(stored.pdfCustomScale) ? Math.min(6, Math.max(.1, stored.pdfCustomScale)) : 1;
   const pdfZoomMode = ['natural', 'fit-width', 'fit-page', 'custom'].includes(stored.pdfZoomMode ?? '') ? stored.pdfZoomMode! : defaultPreferences.pdfZoomMode;
-  const preferences = { ...defaultPreferences, ...stored, interfaceMode, theme, fontSize, lineHeight, fontFamily, readingMargin, lookupViewMode, pdfZoomMode, pdfCustomScale, lookupQuickMode: stored.lookupQuickMode === 'standard' ? 'standard' as const : 'simple' as const, lookupPopupPlacement: normalizePopupPlacement(stored.lookupPopupPlacement) };
-  const normalizedChanged = (Object.keys(defaultPreferences) as (keyof AppPreferences)[]).some(key => JSON.stringify(stored[key]) !== JSON.stringify(preferences[key]));
+  const preferences = { ...defaultPreferences, ...retained, theme, fontSize, lineHeight, fontFamily, readingMargin, lookupViewMode, pdfZoomMode, pdfCustomScale, lookupQuickMode: stored.lookupQuickMode === 'standard' ? 'standard' as const : 'simple' as const, lookupPopupPlacement: normalizePopupPlacement(stored.lookupPopupPlacement) };
+  const normalizedChanged = _retiredInterfaceMode !== undefined
+    || (Object.keys(defaultPreferences) as (keyof AppPreferences)[]).some(key => JSON.stringify(stored[key]) !== JSON.stringify(preferences[key]));
   if (normalizedChanged || legacy) {
     await db.transaction('rw', db.settings, async () => {
       await savePreferences(preferences);

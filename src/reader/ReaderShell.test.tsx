@@ -30,7 +30,7 @@ function mount(width = 390, locked = false, surface: 'text' | 'original' | 'read
   const body = surface === 'original'
     ? <div class="pdf-scroll"><div class="pdf-page"><button>Page control</button></div></div>
     : <div class="pdf-reading-scroll"><button>Reading control</button></div>;
-  act(() => render(<ReaderShell interfaceMode="simple" surface={surface} contentsOpen={false} contextOpen={false} controlsLocked={locked}><header class="reader-header"><button>Back</button></header>{body}<footer class="reader-progress"><button>Zoom out</button></footer></ReaderShell>, host));
+  act(() => render(<ReaderShell surface={surface} contentsOpen={false} contextOpen={false} controlsLocked={locked}><header class="reader-header"><button>Back</button></header>{body}<footer class="reader-progress"><button>Zoom out</button></footer></ReaderShell>, host));
   return { scroll: host.querySelector<HTMLDivElement>(surface === 'original' ? '.pdf-scroll' : '.pdf-reading-scroll')!, queries };
 }
 // Real user scroll only (§5.2/§5.4): the wheel marks the following deltas as user travel, and the
@@ -44,7 +44,7 @@ function scrollSteps(scroll: HTMLElement, tops: number[]) {
 const isQuiet = () => host.querySelector('.chrome-quiet') !== null;
 const revealControl = () => host.querySelector<HTMLButtonElement>('[aria-label="Show reading controls"]');
 
-it('quiets mobile chrome after real accumulated travel and reveals it again without moving content', () => {
+it('quiets mobile chrome after real accumulated travel and reveals it again without moving content @MOB-3', () => {
   const { scroll } = mount();
   scrollSteps(scroll, [20, 60]);
   expect(isQuiet()).toBe(true);
@@ -53,7 +53,7 @@ it('quiets mobile chrome after real accumulated travel and reveals it again with
   expect(scroll.scrollTop).toBe(60);
 });
 
-it('keeps 1024px as the sole responsive authority and never has a tablet band', () => {
+it('keeps 1024px as the sole responsive authority and never has a tablet band @ARCH-1 @CHR-3', () => {
   for (const width of [767, 768, 1023, 1024]) {
     const { scroll, queries } = mount(width);
         // The only responsive query the Reader ever issues is the 1024px authority, so no 768 tablet
@@ -77,7 +77,7 @@ it('reveals chrome only after accumulated upward travel, not for a single small 
   expect(scroll.scrollTop).toBe(168);
 });
 
-it('never reveals or quiets chrome from a tap, and exposes only a reveal-only escape control', () => {
+it('never reveals or quiets chrome from a tap, and exposes only a reveal-only escape control @MOB-3 @INP-4', () => {
   const { scroll } = mount();
   scrollSteps(scroll, [60]);
   expect(isQuiet()).toBe(true);
@@ -91,7 +91,7 @@ it('never reveals or quiets chrome from a tap, and exposes only a reveal-only es
   expect(revealControl()).toBeNull();
 });
 
-it('reveals chrome when focus enters chrome and not when focus enters the reading surface', () => {
+it('reveals chrome when focus enters chrome and not when focus enters the reading surface @INP-3', () => {
   const { scroll } = mount();
   scrollSteps(scroll, [60]);
   expect(isQuiet()).toBe(true);
@@ -107,7 +107,10 @@ it.each([[1024, false], [390, true]])('keeps controls visible on desktop or whil
   scrollSteps(scroll, [20, 60]);
   expect(isQuiet()).toBe(false);
 });
-it('closes the focused Context panel on Escape while keeping Document open', () => {
+// BACK-1 (overlay half): Escape closes the topmost overlay and leaves the one beneath it open.
+// A11Y-3: the panel that held focus is the one that closes. The history-ownership half of BACK-1
+// is an open item and is deliberately not asserted here.
+it('closes the focused Context panel on Escape while keeping Document open @BACK-1 @A11Y-3', () => {
   mount(1024);
   const closeDocument = vi.fn(), closeContext = vi.fn();
   act(() => render(<><ContentsPanel sections={[]} offset={0} onClose={closeDocument} onJump={vi.fn()} onNotes={vi.fn()} /><ContextPanel onClose={closeContext} onNote={vi.fn()} /></>, host));
@@ -115,7 +118,9 @@ it('closes the focused Context panel on Escape while keeping Document open', () 
   expect(closeContext).toHaveBeenCalledOnce();
   expect(closeDocument).not.toHaveBeenCalled();
 });
-it('supports keyboard menu navigation and restores focus on Escape', () => {
+// A11Y-3: the menu takes focus on open, arrows move it, Escape closes it and returns focus to the
+// control that opened it.
+it('supports keyboard menu navigation and restores focus on Escape @A11Y-3', () => {
   mount(1024);
   act(() => render(<ReaderMore items={[{ label: 'Contents', onSelect: vi.fn() }, { label: 'Markup', onSelect: vi.fn() }]} />, host));
   const trigger = host.querySelector<HTMLButtonElement>('[aria-label="Reader menu"]')!;
@@ -150,22 +155,22 @@ it('does not accumulate travel for a declared programmatic jump during a live ge
   expect(isQuiet()).toBe(true);
 });
 
-// §7.1/§7.2/§9.4: the Header owns exactly Back, the document title, and Original/Reading for PDF.
+// §7.1/§7.2/§9.4: the Header owns exactly Back, the document title, and Text|PDF for PDF.
 // Every other approved action lives once, in More, at both widths.
-// Labels follow the §9.3 rename table (2026-10-05): Text, Languages, Click lookup.
+// Labels follow the §9.3 rename table (2026-10-05): Theme, Languages, Click lookup.
 it.each([390, 1024])('keeps the Header to Back, title, and mode while More owns the secondary actions (width=%s)', width => {
   mount(width);
   const contents = vi.fn(), markup = vi.fn(), settings = vi.fn();
-  act(() => render(<><ReaderToolbar title="A long document title.pdf" onBack={vi.fn()} primaryActions={<div>Original / Reading</div>} /><ReaderMore items={[{ label: 'Contents', onSelect: contents }, { label: 'Markup', onSelect: markup }, { label: 'Text', onSelect: settings }]} /></>, host));
+  act(() => render(<><ReaderToolbar title="A long document title.pdf" onBack={vi.fn()} primaryActions={<div>Text / PDF</div>} /><ReaderMore items={[{ label: 'Contents', onSelect: contents }, { label: 'Markup', onSelect: markup }, { label: 'Theme', onSelect: settings }]} /></>, host));
   expect(host.querySelector('.reader-header-leading h1')?.getAttribute('title')).toBe('A long document title.pdf');
-  expect(host.querySelector('.reader-header-actions')?.textContent).toBe('Original / Reading');
-  for (const label of ['Contents', 'Markup', 'OCR next', 'Text', 'Languages', 'Reader menu']) {
+  expect(host.querySelector('.reader-header-actions')?.textContent).toBe('Text / PDF');
+  for (const label of ['Contents', 'Markup', 'OCR next', 'Theme', 'Languages', 'Reader menu']) {
     expect(host.querySelector(`.reader-header [aria-label="${label}"]`)).toBeNull();
   }
   act(() => host.querySelector<HTMLButtonElement>('[aria-label="Reader menu"]')!.click());
   // Selecting an action closes the disclosure (§9 disclosure lifecycle), so each invocation
   // re-opens More: the assertion is that the action is reachable exactly once, via More.
-  for (const label of ['Contents', 'Markup', 'Text']) {
+  for (const label of ['Contents', 'Markup', 'Theme']) {
     if (!document.body.querySelector('[role="menuitem"]')) act(() => host.querySelector<HTMLButtonElement>('[aria-label="Reader menu"]')!.click());
     act(() => document.body.querySelector<HTMLButtonElement>(`[role="menuitem"][aria-label="${label}"]`)!.click());
   }
@@ -174,6 +179,7 @@ it.each([390, 1024])('keeps the Header to Back, title, and mode while More owns 
 
 // U2/§7.2/§9.3/§9.7/§12.11: OCR next is a document-tools action reached from More, never a Header
 // action, and exactly one control in the Reader performs it.
+// Deliberately untagged: OCR next retires in P4, so this is not a More inventory (MORE-3) claim.
 it('OCR next lives only in the document-tools surface opened from More', () => {
   mount(1024);
   const next = vi.fn(), noop = vi.fn();
@@ -193,5 +199,26 @@ it('keeps reading chrome visible while a selection action surface is open', () =
   act(() => { scroll.appendChild(Object.assign(document.createElement('div'), { className: 'pdf-reading-selection-actions' })); });
   scrollSteps(scroll, [20, 60]);
   expect(isQuiet()).toBe(false);
+});
+
+
+it('Header/Footer overlay the surface with static padding and no reserved strip element at both band widths @CHR-1', () => {
+  mount(390);
+  const scroll = document.querySelector('.pdf-scroll') as HTMLElement | null || document.querySelector('.pdf-reading-scroll') as HTMLElement | null;
+  expect(scroll).not.toBeNull();
+  const strip = document.querySelector('.reader-strip');
+  expect(strip).toBeNull();
+  const footer = document.querySelector('.reader-progress');
+  const header = document.querySelector('.reader-header');
+  expect(footer || header).not.toBeNull();
+  if (host) act(() => render(null, host));
+  document.body.replaceChildren();
+  host = document.createElement('div'); document.body.appendChild(host);
+  mount(1280);
+  const strip2 = document.querySelector('.reader-strip');
+  expect(strip2).toBeNull();
+  const scroll2 = document.querySelector('.pdf-scroll') as HTMLElement | null || document.querySelector('.pdf-reading-scroll') as HTMLElement | null;
+  expect(scroll2).not.toBeNull();
+  if (host) act(() => render(null, host));
 });
 

@@ -3,7 +3,7 @@ export function pdfFixture(
   count = 64,
   blankPage = 0,
   rotatePage = 0,
-  opts: { width?: number; height?: number } = {},
+  opts: { width?: number; height?: number; title?: string } = {},
 ) {
   const objects = ['<< /Type /Catalog /Pages 2 0 R >>', '', '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
   const pages: number[] = [];
@@ -25,9 +25,17 @@ export function pdfFixture(
     objects.push(`<< /Type /Outlines /First ${outline + 1} 0 R /Last ${outline + 1} 0 R /Count 1 >>`);
     objects.push(`<< /Title (Chapter 3) /Parent ${outline} 0 R /Dest [${pages[2]} 0 R /Fit] >>`);
   }
+  // HDR-2: an optional `/Info` title lets an import carry a document name that still holds the
+  // extension or a `: subtitle` — the two cases the Header trims for display.
+  let infoRef = '';
+  if (opts.title) {
+    const infoId = objects.length + 1;
+    objects.push(`<< /Title (${opts.title.replace(/([\\()])/g, '\\$1')}) >>`);
+    infoRef = ` /Info ${infoId} 0 R`;
+  }
   let pdf = '%PDF-1.7\n'; const offsets = [0];
   objects.forEach((object, i) => { offsets.push(Buffer.byteLength(pdf)); pdf += `${i + 1} 0 obj\n${object}\nendobj\n`; });
   const xref = Buffer.byteLength(pdf);
-  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map(offset => `${String(offset).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map(offset => `${String(offset).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R${infoRef} >>\nstartxref\n${xref}\n%%EOF`;
   return Buffer.from(pdf);
 }

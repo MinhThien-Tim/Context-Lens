@@ -1,4 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
+import { pdfScanFixture } from './pdfScanFixture';
+import { pdfMixedFixture } from './pdfMixedFixture';
+import {
+  documentItem,
+  goToLocationConfirm,
+  goToLocationPageInput,
+  modeControl,
+  openGoToLocation,
+} from './readerNames';
 
 // §9.7 — document tools and OCR controls are ONE surface reached through More. The old
 // `.pdf-reading-options-toggle` no longer has a renderer (removed in 34f4ca1/75497f9); opening
@@ -7,8 +16,18 @@ import { test, expect, type Page } from '@playwright/test';
 // `Document tools` is still the dialog's accessible name.
 async function openDocumentTools(page: Page) {
   await page.getByRole('button', { name: 'Reader menu' }).click();
-  await page.getByRole('menuitem', { name: 'Document', exact: true }).click();
+  await documentItem(page).click();
   await expect(page.getByRole('dialog', { name: /Document tools|Công cụ/ })).toBeVisible();
+}
+
+// NAV-1: the Header no longer owns previous/next, so a jump to another page goes through the
+// Footer location button and its `Go to location` dialog. This is the same route
+// pdf-ocr-queue.spec.ts and pdf-zoom-footer.spec.ts use, at every band.
+async function goToPage(page: Page, number: number) {
+  const dialog = await openGoToLocation(page);
+  await goToLocationPageInput(dialog).fill(String(number));
+  await goToLocationConfirm(dialog).click();
+  await expect(dialog).toHaveCount(0);
 }
 
 async function beginOcr(page: Page) {
@@ -27,8 +46,21 @@ async function readOcr(page: Page) {
   await option.click();
 }
 
-import { pdfScanFixture } from './pdfScanFixture';
-import { pdfMixedFixture } from './pdfMixedFixture';
+// ARCH-7: Notes is not a More entry and not a Header entry, so the Contents panel's footer
+// action is the only chrome-free way in once the reader is no longer holding a selection. This
+// replaces the old conditional that branched on a `Notes` menuitem or a Header `Notes` button,
+// neither of which was ever added — the test was probing chrome the contract forbids. Desktop
+// opens the panel on document load; mobile closes it whenever a selection action fires, so the
+// Footer band that owns Contents at ≤1023px is the opener there.
+async function openNotesViaContents(page: Page) {
+  const contents = page.locator('.contents-panel');
+  if (!(await contents.isVisible())) {
+    await page.locator('.reader-header, .reader-progress').getByRole('button', { name: 'Contents', exact: true }).click();
+  }
+  await expect(contents).toBeVisible();
+  await contents.locator('.document-panel-actions').getByRole('button', { name: 'Notes', exact: true }).click();
+  await expect(page.locator('.notes-panel')).toBeVisible();
+  }
 
 // The contract under test is a page that carries BOTH a PDF text layer and an OCR result, so a
 // reader can pick the source per page (docs/reader.md §9 "Explicit runs auto-continue" —
@@ -51,28 +83,30 @@ test('lets a reader choose PDF or OCR text on a page with a text layer @pdf @hea
     return canvas.toDataURL('image/jpeg', .92).split(',')[1];
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'source-choice.pdf', mimeType: 'application/pdf', buffer: pdfMixedFixture(Buffer.from(jpeg, 'base64'), 1224, 1584, { eligibleTextPage: true }) });
-  await page.getByRole('button', { name: 'Original', exact: true }).click();
+  await modeControl(page, 'pdf').click();
   await expect(page.getByLabel('Current PDF page')).toContainText('1 / 3');
   await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
-  // The document canvas starts below the Header band and scrolls under the fixed Footer
-    // (docs/desktop-reader.md §1). A rendered page is normally taller than the viewport, so only
-    // the top edge is guaranteed to clear the Header; the bottom edge is reached by scrolling.
+  // P2b geometry: the reading viewport is full height and the Header and Footer overlay it with
+    // static padding inside the scroll container (docs/reader-redesign-phases.md P2b step 2), so the
+    // canvas no longer starts *below* the Header band — it now starts at the top of the container and
+    // passes under both bands. A rendered page's bottom edge is reached by scrolling, so only the
+    // canvas height, the bands' own order and the top edge are asserted here.
     const layout = await page.evaluate(() => ({
       headerBottom: document.querySelector('.reader-header')!.getBoundingClientRect().bottom,
       footerTop: document.querySelector('.reader-progress')!.getBoundingClientRect().top,
       pageTop: document.querySelector('.pdf-page-slot')!.getBoundingClientRect().top,
       pageHeight: document.querySelector('.pdf-page-slot')!.getBoundingClientRect().height,
     }));
-    expect(layout.pageTop).toBeGreaterThanOrEqual(layout.headerBottom);
-    expect(layout.footerTop).toBeGreaterThan(layout.headerBottom);
     expect(layout.pageHeight).toBeGreaterThan(0);
+    expect(layout.footerTop).toBeGreaterThan(layout.headerBottom);
+    expect(layout.pageTop).toBeLessThanOrEqual(layout.headerBottom);
     await expect(page.locator('.pdf-toolbar')).toHaveCount(0);
-  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
-  // An explicit run acts on the page being read, so navigate to the eligible page first.
-  await page.getByRole('button', { name: 'Next page' }).click();
-  await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
-  await page.getByRole('button', { name: 'Next page' }).click();
-  await expect(page.getByLabel('Current PDF page')).toContainText('3 / 3');
+    await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
+    // An explicit run acts on the page being read, so navigate to the eligible page first.
+    await goToPage(page, 2);
+    await expect(page.getByLabel('Current PDF page')).toContainText('2 / 3');
+    await goToPage(page, 3);
+    await expect(page.getByLabel('Current PDF page')).toContainText('3 / 3');
   await beginOcr(page);
   await readOcr(page);
   await expect(page.locator('[data-ocr-page="3"]')).toHaveCount(1);
@@ -99,15 +133,15 @@ test('keeps extracted and scanned pages separate across modes and reopening @pdf
     return canvas.toDataURL('image/jpeg', .92).split(',')[1];
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'mixed-ocr.pdf', mimeType: 'application/pdf', buffer: pdfMixedFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
-  await page.getByRole('button', { name: 'Original', exact: true }).click();
+  await modeControl(page, 'pdf').click();
   await expect(page.getByLabel('Current PDF page')).toContainText('1 / 2');
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
   await openDocumentTools(page);
   await expect(page.getByRole('button', { name: 'OCR next' })).toBeVisible();
   await page.getByRole('button', { name: 'Close document tools', exact: true }).click();
-  await page.getByRole('button', { name: 'Next page' }).click();
+    await goToPage(page, 2);
   await expect(page.getByLabel('Current PDF page')).toContainText('2 / 2');
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  await modeControl(page, 'text').click();
   await expect(page.getByLabel('Current PDF page')).toContainText('2 / 2');
   await expect(page.locator('.pdf-ocr-text')).toContainText('scanned second page');
   await page.locator('.pdf-ocr-text').evaluate(element => {
@@ -120,19 +154,16 @@ test('keeps extracted and scanned pages separate across modes and reopening @pdf
   await page.getByRole('textbox', { name: 'New note' }).fill('Mixed page note');
   await page.getByRole('button', { name: 'Save note' }).click();
   await page.locator('.notes-panel').getByRole('button', { name: 'Close notes' }).click();
-  await page.getByRole('button', { name: 'Previous page' }).click();
+    await goToPage(page, 1);
   await expect(page.locator('.pdf-ocr-page')).toHaveCount(1);
   await expect(page.locator('.pdf-reading-page').first()).toContainText('readable PDF page');
-  await page.getByRole('button', { name: 'Next page' }).click();
+    await goToPage(page, 2);
   await page.getByRole('button', { name: 'Back to library' }).click();
   await page.locator('.library-open').filter({ hasText: 'mixed-ocr' }).click();
   await expect(page.getByLabel('Current PDF page')).toContainText('2 / 2');
   await expect(page.locator('.pdf-ocr-text')).toContainText('scanned second page');
-  if (await page.getByRole('button', { name: 'Reader menu' }).isVisible()) {
-    await page.getByRole('button', { name: 'Reader menu' }).click();
-    await page.getByRole('menuitem', { name: 'Notes' }).click();
-  } else await page.getByRole('button', { name: 'Notes', exact: true }).click();
-  await expect(page.locator('.notes-list')).toContainText('Mixed page note');
+  await openNotesViaContents(page);
+    await expect(page.locator('.notes-list')).toContainText('Mixed page note');
   await page.locator('.notes-list').getByRole('button', { name: 'Go to location' }).click();
   await expect(page.getByLabel('Current PDF page')).toContainText('2 / 2');
   await expect(page.locator('[data-ocr-page="2"]')).toBeVisible();
@@ -158,7 +189,7 @@ test('loads Vietnamese language data only after selecting bilingual OCR @pdf @he
     return canvas.toDataURL('image/jpeg', .94).split(',')[1];
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'bilingual.pdf', mimeType: 'application/pdf', buffer: pdfScanFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
-  await page.getByRole('button', { name: 'Original', exact: true }).click();
+  await modeControl(page, 'text').click();
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
   // Preloading is asynchronous, so poll the transfer log instead of sampling it once.
   await expect.poll(() => transfers.some(item => item.url.includes('/eng.traineddata.gz')), { timeout: 90_000 }).toBe(true);
@@ -196,11 +227,13 @@ test('recognizes one scanned page, reads and looks up its text, then reuses the 
     return canvas.toDataURL('image/jpeg', .92).split(',')[1];
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'scan.pdf', mimeType: 'application/pdf', buffer: pdfScanFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
-  await expect(page.getByRole('button', { name: 'Original', exact: true }).first()).toBeVisible();
-  const heapBefore = await page.evaluate(() => (performance as any).memory?.usedJSHeapSize ?? null);
-  const ocrStart = Date.now();
-  await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+  // MODE-2: with no readable text the control may be hidden or disabled, but the PDF presentation it
+  // switches to must become usable once OCR text exists. Assert the member exists first, then reach it.
+  await expect(modeControl(page, 'text')).toBeVisible();
+    const heapBefore = await page.evaluate(() => (performance as any).memory?.usedJSHeapSize ?? null);
+    const ocrStart = Date.now();
+    await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
+    await modeControl(page, 'text').click();
   const ocrMs = Date.now() - ocrStart;
   const heapAfter = await page.evaluate(() => (performance as any).memory?.usedJSHeapSize ?? null);
   await expect(page.locator('.pdf-ocr-text')).toContainText('careful reader');
@@ -226,7 +259,7 @@ test('recognizes one scanned page, reads and looks up its text, then reuses the 
   await expect(page.locator('.pdf-canvas')).toBeVisible();
   await page.getByRole('button', { name: 'Back to library' }).click();
   await page.locator('.library-open').filter({ hasText: 'scan' }).click();
-  await page.getByRole('button', { name: 'Reading', exact: true }).click();
+    await modeControl(page, 'text').click();
   await expect(page.locator('.pdf-ocr-text')).toContainText('careful reader');
   await test.info().attach('ocr-metrics', { body: JSON.stringify({ ocrMs, heapBefore, heapAfter, transfers }), contentType: 'application/json' });
   await page.getByRole('button', { name: 'Back to library' }).click();
