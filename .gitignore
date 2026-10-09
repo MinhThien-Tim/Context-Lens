@@ -59,3 +59,4 @@ _*.txt
 output.txt
 # Uncommitted WIP safety patch written before handing work to another step
 backup-wip.patch
+tools
