@@ -12,6 +12,7 @@
     "build": "tsc -b && vite build && node scripts/check_bundle_budget.mjs",
     "check:bundle": "node scripts/check_bundle_budget.mjs",
     "check:css": "node scripts/check_css_syntax.mjs",
+    "check:encoding": "node scripts/check_encoding.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "audit:dictionary": "node scripts/audit_dictionary_coverage.mjs",
@@ -33,7 +34,7 @@
     "verify:storage": "npm run typecheck && vitest run src/db src/storage src/notes/store src/vocabulary",
     "verify:ui": "npm run check:css && npm run typecheck && vitest run src/components src/onboarding src/app src/notes/NotesPanel --exclude \"**/LookupBottomSheet*\" --exclude \"**/OfflineBadge*\" --exclude \"**/dictionaryDisplay*\" --exclude \"**/lookupPopupPlacement*\"",
     "verify:offline": "npm run typecheck && vitest run src/documents/offline src/components/OfflineBadge src/components/LookupBottomSheet.offline",
-    "verify:fast": "npm run verify:contracts && npm run check:css && npm run typecheck && vitest run",
+    "verify:fast": "npm run verify:contracts && npm run check:encoding && npm run check:css && npm run typecheck && vitest run",
     "verify:full": "npm run verify:contracts && npm run typecheck && vitest run && npm run build",
     "verify": "npm run verify:full"
   },
@@ -52,13 +53,15 @@
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@preact/preset-vite": "^2.10.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/preact": "^3.2.4",
     "@types/node": "^22.13.10",
     "fake-indexeddb": "^6.0.0",
     "jsdom": "^26.0.0",
     "typescript": "~5.7.2",
     "vite": "^6.2.0",
     "vite-plugin-pwa": "^0.21.1",
-    "vitest": "^5.0.1",
+    "vitest": "^5.0.3",
     "wrangler": "^4.135.0"
   },
   "overrides": {
