@@ -20,14 +20,14 @@ Unmarked rules are true after Phase 2b.
 | ARCH-4 | PDF presentation and PDF processing (extraction, OCR, page tools) stay separate models even when adjacent in More. |
 | ARCH-5 | No Reader FAB, Search, Form Fill or Context-panel entry. No scroll listener changes layout in a way that re-triggers itself. Chrome makes no network call, quota reservation or Worker request. |
 | ARCH-6 | Hit targets ≥44px at ≤1023px and ≥36px at ≥1024px. Every control is reachable at 320px without horizontal scrolling of the chrome. |
-| ARCH-7 | Notes is not a Reader chrome action: no entry in More, Header or Footer. Its implementation, its data and the selection-bar Note action are untouched; deleting the feature is a separate task that traces its dependencies first. |
+| ARCH-7 | Notes is not a Reader chrome action: no entry in More, Header or Footer. Its three entries are the Contents panel footer `Notes` action, the Context panel `Open notes` and the selection-bar Note action, all of which open the same `NotesPanel` overlay. Its implementation, its data and the selection-bar Note action are untouched; giving Notes a dedicated browsing surface or a desktop entry is a separate task that traces its dependencies first. |
 | ARCH-8 | Print is not a Reader chrome action: its Header button, handler, CSS and tests are deleted, and it has no other entry. |
 
 ## 2. Chrome model and input
 
 | ID | Rule |
 | --- | --- |
-| CHR-1 | Header and Footer overlay the reading surface; chrome never pushes content. Static top and bottom padding live inside the scroll container, sized to the chrome, so the first and last readable lines can always scroll clear of it. No reserved status strip (the old `.pdf-queue-status` model is not reintroduced). |
+| CHR-1 | Header and Footer overlay the reading surface; chrome never pushes content. Static top and bottom padding live inside the scroll container, sized to the chrome, so the first and last readable lines can always scroll clear of it: the top padding is the scroller's own, so it scrolls away with the content and leaves no dead band while the chrome is quiet, and `navigate()` compensates the chrome inset when it aligns a page so that page still starts below the Header. No reserved status strip (the old `.pdf-queue-status` model is not reintroduced). |
 | CHR-2 | Two states only: visible and quiet. Quiet is visual (opacity/transform) and never changes content height, `scrollTop`, page identity, location or any geometry. |
 | CHR-3 | Quiet exists only at ≤1023px. Desktop chrome is always visible. |
 | CHR-4 | Never quiet while More, Lookup, a selection surface, Contents, the Markup palette or any menu is open, nor during load or restoration. A document opens with chrome visible. |
@@ -130,9 +130,9 @@ Closed (owner decisions; an agent never reopens these):
 
 | Date | Decision | Rule |
 | --- | --- | --- |
-| 2026-10-06 | Notes is not a chrome action; implementation, data and the selection Note action are untouched. Saved notes have no Reader entry until a separate task decides. | ARCH-7 |
+| 2026-10-06 | Notes is not a chrome action: no More, Header or Footer entry. Its entries are the Contents panel footer `Notes` action, the Context panel `Open notes` and the selection Note action, and all three open the same `NotesPanel` overlay. Implementation, data and the selection Note action are untouched. A dedicated Notes surface (browse all notes, a desktop entry, a tab or not) stays a separate task. | ARCH-7 |
 | 2026-10-07 | OCR never starts on its own beyond the first-12 local preload: a run starts only from an explicit user action, then continues through 12-page windows to exhaustion. | OCR-1, OCR-2 |
-| 2026-10-07 | The Contents panel offers Contents and (PDF) Pages. No Outline tab; no clock icon in the Footer. | HDR-4 |
+| 2026-10-07 | The Contents panel offers Contents and (PDF) Pages, plus a footer `Notes` action that opens the Notes overlay. No Outline tab, no Notes tab, no clock icon in the Footer. | HDR-4 |
 | 2026-10-07 | The reveal-only `Aa ···` sits bottom-right inside the safe-area inset; P2b records the exact offset after the 320px and landscape checks. | INP-4 |
 | 2026-10-07 | Mobile Footer items carry visible text labels; revisit icons only if the 320px check fails. | MOB-2 |
 | 2026-10-07 | One font setting drives reading and interface (APP-3 stands). Reference visuals must comply; chrome legibility at small sizes in Serif is verified in P3. | APP-3 |

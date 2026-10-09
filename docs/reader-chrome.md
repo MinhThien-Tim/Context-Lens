@@ -35,7 +35,7 @@ disagrees with it, this file is the defect. Rule IDs below (HDR-1, INP-2…) ref
 
 - Returns early when `desktop`, `controlsLocked`, `contentsOpen` or `contextOpen` (CHR-3, CHR-4).
 - A live selection or any `OVERLAY_OPEN` surface zeroes travel and suppresses the transition. `OVERLAY_OPEN` = `.reader-more-menu`, `.pdf-reading-options`, `.pdf-reading-selection-wrap`, `.pdf-reading-selection-actions`, `.selection-actions`; the Markup palette joins it in P2b.
-- Quiet hides Header **and** Footer at ≤1023px (progress line included). Both overlay the reading surface; static top and bottom padding lives inside the scroll container.
+- Quiet hides Header **and** Footer at ≤1023px (progress line included). Both overlay the reading surface; static top and bottom padding lives inside the scroll container (`.pdf-scroll`'s own padding), so it scrolls away with the content and leaves no dead band while quiet. `usePdfScroll.navigate()` preserves the top clearance by subtracting the chrome inset from its alignment target (`--reader-chrome-overlay`, set only where the chrome overlays), instead of parking the page under the Header.
 - Reveal-only control: `<button class="reader-reveal" aria-label="Show reading controls">`, a fixed overlay outside the scroll flow, rendered only while quiet (INP-4). No `aria-haspopup`, no `aria-expanded`. It sits bottom-right inside the safe-area inset; P2b records the exact offset after the 320px and landscape checks.
 - `onFocusCapture` reveals only when focus enters `CHROME`; focus on the reading surface, text or selection handles never does.
 
@@ -53,14 +53,18 @@ disagrees with it, this file is the defect. Rule IDs below (HDR-1, INP-2…) ref
 | Header | Back · title · `Text \| PDF` | Library · title ⌄ (File switcher) · `Text \| PDF` (centred) · zoom − level + · Contents · Highlight Underline Erase · `Aa` · More trigger |
 | Footer | One full-width single-row bar: Contents · page number · Markup · More (visible text labels); hairline progress line on its top edge; `Aa ···` overlay while quiet (Header and Footer are both hidden then) | Thin single-row band: page number · progress line · OCR status while active |
 | More | Bottom sheet with backdrop, width-capped at 768–1023px, Escape closes, focus trapped | Popover from the Header trigger |
-| Contents (Header icon on desktop, Footer bar on mobile) | One panel at a time (drawer/sheet) | Document column (Contents, Pages) |
+| Contents (Header icon on desktop, Footer bar on mobile) | One panel at a time (drawer/sheet) | Document column (Contents, Pages) plus a footer `Notes` action |
 | Context | Opens only from Lookup "Show more" | Context Inspector column, same trigger |
+
+Notes has no Header or More entry at either band (ARCH-7). Its three entries — the Contents panel
+footer `Notes` action, the Context panel `Open notes` and the selection-bar Note action — all open the
+same `NotesPanel` overlay.
 
 Notes on the table:
 
 - Mobile Header at 320px: Back + `Text \| PDF` + title; the title is the only element allowed to shrink (ellipsis). Verify at 320 in both fonts.
 - Mobile Footer bar: four 44px targets plus gaps fit 320px with room to spare; the page number is the flexible centre.
-- Geometry: the reading viewport is full height at all times; Header and Footer overlay it, with static padding inside the scroll container (top = Header height, bottom = Footer height + safe-area inset). The reserved Footer band and the Original-PDF resize-on-quiet logic are deleted. At 844×390 and 915×412 the last line must still clear the Footer (GEO-6).
+- Geometry: the reading viewport is full height at all times; Header and Footer overlay it, with static padding inside the scroll container (top = Header height + gutter, bottom = Footer height + safe-area inset). The top padding is the scroller's own, so it scrolls away with the content; `navigate()` compensates the chrome inset so a page it aligns still starts below the Header. The reserved Footer band and the Original-PDF resize-on-quiet logic are deleted. At 844×390 and 915×412 the last line must still clear the Footer (GEO-6).
 - Zoom renders once, at ≥1024px, in the Header toolbar (decrease, level, increase). Mobile has no zoom control; `.pdf-footer-zoom-host`, the mobile stepper and the mobile custom-scale code are deleted. Mobile pinch is a later task (Z1 audit, then Z2).
 - Page navigation is one location button in the Footer at every band (`Current PDF page`, opens Go to location). Previous/next buttons and the Header page count are deleted.
 
@@ -84,7 +88,7 @@ Notes on the table:
 | Focus into chrome reveals; focus into the reading surface does not | INP-3 |
 | `Aa ···` is reveal-only, keyboard operable, operable at 320 and landscape | INP-4 |
 | Header contains exactly its items per band (HDR-5 order on desktop); no Search, FAB, Notes, Print, Markup dialog button, previous/next or page number | HDR-1, HDR-3, HDR-5, ARCH-5, ARCH-7, ARCH-8 |
-| Contents icon (Header on desktop, Footer on mobile) opens the panel and an entry navigates; absent from More; Notes has no chrome entry | HDR-4, MORE-3, ARCH-7 |
+| Contents icon (Header on desktop, Footer on mobile) opens the panel and an entry navigates; absent from More; Notes has no Header or More entry and opens from the Contents panel footer action | HDR-4, MORE-3, ARCH-7 |
 | Footer per band: mobile bar items, desktop page number and OCR status, no percentage, hairline progress | FTR-1, FTR-4, FTR-5, MOB-2, ARCH-6 |
 | Desktop zoom −/level/+ in the Header; no zoom control at ≤1023px; Markup palette (mobile) and tool group (desktop); page number is the only page control | FTR-2, FTR-3, NAV-1 |
 | Mobile quiet shows text only; reveal returns Header and Footer together; tap never toggles | MOB-1, MOB-3 |
