@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { pdfFixture } from './pdfFixture';
-import { modeControl, documentItem } from './readerNames';
+import { modeControl } from './readerNames';
 import { waitForReaderSurface } from './readerO';
 
 test.describe('HDR-1 — Header item sets per band', () => {
@@ -13,7 +13,7 @@ test.describe('HDR-1 — Header item sets per band', () => {
 
     const header = page.locator('.reader-header');
     await expect(header.getByRole('button', { name: /Back/i })).toBeVisible();
-    await expect(header.locator('.reader-title')).toBeVisible();
+    await expect(header.locator('.reader-document h1')).toBeVisible();
     await expect(header.locator('.pdf-mode-switch')).toBeVisible();
 
     // desktop
@@ -32,12 +32,17 @@ test.describe('HDR-2 — Title ellipsis at narrow widths', () => {
     await page.locator('input[type=file]').setInputFiles({ name: 'hdr2.pdf', mimeType: 'application/pdf', buffer: pdfFixture(1) });
     await waitForReaderSurface(page);
 
-    const title = documentItem(page);
+    const title = page.locator('.reader-header .reader-document h1');
     await expect(title).toBeVisible();
     const titleAttr = await title.getAttribute('title');
     expect(titleAttr).toBeTruthy();
     const text = await title.textContent();
     expect(text?.trim().length).toBeGreaterThan(0);
+    // HDR-2: the title is not interactive on mobile. FILE-1 makes it the desktop File-switcher
+    // trigger at >=1024px; until P2c it carries no activation affordance at any band.
+    await expect(title).not.toHaveAttribute('role', 'button');
+    await expect(title).not.toHaveAttribute('tabindex', /\S/);
+    expect(await title.evaluate(el => el.closest('button, a, [role="button"]'))).toBeNull();
   });
 });
 

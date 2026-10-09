@@ -155,15 +155,15 @@ it('does not accumulate travel for a declared programmatic jump during a live ge
   expect(isQuiet()).toBe(true);
 });
 
-// §7.1/§7.2/§9.4: the Header owns exactly Back, the document title, and Original/Reading for PDF.
+// §7.1/§7.2/§9.4: the Header owns exactly Back, the document title, and Text|PDF for PDF.
 // Every other approved action lives once, in More, at both widths.
 // Labels follow the §9.3 rename table (2026-10-05): Theme, Languages, Click lookup.
 it.each([390, 1024])('keeps the Header to Back, title, and mode while More owns the secondary actions (width=%s)', width => {
   mount(width);
   const contents = vi.fn(), markup = vi.fn(), settings = vi.fn();
-  act(() => render(<><ReaderToolbar title="A long document title.pdf" onBack={vi.fn()} primaryActions={<div>Original / Reading</div>} /><ReaderMore items={[{ label: 'Contents', onSelect: contents }, { label: 'Markup', onSelect: markup }, { label: 'Theme', onSelect: settings }]} /></>, host));
+  act(() => render(<><ReaderToolbar title="A long document title.pdf" onBack={vi.fn()} primaryActions={<div>Text / PDF</div>} /><ReaderMore items={[{ label: 'Contents', onSelect: contents }, { label: 'Markup', onSelect: markup }, { label: 'Theme', onSelect: settings }]} /></>, host));
   expect(host.querySelector('.reader-header-leading h1')?.getAttribute('title')).toBe('A long document title.pdf');
-  expect(host.querySelector('.reader-header-actions')?.textContent).toBe('Original / Reading');
+  expect(host.querySelector('.reader-header-actions')?.textContent).toBe('Text / PDF');
   for (const label of ['Contents', 'Markup', 'OCR next', 'Theme', 'Languages', 'Reader menu']) {
     expect(host.querySelector(`.reader-header [aria-label="${label}"]`)).toBeNull();
   }
