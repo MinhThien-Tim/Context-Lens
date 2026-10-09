@@ -35,7 +35,7 @@ test('reviews the supplied title page and manually compares OCR with PDF text @p
   await modeControl(page, 'text').click();
   await expect(page.locator('.pdf-reading-page').nth(4)).toContainText('THIRD EDITION');
   await expect(page.locator('.pdf-reading-page').nth(4)).toContainText('GERALD GRAFF');
-  await modeControl(page, 'pdf').click();
+  await modeControl(page, 'text').click();
   await beginOcr(page);
   await readOcr(page);
   await expect(page.getByLabel('Current PDF page')).toContainText('5 / 21');

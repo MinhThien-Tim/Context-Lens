@@ -49,7 +49,7 @@ async function openPdf(page: import('@playwright/test').Page, width: number, hei
   await page
     .locator('input[type=file]')
     .setInputFiles({ name: 'a12.pdf', mimeType: 'application/pdf', buffer: pdfFixture(12) });
-  await togglePdfMode(page, 'text');
+  await togglePdfMode(page, 'pdf');
   await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
   await page.waitForTimeout(300);
 }

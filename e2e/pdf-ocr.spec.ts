@@ -83,7 +83,7 @@ test('lets a reader choose PDF or OCR text on a page with a text layer @pdf @hea
     return canvas.toDataURL('image/jpeg', .92).split(',')[1];
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'source-choice.pdf', mimeType: 'application/pdf', buffer: pdfMixedFixture(Buffer.from(jpeg, 'base64'), 1224, 1584, { eligibleTextPage: true }) });
-  await modeControl(page, 'text').click();
+  await modeControl(page, 'pdf').click();
   await expect(page.getByLabel('Current PDF page')).toContainText('1 / 3');
   await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
   // P2b geometry: the reading viewport is full height and the Header and Footer overlay it with
@@ -133,7 +133,7 @@ test('keeps extracted and scanned pages separate across modes and reopening @pdf
     return canvas.toDataURL('image/jpeg', .92).split(',')[1];
   });
   await page.locator('input[type=file]').setInputFiles({ name: 'mixed-ocr.pdf', mimeType: 'application/pdf', buffer: pdfMixedFixture(Buffer.from(jpeg, 'base64'), 1224, 1584) });
-  await modeControl(page, 'text').click();
+  await modeControl(page, 'pdf').click();
   await expect(page.getByLabel('Current PDF page')).toContainText('1 / 2');
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
   await openDocumentTools(page);
@@ -141,7 +141,7 @@ test('keeps extracted and scanned pages separate across modes and reopening @pdf
   await page.getByRole('button', { name: 'Close document tools', exact: true }).click();
     await goToPage(page, 2);
   await expect(page.getByLabel('Current PDF page')).toContainText('2 / 2');
-  await modeControl(page, 'pdf').click();
+  await modeControl(page, 'text').click();
   await expect(page.getByLabel('Current PDF page')).toContainText('2 / 2');
   await expect(page.locator('.pdf-ocr-text')).toContainText('scanned second page');
   await page.locator('.pdf-ocr-text').evaluate(element => {
@@ -233,7 +233,7 @@ test('recognizes one scanned page, reads and looks up its text, then reuses the 
     const heapBefore = await page.evaluate(() => (performance as any).memory?.usedJSHeapSize ?? null);
     const ocrStart = Date.now();
     await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
-    await modeControl(page, 'pdf').click();
+    await modeControl(page, 'text').click();
   const ocrMs = Date.now() - ocrStart;
   const heapAfter = await page.evaluate(() => (performance as any).memory?.usedJSHeapSize ?? null);
   await expect(page.locator('.pdf-ocr-text')).toContainText('careful reader');
@@ -259,7 +259,7 @@ test('recognizes one scanned page, reads and looks up its text, then reuses the 
   await expect(page.locator('.pdf-canvas')).toBeVisible();
   await page.getByRole('button', { name: 'Back to library' }).click();
   await page.locator('.library-open').filter({ hasText: 'scan' }).click();
-    await modeControl(page, 'pdf').click();
+    await modeControl(page, 'text').click();
   await expect(page.locator('.pdf-ocr-text')).toContainText('careful reader');
   await test.info().attach('ocr-metrics', { body: JSON.stringify({ ocrMs, heapBefore, heapAfter, transfers }), contentType: 'application/json' });
   await page.getByRole('button', { name: 'Back to library' }).click();

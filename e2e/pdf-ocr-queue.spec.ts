@@ -45,7 +45,7 @@ test('OCRs only inked poor pages in bounded slices and clears their cache @pdf @
   await page.getByRole('button', { name: 'Tiếp tục OCR' }).click();
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
   await expect(page.getByRole('progressbar', { name: 'Reading progress' })).toBeVisible();
-  await modeControl(page, 'pdf').click();
+  await modeControl(page, 'text').click();
   await expect(page.locator('.pdf-ocr-page')).toHaveCount(3);
   await expect(page.locator('[data-pdf-reading-page="3"] .pdf-ocr-text')).toHaveCount(0);
   // The OCR Next action lives in the document-tools dialog; open it explicitly before acting on it.
@@ -64,7 +64,7 @@ test('OCRs only inked poor pages in bounded slices and clears their cache @pdf @
   // "Xóa kết quả OCR của tài liệu" is a button inside the document-tools dialog, not a More menuitem
   await page.getByRole('dialog', { name: /Document tools|Công cụ/ }).getByRole('button', { name: 'Xóa kết quả OCR của tài liệu' }).click();
   await expect(page.locator('.pdf-ocr-page')).toHaveCount(0);
-  await modeControl(page, 'text').click();
+  await modeControl(page, 'pdf').click();
   await expect(page.locator('.pdf-canvas').first()).toBeVisible();
 });
 
@@ -110,7 +110,7 @@ test('preloads at most the first twelve pages and leaves later scans for a manua
   const kinds = Array.from({ length: 13 }, (_, index) => index === 0 || index === 12 ? 'scan' as const : 'blank' as const);
   await page.locator('input[type=file]').setInputFiles({ name: 'first-twelve.pdf', mimeType: 'application/pdf', buffer: pdfQueueFixture(Buffer.from(jpeg, 'base64'), 800, 1000, undefined, kinds) });
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
-  await modeControl(page, 'text').click();
+  await modeControl(page, 'pdf').click();
   // docs/desktop-reader.md §2.2: the page-number button opens `Go to location` at >=1024px.
   // The Footer owns the location button at every band (NAV-1), so we use it to jump to page 12.
   // This spec runs in both projects, so the band comes from the project fixture (the repo idiom
@@ -137,7 +137,7 @@ test('preloads at most the first twelve pages and leaves later scans for a manua
   // The canonical OCR Next action carries aria-label="OCR next"
   await page.getByRole('button', { name: 'OCR next' }).click();
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 90_000 });
-  await modeControl(page, 'pdf').click();
+  await modeControl(page, 'text').click();
   await expect(page.locator('[data-ocr-page="13"]')).toHaveCount(1);
 });
 
@@ -168,7 +168,7 @@ test('§9 auto-continues an explicit run past the ineligible page it started on 
   // asserting an absence that is also the pre-run state.
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole('progressbar', { name: 'OCR progress' })).toHaveCount(0, { timeout: 120_000 });
-  await modeControl(page, 'pdf').click();
+  await modeControl(page, 'text').click();
   // Only page 14 was an OCR candidate: the started-on page is never OCRed and never revisited.
   await expect(page.locator('.pdf-ocr-page')).toHaveCount(1);
   await expect(page.locator('[data-ocr-page="14"]')).toHaveCount(1);

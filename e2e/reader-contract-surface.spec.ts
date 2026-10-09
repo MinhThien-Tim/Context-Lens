@@ -38,7 +38,7 @@ async function openPdfView(page: Page, name: string, buffer: Buffer, width: numb
   await page.setViewportSize({ width, height });
   await page.goto('/');
   await page.locator('input[type=file]').setInputFiles({ name, mimeType: 'application/pdf', buffer });
-  await modeControl(page, 'text').click();
+  await modeControl(page, 'pdf').click();
   await expect(page.locator('.pdf-page-slot').first()).toBeVisible();
 }
 
@@ -189,7 +189,7 @@ test.describe('MODE-1 — Text <-> PDF changes presentation only', () => {
       const pagesBefore = await page.locator('.pdf-page-slot').count();
       const textBefore = await page.locator('[data-pdf-page="1"] .pdf-text-layer').innerText();
 
-            await modeControl(page, 'pdf').click();
+            await modeControl(page, 'text').click();
             await expect(page.locator('.pdf-reading-page').first()).toBeVisible();
 
             // Reading state, not geometry: the Reading view owns its own scroll
@@ -205,7 +205,7 @@ test.describe('MODE-1 — Text <-> PDF changes presentation only', () => {
             expect(await page.locator('.pdf-page-slot').count()).toBe(0);
             expect((await page.locator('.pdf-reading-scroll').innerText()).length, 'the Reading view lost the document text').toBeGreaterThan(0);
 
-      await modeControl(page, 'text').click();
+      await modeControl(page, 'pdf').click();
       await expect(page.locator('[data-pdf-page="1"] .pdf-canvas')).toBeVisible();
 
       // Back in the PDF view at the top of the same document: page identity and the
@@ -238,7 +238,7 @@ test('with no readable text the mode control is disabled, not an enabled no-op @
 
   // MODE-2 admits either form, but never an enabled no-op. Whichever form the
   // UI takes, the Reading member must carry a state a screen reader can read.
-  const reading = modeControl(page, 'pdf');
+  const reading = modeControl(page, 'text');
   if (await reading.count()) {
     await expect(reading, 'the Reading mode control is offered on a page with no readable text and is enabled').toBeDisabled();
     // `disabled` is the perceivable state. A visually-disabled control that only
