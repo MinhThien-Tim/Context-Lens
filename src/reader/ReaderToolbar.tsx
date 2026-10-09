@@ -68,6 +68,17 @@ export function ClickLookupIcon() {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5M11 8.5v5M8.5 11h5"/></svg>;
 }
 
+/**
+ * HDR-2: the Header label is the trimmed document name — the file extension and any
+ * `: subtitle` are dropped — while the full record title stays on the `title`
+ * attribute, so the untrimmed name is still recoverable (FILE-1 will need it).
+ */
+export function trimDocumentTitle(title: string): string {
+  return title
+    .replace(/\.(?:pdf|epub|txt|md|markdown|html?|rtf|docx?|odt|fb2|mobi|azw3?)(?=[:：]|$)/i, '')
+    .replace(/\s*[:：].*$/, '');
+}
+
 // Contract §7.1: the Header owns exactly and only Back, the document title, and Original/Reading
 // for PDF. No secondary action, no More trigger, no OCR control lives here (§7.2).
 // DesktopReader extension: at ≥1024px the Header expands to a full document-reader toolbar
@@ -138,7 +149,7 @@ export function ReaderToolbar({
   return <header class="reader-header">
     <div class="reader-header-leading">
       <button class="icon-button reader-back" aria-label="Back to library" onClick={onBack}><BackIcon /><span class="reader-back-label">Library</span></button>
-      <div class="reader-document"><h1 title={title}>{title}</h1></div>
+      <div class="reader-document"><h1 class="reader-title" title={title}>{trimDocumentTitle(title)}</h1></div>
     </div>
     <div class="reader-header-actions">
       {primaryActions}
